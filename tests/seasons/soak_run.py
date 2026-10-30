@@ -6,7 +6,7 @@ save near each season change that a new program loads and plays on.
 Usage:
     python3 tests/seasons/soak_run.py <cm0102_recomp> <game folder> --keep <folder> [--start 2001] [--last 2027]
         [--seed 1] [--nations all|England,...] [--database <folder>] [--changing-rules on|off] [--leg-days 365]
-        [--extra regional,c2,spain,...] [--timeout 14400]
+        [--extra regional,c2,spain,...] [--timeout 14400] [--env NAME=VALUE ...] [--checkpoints 10]
 
 The legs. Leg 0 makes the game (tests/seasons/rules_report_check.py: the steps of a new game, the season jump to
 --last, the rules report) with RECOMP_SAVE_AFTER_DAYS=<leg days>: at the first human turn that many game days after
@@ -26,6 +26,11 @@ At the end: the last leg's rules report holds the end of --last, and over the re
 division's edition moves on from the end of one season to the next (rules_report_check.league_stalls). The run
 folder holds one folder per leg (leg00, leg01, ...) with its stderr.txt, report.tsv and user folder, and soak.tsv
 with one line per leg (leg, the season it starts in, the result, seconds, the first box).
+
+--env sets a test variable for every leg, for example --env RECOMP_TIER_A=1 (the Tier A switch, 0.6.2 slice 3) or
+--env RECOMP_DATE_JUMP=1. --checkpoints N keeps only the saves of the Julys of years that N divides (and the last
+one): each other save and its loaded copy is deleted when the next leg has passed, so a run to 2300 keeps one save
+per decade.
 
 A leg of Select All takes about 20 to 60 minutes on a loaded machine (a 2001 game to 2027/28: 27 legs). The script
 starts one game at a time and waits while /Users/max/Projects/cm0102/run-logs/HOLD exists, while 15 or more games
@@ -101,8 +106,12 @@ def play(args, env, log, timeout):
     return code, time.time() - start, box or first_box(log)
 
 
+LEG_ENV = {}        # --env NAME=VALUE: test variables for every leg
+
+
 def leg_env(program, game, user, home, shots, steps, last, report, extra):
     table = rrc.rules_table(program, game)
+    extra = dict(LEG_ENV, **extra)
     return dict(os.environ, HOME=home, SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy", RECOMP_NO_BOX="1",
                 RECOMP_USER_DIR=user, RECOMP_FIXED_CLOCK="1", RECOMP_SEASON_JUMP=str(last), RECOMP_SCREEN_LOG="1",
                 RECOMP_RULES_REPORT=report, RECOMP_RULES_TABLE=table, RECOMP_SEASON_INTL_LOG="1",
@@ -157,6 +166,16 @@ def load_leg(o, work, save, save_days):
                 o["timeout"])
 
 
+def prune(work, season, every):
+    """--checkpoints: the leg in work saved in July of season, and the next leg has passed. Its loaded copy goes,
+    and its save too unless every divides season."""
+    names = ["soak.sav"] + ([smoke_run.SAVE_NAME] if season % every else [])
+    for name in names:
+        path = os.path.join(work, "user", name)
+        if os.path.exists(path):
+            os.remove(path)
+
+
 def main(argv):
     if len(argv) < 3 or "--keep" not in argv:
         print(__doc__)
@@ -168,7 +187,12 @@ def main(argv):
          "database": os.path.abspath(arg(argv, "--database")) if "--database" in argv else None,
          "rules": arg(argv, "--changing-rules", "on"), "days": int(arg(argv, "--leg-days", 365)),
          "timeout": int(arg(argv, "--timeout", 14400)),
-         "extra": [e for e in arg(argv, "--extra", "").split(",") if e]}
+         "extra": [e for e in arg(argv, "--extra", "").split(",") if e],
+         "checkpoints": int(arg(argv, "--checkpoints", 0))}
+    for i, a in enumerate(argv):
+        if a == "--env":
+            name, value = argv[i + 1].split("=", 1)
+            LEG_ENV[name] = value
     if o["last"] < o["start"]:
         print("soak_run.py: --last is before --start")
         return 2
@@ -207,6 +231,8 @@ def main(argv):
         if result != "ok":
             fails.append(f"leg {leg} ({season}/{(season + 1) % 100:02d}): {result} ({work})")
             break
+        if o["checkpoints"] and leg and season < o["last"]:
+            prune(os.path.join(o["keep"], f"leg{leg - 1:02d}"), season, o["checkpoints"])
         save = saved
     if not fails:
         seasons, _ = rrc.read_report(os.path.join(o["keep"], f"leg{o['last'] - o['start']:02d}", "report.tsv"))

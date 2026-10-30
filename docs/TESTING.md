@@ -48,6 +48,12 @@ Long games run from 2001/02 to 2027/28 with all nations and different random see
 
 A date jump starts a new game in a far year, with every date of the database moved to that year. It needs an Update Team or Custom database. The test variable `RECOMP_START_SEASON` takes a start year up to 2099. With the date jump switch `RECOMP_DATE_JUMP=1` it takes a year up to 2300. The program reads the switch once at the start, and it is off by default. The same-save set proves that the switch changes nothing in a game of the normal start years (run `date-jump-on`). The season code itself has no year limit: its hooks, rules and save parts work in every year (ctest `future_2300` and `season_part` step them to 2301).
 
+## Tier A runs
+
+A Tier A run reaches a far year quickly. It plays only the competitions: the calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players, and save and load. It skips the AI transfer market, background matches, contracts, injuries and AI manager moves (sackings). Each match gets an instant result from the two sides' reputation, so the stronger side wins more often. The test switch is `RECOMP_TIER_A=1`. The program reads it once at the start, and it is off by default. The same-save set proves that the switch changes nothing when it is off.
+
+The script is `tests/seasons/soak_run.py` with `--env RECOMP_TIER_A=1`, and `--checkpoints 10` to keep one save per decade. A Tier A run counts as the same as the normal game when, after 10 years from the same start, database and seed, the two saves agree on editions, dates, hosts and entrant rules (`tests/seasons/future/tier_a_compare.py`). Winners can differ. The history checker then reads each checkpoint save.
+
 ## Memory and big saves
 
 A game with all nations uses more memory each season. The heap now has room for about 2 GB of game data. A code test (`tests/recomp/test_heap.c`) fills a small heap and checks that it still serves new blocks.
