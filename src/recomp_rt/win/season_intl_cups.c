@@ -607,16 +607,17 @@ static void knockout24(int c, uint32_t self)
                 year_of(self), 'A' + rank_group[0], 'A' + rank_group[1], 'A' + rank_group[2], 'A' + rank_group[3]);
 }
 
-/* The quarter-finals of the Asian Cup of 16 (0.6.2 open item 44), after the original's 0x40fa90 for 12: its
- * list of 8 (0x40fc27..0x40fca4: winners of A, B, C, the two best thirds, runners-up of A, B, C), the template
- * of the knockout index (0x40fcb1), the Cup_Stage of 8 (0x40fce2..0x40fd02: this, 8, list, rounds, record, template,
- * year, knockout index, 4, id, 0x14, 0, 0, 0, 0) into stage[ko] (0x40fd1a), the frees (0x40fd1d, 0x40fd23) and
- * the start (0x40fdc4) and +0x30 the knockout index (0x40fdd0). Here the top two of the four groups, in the pair order of the real bracket: the Cup_Stage
- * pairs teams 0-1, 2-3 and so on and the winners in the same order (inference, see season_intl_euro.c). Sources
- * (read 2026-10-30): https://en.wikipedia.org/wiki/2004_AFC_Asian_Cup (QF 1A-2C, 1B-2D, 1C-2A, 1D-2B; SF the
- * winners of 1A-2C and 1B-2D, of 1D-2B and 1C-2A) and the knockout stage pages of 2007, 2011 and 2015 (QF 1A-2B,
- * 1B-2A, 1C-2D, 1D-2C; SF the winners of 1A-2B and 1C-2D, of 1B-2A and 1D-2C). An edition after 2015 of 16 teams
- * (changing rules off) takes the bracket of 2015. */
+/* The quarter-finals of the Asian Cup of 16 (0.6.2 open item 44), after the original's 0x40fa90 for 12. The
+ * original lists 8 teams (0x40fc27..0x40fca4: winner A, best third, winner B, second best third, winner C, runners-up
+ * A, B and C), calls the template of the knockout index (0x40fcb1), makes the Cup_Stage of 8 (0x40fce2..0x40fd02:
+ * this, 8, list, rounds, record, template, year, knockout index, 4, id, 0x14, 0, 0, 0, 0) into stage[ko]
+ * (0x40fd1a), frees the list and the template (0x40fd1d, 0x40fd23), starts it (0x40fdc4) and sets +0x30 to the
+ * knockout index (0x40fdd0). Here the list holds the top two of the four groups in the pair order of the real
+ * bracket. The Cup_Stage pairs teams 0-1, 2-3 and so on, and the winners in the same order (inference, see
+ * season_intl_euro.c). Sources (read 2026-10-30): https://en.wikipedia.org/wiki/2004_AFC_Asian_Cup (QF 1A-2C,
+ * 1B-2D, 1C-2A, 1D-2B; SF the winners of 1A-2C and 1B-2D, of 1D-2B and 1C-2A) and the knockout stage pages of
+ * 2007, 2011 and 2015 (QF 1A-2B, 1B-2A, 1C-2D, 1D-2C; SF the winners of 1A-2B and 1C-2D, of 1B-2A and 1D-2C). An
+ * edition of 16 after 2015 (changing rules off) takes the bracket of 2015. */
 static void knockout16(uint32_t self)
 {
     static const char *const b2004[8] = {"1A", "2C", "1B", "2D", "1D", "2B", "1C", "2A"};

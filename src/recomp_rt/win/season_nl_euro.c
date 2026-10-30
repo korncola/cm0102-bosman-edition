@@ -83,7 +83,7 @@ static int readable(uint32_t p) { return p >= 0x10000u && p < 0xfff00000u; }
 /* The matchdays of the campaign that the object holds, or NULL: a season game, the original class (not the
  * Nations League copy), a campaign of the table. A campaign for a Euro after the table (0.6.2 decision A: the
  * Euro continues every 4 years) takes the last campaign of the table with its own year: its matchdays (year
- * offsets from the campaign) and its play-off by the host places, with no kept places 4 two-leg ties. */
+ * offsets from the campaign) and its play-off by the host places (a Euro with no kept places plays 4 two-leg ties). */
 static const SeasonNlQualifying *moved(uint32_t self)
 {
     if (!season_comps_on() || !readable(self) || rd32(g_mem, self) != QUAL_VTABLE) return NULL;

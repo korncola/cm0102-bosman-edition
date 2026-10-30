@@ -150,14 +150,18 @@ int main(void)
     CHECK(rt_intl_first_year(INTL_EURO, 2098) == 2100, "2098: Euro 2100");
     CHECK(rt_intl_first_year(INTL_ACN, 2098) == 2099, "2098: ACN 2099 (season 2098/99)");
     CHECK(rt_intl_first_year(INTL_CONFED, 2098) == 2999, "2098: no Confederations Cup");
-    CHECK(season_intl_rule_edition("world_cup", 2102)->teams == 48, "2098 on: World Cup 2102 with 48 teams");
+    a = season_intl_rule_edition("world_cup", 2102);
+    CHECK(a && a->teams == 48, "2098 on: World Cup 2102 with 48 teams");
     game(1, 2298, 0);
     CHECK(rt_intl_first_year(INTL_WORLD_CUP, 2298) == 2302, "2298: World Cup 2302, none in the past");
     CHECK(rt_intl_first_year(INTL_OLYMPICS, 2298) == 2300, "2298: Olympics 2300");
-    CHECK(season_intl_rule_edition("world_cup", 2302)->teams == 48, "2298 off: the start season's 48 teams");
+    a = season_intl_rule_edition("world_cup", 2302);
+    CHECK(a && a->teams == 48, "2298 off: the start season's 48 teams");
 
-    /* No class waits after its table (the idle year 2200 of 0.6.0 and 0.6.1): from every start, both rule
-     * settings, each next edition comes on the class's cycle, and only the Confederations Cup ends. */
+    /* No class waits after its table (the idle year 2200 of 0.6.0 and 0.6.1): from every start with changing
+     * rules on, each next edition comes on the class's cycle, and only the Confederations Cup ends. With changing
+     * rules off the first edition of a start after the table is on the class's cycle too (then the original's
+     * step, checked above). */
     {
         static const int cycle[INTL_CLASSES] = {4, 4, 0, 4, 2, 4, 4, 4};
         int waits = 0;
@@ -166,6 +170,13 @@ int main(void)
                 game(1, start, rules);
                 for (uint32_t c = 0; c < INTL_CLASSES; c++) {
                     uint32_t y = rt_intl_first_year(c, (uint32_t)start);
+                    if (!rules) {               /* a 2001 start keeps the original's year (start_edition_2001) */
+                        const char *f = season_intl_class_file(c);
+                        if (start != 2001 && (c == INTL_CONFED ? start > 2017 && y != 2999
+                                                               : !season_intl_edition(f, (int)y)))
+                            waits++;
+                        continue;
+                    }
                     for (int k = 0; k < 120 && y < 2400u; k++) {
                         uint32_t n = rt_intl_next_year(c, y, cycle[c] ? (uint32_t)cycle[c] : 2u);
                         if (c == INTL_CONFED) {

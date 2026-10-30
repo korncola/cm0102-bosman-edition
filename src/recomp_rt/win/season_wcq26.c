@@ -1011,8 +1011,9 @@ static int cup_status(uint32_t cup, uint32_t team)
 /* The six of the tournament, best first by nation reputation (the real seeding used the FIFA ranking of
  * November 2025: decision Q565): the first two are the seeds. The sections keep their tables until their
  * start_new_season of 25 July, so the finals take the same six again (no state of this file goes into a save). */
-/* The 2030 shape (O265): CONCACAF's two places in the tournament go to the two best thirds of its semi-final groups
- * (stages 3 to 5, 0x917320), by points, then goal difference, as the original's tables sort (0x6827d0). */
+/* CONCACAF with no host (2030, O265, and after the table): its two places in the tournament go to the two best
+ * thirds of its semi-final groups (stages 3 to 5, 0x917320), by points, then goal difference, as the original's
+ * tables sort (0x6827d0). */
 static void concacaf_thirds(uint32_t out[2])
 {
     uint32_t cc = comp_of(KEY_CONCACAF), z[1] = {0}, team[3] = {0, 0, 0};

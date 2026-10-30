@@ -19,7 +19,9 @@ static const char *const class_files[INTL_CLASSES] = {
 
 /* The year that an ended class holds (the Confederations Cup after 2017): the object waits and plays no more
  * finals. The same year as SEASON_CUPS_NEVER of the ended cups (season_cups.h), which the history checker reads
- * as ended (tests/seasons/future/history_check.py, ENDED_YEAR). Up to 0.6.1 every class waited for 2200 after
+ * as ended (tests/seasons/future/history_check.py, ENDED_YEAR). It is also an edition year of the classes that
+ * continue (the Africa Cup of Nations holds every odd year from 2027), so a game near 2999 would show such an
+ * edition as ended there; the date jump limit is 2300 (season.h). Up to 0.6.1 every class waited for 2200 after
  * its table, which a game to 2300 reaches (0.6.2 open items 1, 13 and 34). */
 #define NEVER_YEAR 2999u
 
