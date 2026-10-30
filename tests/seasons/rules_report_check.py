@@ -240,6 +240,11 @@ def not_played(r):
     return NOT_PLAYED in (r.get("notes") or "")
 
 
+# The calendar-year leagues whose start report (1 August) is not read by league_stalls: they hold the year before at
+# 1 August and move on by the end of the season (run 8b, 2019 start: arg_prm 2020 at the 2021/22 start, 2021 at its end).
+CALENDAR_START_FILES = {"arg_prm", "arg_second"}
+
+
 def league_stalls(comps, rows=None):
     """Gate check (O278, O282): the divisions whose edition does not move on from one season to the next. comps: the
     comp lines of one or more reports, the legs of a soak in leg order. A division is a file of a table row with a
@@ -289,6 +294,8 @@ def league_stalls(comps, rows=None):
         for season in sorted(starts):
             before = ends.get(season - 1)
             if season in ends or before is None or before > season - 1 or not held(key[1], season):
+                continue
+            if key[1] in CALENDAR_START_FILES:
                 continue
             # The object moved on by 1 August in this run: at two or more other season starts it holds the
             # season's own year, and at no other start an earlier one.
@@ -728,7 +735,10 @@ def league_steps(nations, extra):
                 out += ["wait screen:0x81e8d0", "2500 click 705 572"]   # Select Start Season: Next (England)
             continue
         if many and s in ("wait typing", "wait first-news"):
-            s += " 1800000"                                         # the game is made after the start season
+            # The game is made after the run to the start date. A 2025 start with all nations took 1226 to 1676 s on
+            # the gates and passed 1800 s under the load of gate (a) and gate (b) together (ec579543, a b6a4c3ad
+            # build the same to 0.1 s), so the wait is an hour. A hang still fails.
+            s += " 3600000"
         if many and s == "1000 click 155 163":
             s = "2000 click 155 188"                                # Select Team: Arsenal, below the Nation box
         out.append(s)

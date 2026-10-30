@@ -137,4 +137,8 @@ uint32_t season_intl_team_named(const char *names);
  * partner whose section is not complete (O259 A16; season_intl_qual.c, called by the wrap of 0x91f0d0). */
 int season_intl_oceania_wait(uint32_t self);
 
+/* After the original's Oceania template 0x91e2e0 (the wrap in season_wcq26.c): stage 2, the other tie of the
+ * cycles 2006 to 2018, takes its real dates (season_intl_qual.c). rec is the round record that the template gave. */
+void season_intl_oceania_tie_dates(uint32_t self, int stage, uint32_t rec);
+
 #endif

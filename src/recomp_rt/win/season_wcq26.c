@@ -1166,6 +1166,7 @@ RT_WRAP(0091e2e0, wcq26_oceania_template)
     int st = (int8_t)rd8(g_mem, sp + 4u);
     if (!oceania_on(self) || (st != 2 && st != 3)) {
         o_0091e2e0();
+        if (!rt_unwinding) season_intl_oceania_tie_dates(self, st, cpu.eax);
         return;
     }
     uint32_t out_rounds = rd32(g_mem, sp + 8u), out_code = rd32(g_mem, sp + 0xcu), out_league = rd32(g_mem, sp + 0x10u);

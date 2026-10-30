@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://maxevans60.github.io/cm0102-bosman-edition/assets/logo-sm.png" alt="CM 01/02 Bosman Edition" width="320">
+  <img src="https://maxevans60.github.io/cm0102-bosman-edition/assets/logo-readme.png" alt="CM 01/02 Bosman Edition" width="380">
 </p>
 
 <h1 align="center">CM 01/02: Bosman Edition</h1>
@@ -21,8 +21,8 @@
 </p>
 
 <p align="center">
+  <img src="https://maxevans60.github.io/cm0102-bosman-edition/assets/post-060-choose-season.png" alt="The Choose Season screen, with a tile for each season from 2001/02 to 2025/26" width="49%">
   <img src="https://maxevans60.github.io/cm0102-bosman-edition/assets/s1@2x.png" alt="The squad screen in widescreen" width="49%">
-  <img src="https://maxevans60.github.io/cm0102-bosman-edition/assets/s3@2x.png" alt="A match in widescreen" width="49%">
 </p>
 
 ## What it is
@@ -35,7 +35,10 @@ Each download is ready to play. It holds the game files of the free release that
 
 - Runs on macOS 11 or later (Apple silicon and Intel), Windows 10 and 11 (64-bit), and 64-bit Linux. The Linux AppImage also runs on the Steam Deck in desktop mode.
 - Widescreen at 1280 × 800 in a window you can resize, with sharp scaling. The original 800 × 600 layout is one setting away.
-- Any season from 2001/02 to 2025/26, with a database for every season in the download, and that season's leagues, cups and rules. In a long game the rules change each July as they did in real life.
+- Any season from 2001/02 to 2025/26 on the Choose Season screen, with a database for every season in the download. Each season has its own leagues, cups, European and international competitions, substitutes, foreign player rules and transfer windows.
+- In a long game the rules change each July as they did in real life, and a news item lists what changed. You can switch this off and keep your start season's rules.
+- A Custom database tile for a database folder of your own. You say which season it holds, and that season's rules apply.
+- Best XI and squad depth on one screen, with the next two players for each place.
 - An Assistant menu on the squad screen picks the best team, the fittest team or an under-21 team, scored by the key attributes of each position.
 - Clickable player and club names, coloured attributes, condition and morale.
 - Holiday until the next match, faster days on holiday and a Fastest commentary speed.
@@ -56,7 +59,9 @@ Saved games are in `~/Library/Application Support/cm0102` on a Mac, `%APPDATA%\c
 
 ## Roadmap
 
-0.6.0 (released TODO-DATE) added Choose Season: any season from 2001/02 to 2025/26 with its own squads, leagues, cups and rules, and rules that change each July in a long game.
+0.6.0, released on 29 October 2026, added Choose Season: any season from 2001/02 to 2025/26 with its own squads, leagues, cups and rules, and rules that change each July in a long game. The [test report](docs/release/0.6.0-test-report.md) says how it was tested.
+
+Next is 0.6.1, with fixes for the problems that players report on 0.6.0.
 
 Planned for 0.7.0 ([#45](https://github.com/maxevans60/cm0102-bosman-edition/issues/45)): easy online play with friends. The host gets a short join code and friends type it in, with no extra patch or VPN.
 
@@ -87,7 +92,7 @@ For a problem with the picture or the window, such as blurred text or a picture 
 
 - Sports Interactive made Championship Manager 01/02, and Eidos published it and made it free in 2008.
 - u/gundenaf on Reddit asked for the Linux version, the database choice, the polygon analyser, the HD layout and the attribute groups.
-- The CM 01/02 Update Team at [champman0102.co.uk](https://champman0102.co.uk) makes the yearly databases that the custom databases feature will load.
+- The CM 01/02 Update Team at [champman0102.co.uk](https://champman0102.co.uk) makes the yearly databases. The download includes 21 of them, for the seasons that do not use the official data or our own Summer 2002, 2004 and 2006 databases.
 
 ## Legal
 

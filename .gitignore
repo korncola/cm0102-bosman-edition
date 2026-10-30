@@ -16,3 +16,6 @@ __pycache__/
 site/assets/
 .taste-skill/
 build-*/
+
+# Claude workflow files (skills, hooks, settings) live outside the repo.
+.claude/

@@ -111,6 +111,7 @@ a { color: inherit; }
 .release li::before { content: ""; position: absolute; left: 0; top: .45em; width: .55em; height: .55em; background: var(--accent); }
 .release .later li::before { background: #7a7a86; }
 .release .later { margin-top: 28px; color: var(--muted); }
+.release.history { grid-template-columns: minmax(0, 1fr); }
 .shot { position: relative; aspect-ratio: 4 / 3; min-width: 0; width: 100%; }
 .shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; border: 2px solid #2433b8; }
 .shot.wide { aspect-ratio: 1600 / 1000; align-self: start; }
@@ -168,10 +169,11 @@ a { color: inherit; }
 .foot ul a { text-decoration: none; }
 .foot ul a:hover { text-decoration: underline; }
 
-/* 0.6.0 preview: the era colours of the Choose Season tiles */
+/* 0.6.0: the era colours of the Choose Season tiles */
 .preview { display: grid; gap: 32px; }
 .preview .release { align-items: start; }
 .preview .mock { margin: 0; max-width: 960px; width: 100%; justify-self: center; }
+.preview .mock.real { max-width: 800px; }
 .preview .mock img { width: 100%; height: auto; border: 2px solid #2433b8; }
 .preview .mock figcaption { text-align: center; font-size: var(--step-small); color: var(--muted); margin-top: 10px; }
 .preview .release > .panel { align-self: stretch; }
@@ -263,8 +265,8 @@ a { color: inherit; }
     <a class="mark" href="#top">CM 01/02<span class="long"> Bosman Edition</span></a>
     <ul>
       <li><a href="#release">Release</a></li>
-      <li><a href="#new">New</a></li>
-      <li><a href="#seasons">0.6.0</a></li>
+      <li><a href="#seasons">New</a></li>
+      <li><a href="#history">History</a></li>
       <li><a href="#next">Roadmap</a></li>
       <li><a href="#install">Install</a></li>
       <li><a href="#questions">Questions</a></li>
@@ -298,7 +300,7 @@ a { color: inherit; }
         <h3 class="sub">You get</h3>
         <ul>
           <li>The whole game from the 2008 free release, with the last official patch, 3.9.68.</li>
-          <li>Three official databases to choose from for each new game: the original 2001/02 data, its December 2001 update and the 2002/03 data. You can add the CM 01/02 Update Team's databases yourself.</li>
+          <li>A database for every season from 2001/02 to 2025/26, from the Choose Season screen: the official 3.9.68 data, our own Summer 2002, Summer 2004 and Summer 2006, and the CM 01/02 Update Team's databases. You can add a database folder of your own.</li>
           <li>Widescreen at 1280 × 800, in a window you can resize. The old 800 × 600 layout is one setting away.</li>
           <li>One Mac app for Apple silicon and Intel, macOS 11 or later.</li>
           <li>An installer for 64-bit Windows 10 and 11.</li>
@@ -315,47 +317,21 @@ a { color: inherit; }
   </div>
 </section>
 
-<section class="screen" id="new" aria-labelledby="new-title">
-  <div class="inner">
-    <h2 class="bar" id="new-title">New in <em>0.5.0</em></h2>
-    <div class="release">
-      <div class="panel" data-in>
-        <h3 class="sub">Added</h3>
-        <ul>
-          <li>Bosman Edition Options: change every option in the game, from Setup Game or from Game Options in the side bar.</li>
-          <li>Each player's position on the tactics screen, before and during a match.</li>
-          <li>Players who count against the foreign player limit of your next league or cup match show in light violet.</li>
-          <li>A full player search option that lists every player, also the ones your manager does not know.</li>
-          <li>Fixes for rare faults of the original game in news, transfers and squad updates.</li>
-          <li>The game no longer uses a full processor core while it waits for you.</li>
-          <li>The Database button lists the Update Team databases by season.</li>
-        </ul>
-        <ul class="later">
-          <li>Each option can be switched off in the options box or in settings.txt. The changelog on GitHub lists every change.</li>
-        </ul>
-      </div>
-      <figure class="shot wide" data-in style="margin:0">
-        <img src="assets/s3@2x.png" width="1600" height="1000" alt="The Arsenal squad screen after Pick best team: Seaman in goal, Cole, Keown, Campbell and Luzhny in defence, Vieira and Parlour in midfield, Bergkamp and Henry up front." loading="lazy">
-      </figure>
-    </div>
-  </div>
-</section>
-
 <section class="screen" id="seasons" aria-labelledby="seasons-title">
   <div class="inner">
-    <h2 class="bar" id="seasons-title">Coming in <em>0.6.0</em></h2>
-    <p class="lead" data-in>Start a game in any season from 2001/02 to 2025/26, with that season's squads and rules. Version 0.6.0 is not out yet, and it has no release date.</p>
+    <h2 class="bar" id="seasons-title">New in <em>0.6.0</em></h2>
+    <p class="lead" data-in>Start a game in any season from 2001/02 to 2025/26, with that season's squads and rules. Version 0.6.0 came out on 29 October 2026.</p>
     <div class="preview">
-      <figure class="mock" data-in>
-        <img src="assets/choose-season-2025-mockup.png" width="1280" height="800" alt="The Choose Season screen. Season tiles sit in three rows for the 2000s, 2010s and 2020s, from 2001/02 to 2025/26. 2001/02 and 2002/03 are marked Official and the others Included, and a Custom database tile ends the last row. 2025/26 is picked: December 2025, a database by the CM 01/02 Update Team. Europe: Champions League, Europa League, Conference League, each with a 36-club league phase. Starts July 2025." loading="lazy">
-        <figcaption>A mockup of the 0.6.0 Choose Season screen, with 2025/26 picked. The screen may change before the release.</figcaption>
+      <figure class="mock real" data-in>
+        <img src="assets/post-060-choose-season.png" width="800" height="600" alt="The Choose Season screen. Season tiles sit in three rows for the 2000s, 2010s and 2020s, from 2001/02 to 2025/26, each marked Included, with 2001/02 marked Official and a Custom database tile at the end. 2002/03 is picked: Summer 2002, Bosman Edition database, data from CM 02/03. Europe: Champions League with two group stages, UEFA Cup, Intertoto Cup. Starts July 2002. Changing rules is on." loading="lazy">
+        <figcaption>The Choose Season screen with 2002/03 picked, which plays our own Summer 2002 database.</figcaption>
       </figure>
       <div class="release">
         <div class="panel" data-in>
           <h3 class="sub">What it adds</h3>
           <ul class="adds">
             <li>A Choose Season screen with a tile for each season. The tile picks the database, so you never install one by hand.</li>
-            <li>A database for every season comes in the download: the CM 01/02 Update Team's databases, and our own for 2004/05 and 2006/07. Each one unpacks the first time you pick its season.</li>
+            <li>A database for every season comes in the download: the official 3.9.68 data for 2001/02, our own Summer 2002, Summer 2004 and Summer 2006 for 2002/03, 2004/05 and 2006/07, and the CM 01/02 Update Team's databases for the other seasons. Each one unpacks the first time you pick its season.</li>
             <li>The game starts in July of the season you pick. Every player has the right age for that July, and the competition history lists the real winners up to that season.</li>
             <li>Each league has that season's number of clubs, promotion and relegation places, play-offs and splits. Domestic cups have that season's format.</li>
             <li>The number of substitutes, foreign player rules, work permits and transfer windows follow the season. The bench holds at most nine players.</li>
@@ -396,9 +372,9 @@ a { color: inherit; }
           <div class="era e5"><h4>Mid 2020s<span>2024/25 on</span></h4><p>The Champions League, the Europa League and the Conference League each start with a league phase of 36 clubs.</p></div>
         </div>
       </div>
-      <figure class="mock" data-in>
-        <img src="assets/new-rules-news-mockup.png" width="1280" height="800" alt="A news item headed New rules for the 2020/21 season. It says that from 1 January 2021 players from the EU need a work permit to sign for a club in England, that the FA Cup has no replays this season, and that the League Cup semi-finals are single matches." loading="lazy">
-        <figcaption>The news item a long game shows in July 2020, from a test build. It may change before the release.</figcaption>
+      <figure class="mock real" data-in>
+        <img src="assets/post-060-new-rules-news.png" width="800" height="600" alt="A news item headed New rules for the 2004/05 season. The UEFA Cup now has a group stage of 8 groups of 5 clubs, then a round of 32. The Conference Cup is played for the first time. The First Division is now called the Football League Championship, the Second Division League One and the Third Division League Two." loading="lazy">
+        <figcaption>The news item a game that started in 2003/04 shows in July 2004.</figcaption>
       </figure>
       <div class="faq more" data-in>
         <details><summary>The European cups, year by year</summary>
@@ -417,7 +393,7 @@ a { color: inherit; }
         </details>
         <details><summary>Leagues by nation</summary>
           <ul class="adds">
-            <li>In England the Premier League drops "FA" from its name in 2007/08. A game that starts in 2019/20 plays League One with 23 clubs, as Bury was expelled.</li>
+            <li>In England the Premier League drops "FA" from its name in 2007/08. League One keeps 24 clubs in 2019/20, as Bury was expelled after the season started.</li>
             <li>The Scottish top flight splits into a top six and a bottom six after 33 matches. From 2013/14 it is the Premiership, and its 11th plays the Championship play-off winner for a place. From 2014/15 the League Two 10th plays the winner of the pyramid play-off.</li>
             <li>Belgium goes from 18 clubs to 16 with play-offs in 2009/10, back to 18 with a top four in 2020/21, and to 16 with a top six in 2023/24. The format announced for 2026/27 has 18 clubs and no play-offs.</li>
             <li>Until the 3. Liga starts with 20 clubs in 2008/09, the Regionalliga Nord and Süd are Germany's third tier. From then on the Bundesliga 16th plays the 2. Bundesliga 3rd, and the 2. Bundesliga 16th plays the 3. Liga 3rd.</li>
@@ -491,6 +467,30 @@ a { color: inherit; }
   </div>
 </section>
 
+<section class="screen" id="history" aria-labelledby="history-title">
+  <div class="inner">
+    <h2 class="bar" id="history-title">All <em>releases</em></h2>
+    <div class="release history">
+    <div class="panel" data-in>
+      <ul>
+        <li><b>0.6.0</b> (29 October 2026): any season from 2001/02 to 2025/26 with its own database, leagues, cups and rules, changing rules in a long game, Best XI with squad depth, a new Setup Game.</li>
+        <li><b>0.5.1</b> (18 October 2026): a Mac fix for saving games with Brazil's state championships.</li>
+        <li><b>0.5.0</b> (16 October 2026): Bosman Edition Options to change every option from Setup Game or Game Options, each player's position on the tactics screen, foreign players who count against the limit in light violet, a full player search, the Update Team databases listed by season, fixes for rare faults of the original in news, transfers and squad updates, and low processor use while the game waits for you.</li>
+        <li><b>0.4.0</b> (16 October 2026): Team views with best XI and squad depth, player comparison with a polygon, attribute groups, print to PDF, HD layout, the Update Team's databases.</li>
+        <li><b>0.3.1</b> (15 October 2026): the Assistant picks by the key attributes of each position and finds the best eleven as a whole.</li>
+        <li><b>0.3.0</b> (15 October 2026): Linux and Steam Deck, a database choice, the Assistant menu, holiday until next match, Fastest commentary, save names, backups, colours for condition and morale.</li>
+        <li><b>0.2.0</b> (15 October 2026): sound, space bar for Continue Game, a Back key, sharp scaling, clickable names, attribute colours, faster holidays.</li>
+        <li><b>0.1.0</b> (14 October 2026): the first release, for Mac and Windows, in widescreen or classic.</li>
+      </ul>
+      <ul class="later">
+        <li>Each option can be switched off in the options box or in settings.txt. The <a href="https://github.com/maxevans60/cm0102-bosman-edition/releases">GitHub releases</a> list every change.</li>
+      </ul>
+    </div>
+    </div>
+  </div>
+</section>
+
+
 <section class="screen" id="next" aria-labelledby="next-title">
   <div class="inner">
     <h2 class="bar" id="next-title">The road to <em>1.0</em></h2>
@@ -498,7 +498,7 @@ a { color: inherit; }
     <div class="plans" data-plans>
       <div class="panel" data-in>
         <h3 class="sub">Version 0.6.0</h3>
-        <p class="plan-note">Pick any season from 2001/02 to 2025/26 and play it with that year's leagues, cups and rules. It comes out as a beta first, so players can find what our tests miss.</p>
+        <p class="plan-note">Out now, as a pre-release, so players can find what our tests miss. Pick any season from 2001/02 to 2025/26 and play it with that year's leagues, cups and rules.</p>
         <ul>
           <li>Choose your season: every season from 2001/02 to 2025/26</li>
           <li>The game moves with the years: rules and leagues of each season</li>
@@ -611,7 +611,7 @@ a { color: inherit; }
         <p>On a Mac: <code>~/Library/Application Support/cm0102</code>. On Windows: <code>%APPDATA%\cm0102</code>. On Linux: <code>~/.local/share/cm0102</code>. A new release does not change this folder. Older copies of each save are in the <code>backups</code> folder inside it.</p></details>
       <details><summary>How do I get the 800 × 600 layout back?</summary>
         <p>Open Bosman Edition Options from Setup Game or from Game Options, and set Display mode to Classic. Then start the game again. You can also change the line in <code>settings.txt</code> in the save folder to <code>display = classic</code>.</p></details>
-      <details><summary>Which settings can I change in version 0.5.0?</summary>
+      <details><summary>Which settings can I change in version 0.6.0?</summary>
         <p>Open Bosman Edition Options from Setup Game or from Game Options in the side bar, or open <code>settings.txt</code> in the save folder. Each option has one line in the file, and a switch takes <code>on</code> or <code>off</code>. The defaults are:</p>
         <ul>
           <li><code>display = widescreen</code> draws the game at 1280 × 800, and <code>classic</code> at 800 × 600.</li>
@@ -627,7 +627,9 @@ a { color: inherit; }
           <li><code>save_backups = on</code> keeps the last three copies of each save in the <code>backups</code> folder.</li>
           <li><code>remember_window = on</code> opens the window at the size and place it had when you quit.</li>
           <li><code>condition_colours = on</code> colours condition and morale: red, amber or green.</li>
-          <li><code>database = 3.9.68</code> is the database for the next new game. <code>3.9.60</code> is the original 2001/02 data and <code>3.9.65</code> its December 2001 update. <code>folder:May 2026</code> is a folder of your own in <code>Databases</code> (see the FAQ). The Database button on the Setup Game screen changes this line.</li>
+          <li><code>database = 3.9.68</code> is the database for the next new game. <code>3.9.60</code> is the original 2001/02 data and <code>3.9.65</code> its December 2001 update. <code>folder:May 2026</code> is a folder of your own in <code>Databases</code> (see the FAQ). The Choose Season screen changes this line.</li>
+          <li><code>season = 2001/02</code> is the season of the next new game. The Choose Season screen changes this line.</li>
+          <li><code>changing_rules = on</code> changes each rule in the July it changed in real life. <code>off</code> keeps the rules of the start season for the whole game. The Changing rules button sets it for each new game.</li>
           <li><code>squad_views = on</code> adds Team views (best XI, squad depth, compare players) to the Assistant menu of every squad screen, and the polygon to the comparison screen.</li>
           <li><code>attribute_groups = on</code> shows the player profile's attributes in Technical, Mental and Physical groups.</li>
           <li><code>foreign_colours = on</code> shows in light violet the players who count against the foreign player limit of the club's next league or cup match.</li>
@@ -635,7 +637,7 @@ a { color: inherit; }
         </ul>
         <p>Prints go to the <code>Prints</code> folder as PDF files. To get the old text files, set Print To to File in the game's own options.</p></details>
       <details><summary>Is the database updated?</summary>
-        <p>You can choose. The default is the data of the last official patch, 3.9.68, which has the 2002/03 squads. The original 2001/02 data and its December 2001 update are on the Database button of the Setup Game screen. Fan databases are not included, but you can play them: copy a database of the CM 01/02 Update Team (<a href="https://champman0102.co.uk">champman0102.co.uk</a>) into a new folder in <code>Databases</code> in your save folder, for example <code>Databases/May 2026</code>. Copy every file of the database, euro.cfg included. The Database button then lists the folder by its name. The game starts in July 2001 whatever the database.</p></details>
+        <p>Yes. Each season from 2001/02 to 2025/26 has a database in the download, and the Choose Season screen starts it: the official 3.9.68 data for 2001/02, our own Summer 2002, Summer 2004 and Summer 2006, and the CM 01/02 Update Team's databases (<a href="https://champman0102.co.uk">champman0102.co.uk</a>) for the other seasons. The game starts in July of the season you pick. To play another database, copy it into a new folder in <code>Databases</code> in your save folder, for example <code>Databases/May 2026</code>, with every file, euro.cfg included. Then pick the Custom database tile and say which season it holds. The original 2001/02 data and its December 2001 update start with a <code>database = 3.9.60</code> or <code>3.9.65</code> line in <code>settings.txt</code>.</p></details>
       <details><summary>Something does not work</summary>
         <p>Open an issue on GitHub. Say which computer you use and what you clicked before the problem.</p></details>
     </div>
