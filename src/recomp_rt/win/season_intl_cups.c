@@ -4,7 +4,8 @@
  * Asian Cup of 2019 has none ("there was no third place play-off", source below). The edition table
  * (season_intl_table.c) gives the team count of each edition. The base game (season_intl_on() 0) and every
  * edition of 16 (ACN) or 12 (Asian Cup) teams take the original path: each site and wrap here gives the
- * original's value or calls the original then.
+ * original's value or calls the original then. The Asian Cup of 16 teams (2004 to 2015, 0.6.2 open item 44) has
+ * 4 groups of 4 and quarter-finals of the top two (asian16 below).
  *
  * The classes of the original (sweep-international section 2):
  * - african_nations: ctor 0x401000, vtable 0x967270. The League object is group A, stage[0..2] (+0xc, count
@@ -52,6 +53,9 @@
 #define TEAMS 24
 #define GROUPS 6
 #define KO 5                            /* knockout stage index with 24 teams */
+#define TEAMS16 16                      /* the Asian Cup of 16 teams (2004 to 2015): 4 groups, quarter-finals */
+#define GROUPS16 4
+#define KO16 3
 
 enum { ACN, ASIAN, CUPS };
 
@@ -170,12 +174,23 @@ static int cup24(uint32_t self)
     return e && e->teams == TEAMS ? c : -1;
 }
 
+/* 1 when the object is an Asian Cup of 16 teams in a season game (2004 to 2015; 0.6.2 open item 44: the
+ * original's 12 played there). Its shape is the ACN's of 16: group A, stage[0..2] groups B to D, stage[3] the
+ * quarter-finals of the top two of each group. */
+static int asian16(uint32_t self)
+{
+    if (!season_intl_on() || cup_of(self) != ASIAN) return 0;
+    const SeasonIntlEdition *e = season_intl_rule_edition(cups[ASIAN].file, year_of(self));
+    return e && e->teams == TEAMS16;
+}
+
 /* ---- Sites of seasons.py ---- */
 
 /* The team count: 16 (ACN 0x4022d3, 0x40241d) or 12 (Asian Cup 0x40fe02), and 4 times it for the arrays
  * (0x40244b, 0x40fdfe, 0x41001c). */
 uint32_t rt_intl_cup_teams(uint32_t self, uint32_t original)
 {
+    if (asian16(self)) return TEAMS16;
     return cup24(self) >= 0 ? (uint32_t)TEAMS : original;
 }
 
@@ -183,6 +198,7 @@ uint32_t rt_intl_cup_teams(uint32_t self, uint32_t original)
  * or 3 (Asian Cup 0x41009b, 0x4100af, 0x4100ce, 0x410102). */
 uint32_t rt_intl_cup_groups(uint32_t self, uint32_t original)
 {
+    if (asian16(self)) return GROUPS16;
     return cup24(self) >= 0 ? (uint32_t)GROUPS : original;
 }
 
@@ -190,6 +206,7 @@ uint32_t rt_intl_cup_groups(uint32_t self, uint32_t original)
  * Olympics (vtable 0x96e218), whose objects give the original's value. */
 uint32_t rt_intl_cup_ko(uint32_t self, uint32_t original)
 {
+    if (asian16(self)) return KO16;
     return cup24(self) >= 0 ? (uint32_t)KO : original;
 }
 
@@ -331,6 +348,18 @@ uint32_t season_intl_cup_template(uint32_t cls, void (*original)(void))
 {
     uint32_t self = cpu.ecx, sp = cpu.esp;
     int c = cup24(self), idx = (int8_t)rd8(g_mem, sp + 4u);
+    /* The Asian Cup of 16: group D (index 2) takes the template of group A, as the groups of 24 above; the
+     * quarter-finals (index 3) take the original's knockout template (index 2: quarter-final, semi-final, third
+     * place and final, 0x40edb1..0x40f113), which fits the 8 of the top two. */
+    if (cls == INTL_ASIAN && asian16(self) && idx >= -1 && idx <= KO16) {
+        int mapped = idx == KO16 ? cups[ASIAN].ko : (idx + 1) % cups[ASIAN].groups - 1;
+        uint32_t out_id = rd32(g_mem, sp + 0xcu);
+        wr8(g_mem, sp + 4u, (uint32_t)mapped);
+        original();
+        if (rt_unwinding) return cpu.eax;
+        if (idx < KO16 && mapped != idx && readable(out_id)) wr16(g_mem, out_id, (uint32_t)(idx + cups[ASIAN].id_base));
+        return cpu.eax;
+    }
     if (c < 0 || cups[c].cls != cls || idx < -1 || idx > KO) {
         original();
         return cpu.eax;
@@ -361,9 +390,10 @@ RT_WRAP(0040f8a0, asian_group_stage)
 {
     uint32_t self = cpu.ecx, index = rd32(g_mem, cpu.esp + 4u);
     o_0040f8a0();
-    if (rt_unwinding || cup24(self) != ASIAN || index != 1u) return;
+    if (rt_unwinding || index != 1u) return;
+    uint32_t last = cup24(self) == ASIAN ? KO : asian16(self) ? KO16 : 0;     /* 16 teams: group D (2) */
     Cpu after = cpu;
-    for (uint32_t k = 2; k < KO; k++) {
+    for (uint32_t k = 2; k < last; k++) {
         uint32_t a[1] = {k};
         call_this(ASIAN_GROUP_STAGE, self, 1, a);
         if (rt_unwinding) return;
@@ -403,7 +433,7 @@ static void predicted(int c, uint32_t self)
 static void predicted_wrap(void (*original)(void))
 {
     uint32_t self = cpu.ecx;
-    int c = cup24(self);
+    int c = asian16(self) ? ASIAN : cup24(self);       /* 16 teams: 1, 2, 3, 3, 5 x 4, 9 x 8 */
     if (c < 0 || !readable(rd32(g_mem, self + 8u))) {
         original();
         return;
@@ -426,11 +456,12 @@ RT_WRAP(004103a0, asian_predicted) { predicted_wrap(o_004103a0); }
  * and the knockout 5 the knockout branch. */
 static void positions_wrap(void (*original)(void))
 {
-    int c = cup24(cpu.ecx);
+    int c = cup24(cpu.ecx), ko = KO;
+    if (c < 0 && asian16(cpu.ecx)) c = ASIAN, ko = KO16;    /* 16 teams: group D and the quarter-finals 3 */
     if (c >= 0) {
         int stage = (int8_t)rd8(g_mem, cpu.esp + 8u);
-        if (stage >= cups[c].ko && stage < KO) wr8(g_mem, cpu.esp + 8u, 0);
-        else if (stage == KO) wr8(g_mem, cpu.esp + 8u, (uint32_t)cups[c].ko);
+        if (stage >= cups[c].ko && stage < ko) wr8(g_mem, cpu.esp + 8u, 0);
+        else if (stage == ko) wr8(g_mem, cpu.esp + 8u, (uint32_t)cups[c].ko);
     }
     original();
 }
@@ -576,11 +607,80 @@ static void knockout24(int c, uint32_t self)
                 year_of(self), 'A' + rank_group[0], 'A' + rank_group[1], 'A' + rank_group[2], 'A' + rank_group[3]);
 }
 
+/* The quarter-finals of the Asian Cup of 16 (0.6.2 open item 44), after the original's 0x40fa90 for 12: its
+ * list of 8 (0x40fc27..0x40fca4: winners of A, B, C, the two best thirds, runners-up of A, B, C), the template
+ * of the knockout index (0x40fcb1), the Cup_Stage of 8 (0x40fce2..0x40fd02: this, 8, list, rounds, record, template,
+ * year, knockout index, 4, id, 0x14, 0, 0, 0, 0) into stage[ko] (0x40fd1a), the frees (0x40fd1d, 0x40fd23) and
+ * the start (0x40fdc4) and +0x30 the knockout index (0x40fdd0). Here the top two of the four groups, in the pair order of the real bracket: the Cup_Stage
+ * pairs teams 0-1, 2-3 and so on and the winners in the same order (inference, see season_intl_euro.c). Sources
+ * (read 2026-10-30): https://en.wikipedia.org/wiki/2004_AFC_Asian_Cup (QF 1A-2C, 1B-2D, 1C-2A, 1D-2B; SF the
+ * winners of 1A-2C and 1B-2D, of 1D-2B and 1C-2A) and the knockout stage pages of 2007, 2011 and 2015 (QF 1A-2B,
+ * 1B-2A, 1C-2D, 1D-2C; SF the winners of 1A-2B and 1C-2D, of 1B-2A and 1D-2C). An edition after 2015 of 16 teams
+ * (changing rules off) takes the bracket of 2015. */
+static void knockout16(uint32_t self)
+{
+    static const char *const b2004[8] = {"1A", "2C", "1B", "2D", "1D", "2B", "1C", "2A"};
+    static const char *const b2007[8] = {"1A", "2B", "1C", "2D", "1B", "2A", "1D", "2C"};
+    const char *const *bracket = year_of(self) == 2004 ? b2004 : b2007;
+    uint32_t stages = rd32(g_mem, self + 0xcu);
+    if ((int)rd32(g_mem, self + 0x2cu) <= KO16 || !readable(stages)) {
+        fprintf(stderr, "recomp: season intl: asia_nations %d: %d stages, no room for the quarter-finals\n",
+                year_of(self), (int)rd32(g_mem, self + 0x2cu));
+        return;
+    }
+    uint32_t g[GROUPS16], zero[1] = {0};
+    g[0] = self;
+    for (int i = 1; i < GROUPS16; i++) g[i] = rd32(g_mem, stages + 4u * (uint32_t)(i - 1));
+    uint32_t teams = game_malloc(8u * 4u), out = game_malloc(8);
+    if (rt_unwinding) return;
+    if (!teams || !out) {
+        if (teams) game_free(teams);
+        if (out) game_free(out);
+        return;
+    }
+    for (int k = 0; k < 8; k++)
+        wr32(g_mem, teams + 4u * (uint32_t)k, table_club(g[bracket[k][1] - 'A'], bracket[k][0] - '1'));
+    uint32_t xa[4] = {KO16, out, out + 4u, 0};
+    uint32_t tmpl = vcall(self, 0x3cu, 4, xa);
+    if (rt_unwinding) return;
+    uint32_t ba[1] = {0xb2};
+    uint32_t cup = call_cdecl(GAME_NEW, 1, ba);
+    if (rt_unwinding) return;
+    if (readable(cup)) {
+        uint32_t ca[15] = {self, 8, teams, (uint32_t)(int16_t)rd16(g_mem, out), rd32(g_mem, self + 4u), tmpl,
+                           (uint32_t)year_of(self), KO16, 4, (uint32_t)(int16_t)rd16(g_mem, out + 4u), 0x14, 0, 0, 0,
+                           0};
+        cup = call_this(CUP_STAGE_NEW, cup, 15, ca);
+        if (rt_unwinding) return;
+    } else {
+        cup = 0;
+    }
+    wr32(g_mem, stages + 4u * KO16, cup);
+    game_free(teams);
+    game_free(tmpl);
+    game_free(out);
+    if (rt_unwinding) return;
+    if (!cup) {
+        fprintf(stderr, "recomp: season intl: asia_nations %d: no quarter-final stage\n", year_of(self));
+        return;
+    }
+    call_this(CUP_START, cup, 1, zero);
+    if (rt_unwinding) return;
+    wr32(g_mem, self + 0x30u, KO16);
+    if (logging()) fprintf(stderr, "recomp: season intl: asia_nations %d quarter-finals of 16 teams\n", year_of(self));
+}
+
 /* The knockout builders, thiscall (), from the stage step (ACN 0x401e94 at stage 3, site 0x401e8c; Asian Cup
  * 0x40f894 at stage 2, site 0x40f88f). */
 static void knockout_wrap(int want, void (*original)(void))
 {
     uint32_t self = cpu.ecx;
+    if (want == ASIAN && asian16(self)) {
+        knockout16(self);
+        if (rt_unwinding) return;
+        rt_ret_stdcall(cpu.eax, 0);
+        return;
+    }
     int c = cup24(self);
     if (c != want) {
         original();

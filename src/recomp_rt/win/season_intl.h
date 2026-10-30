@@ -29,13 +29,20 @@ extern const int season_intl_edition_count;
  * base game (2001/02, changing rules off) and RECOMP_SEASON_CODE=off give 0. */
 int season_intl_on(void);
 
-/* The edition of a class in a year, or NULL. */
+/* The edition of a class in a year, or NULL. After the last edition of its table a class continues on its last
+ * cycle (0.6.2 decision A): the edition of such a year is a copy of the last table edition with that year, its
+ * season and first day moved with it, no golden goal and no host (row "after-table"). The pointer of a copy stays
+ * good for the next 31 lookups. An ended class (the Confederations Cup) has none. */
 const SeasonIntlEdition *season_intl_edition(const char *file, int year);
 
-/* The first edition of a class whose season is the start season or later, or NULL. */
+/* The edition of a class in a year of the table only, or NULL: the host rows (season_intl.c), which go only to
+ * the table's years until the hosts after the table (0.6.2 slice 5). */
+const SeasonIntlEdition *season_intl_table_edition(const char *file, int year);
+
+/* The first edition of a class whose season is the start season or later, after the table too, or NULL. */
 const SeasonIntlEdition *season_intl_first(const char *file, int start_season);
 
-/* The next edition of a class after the edition year, or NULL. */
+/* The next edition of a class after the edition year, after the table too, or NULL. */
 const SeasonIntlEdition *season_intl_next(const char *file, int year);
 
 /* The calls of the code sites (tools/recomp/seasons.py). Each gives the original's value when

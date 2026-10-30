@@ -267,7 +267,7 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
     }
     int extra = 0;
     for (int y = from_season; any && y <= HOST_ROWS_LAST; y++)
-        if (!season_intl_edition("fifa_confed", y) && !row_find(rows, count, confed, y)) extra++;
+        if (!season_intl_table_edition("fifa_confed", y) && !row_find(rows, count, confed, y)) extra++;
     for (int c = 0; c < HOST_COMPS; c++) {
         uint32_t key = rd32(g_mem, host_comps[c].key);
         if (key == 0xffffffffu) continue;
@@ -294,7 +294,7 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
     }
     int used = count;
     for (int y = from_season; any && y <= HOST_ROWS_LAST; y++) {
-        if (season_intl_edition("fifa_confed", y) || row_find(rows, used, confed, y)) continue;
+        if (season_intl_table_edition("fifa_confed", y) || row_find(rows, used, confed, y)) continue;
         uint32_t row = rows + (uint32_t)used++ * ROW_SIZE;
         memcpy(g_mem + row, g_mem + any, ROW_SIZE);
         wr16(g_mem, row + ROW_YEAR, (uint16_t)y);
@@ -328,7 +328,7 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
             if (rd32(g_mem, host_comps[c].key) == rd32(g_mem, row + ROW_COMP)) file = host_comps[c].file;
         if (!file || year <= 0 || cycle <= 0) continue;
         for (int y = year + cycle; y <= HOST_ROWS_LAST; y += cycle)
-            if (season_intl_edition(file, y)) {
+            if (season_intl_table_edition(file, y)) {
                 wr8(g_mem, row + ROW_CYCLE, 0);
                 break;
             }
@@ -378,7 +378,8 @@ RT_WRAP(005fab70, host_redraw)
     int kept = 0;
     for (int i = 0; readable(rows) && i < count && kept < MAX_KEEP; i++) {
         uint32_t row = rows + (uint32_t)i * ROW_SIZE;
-        if (rd32(g_mem, row + ROW_COMP) == key && season_intl_edition("fifa_confed", (int16_t)rd16(g_mem, row + ROW_YEAR))) {
+        if (rd32(g_mem, row + ROW_COMP) == key &&
+            season_intl_table_edition("fifa_confed", (int16_t)rd16(g_mem, row + ROW_YEAR))) {
             keep_at[kept] = row + ROW_PAIRS;
             keep[kept++] = rd32(g_mem, row + ROW_PAIRS);
         }

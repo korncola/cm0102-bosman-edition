@@ -17,11 +17,17 @@ static const char *const class_files[INTL_CLASSES] = {
     "olympics",
 };
 
-/* The year that a class holds when the table has no later edition: the object waits and plays no more
- * finals (the Confederations Cup after 2017). No game reaches it.
- * TODO (slice 16 interface): idle the object with season_change_skip() in a before hook instead, once a game
- * run has tested that interface with an international class. */
-#define IDLE_YEAR 2200u
+/* The year that an ended class holds (the Confederations Cup after 2017): the object waits and plays no more
+ * finals. The same year as SEASON_CUPS_NEVER of the ended cups (season_cups.h), which the history checker reads
+ * as ended (tests/seasons/future/history_check.py, ENDED_YEAR). Up to 0.6.1 every class waited for 2200 after
+ * its table, which a game to 2300 reaches (0.6.2 open items 1, 13 and 34). */
+#define NEVER_YEAR 2999u
+
+/* The cycle of each class after the last edition of its table, in years (0.6.2 decision A: each final continues
+ * on its last cycle, with no end year; the OFC Nations Cup every 4 years from 2028, Max on 30 October 2026; the
+ * Africa Cup of Nations every 2 years, the original's step, where the table's last two editions are one year
+ * apart). 0: the class has ended (the Confederations Cup). Order of the enum of season_intl.h. */
+static const int class_cycles[INTL_CLASSES] = {4, 4, 0, 4, 2, 4, 4, 4};
 
 /* The last season with a golden goal (int-world: the 2003 Confederations Cup used it, "golden goal ceased in
  * 2004"; Q367: the silver goal of Euro 2004, season 2003/04, becomes full extra time and penalties). */
@@ -43,12 +49,58 @@ int season_intl_on(void)
     return season_code_on() && (season_start_year() != SEASON_FIRST_YEAR || season_changing_rules());
 }
 
-const SeasonIntlEdition *season_intl_edition(const char *file, int year)
+const SeasonIntlEdition *season_intl_table_edition(const char *file, int year)
 {
     for (int i = 0; i < season_intl_edition_count; i++)
         if (season_intl_editions[i].year == year && !strcmp(season_intl_editions[i].file, file))
             return &season_intl_editions[i];
     return NULL;
+}
+
+/* ---- The editions after the table (0.6.2 decision A) ---- */
+
+/* The last table edition of a class, and its cycle after the table (0 for an ended class or another file). */
+static const SeasonIntlEdition *table_last(const char *file, int *cycle)
+{
+    const SeasonIntlEdition *last = NULL;
+    for (int i = 0; i < season_intl_edition_count; i++)
+        if (!strcmp(season_intl_editions[i].file, file)) last = &season_intl_editions[i];
+    *cycle = 0;
+    for (int c = 0; last && c < INTL_CLASSES; c++)
+        if (!strcmp(class_files[c], file)) *cycle = class_cycles[c];
+    return last;
+}
+
+/* The year field of a class is a 16-bit signed word (+0x40): no edition after this year. */
+#define LAST_EDITION_YEAR 32767
+
+/* The edition of a year after the table: a copy of the last table edition (teams, first day of the year, no
+ * golden goal) on the class's cycle, with no host (the hosts after the table are slice 5). The copies live in a
+ * ring, so a pointer stays good for the next 31 calls; every caller reads it at once. */
+static const SeasonIntlEdition *continued(const char *file, int year)
+{
+    static SeasonIntlEdition ring[32];
+    static int next;
+    int cycle;
+    const SeasonIntlEdition *last = table_last(file, &cycle);
+    if (!last || cycle <= 0 || year <= last->year || year > LAST_EDITION_YEAR || (year - last->year) % cycle)
+        return NULL;
+    SeasonIntlEdition *e = &ring[next];
+    next = (next + 1) % (int)(sizeof ring / sizeof ring[0]);
+    *e = *last;
+    e->year = year;
+    e->season = year - (last->year - last->season);
+    e->start_year = year + (last->start_year - last->year);
+    e->golden = 0;
+    e->hosts = "";
+    e->row = "after-table";
+    return e;
+}
+
+const SeasonIntlEdition *season_intl_edition(const char *file, int year)
+{
+    const SeasonIntlEdition *e = season_intl_table_edition(file, year);
+    return e ? e : continued(file, year);
 }
 
 /* The table is sorted by file, then year (make_intl.py). */
@@ -57,7 +109,13 @@ const SeasonIntlEdition *season_intl_first(const char *file, int start_season)
     for (int i = 0; i < season_intl_edition_count; i++)
         if (!strcmp(season_intl_editions[i].file, file) && season_intl_editions[i].season >= start_season)
             return &season_intl_editions[i];
-    return NULL;
+    int cycle;
+    const SeasonIntlEdition *last = table_last(file, &cycle);
+    if (!last || cycle <= 0) return NULL;
+    int k = (start_season - last->season + cycle - 1) / cycle;      /* start_season > last->season here */
+    if (k < 1) k = 1;
+    long year = (long)last->year + (long)k * cycle;
+    return year <= LAST_EDITION_YEAR ? continued(file, (int)year) : NULL;
 }
 
 const SeasonIntlEdition *season_intl_next(const char *file, int year)
@@ -65,7 +123,12 @@ const SeasonIntlEdition *season_intl_next(const char *file, int year)
     for (int i = 0; i < season_intl_edition_count; i++)
         if (!strcmp(season_intl_editions[i].file, file) && season_intl_editions[i].year > year)
             return &season_intl_editions[i];
-    return NULL;
+    int cycle;
+    const SeasonIntlEdition *last = table_last(file, &cycle);
+    if (!last || cycle <= 0) return NULL;
+    long k = year < last->year ? 1 : ((long)year - last->year) / cycle + 1;
+    long next = (long)last->year + k * cycle;
+    return next <= LAST_EDITION_YEAR ? continued(file, (int)next) : NULL;
 }
 
 static const char *class_file(uint32_t cls)
@@ -82,7 +145,7 @@ uint32_t rt_intl_first_year(uint32_t cls, uint32_t year)
 {
     if (!season_intl_on() || season_start_year() == SEASON_FIRST_YEAR) return year;
     const SeasonIntlEdition *e = season_intl_first(class_file(cls), season_start_year());
-    uint32_t now = e ? (uint32_t)e->year : IDLE_YEAR;
+    uint32_t now = e ? (uint32_t)e->year : NEVER_YEAR;
     if (logging())
         fprintf(stderr, "recomp: season intl: %s first edition %u (the original %u)\n", class_file(cls), now,
                 year & 0xffffu);
@@ -90,15 +153,15 @@ uint32_t rt_intl_first_year(uint32_t cls, uint32_t year)
 }
 
 /* start_new_season of a class: the original adds its step. With changing rules on, the next edition of the
- * table. With changing rules off, the rules of the start season stay: the original's step from the first
- * edition. After the last edition of the table, the object waits (Q248: the rules stay; a competition that
- * ended does not come back). */
+ * table, and after the table the next edition on the class's last cycle (0.6.2 decision A). With changing rules
+ * off, the rules of the start season stay: the original's step from the first edition. An ended class waits for
+ * NEVER_YEAR (Q248: a competition that ended does not come back). */
 uint32_t rt_intl_next_year(uint32_t cls, uint32_t year, uint32_t step)
 {
     uint32_t old = year & 0xffffu;
     if (!season_intl_on() || !season_changing_rules()) return old + step;
     const SeasonIntlEdition *e = season_intl_next(class_file(cls), (int)(int16_t)old);
-    uint32_t now = e ? (uint32_t)e->year : (old >= IDLE_YEAR ? old : IDLE_YEAR);
+    uint32_t now = e ? (uint32_t)e->year : (old >= NEVER_YEAR ? old : NEVER_YEAR);
     if (logging())
         fprintf(stderr, "recomp: season intl: %s next edition %u after %u (the original %u)\n", class_file(cls),
                 now, old, old + step);
