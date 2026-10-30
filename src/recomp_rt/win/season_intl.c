@@ -74,7 +74,11 @@ static const struct { const char *file; uint32_t key; } host_comps[] = {
 /* The last year of the host rows that hosts_apply writes and checks: 4 years after the last rules row, as up to
  * 0.6.1. The hosts after the table are slice 5 of 0.6.2. */
 #define HOST_ROWS_LAST (SEASON_RULE_LAST + 4)
-#define CONFED_ANY_YEAR 2200            /* the year that the Confederations Cup row of every year moves to */
+/* The year that the Confederations Cup row of every year moves to: the never year of the ended class
+ * (season_intl_rules.c NEVER_YEAR, 0.6.2 open item 13). Up to 0.6.1 it was 2200, which a game to 2300 reaches.
+ * hosts_apply runs only at a new game and at the first season change of a 2001 game, so a row that a save of 0.6.1
+ * holds at 2200 stays there (slice 4b). */
+#define CONFED_ANY_YEAR 2999
 
 static int logging(void)
 {
@@ -256,7 +260,7 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
     int count = (int16_t)rd16(g_mem, self + 4);
     if (!readable(rows) || count <= 0 || count > 1000) return;
     /* The Confederations Cup row of every year (year 0, host redrawn by 0x5fab70) would come first in find_hosts,
-     * before the rows of the table: it leaves for a year that no game reaches (2200, below). In its place each
+     * before the rows of the table: it leaves for a year that no game reaches (CONFED_ANY_YEAR). In its place each
      * year from the start that has no edition in the table gets its own copy, so find_hosts still finds a host
      * there: with changing rules off the original holds the cup every two years after 2017 (fifa_confed..cpp 870,
      * 0x58c7b5, in a 2016 start on 5 January 2019). */

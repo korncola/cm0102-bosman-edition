@@ -174,14 +174,23 @@ static int cup24(uint32_t self)
     return e && e->teams == TEAMS ? c : -1;
 }
 
-/* 1 when the object is an Asian Cup of 16 teams in a season game (2004 to 2015; 0.6.2 open item 44: the
- * original's 12 played there). Its shape is the ACN's of 16: group A, stage[0..2] groups B to D, stage[3] the
+/* 1 when the edition at +0x40 is an Asian Cup of 16 teams in a season game (2004 to 2015; 0.6.2 open item 44:
+ * the original's 12 played there). Its shape is the ACN's of 16: group A, stage[0..2] groups B to D, stage[3] the
  * quarter-finals of the top two of each group. */
-static int asian16(uint32_t self)
+static int asian16_edition(uint32_t self)
 {
     if (!season_intl_on() || cup_of(self) != ASIAN) return 0;
     const SeasonIntlEdition *e = season_intl_rule_edition(cups[ASIAN].file, year_of(self));
     return e && e->teams == TEAMS16;
+}
+
+/* An object of that edition with its array of 4 stages (+0x2c, made by the ctor or by rt_intl_cup_stages). A
+ * save of 0.6.1 or older holds such an edition in the original's shape of 3 stages (the League load makes the
+ * array from the saved count, 0x688e11, 0x688e53): it plays that edition with 12 teams, and the next edition gets
+ * the new array at its start_new_season. */
+static int asian16(uint32_t self)
+{
+    return asian16_edition(self) && rd32(g_mem, self + 0x2cu) == KO16 + 1u;
 }
 
 /* ---- Sites of seasons.py ---- */
@@ -210,6 +219,13 @@ uint32_t rt_intl_cup_ko(uint32_t self, uint32_t original)
     return cup24(self) >= 0 ? (uint32_t)KO : original;
 }
 
+/* The Asian Cup ctor 0x40e860 (0x40E90A, 0x40E923): the stage array is made there, so the edition decides. */
+uint32_t rt_intl_cup_ko_ctor(uint32_t self, uint32_t original)
+{
+    if (asian16_edition(self)) return KO16;
+    return rt_intl_cup_ko(self, original);
+}
+
 /* start_new_season (ACN 0x401d20, Asian Cup 0x40f720) keeps the stage array of the ctor. After the step of the
  * year (0x401d80, 0x40f780) an edition of another size gets a new array (0x401d85, 0x40f785). A save keeps
  * the count: the League load makes the array from it (0x688e11, 0x688e53). */
@@ -217,7 +233,9 @@ void rt_intl_cup_stages(uint32_t self)
 {
     int c = cup_of(self);
     if (!season_intl_on() || c < 0) return;
-    uint32_t want = rt_intl_cup_ko(self, (uint32_t)cups[c].ko) + 1u, have = rd32(g_mem, self + 0x2cu);
+    uint32_t want = (c == ASIAN ? rt_intl_cup_ko_ctor(self, (uint32_t)cups[c].ko)
+                                : rt_intl_cup_ko(self, (uint32_t)cups[c].ko)) + 1u,
+             have = rd32(g_mem, self + 0x2cu);
     if (have == want) return;
     uint32_t stages = game_malloc(4u * want);
     if (rt_unwinding || !stages) return;

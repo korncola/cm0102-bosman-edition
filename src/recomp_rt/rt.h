@@ -432,6 +432,7 @@ uint32_t rt_wcq26_europe_index(uint32_t self, uint32_t original);
 uint32_t rt_intl_cup_teams(uint32_t self, uint32_t original);
 uint32_t rt_intl_cup_groups(uint32_t self, uint32_t original);
 uint32_t rt_intl_cup_ko(uint32_t self, uint32_t original);
+uint32_t rt_intl_cup_ko_ctor(uint32_t self, uint32_t original);     /* the Asian Cup ctor: by the edition only */
 void rt_intl_cup_stages(uint32_t self);
 /* The Copa America of 16 teams (win/season_intl_copa.c): the knockout stage index (2), the group count (3) and a
  * new stage array after the step of start_new_season. Each gives the original's value for an edition of 12

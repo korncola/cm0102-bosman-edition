@@ -217,8 +217,8 @@ PATCHES = {
     0x4024FD: (0x4, "rt_intl_cup_groups(esi, 4u)"),                 # ACN draw: random place in a pot, again
     0x402531: (0x4, "rt_intl_cup_groups(esi, 4u)"),                 # ACN draw: next pot
     0x402772: (0x3, "rt_intl_cup_ko(esi, 3u)"),                     # ACN update_for_date 0x4025a0: group stages
-    0x40E90A: (0xC, "(4u * (rt_intl_cup_ko(esi, 2u) + 1u))"),       # Asian Cup ctor: malloc of the stage array
-    0x40E923: (0x3, "(rt_intl_cup_ko(esi, 2u) + 1u)"),              # Asian Cup ctor: stage count +0x2c
+    0x40E90A: (0xC, "(4u * (rt_intl_cup_ko_ctor(esi, 2u) + 1u))"),  # Asian Cup ctor: malloc of the stage array
+    0x40E923: (0x3, "(rt_intl_cup_ko_ctor(esi, 2u) + 1u)"),         # Asian Cup ctor: stage count +0x2c
     0x40F593: (0x8, "(4u * rt_intl_cup_ko(ecx, 2u))"),              # Asian Cup vtable +0x30: stage[ko]
     0x40F5A5: (0x2, "rt_intl_cup_ko(ecx, 2u)"),                     # Asian Cup stage news (vtable +0x44)
     0x40F627: (0x8, "(4u * rt_intl_cup_ko(esi, 2u))"),              # Asian Cup stage news: round record of stage[ko]
