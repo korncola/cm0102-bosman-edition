@@ -122,6 +122,8 @@ def settings(user, rules, database):
     if database:
         cdr.copy_data(database, os.path.join(user, "Databases", os.path.basename(database)))
         lines.append("database = folder:" + os.path.basename(database))
+    else:
+        lines.append("database = 3.9.68")
     with open(os.path.join(user, "settings.txt"), "w") as f:
         f.write("\n".join(lines) + "\n")
 

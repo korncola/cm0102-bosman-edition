@@ -766,7 +766,7 @@ def run(program, game, last, year, database, nations, extra, keep, timeout, opti
     user, home, shots = (os.path.join(work, d) for d in ("user", "home", "shots"))
     for d in (user, home, shots):
         os.makedirs(d)
-    options = {"display": "classic", "changing_rules": "off", "faster_days": "on"}
+    options = {"display": "classic", "changing_rules": "off", "faster_days": "on", "database": "3.9.68"}
     options.update(options_more or {})
     env_extra = dict(env_more or {})
     # Slice 20: Spain and Portugal sit below the 16 rows of the Select League(s) screen, so their extra division

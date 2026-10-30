@@ -9,6 +9,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <shlobj.h>
+#include <shellapi.h>
 
 #include <errno.h>
 #include <stdarg.h>
@@ -424,4 +425,16 @@ int host_pick_folder(const char *title, char *out, size_t room)
     size_t n = strlen(out);
     while (n > 3 && out[n - 1] == '/') out[--n] = 0;
     return 1;
+}
+
+/* Open folder: the shell's "open" verb on the folder, which opens it in an Explorer window. Explorer wants a
+ * backslash between the parts. ShellExecuteW gives a value above 32 on success. */
+int host_open_folder(const char *path)
+{
+    wchar_t w[MAX_PATH * 4];
+    if (!to_wide(path, w, MAX_PATH * 4)) return 0;
+    for (wchar_t *c = w; *c; c++) if (*c == L'/') *c = L'\\';
+    DWORD a = GetFileAttributesW(w);
+    if (a == INVALID_FILE_ATTRIBUTES || !(a & FILE_ATTRIBUTE_DIRECTORY)) return 0;
+    return (INT_PTR)ShellExecuteW(NULL, L"open", w, NULL, NULL, SW_SHOWNORMAL) > 32;
 }

@@ -40,7 +40,11 @@
  * save_folder: the Change button of its row opens the computer's own folder picker (host_pick_folder, Q419)
  * and writes the choice to settings.txt; the row then shows the new folder, and the game uses it at the next
  * start. The test variable RECOMP_PICK_FOLDER gives the answer of the picker without a window. When
- * settings.txt cannot be written, the option keeps its old value and its row shows a note.
+ * settings.txt cannot be written, the option keeps its old value and its row shows a note. The Open folder button
+ * of the row opens the folder in the computer's file manager (host_open_folder, 0.6.1 item 5: players could not
+ * find their saves), and a line under the row shows the whole path, with "\" between the parts on Windows. Both
+ * use the folder of the next start when the player chose one in this run. Load Game has the same button
+ * (file_dialog_build below).
  *
  * Same game (Q152): the box makes its scratch block when it opens the first time, after a click of the
  * player. The side bar item makes its text block at the first side bar build of each game, so each run has
@@ -185,6 +189,7 @@ static int test_asked;              /* the connection test started while this bo
 static int test_built;              /* the box was built while the test ran */
 static char kick_name[64];
 static int failed_row = -1;         /* the row whose last value could not be written to settings.txt */
+static int open_failed;             /* the last Open folder of the box could not start the file manager */
 static char picked[1100];           /* the save folder chosen in this run, for the next start */
 
 static uint32_t call_this(uint32_t fn, uint32_t self, int n, const uint32_t *args)
@@ -288,18 +293,25 @@ static void fit_front(const char *s, int width, char *out, size_t room)
     else snprintf(out, room, "...%s", s + n - (fit - 3));
 }
 
-/* The folder of the saved games, with the home folder as "~", in code page 1252: the folder of the next start
- * when the player chose another one in this run, else the folder in use. */
+/* The folder of the saved games: the folder of the next start when the player chose another one in this run, else
+ * the folder in use. */
+static const char *shown_folder(void) { return picked[0] ? picked : win_save_folder(); }
+
+/* The whole path of that folder in code page 1252, as the system writes it: "\" between the parts on Windows. */
 static void folder_text(char *out, size_t room)
 {
-    char path[1100], home[1024];
-    const char *dir = picked[0] ? picked : win_save_folder();
-    size_t hl = host_home_dir(home, sizeof home) ? strlen(home) : 0;
-    if (hl && !strncmp(dir, home, hl) && (dir[hl] == '/' || dir[hl] == '\\' || !dir[hl]))
-        snprintf(path, sizeof path, "~%s", dir + hl);
-    else
-        snprintf(path, sizeof path, "%s", dir);
+    char path[1100];
+    snprintf(path, sizeof path, "%s", shown_folder());
+    if (HOST_FOLDS_CASE) for (char *c = path; *c; c++) if (*c == '/') *c = '\\';
     dbfolders_label(path, out, room);
+}
+
+/* Opens the save folder in the file manager. 1 when the file manager started. */
+static int open_save_folder(const char *dir)
+{
+    int ok = host_open_folder(dir);
+    fprintf(stderr, "recomp: open folder %s: %s\n", dir, ok ? "started" : "failed");
+    return ok;
 }
 
 /* The index of the current value of a row: 0 or 1. */
@@ -314,7 +326,7 @@ static int current_index(const Row *r)
  * Settings: 3, 1, 1, 1, 1 at 0x8239ad). A switch row has two values, so its note starts in the third value
  * column. */
 static const uint8_t weights_two[] = {38, 17, 17, 48};
-static const uint8_t weights_path[] = {38, 44, 15, 28};
+static const uint8_t weights_path[] = {38, 17, 22, 43};
 #define ROW_X1 160
 #define ROW_X2 729
 
@@ -328,12 +340,6 @@ static int column_x(const uint8_t *weights, int columns, int c)
 }
 
 static int last_column_x(const uint8_t *weights, int columns) { return column_x(weights, columns, columns - 1); }
-
-/* The room of column c for a text, in screen pixels, with a margin for the frame. */
-static int column_px(const uint8_t *weights, int columns, int c)
-{
-    return (column_x(weights, columns, c + 1) - column_x(weights, columns, c)) * (int)rt_screen_w / 800 - 12;
-}
 
 /* The note of a row in the last column, in the small font. A "\n" splits it into two lines, for the narrow
  * note columns of classic mode: a label shows one line only. */
@@ -358,13 +364,17 @@ static void build_row(const Row *r, int index, int y1, int y2, uint32_t green, u
     if (r->kind == ROW_PATH) {
         int a = area(ROW_X1, y1, ROW_X2, y2, 4, weights_path, 1, 0);
         plain(a, 0, r->label, 3, light);
+        choice(a, 1, "Change", VALUE_ID, (uint32_t)index * 16u, green);
+        choice(a, 2, "Open folder", VALUE_ID, (uint32_t)index * 16u + 1u, green);
+        const char *n = index == failed_row ? "Not saved: settings.txt\ncannot be written"
+                        : open_failed       ? "The folder could not\nbe opened"
+                                            : r->note;
+        note(n, weights_path, 4, y1, y2, light);
+        /* The whole path on a line under the row, from the label's left edge to the box's right edge. */
         char folder[1100], path[1104];
         folder_text(folder, sizeof folder);
-        fit_front(folder, column_px(weights_path, 4, 1), path, sizeof path);
-        plain(a, 1, path, 2, colour16(TEXT_YELLOW));
-        choice(a, 2, "Change", VALUE_ID, (uint32_t)index * 16u, green);
-        note(index == failed_row ? "Not saved: settings.txt\ncannot be written" : r->note, weights_path, 4, y1, y2,
-             light);
+        fit_front(folder, (ROW_X2 - ROW_X1 - 8) * (int)rt_screen_w / 800, path, sizeof path);
+        box_text(ROW_X1 + 4, y2 + 1, ROW_X2, y2 + 19, 1, 0, 1, 2, colour16(TEXT_YELLOW), path);
         return;
     }
     int cur = current_index(r);
@@ -610,6 +620,11 @@ static void pick_save_folder(int index)
 static void apply(const Row *r, int index, int value)
 {
     if (r->kind == ROW_PATH) {
+        if (value == 1) {
+            open_failed = !open_save_folder(shown_folder());
+            return;
+        }
+        open_failed = 0;
         pick_save_folder(index);
         return;
     }
@@ -678,6 +693,59 @@ static void options_input(void)
     rt_ret_cdecl(r);
 }
 
+/* The Open folder button of Load Game (0.6.1 item 5). Load Game is the original's file dialog: open_file_dialog
+ * 0x58f500 pushes the build 0x58f7c0 and the input 0x58ff80 and keeps its arguments in node slots, the mode in
+ * slot 2 (0x58f606) and the routine of Ok in slot 5 (0x58f647). Restore Saved Game (start screen, 0x81ca9a) and
+ * Restore Network Game (0x81f837) open it with mode 0 and the load routine 0x838e10; Save Game has mode 1, Delete
+ * Saved Game mode 2. The build lays out the File row (190, 195)-(700, 231), the list of six saves (190, 234)-(700,
+ * 510) and the row of Cancel, Info and Ok (100, 555)-(790, 590), so the button goes in the free space under the
+ * list, at its left edge, in the style of Cancel (0x58fd46). The text goes through the game's own text buffer
+ * 0xde1f64, as the build's own buttons do (0x58fd09): the create function copies it, and the button needs no
+ * block of its own (Q152: nothing is allocated before a load). The input runs the original unless the widget is
+ * the button. */
+#define FILE_DIALOG_MODE_SLOT 2
+#define FILE_DIALOG_OK_SLOT 5
+#define LOAD_ROUTINE 0x838e10u
+#define BUTTON_TEXT_BUFFER 0xde1f64u
+#define LOAD_OPEN_ID 0x7d3du            /* an id that the original does not use */
+
+static int is_load_dialog(void)
+{
+    return node_slot(FILE_DIALOG_MODE_SLOT) == 0 && node_slot(FILE_DIALOG_OK_SLOT) == LOAD_ROUTINE;
+}
+
+void o_0058f7c0(void);
+void o_0058ff80(void);
+
+RT_WRAP(0058f7c0, file_dialog_build)
+{
+    o_0058f7c0();
+    if (rt_unwinding || !is_load_dialog()) return;
+    Cpu saved = cpu;
+    int a = area(190, 517, 360, 547, 1, NULL, 1, 0);
+    win_put_str(BUTTON_TEXT_BUFFER, "Open folder", 0x40);
+    uint32_t b[11] = {(uint32_t)a, 0, 0, 0x30, colour16(BUTTON_COLOUR), 0xc, 3, colour16(BUTTON_TEXT),
+                      BUTTON_TEXT_BUFFER, LOAD_OPEN_ID, 0};
+    call_this(CELL_BUTTON, SCREENS, 11, b);
+    cpu = saved;
+}
+
+static uint32_t load_handled_press = 0xffffffffu;
+
+RT_WRAP(0058ff80, file_dialog_input)
+{
+    int16_t w = (int16_t)rt_arg(0);
+    if (w >= 0 && w < 1200 && rd16(g_mem, display() + WIDGETS + 8 + (uint32_t)w * WIDGET_SIZE) == LOAD_OPEN_ID) {
+        if (win_press_count() != load_handled_press) {     /* a held button repeats: one press, one window */
+            load_handled_press = win_press_count();
+            open_save_folder(win_save_folder());
+        }
+        rt_ret_cdecl(0);
+        return;
+    }
+    o_0058ff80();
+}
+
 uint32_t options_screen_build_fn(void) { return rt_host_fn("options_build", options_build); }
 
 int options_screen_open(int from)
@@ -691,6 +759,7 @@ int options_screen_open(int from)
     set_slot(1, (uint32_t)from);
     failed_row = -1;
     test_asked = test_built = 0;
+    open_failed = 0;
     handled_press = win_press_count();              /* the press that opened the box does not click in it */
     fprintf(stderr, "recomp: options box opened from %s\n", from == 1 ? "the start screen" : "the side bar");
     return 1;

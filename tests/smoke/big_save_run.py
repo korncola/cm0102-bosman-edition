@@ -101,7 +101,7 @@ def play(program, game, run, steps, days, save=None, fillers=(), again=False, se
     if save:
         shutil.copyfile(save, os.path.join(user, os.path.basename(save)))
     with open(os.path.join(user, "settings.txt"), "w") as f:
-        f.write("display = classic\n" + settings)
+        f.write("display = classic\ndatabase = 3.9.68\n" + settings)
     env = dict(os.environ, HOME=home, SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy", RECOMP_NO_BOX="1",
                RECOMP_USER_DIR=user, RECOMP_FIXED_CLOCK="1", RECOMP_SAVE_AFTER_DAYS=str(days),
                RECOMP_SCRIPT="; ".join(smoke_run.scaled_steps("classic", shots, steps + ["3000000 quit"])))

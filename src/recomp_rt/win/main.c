@@ -11,6 +11,7 @@
  * (user32.c), RECOMP_NO_BOX=1 (message boxes only on stderr), RECOMP_USER_DIR (another user folder,
  * for test runs). */
 #include "win.h"
+#include "qsort6.h"
 #include "host.h"
 #include "season.h"
 #include "season_rules.h"
@@ -177,6 +178,7 @@ int main(int argc, char **argv)
     cpu.esp = GAME_STACK_TOP;
     cpu.esp -= 4;
     wr32(g_mem, cpu.esp, RT_RETURN_ADDR);
+    if (getenv("RECOMP_QSORT_TEST")) return qsort6_self_test();     /* crt.c */
     f_00947a13();
     fprintf(stderr, "cm0102_recomp: the entry point returned %u\n", cpu.eax);
     at_end();

@@ -139,11 +139,12 @@ INSNS[0x905A4C] = ("jne 0x905c21",
 # no region object (je 0x7afe6b at 0x7afc8d), another region (jne 0x7afe6b at 0x7afc9d), and all four tests
 # false (je 0x7afcf3 at 0x7afcdf, where ebx stays 0). Accept = go to 0x7afcee (ebx = 1). The screen keeps the
 # count of the list in 16 bits, so rt_full_player_search(ebp) is 0 once the list (count at ebp+0x1f6) holds
-# 32767 players. The option is read at run time (playersearch.c).
-_FPS = "if (%s) { if (rt_full_player_search(ebp)) goto L_7afcee; goto L_7afe6b; }"
+# 32767 players. The option is read at run time (playersearch.c). esi is the player under test: the extra players
+# are marked, so that the search does not run their daily fitness update (playersearch.c, 0.6.1).
+_FPS = "if (%s) { if (rt_full_player_search(ebp, esi)) goto L_7afcee; goto L_7afe6b; }"
 INSNS[0x7AFC8D] = ("je 0x7afe6b", _FPS % "cc_e(F)")
 INSNS[0x7AFC9D] = ("jne 0x7afe6b", _FPS % "!cc_e(F)")
-INSNS[0x7AFCDF] = ("je 0x7afcf3", "if (cc_e(F)) { if (rt_full_player_search(ebp)) ebx = 1; goto L_7afcf3; }")
+INSNS[0x7AFCDF] = ("je 0x7afcf3", "if (cc_e(F)) { if (rt_full_player_search(ebp, esi)) ebx = 1; goto L_7afcf3; }")
 # The limit (forum report of 2026-10-21, playersearch.c). The screen counts the players it shows in 16 bits, and
 # known players and scout lists still join after the extra ones stop, so a full list went above 32767 and the
 # screen said "1 player found (N filtered out)". The builder's reset of the list (0x7afbb3) resets the record of

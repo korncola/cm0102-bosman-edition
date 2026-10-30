@@ -26,8 +26,11 @@ static char *text;                 /* the file, with a NUL at the end of each fi
 static SeasonRule *rows;
 static int nrows;
 
+static void drop_index(void);
+
 static void drop(void)
 {
+    drop_index();
     free(text);
     free(rows);
     text = NULL;
@@ -234,10 +237,119 @@ static int new_file(const SeasonRule *r, const char *file)
     return !*p && !*f;
 }
 
-const SeasonRule *season_rules_find(int season, const char *file, int n)
+const SeasonRule *season_rules_find_scan(int season, const char *file, int n)
 {
     for (int i = 0; i < nrows; i++)
         if (rows[i].season == season && (has_file(rows[i].comp_file, file) || new_file(&rows[i], file)) && n-- == 0)
             return &rows[i];
     return NULL;
+}
+
+/* 0.6.1: an index for season_rules_find, made at its first call after a load. The day code asks for the
+ * rows of each competition many times a day, and the scan of every row with its file lists took about a
+ * tenth of "Initialising Leagues" with all nations (docs/research/2026-10-29-new-game-speed.md). A key is
+ * a season and a file, one of the comp_file list of a row or the new_ file of a new competition; its rows
+ * are in table order, as the scan finds them. tests/seasons/test_season_rules.c compares the two. */
+typedef struct {
+    int season;
+    char *file;                    /* NULL: a free slot */
+    int *rows, n, room;
+} FindKey;
+
+static FindKey *keys;
+static uint32_t key_slots;         /* a power of 2, at least twice the keys */
+static int index_made;
+
+static void drop_index(void)
+{
+    for (uint32_t i = 0; i < key_slots; i++) {
+        free(keys[i].file);
+        free(keys[i].rows);
+    }
+    free(keys);
+    keys = NULL;
+    key_slots = 0;
+    index_made = 0;
+}
+
+static uint32_t key_hash(int season, const char *file, size_t len)
+{
+    uint32_t h = 2166136261u ^ (uint32_t)season;
+    for (size_t i = 0; i < len; i++) h = (h ^ (uint8_t)file[i]) * 16777619u;
+    return h;
+}
+
+static FindKey *key_slot(int season, const char *file, size_t len)
+{
+    for (uint32_t i = key_hash(season, file, len) & (key_slots - 1); ; i = (i + 1) & (key_slots - 1)) {
+        FindKey *k = &keys[i];
+        if (!k->file || (k->season == season && strlen(k->file) == len && !memcmp(k->file, file, len))) return k;
+    }
+}
+
+static int key_add(int season, const char *file, size_t len, int row)
+{
+    FindKey *k = key_slot(season, file, len);
+    if (!k->file) {
+        if (!(k->file = malloc(len + 1))) return 0;
+        memcpy(k->file, file, len);
+        k->file[len] = 0;
+        k->season = season;
+    }
+    if (k->n && k->rows[k->n - 1] == row) return 1;           /* the same file twice in one list */
+    if (k->n == k->room) {
+        int room = k->room ? 2 * k->room : 4;
+        int *more = realloc(k->rows, (size_t)room * sizeof *more);
+        if (!more) return 0;
+        k->rows = more;
+        k->room = room;
+    }
+    k->rows[k->n++] = row;
+    return 1;
+}
+
+static int make_index(void)
+{
+    index_made = 1;
+    uint32_t want = 0;
+    for (int i = 0; i < nrows; i++) {
+        want += 2;
+        for (const char *p = rows[i].comp_file; (p = strchr(p, ';')); p++) want++;
+    }
+    for (key_slots = 64; key_slots < 2 * (want + (uint32_t)nrows); key_slots *= 2) {}
+    if (!(keys = calloc(key_slots, sizeof *keys))) { key_slots = 0; return 0; }
+    for (int i = 0; i < nrows; i++) {
+        const SeasonRule *r = &rows[i];
+        for (const char *p = r->comp_file; *p; ) {
+            const char *e = strchr(p, ';');
+            size_t len = e ? (size_t)(e - p) : strlen(p);
+            if (!key_add(r->season, p, len, i)) goto fail;
+            if (!e) break;
+            p = e + 1;
+        }
+        if (!strcmp(r->comp_file, "new") && r->comp) {
+            size_t len = 4;
+            char *name = malloc(strlen(r->comp) + 5);
+            if (!name) goto fail;
+            memcpy(name, "new_", 4);
+            for (const char *c = r->comp; *c; c++)
+                name[len++] = *c == ' ' ? '_' : (*c >= 'A' && *c <= 'Z') ? (char)(*c - 'A' + 'a') : *c;
+            int ok = key_add(r->season, name, len, i);
+            free(name);
+            if (!ok) goto fail;
+        }
+    }
+    return 1;
+fail:
+    drop_index();
+    index_made = 1;                /* out of memory: the scan */
+    return 0;
+}
+
+const SeasonRule *season_rules_find(int season, const char *file, int n)
+{
+    if (!index_made) make_index();
+    if (!keys) return season_rules_find_scan(season, file, n);
+    FindKey *k = key_slot(season, file, strlen(file));
+    return k->file && n >= 0 && n < k->n ? &rows[k->rows[n]] : NULL;
 }

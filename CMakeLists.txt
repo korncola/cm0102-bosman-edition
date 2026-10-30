@@ -132,6 +132,9 @@ if(NOT WIN32)
         src/recomp_rt/host/posix.c)
     target_include_directories(dbfolders_test PRIVATE src/recomp_rt/win)
     add_test(NAME dbfolders COMMAND dbfolders_test)
+    # The Open folder buttons (0.6.1 item 5): host_open_folder starts the file manager with the folder.
+    add_executable(host_folder_test tests/host/test_open_folder.c src/recomp_rt/host/posix.c)
+    add_test(NAME host_folder COMMAND host_folder_test)
     # Season databases in the download (0.6.0 slice 14): zip reader, SHA-256, recognition, first pick.
     add_executable(seasons_db_test tests/seasons/test_seasons_db.c src/recomp_rt/win/seasons_db.c
         src/recomp_rt/win/seasons_zip.c src/recomp_rt/win/seasons_table.c src/recomp_rt/win/dbfolders.c
@@ -187,6 +190,10 @@ if(NOT WIN32)
     target_include_directories(link_pass_test PRIVATE src/recomp_rt)
     target_link_libraries(link_pass_test PRIVATE Threads::Threads)
     add_test(NAME link_pass COMMAND link_pass_test)
+    # The zone of the heap for the player search (0.6.1, playersearch.c).
+    add_executable(heap_zone_test tests/recomp/test_heap_zone.c src/recomp_rt/heap.c)
+    target_include_directories(heap_zone_test PRIVATE src/recomp_rt)
+    add_test(NAME heap_zone COMMAND heap_zone_test)
     add_test(NAME seasons_table COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_db_table.py" --check)
     add_test(NAME season_credits COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/check_credits.py")
     # Right ages and dates in every season (0.6.0 slice 11b): the C table matches the date shift tables.
@@ -244,6 +251,8 @@ if(NOT WIN32)
         "${CMAKE_SOURCE_DIR}/src/recomp_rt/win")
     # The names table and the club moves table (0.6.0 slice 15): the tools read every part and stop on a bad row.
     add_test(NAME season_names_table COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_names.py" --check)
+    # 0.6.1 item 2: the abbreviation column of the names table (Select Team shows it).
+    add_test(NAME season_names_abbr COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/names_abbr_check.py")
     add_test(NAME season_clubs_table COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_clubs.py" --check)
     # The club ids of the clubs files (O151): each row names a club record of its season's database. The check reads
     # the databases of test-fixtures and skips (code 77) where they are missing.
@@ -296,12 +305,28 @@ if(NOT WIN32)
     target_include_directories(season_subs_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_subs COMMAND season_subs_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv")
     set_tests_properties(season_subs PROPERTIES FIXTURES_REQUIRED rules_table)
+    # The whole season part of a save (0.6.1 items 4 and 10): its write keeps inside its size.
+    add_executable(season_part_test tests/seasons/test_season_part.c
+        src/recomp_rt/win/season_change.c src/recomp_rt/win/season_friendly_dates.c)
+    target_include_directories(season_part_test PRIVATE src/recomp_rt/win src/recomp_rt)
+    add_test(NAME season_part COMMAND season_part_test)
+    # The key competition check of a load (0.6.1 item 10): the names of the player's cm0102.exe and its Data.
+    add_executable(season_load_check_test tests/seasons/test_season_load_check.c
+        src/recomp_rt/win/season_load_check.c src/cm3/key_comp_names.c src/cm3/key_ids_table.c)
+    target_include_directories(season_load_check_test PRIVATE src/recomp_rt/win include)
+    get_filename_component(CM0102_GAME_DIR "${CM0102_EXE}" DIRECTORY)
+    add_test(NAME season_load_check COMMAND season_load_check_test "${CM0102_EXE}" "${CM0102_GAME_DIR}/Data")
     # The nation rules (0.6.0 slice 17): windows, foreign player limits and the work permit rule. The encoder reads
     # the research parts; its outputs are committed and checked here; the lookup runs on the C table.
     add_executable(season_nation_test tests/seasons/test_season_nation.c src/recomp_rt/win/season_nation.c
         src/recomp_rt/win/season_nation_table.c)
     target_include_directories(season_nation_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_nation COMMAND season_nation_test)
+    # The row A18 list of the season part (0.6.1 item 4): its write keeps inside its size.
+    add_executable(season_friendly_part_test tests/seasons/test_season_friendly_part.c
+        src/recomp_rt/win/season_friendly_dates.c)
+    target_include_directories(season_friendly_part_test PRIVATE src/recomp_rt/win src/recomp_rt)
+    add_test(NAME season_friendly_part COMMAND season_friendly_part_test)
     add_test(NAME season_encode_rules COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/test_encode_rules.py")
     # The league rules (0.6.0 slice 19): play-off places, splits and calendars. The outputs are committed.
     add_test(NAME season_encode_leagues COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/test_encode_leagues.py")
@@ -361,6 +386,10 @@ set(RECOMP_PYTHON "${RECOMP_PYTHON_DEFAULT}" CACHE FILEPATH "A Python with capst
 # every row is valid. A Python test, so it runs on every platform.
 enable_testing()
 add_test(NAME season_history_table COMMAND "${RECOMP_PYTHON}" -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_history_table.py" --check)
+# The .dmg window background shows the logo art alone, with no drawn BOSMAN EDITION line under it (0.6.1
+# item 1). Needs Pillow, so a skip (77) without it.
+add_test(NAME dmg_background COMMAND "${RECOMP_PYTHON}" -I "${CMAKE_SOURCE_DIR}/tests/mac/dmg_background_check.py")
+set_tests_properties(dmg_background PROPERTIES SKIP_RETURN_CODE 77)
 
 if(EXISTS "${CM0102_EXE}")
     set(RECOMP_SHARDS 128)
@@ -408,8 +437,19 @@ if(EXISTS "${CM0102_EXE}")
         src/recomp_rt/host/link.c
         src/recomp_rt/host/link_pass.c
         ${RECOMP_WIN}
+        src/cm3/key_comp_names.c
+        src/cm3/key_ids_table.c
     )
+    # The key table of set_key_ids for the load check (season_load_check.c): the port's headers for these two only.
+    set_source_files_properties(src/cm3/key_comp_names.c src/cm3/key_ids_table.c TARGET_DIRECTORY cm0102_recomp
+        PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/include")
     add_dependencies(cm0102_recomp recomp_gen)
+    # The host qsort of the player history lists (qsort6.c) sorts as the recompiled qsort 0x945333 does,
+    # rows and eax, so "Player histories" is faster and the game stays the same (rule Q152).
+    get_filename_component(CM0102_EXE_DIR "${CM0102_EXE}" DIRECTORY)
+    add_test(NAME qsort6 COMMAND cm0102_recomp --game "${CM0102_EXE_DIR}")
+    set_tests_properties(qsort6 PROPERTIES ENVIRONMENT
+        "RECOMP_QSORT_TEST=1;SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy;RECOMP_NO_BOX=1;RECOMP_USER_DIR=${CMAKE_BINARY_DIR}/qsort6-user")
     # 0.6.0 slice 11c: the build stops when the history table is not the one plan.tsv gives, or a row is not valid.
     add_custom_command(
         OUTPUT "${CMAKE_BINARY_DIR}/seasons/history.ok"

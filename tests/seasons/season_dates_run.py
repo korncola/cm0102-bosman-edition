@@ -112,6 +112,8 @@ def play(program, game, work, label, year, db_folder, env=None, steps=None, seas
     for d in (user, home, shots):
         os.makedirs(d)
     settings = "display = classic\n"
+    if not db_folder:
+        settings += "database = 3.9.68\n"
     for f in more_folders:
         scr.cdr.copy_data(f, os.path.join(user, "Databases", os.path.basename(f)))
     if db_folder:

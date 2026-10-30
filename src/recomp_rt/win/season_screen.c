@@ -29,10 +29,16 @@
  * Same game (Q152): the screen keeps its texts in runtime memory (win_static_alloc), not in the game's heap.
  * It reads files only: settings.txt changes through options_set. The push of the node is the original's.
  *
- * Node slots: 0 the chosen tile (1 to 25 for the seasons, 26 for the Custom database), 2 the Custom folder,
- * 3 the season of the Custom folder (start year), 4 the state (0, 1 unpack next, 2 error). Slots 1 and 5
- * held the version and its page until Q417 and stay 0. Only numbers, so the screen needs no leave
- * function. */
+ * The 2001/02 tile has three data sets (item 11 of 0.6.1, Max, 30 October 2026): 3.9.60, 3.9.65 and 3.9.68. A click
+ * on the tile when another tile is chosen chooses it. Each click on the chosen tile moves to the next data set
+ * (3.9.60, 3.9.65, 3.9.68, then 3.9.60 again). The tag of the tile shows the data set, and the details show its
+ * name and say that a click changes it. The option database gives the first data set when the screen opens, and
+ * Start writes the data set into it. Back changes nothing.
+ *
+ * Node slots: 0 the chosen tile (1 to 25 for the seasons, 26 for the Custom database), 1 the data set of the
+ * 2001/02 tile (1 to 3, the index in data_sets + 1), 2 the Custom folder, 3 the season of the Custom folder
+ * (start year), 4 the state (0, 1 unpack next, 2 error). Slot 5 held the version page until Q417 and stays 0.
+ * Only numbers, so the screen needs no leave function. */
 #include "win.h"
 #include "draw.h"
 #include "options.h"
@@ -246,6 +252,40 @@ static void scan_saves(void)
     host_closedir(d);
 }
 
+/* ---- The data sets of the 2001/02 tile (item 11 of 0.6.1) ---- */
+
+/* In the order of the clicks. The tag is the short text of the tile, the name the text of the details. */
+typedef struct { const char *value, *name; } DataSet;
+static const DataSet data_sets[] = {
+    {"3.9.60", "3.9.60, original data"},
+    {"3.9.65", "3.9.65, December 2001 update"},
+    {"3.9.68", "3.9.68, with the summer 2002 transfers"},
+};
+#define DATA_SETS (int)(sizeof data_sets / sizeof data_sets[0])
+
+/* 1 when the game folder holds the data set: 3.9.68 is the game's own Data, the others are the folders
+ * Data-3.9.60 and Data-3.9.65 (seasons_db_scan lists them as the versions of 2001/02). */
+static int data_set_there(int i)
+{
+    if (!strcmp(data_sets[i].value, "3.9.68")) return 1;
+    const SeasonsEntry *s = &list.season[0];
+    for (int k = 0; k < s->extra_count; k++)
+        if (s->extra[k].data_set && !strcmp(s->extra[k].value, data_sets[i].value)) return 1;
+    return 0;
+}
+
+/* The data set that the tile shows first: the option database when it names one that is there, else the first
+ * one that is there in the order of the clicks (3.9.60, the default of the option). */
+static int data_set_first(void)
+{
+    const char *db = options_string(OPT_DATABASE);
+    for (int i = 0; i < DATA_SETS; i++)
+        if (!strcmp(db, data_sets[i].value) && data_set_there(i)) return i;
+    for (int i = 0; i < DATA_SETS; i++)
+        if (data_set_there(i)) return i;
+    return DATA_SETS - 1;
+}
+
 /* ---- The season of the next new game, from the options database and season ---- */
 
 static int option_season(void) { return SEASONS_FIRST + options_enum(OPT_SEASON); }
@@ -325,6 +365,21 @@ static void set_slot(int n, uint32_t value)
 {
     uint32_t a[3] = {(uint32_t)n, value, 0};
     call_this(SET_SLOT, SCREENS, 3, a);
+}
+
+/* The data set of the 2001/02 tile on the screen (node slot 1). */
+static int data_set_chosen(void)
+{
+    int i = (int)node_slot(1) - 1;
+    return i >= 0 && i < DATA_SETS ? i : data_set_first();
+}
+
+/* The next data set that is there, after i. */
+static int data_set_next(int i)
+{
+    for (int k = 1; k <= DATA_SETS; k++)
+        if (data_set_there((i + k) % DATA_SETS)) return (i + k) % DATA_SETS;
+    return i;
 }
 
 static uint32_t display(void)
@@ -653,12 +708,23 @@ static void details_of(int sel, Details *d)
         snprintf(d->decade, sizeof d->decade, "%s", seasons_db_decade_name(s->decade));
         d->decade_rgb = decade_look[s->decade].text;
         d->top_rgb = decade_look[s->decade].bar;
-        db_title(s->database ? s->database : "No database", d->db, sizeof d->db);
-        if (s->database) snprintf(d->credit, sizeof d->credit, "%s", season_screen_credit(s->database));
+        if (s->start_year == SEASONS_FIRST) {
+            int i = data_set_chosen();
+            snprintf(d->db, sizeof d->db, "%s", data_sets[i].name);
+            snprintf(d->credit, sizeof d->credit, "%s", season_screen_credit(data_sets[i].value));
+            if (data_set_next(i) != i) {
+                static char note[120];
+                snprintf(note, sizeof note, "Click the 2001/02 tile to change to %s.",
+                         data_sets[data_set_next(i)].name);
+                d->row_note = note;
+            }
+        } else {
+            db_title(s->database ? s->database : "No database", d->db, sizeof d->db);
+            if (s->database) snprintf(d->credit, sizeof d->credit, "%s", season_screen_credit(s->database));
+        }
         if (!s->database || s->status == SEASONS_NO_DATABASE || s->status == SEASONS_MISSING) d->ok = 0;
-        d->row_note = s->status == SEASONS_IN_DOWNLOAD ? "The first start unpacks this database into Databases."
-                      : s->status == SEASONS_MISSING   ? "This database is not in this game folder."
-                                                       : NULL;
+        if (s->status == SEASONS_IN_DOWNLOAD) d->row_note = "The first start unpacks this database into Databases.";
+        else if (s->status == SEASONS_MISSING) d->row_note = "This database is not in this game folder.";
         d->row_rgb = pale_rgb;
     }
     snprintf(d->start, sizeof d->start, "Starts July %d", d->year);
@@ -845,7 +911,9 @@ static void season_build(void)
             if (i < 0 || i >= SEASONS_COUNT) continue;          /* 2000/01 and the cells after 2025/26 */
             const SeasonsEntry *s = &list.season[i];
             int tx = L->grid_x + col * (L->tile_w + L->tile_gap);
-            tile(tx, ty, tx + L->tile_w - 1, ty + L->tile_h, s->label, status_tag(s), decade_look[dec].bar, i,
+            Tag t = status_tag(s);
+            if (s->start_year == SEASONS_FIRST) t.text = data_sets[data_set_chosen()].value;   /* item 11 of 0.6.1 */
+            tile(tx, ty, tx + L->tile_w - 1, ty + L->tile_h, s->label, t, decade_look[dec].bar, i,
                  s->status != SEASONS_NO_DATABASE, starred[i], sel == i);
         }
         if (dec == 2) {                     /* the Custom database fills the free cells after 2025/26 */
@@ -942,7 +1010,7 @@ static int choose_apply(void)
         year = s->start_year;
         if (!s->database) return 0;
         if (year == SEASONS_FIRST) {
-            snprintf(value, sizeof value, "3.9.68");
+            snprintf(value, sizeof value, "%s", data_sets[data_set_chosen()].value);
         } else {
             SeasonsPrepare r;
             memset(&r, 0, sizeof r);
@@ -1004,7 +1072,14 @@ static void season_input(void)
         uint32_t id = (uint16_t)rd32(g_mem, at), data = rd32(g_mem, at + 0x40);
         uint32_t r = 0;
         if (id == TILE_ID && data < TILES) {
-            choose_select((int)data);
+            if (data == 0 && node_slot(0) == 1) {
+                /* A click on the chosen 2001/02 tile: the next data set (item 11 of 0.6.1). */
+                set_slot(1, (uint32_t)data_set_next(data_set_chosen()) + 1);
+                set_slot(4, 0);
+                fprintf(stderr, "recomp: choose season: 2001/02 data %s\n", data_sets[data_set_chosen()].value);
+            } else {
+                choose_select((int)data);
+            }
             r = REBUILD;
         } else if (id == RULES_ID) {
             rules_choice = data ? 1 : 0;
@@ -1073,7 +1148,7 @@ void season_screen_open(void)
     uint32_t p[5] = {build_fn(), rt_host_fn("season_input", season_input), 0, 0, 0};
     call_this(PUSH, SCREENS, 5, p);
     set_slot(0, (uint32_t)tile_index + 1);
-    set_slot(1, 0);
+    set_slot(1, (uint32_t)data_set_first() + 1);
     set_slot(2, (uint32_t)folder);
     set_slot(3, (uint32_t)(tile_index == CUSTOM_TILE ? year : 2025));
     set_slot(4, 0);

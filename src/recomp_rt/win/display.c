@@ -14,7 +14,10 @@
 #include "host.h"
 #include "options.h"
 
+#include <SDL.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 #define CLASSIC_W 800u
@@ -247,9 +250,57 @@ static uint32_t sye(uint32_t v) { return scale(v, rt_screen_h, CLASSIC_H, 1); }
  * at the scaled places: the panel (100, 555)-(790, 590), the text (120, 565)-(250, 580) and the bar
  * (270, 565)-(770, 580) filled from x 272 over 496 pixels, or the text alone over (120, 565)-(770, 580).
  * Step 0 first darkens the screen once (0x55f2c0 on the screen manager of the record). */
+/* RECOMP_PROGRESS_LOG: a line on stderr at each new progress text, with the time since the program
+ * started, the calls of the box for the text before, and the time spent inside the box for them. Only
+ * the log changes (docs/research/2026-10-29-new-game-speed.md). */
+static int progress_log = -1;
+static char progress_text[64];
+static uint64_t progress_calls, progress_in_box, progress_since;
+
+static void progress_log_line(uint32_t text, uint32_t step, uint32_t total)
+{
+    char now[64] = "";
+    if (text) snprintf(now, sizeof now, "%s", (const char *)(g_mem + text));
+    uint64_t t = SDL_GetTicks64();
+    if (strcmp(now, progress_text) || !step) {
+        if (progress_text[0])
+            fprintf(stderr, "recomp: progress done \"%s\" %llu ms, %llu calls, %llu ms in the box\n", progress_text,
+                    (unsigned long long)(t - progress_since), (unsigned long long)progress_calls,
+                    (unsigned long long)progress_in_box);
+        fprintf(stderr, "recomp: progress at %llu ms \"%s\" %d of %d\n", (unsigned long long)t, now,
+                (int32_t)step, (int32_t)total);
+        snprintf(progress_text, sizeof progress_text, "%s", now);
+        progress_calls = progress_in_box = 0;
+        progress_since = t;
+    }
+    progress_calls++;
+}
+
+void progress_log_end(void)
+{
+    if (progress_log <= 0 || !progress_text[0]) return;
+    progress_log_line(0, 0, 0);
+    progress_text[0] = 0;
+}
+
+static void progress_box_draw(uint32_t text, uint32_t step, uint32_t total);
+
 RT_REPLACE(005e76f0, progress_box)
 {
     uint32_t text = rt_arg(0), step = rt_arg(1), total = rt_arg(2);
+    if (progress_log < 0) progress_log = getenv("RECOMP_PROGRESS_LOG") != NULL;
+    if (progress_log) {
+        progress_log_line(text, step, total);
+        uint64_t t = SDL_GetTicks64();
+        progress_box_draw(text, step, total);
+        progress_in_box += SDL_GetTicks64() - t;
+        return;
+    }
+    progress_box_draw(text, step, total);
+}
+
+static void progress_box_draw(uint32_t text, uint32_t step, uint32_t total)
+{
     if (rd32(g_mem, 0xaebe0cu)) { rt_ret_cdecl(0); return; }        /* the display is off */
     rt_callback(0x68d520u, 0, NULL);                                /* the message pump */
     if (!text) { rt_ret_cdecl(0); return; }

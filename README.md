@@ -37,6 +37,7 @@ Each download is ready to play. It holds the game files of the free release that
 - Widescreen at 1280 × 800 in a window you can resize, with sharp scaling. The original 800 × 600 layout is one setting away.
 - Any season from 2001/02 to 2025/26 on the Choose Season screen, with a database for every season in the download. Each season has its own leagues, cups, European and international competitions, substitutes, foreign player rules and transfer windows.
 - In a long game the rules change each July as they did in real life, and a news item lists what changed. You can switch this off and keep your start season's rules.
+- Three versions of the official 2001/02 data on its tile: 3.9.60, the original data (the default), 3.9.65, the December 2001 update, and 3.9.68, with the summer 2002 transfers. Click the chosen tile to change the version.
 - A Custom database tile for a database folder of your own. You say which season it holds, and that season's rules apply.
 - Best XI and squad depth on one screen, with the next two players for each place.
 - An Assistant menu on the squad screen picks the best team, the fittest team or an under-21 team, scored by the key attributes of each position.
@@ -55,7 +56,7 @@ Each feature is a line in `settings.txt` in the save folder and can be switched 
 | Windows | Run `Setup.exe`. If Windows shows "Windows protected your PC", click More info, then Run anyway. |
 | Linux and Steam Deck | Download the `.AppImage`, allow it to run as a program in its Properties, and double-click it. On the Steam Deck, do this in Desktop Mode. The trackpad is the mouse. |
 
-Saved games are in `~/Library/Application Support/cm0102` on a Mac, `%APPDATA%\cm0102` on Windows and `~/.local/share/cm0102` on Linux. A new version does not touch them.
+Saved games are in `~/Library/Application Support/cm0102` on a Mac, `%APPDATA%\cm0102` on Windows and `~/.local/share/cm0102` on Linux. A new version does not touch them. The Open folder button on Load Game opens this folder, and so does the one on the Save folder row of the Bosman Edition Options box, which also shows its full path.
 
 ## Roadmap
 

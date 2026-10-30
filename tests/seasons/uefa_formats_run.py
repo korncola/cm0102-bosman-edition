@@ -214,9 +214,7 @@ def run_load(program, game, work):
     shutil.copyfile(first, os.path.join(user, "uefa.sav"))
     dbname = os.path.basename(NOV_2007)
     shutil.copytree(os.path.join(work, "user", "Databases"), os.path.join(user, "Databases"))
-    fixtures.write_settings(user, "classic", [])
-    with open(os.path.join(user, "settings.txt"), "a") as f:
-        f.write(f"database = folder:{dbname}\nfaster_days = on\n")
+    fixtures.write_settings(user, "classic", [("database", f"folder:{dbname}"), ("faster_days", "on")])
     report = os.path.join(again, "report.tsv")
     steps = fixtures.LOAD_STEPS + ["3600000 quit"]       # the loaded game goes on with its holiday
     r, _ = fixtures.run(program, game, "classic", user, smoke_run.scaled_steps("classic", again, steps),

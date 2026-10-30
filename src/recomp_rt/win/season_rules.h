@@ -63,6 +63,8 @@ const SeasonRule *season_rules_row(int i);           /* NULL out of range */
 
 /* The n-th row (from 0) of a season whose comp_file holds file (one of the ";" names), or NULL. */
 const SeasonRule *season_rules_find(int season, const char *file, int n);
+/* The same by a scan of every row, for the test of the index that season_rules_find uses. */
+const SeasonRule *season_rules_find_scan(int season, const char *file, int n);
 
 /* The competition classes of the original (comp_classes.c of the build, tools/seasons/make_comp_classes.py). */
 typedef enum { SEASON_KIND_COMP, SEASON_KIND_LEAGUE, SEASON_KIND_CUP } SeasonCompKind;

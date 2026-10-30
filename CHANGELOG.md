@@ -24,6 +24,20 @@ Play network games with friends online, on a Mac, Windows or Linux, with no patc
 - Privacy: the lobby keeps internet addresses in memory only while a game is open, and writes them to no log. It has no accounts.
 - The secure connection to the lobby and the relay uses mbedTLS. Its licence is in each download.
 
+## 0.6.1 (pre-release)
+
+Fixes for 0.6.0: crashes at save and start, wrong names, and faster new games.
+
+- Saving a season game no longer crashes. The crash came most often at the first save of a 2002/03 game with several nations, and at an autosave on Linux. The save it left gave the box "index..cpp 5809" at its load. The season data now goes into the save before the old save is replaced. A save that a crash left without its season data now gives the box "This save is incomplete. Load an earlier save." in place of 5809.
+- Linux: the AppImage no longer crashes after its window opens on Arch, CachyOS and other current systems. It now carries SDL 2.32.10.
+- Bosman Edition Options: the Save folder row shows the full path of the folder and has an Open folder button, which opens it in Finder, Explorer or your file manager. The Load Game screen has the same button.
+- Select Team and other screens show the division short names of the season, for example PL, CH, L1 and L2 for England from 2004/05, in place of the 2001 names PRM, D1, D2 and D3.
+- Attribute groups: a goalkeeper's profile shows the Goalkeeping group in every language, not only in English.
+- Assistant: Pick best team no longer puts a player who cannot play into the eleven.
+- A new game with all nations is two to three times faster. "Player histories" takes about 25 seconds in place of about 4 minutes.
+- The Mac disk image shows the logo once, without a second "Bosman Edition" line under it.
+- Choose Season: the 2001/02 tile has three versions of the official data. Each click on the chosen tile changes the version: 3.9.60, the original data, then 3.9.65, the December 2001 update, then 3.9.68, with the summer 2002 transfers. The tile shows the version in use, and Start writes it into the `database` line of `settings.txt`. The default is now 3.9.60. A `settings.txt` that already has a `database` line keeps its version.
+
 ## 0.6.0 (pre-release)
 
 Play any season from 2001/02 to 2025/26 with that season's squads, leagues, cups and rules. In a long game the rules change each July as they did in real life. New lines in `settings.txt`: `season` and `changing_rules`.

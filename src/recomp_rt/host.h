@@ -81,6 +81,12 @@ void host_display_notes(char *out, size_t room);
  * out ("/" between parts, no "/" at the end), 0 when the player cancels, -1 when this computer has no picker
  * (Linux without zenity or kdialog). It blocks until the player answers. */
 int host_pick_folder(const char *title, char *out, size_t room);
+/* Opens a folder in the computer's file manager (0.6.1 item 5, the Open folder buttons of the options box and
+ * Load Game): Finder on a Mac (open), Explorer on Windows (ShellExecute), the desktop's file manager on Linux
+ * (xdg-open). 1 when the file manager was started, 0 when the folder does not exist or nothing could open it. It
+ * does not wait for the file manager. The test variable RECOMP_OPEN_FOLDER_PROGRAM names another program to start
+ * with the folder as its one argument (Mac and Linux). */
+int host_open_folder(const char *path);
 
 /* The cm0102:// link handler (0.7.0 slice 8, host/link.c): the computer starts this program with a link
  * cm0102://join/<code> from an invite link page. on 1 writes it for this program, for the current user only,

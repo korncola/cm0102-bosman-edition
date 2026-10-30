@@ -18,8 +18,9 @@
  *
  * The original opens a part by its exact name (zopen 0x9326e0, the name scan at 0x93293b) and extracts only
  * the parts whose name ends in .tmp (load_game_data 0x82a9c0 calls 0x933320 with "*.tmp" at 0x82acbc), so it
- * never reads this part. The runtime adds the part after the save of the game 0x82e430 has written and
- * renamed the file, and reads it before the load 0x82a9c0 runs. Neither touches the game's memory. The
+ * never reads this part. The runtime adds the part to the file of the save after the original's last part
+ * (save_fifa_transfer_rules 0x8395b0), before the save deletes the old file and renames its temporary file to
+ * the name (0.6.1 item 10), and reads it before the load 0x82a9c0 runs. Neither touches the game's memory. The
  * proof: docs/research/2026-10-17-season-save-part.md. */
 #include "win.h"
 #include "season.h"
@@ -27,6 +28,7 @@
 #include "season_change.h"
 #include "season_dates.h"
 #include "season_intl.h"
+#include "season_load_check.h"
 #include "options.h"
 #include "../host.h"
 
@@ -235,6 +237,9 @@ static int add_part(const char *host)
     put32(data + 8, rt_season_year);
     put32(data + 12, (uint32_t)rules_now);
     if (extra) season_change_part_write(data + PART_SIZE);
+    /* Test switch (tests/seasons/save_crash_run.py): the program stops here, as 0.6.0 did on Linux when the
+     * write went past the block (glibc free(), 0.6.1 item 10). */
+    if (getenv("RECOMP_TEST_PART_CRASH")) abort();
     uint32_t n = size;
     if (version == 2 || version == 4) n = encode(data, size, stored);
     else memcpy(stored, data, size);
@@ -328,6 +333,27 @@ int season_of_save(const char *host, int *year)
 
 void o_0082e430(void);
 
+/* 1 while the original's save 0x82e430 runs; part_added when the part is in its file (save_last_part). */
+static int saving, part_added;
+
+void o_008395b0(void);
+
+/* save_fifa_transfer_rules, cdecl (archive): the last part of every save (one caller, 0x82f5b0). The archive
+ * starts with the name of its file, the name that the rename at 0x82f684 moves: temp_save_file.sav with the
+ * option bit 0x20000000 (a fresh game.cfg has it), else the name of the save. The part goes in here, before the
+ * save deletes the old file (0x82f5e3) and renames the new one (0x82f684): a program that stops while the part
+ * goes in leaves the old save whole, and only a whole new file takes its name. Before 0.6.1 the part went in
+ * after the rename, so a crash at that point left a save of renamed records without its part, which loads to
+ * the box "index.cpp 5809" (0.6.1 items 4 and 10). */
+RT_WRAP(008395b0, save_last_part)
+{
+    char path[1024], host[2048];
+    snprintf(path, sizeof path, "%.1023s", win_str(rt_arg(0)));
+    o_008395b0();
+    if (rt_unwinding || !saving || !part_needed()) return;
+    if (win_existing_file(path, host, sizeof host) && !add_part(host)) part_added = 1;
+}
+
 /* A save above 4 GB fails (files.c, win_save_begin): the box says so, the result is that of a failed save. */
 static int save_too_big(void)
 {
@@ -354,9 +380,12 @@ RT_WRAP(0082e430, save_game)
     }
     char path[1024];
     snprintf(path, sizeof path, "%.1023s", win_str(rt_arg(0)));
+    saving = 1, part_added = 0;
     o_0082e430();
+    saving = 0;
     if (save_too_big() || rt_unwinding) return;
-    if (cpu.eax != 1 || !part_needed()) return;
+    if (cpu.eax != 1 || !part_needed() || part_added) return;
+    /* The part is not in the file yet: a save that did not reach its last part, or an add that failed. */
     char host[2048];
     if (win_existing_file(path, host, sizeof host) && !add_part(host)) return;
     /* The file stays a whole save without the part, which would load as a 2001/02 game: the save fails. */
@@ -368,6 +397,70 @@ RT_WRAP(0082e430, save_game)
              rt_season_year, (rt_season_year + 1) % 100);
     season_box("Save Game", text);
     if (!rt_unwinding) cpu.eax = 0;             /* the result of a failed save */
+}
+
+#define RECORD 0x6bu
+#define MAX_RECORDS 8192
+
+static const char *exe_name(uint32_t address) { return win_str(address); }
+
+/* 1 when the save at host, which has no season part, lacks a key competition name: its load would stop at the
+ * box "index.cpp 5809" (season_load_check.c). It reads the long names of club_comp.dat and nation_comp.dat.
+ * Only for the English names: set_key_ids takes the records' names when the language of the names [0x9b5984]
+ * is 0 (0x603c52), else the names of eng.lng, which no rename changes. A save keeps that language as the last
+ * 4 bytes of index.dat (written at 0x531488 before the close at 0x531499, read at 0x52894b in database_load).
+ * 0 when unsure. */
+static int lacks_key_comps(const char *host)
+{
+    int fd = host_open(host, O_RDONLY, 0);
+    if (fd < 0) return 0;
+    static char store[MAX_RECORDS][52];
+    static const char *names[MAX_RECORDS];
+    int count = 0, files = 0, english = 0;
+    uint8_t head[12], row[ROW_SIZE], *stored = NULL, *data = NULL;
+    if (!read_at(fd, 0, head, 12)) goto done;
+    uint32_t version = get32(head), rows = get32(head + 8);
+    if (version < 1 || version > 4 || rows > HEADER_ROWS) goto done;
+    for (uint32_t k = 0; k < rows; k++) {
+        if (!read_at(fd, 12 + (int64_t)k * ROW_SIZE, row, ROW_SIZE)) goto done;
+        const char *name = (const char *)row + ROW_NAME;
+        int index = !strncmp(name, "index.dat", NAME_SIZE);
+        if (!index && strncmp(name, "club_comp.dat", NAME_SIZE) && strncmp(name, "nation_comp.dat", NAME_SIZE)) continue;
+        uint32_t offset = get32(row), size = get32(row + 4);
+        if (size > MAX_RECORDS * RECORD || (index && size > PART_MAX)) goto done;
+        uint32_t room = version == 2 || version == 4 ? 2 * size : size;
+        free(stored), free(data);
+        stored = malloc(room + 1), data = malloc(size + 1);
+        if (!stored || !data) goto done;
+        int64_t end = host_seek(fd, 0, SEEK_END);
+        if (end < (int64_t)offset) goto done;
+        if ((int64_t)offset + room > end) room = (uint32_t)(end - offset);
+        if (!read_at(fd, offset, stored, room)) goto done;
+        if (version == 2 || version == 4) {
+            if (!decode(stored, room, data, size)) goto done;
+        } else {
+            if (room < size) goto done;
+            memcpy(data, stored, size);
+        }
+        if (index) {
+            english = size >= 4 && get32(data + size - 4) == 0;
+            continue;
+        }
+        for (uint32_t r = 0; r + RECORD <= size && count < MAX_RECORDS; r += RECORD, count++) {
+            memcpy(store[count], data + r + 4, 51);
+            store[count][51] = 0;
+            names[count] = store[count];
+        }
+        files++;
+    }
+done:
+    free(stored);
+    free(data);
+    host_close(fd);
+    int missing = files == 2 && english ? season_key_comps_missing(names, count, exe_name) : 0;
+    if (missing)
+        fprintf(stderr, "recomp: the save %s has no season part and lacks %d key competition names\n", host, missing);
+    return missing > 0;
 }
 
 void o_0082a9c0(void);
@@ -386,7 +479,19 @@ RT_WRAP(0082a9c0, load_game)
     int year = SEASON_FIRST_YEAR, rules = 0;
     snprintf(path, sizeof path, "%.1023s", win_str(rt_arg(0)));
     season_change_reset();
-    if (win_existing_file(path, host, sizeof host) && read_part(host, &year, &rules, 1) < 0) {
+    int found = win_existing_file(path, host, sizeof host), part = found ? read_part(host, &year, &rules, 1) : 0;
+    /* A save of renamed records without its part (in 0.6.0, a crash after the rename of the save and before
+     * the part went in: 0.6.1 items 4 and 10) cannot give the names back, and its load would stop at the box
+     * "index.cpp 5809" (season_load_check.c). The load refuses it before any code of the original runs. */
+    if (found && part == 0 && lacks_key_comps(host)) {
+        season_change_reset();
+        fprintf(stderr, "cm0102_recomp: the save %s has renamed competitions but no season part, so the game does "
+                "not load it.\n", path);
+        season_box("Load Game", "This save is incomplete. Load an earlier save.");
+        if (!rt_unwinding) rt_ret_cdecl(0);
+        return;
+    }
+    if (part < 0) {
         season_change_reset();
         /* A damaged part: the season of the game is not known, so the game is not loaded. The load fails
          * before any code of the original runs, as its own early failures do (0x82aa28), and the callers

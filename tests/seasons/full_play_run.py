@@ -81,7 +81,8 @@ def folders(work):
 
 
 def write_settings(user, argv, database):
-    options = {"display": "classic", "changing_rules": arg(argv, "--changing-rules", "on"), "faster_days": "on"}
+    options = {"display": "classic", "changing_rules": arg(argv, "--changing-rules", "on"), "faster_days": "on",
+               "database": "3.9.68"}
     if database:
         cdr.copy_data(database, os.path.join(user, "Databases", os.path.basename(database)))
         options["database"] = "folder:" + os.path.basename(database)

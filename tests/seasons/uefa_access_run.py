@@ -114,9 +114,7 @@ def run_load(program, game, work, season=2010, database="September 2010 ODB", da
     os.makedirs(user, exist_ok=True)
     shutil.copyfile(first, os.path.join(user, "uefa.sav"))
     shutil.copytree(os.path.join(work, "user", "Databases"), os.path.join(user, "Databases"))
-    fixtures.write_settings(user, "classic", [])
-    with open(os.path.join(user, "settings.txt"), "a") as f:
-        f.write(f"database = folder:{os.path.basename(db)}\nfaster_days = on\n")
+    fixtures.write_settings(user, "classic", [("database", f"folder:{os.path.basename(db)}"), ("faster_days", "on")])
     report = os.path.join(again, "report.tsv")
     # The loaded game goes on with its holiday at once and ends when the season jump ends: no wait for the first
     # news (its 120 s limit is shorter than the jump on a loaded machine).

@@ -139,7 +139,7 @@ A nation that the original finds by name after the load, such as England for the
 _Avoid_: main nation
 
 **Data set**:
-The season's data that a new game loads: the 2001/02 data of the free release (3.9.60), the 2001/02 December update of the official 3.9.65 patch (3.9.65) or the 2002/03 data of the official patch (3.9.68, the default). The option `database` names it. A download holds 3.9.60 and 3.9.65 in the folders Data-3.9.60 and Data-3.9.65 of the game folder.
+The season's data that a new game loads: the 2001/02 data of the free release (3.9.60, the default since 0.6.1), the 2001/02 December update of the official 3.9.65 patch (3.9.65) or the data of the official patch, which holds the summer 2002 transfers (3.9.68, the data of the base game). The option `database` names it. Each click on the chosen 2001/02 tile of the Choose Season screen moves to the next data set, and Start writes it into the option. A download holds 3.9.60 and 3.9.65 in the folders Data-3.9.60 and Data-3.9.65 of the game folder.
 _Avoid_: database version, data pack, DB
 
 **Progress bar**:
@@ -157,7 +157,7 @@ A game whose start season is not 2001/02, or whose changing rules are on. Only a
 _Avoid_: modern game, new-season game
 
 **Choose Season screen**:
-The screen from the start screen with one tile per season under era headings. The player picks the season, and so its database, there, and sets changing rules for the new game. Each season has one database (Q417).
+The screen from the start screen with one tile per season under era headings. The player picks the season, and so its database, there, and sets changing rules for the new game. Each season has one database (Q417), except 2001/02, whose tile has the three data sets (0.6.1).
 _Avoid_: season picker, year select
 
 **Season button**:

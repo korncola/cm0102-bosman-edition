@@ -68,6 +68,32 @@ int main(int argc, char **argv)
         if (strchr(r->comp_file, ';')) both++;
     CHECK(both == 1, "rows of 2001 with wc_oceania_league and another file: %d", both);
 
+    /* 0.6.1: the lookup by an index gives the rows of the plain scan, for each file of each row (and the
+     * file of a new competition), each season and each count, and none for other files. */
+    int keys = 0, wrong = 0;
+    for (int i = 0; i < season_rules_count(); i++) {
+        const SeasonRule *row = season_rules_row(i);
+        char files[512], newname[160];
+        snprintf(files, sizeof files, "%s", row->comp_file);
+        snprintf(newname, sizeof newname, "new_");
+        for (const char *c = row->comp ? row->comp : ""; *c && strlen(newname) < sizeof newname - 1; c++) {
+            char ch = *c == ' ' ? '_' : (*c >= 'A' && *c <= 'Z') ? (char)(*c - 'A' + 'a') : *c;
+            strncat(newname, &ch, 1);
+        }
+        char *names[64];
+        int nn = 0;
+        for (char *f = strtok(files, ";"); f && nn < 62; f = strtok(NULL, ";")) names[nn++] = f;
+        names[nn++] = newname;
+        names[nn++] = "no_such_file";
+        for (int k = 0; k < nn; k++)
+            for (int season = 1999; season <= 2032; season++)
+                for (int n = 0; n < 6; n++) {
+                    keys++;
+                    if (season_rules_find(season, names[k], n) != season_rules_find_scan(season, names[k], n)) wrong++;
+                }
+    }
+    CHECK(keys > 1000 && !wrong, "index lookups: %d of %d differ from the scan", wrong, keys);
+
     /* Codes. */
     r = season_rules_find(2001, "uefa_cup", 0);
     CHECK(r && r->clubs == 145 && r->tier == 2, "uefa_cup 2001");

@@ -490,12 +490,15 @@ static void move_pending(void)
 }
 
 /* The list in the season part: the count, then 20 bytes an entry (16 in a save before the stage bound: record id,
- * home, away, year, day; then the stage's last year and day). */
+ * home, away, year, day; then the stage's last year and day). An empty list has no bytes, not even the count: the
+ * save allocates the size of the part (season.c add_part), and in 0.6.0 the count of an empty list went 4 bytes
+ * past that block (0.6.1 item 4). The reader takes no bytes as an empty list. */
 #define ENTRY 20u
 uint32_t season_friendly_part_size(void) { return pending_count ? 4u + ENTRY * (uint32_t)pending_count : 0u; }
 
 void season_friendly_part_write(uint8_t *out)
 {
+    if (!pending_count) return;
     uint32_t n = (uint32_t)pending_count;
     memcpy(out, &n, 4);
     for (int i = 0; i < pending_count; i++) {

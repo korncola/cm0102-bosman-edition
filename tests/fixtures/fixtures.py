@@ -71,9 +71,16 @@ def run(program, game, mode, user, steps, env_extra, timeout):
     return r, time.time() - start
 
 
+# The data set of the base game (Q152). The option's default is 3.9.60 since 0.6.1 (item 11), so a test that
+# names no data set pins 3.9.68.
+BASE_DATABASE = "3.9.68"
+
+
 def write_settings(user, mode, options):
     with open(os.path.join(user, "settings.txt"), "w") as f:
         f.write(f"display = {mode}\n")
+        if not any(key == "database" for key, _ in options):
+            f.write(f"database = {BASE_DATABASE}\n")
         for key, value in options:
             f.write(f"{key} = {value}\n")
 

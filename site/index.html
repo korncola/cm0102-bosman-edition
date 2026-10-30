@@ -508,6 +508,7 @@ a { color: inherit; }
     <div class="panel" data-in>
       <ul>
         <li><b>0.7.0</b> (30 October 2026): network games with friends online and on your own network, for Mac, Windows and Linux together, with invite links, a game password, Kick, drop in and drop out, clear errors and a connection test.</li>
+        <li><b>0.6.1</b> (30 October 2026): fixes for crashes at save and start, the Linux AppImage on current systems, season short names, goalkeeper groups in every language, an Open folder button for your saves and faster new games.</li>
         <li><b>0.6.0</b> (29 October 2026): any season from 2001/02 to 2025/26 with its own database, leagues, cups and rules, changing rules in a long game, Best XI with squad depth, a new Setup Game.</li>
         <li><b>0.5.1</b> (18 October 2026): a Mac fix for saving games with Brazil's state championships.</li>
         <li><b>0.5.0</b> (16 October 2026): Bosman Edition Options to change every option from Setup Game or Game Options, each player's position on the tactics screen, foreign players who count against the limit in light violet, a full player search, the Update Team databases listed by season, fixes for rare faults of the original in news, transfers and squad updates, and low processor use while the game waits for you.</li>
@@ -662,7 +663,7 @@ a { color: inherit; }
           <li><code>save_backups = on</code> keeps the last three copies of each save in the <code>backups</code> folder.</li>
           <li><code>remember_window = on</code> opens the window at the size and place it had when you quit.</li>
           <li><code>condition_colours = on</code> colours condition and morale: red, amber or green.</li>
-          <li><code>database = 3.9.68</code> is the database for the next new game. <code>3.9.60</code> is the original 2001/02 data and <code>3.9.65</code> its December 2001 update. <code>folder:May 2026</code> is a folder of your own in <code>Databases</code> (see the FAQ). The Choose Season screen changes this line.</li>
+          <li><code>database = 3.9.60</code> is the database for the next new game: the original 2001/02 data. <code>3.9.65</code> is its December 2001 update and <code>3.9.68</code> the 2001/02 data with the summer 2002 transfers. <code>folder:May 2026</code> is a folder of your own in <code>Databases</code> (see the FAQ). The Choose Season screen changes this line.</li>
           <li><code>season = 2001/02</code> is the season of the next new game. The Choose Season screen changes this line.</li>
           <li><code>changing_rules = on</code> changes each rule in the July it changed in real life. <code>off</code> keeps the rules of the start season for the whole game. The Changing rules button sets it for each new game.</li>
           <li><code>squad_views = on</code> adds Team views (best XI, squad depth, compare players) to the Assistant menu of every squad screen, and the polygon to the comparison screen.</li>
@@ -674,7 +675,7 @@ a { color: inherit; }
         </ul>
         <p>Prints go to the <code>Prints</code> folder as PDF files. To get the old text files, set Print To to File in the game's own options.</p></details>
       <details><summary>Is the database updated?</summary>
-        <p>Yes. Each season from 2001/02 to 2025/26 has a database in the download, and the Choose Season screen starts it: the official 3.9.68 data for 2001/02, our own Summer 2002, Summer 2004 and Summer 2006, and the CM 01/02 Update Team's databases (<a href="https://champman0102.co.uk">champman0102.co.uk</a>) for the other seasons. The game starts in July of the season you pick. To play another database, copy it into a new folder in <code>Databases</code> in your save folder, for example <code>Databases/May 2026</code>, with every file, euro.cfg included. Then pick the Custom database tile and say which season it holds. The original 2001/02 data and its December 2001 update start with a <code>database = 3.9.60</code> or <code>3.9.65</code> line in <code>settings.txt</code>.</p></details>
+        <p>Yes. Each season from 2001/02 to 2025/26 has a database in the download, and the Choose Season screen starts it: the official data for 2001/02, our own Summer 2002, Summer 2004 and Summer 2006, and the CM 01/02 Update Team's databases (<a href="https://champman0102.co.uk">champman0102.co.uk</a>) for the other seasons. The game starts in July of the season you pick. To play another database, copy it into a new folder in <code>Databases</code> in your save folder, for example <code>Databases/May 2026</code>, with every file, euro.cfg included. Then pick the Custom database tile and say which season it holds. The 2001/02 tile has three versions of the official data: 3.9.60, the original data, 3.9.65, the December 2001 update, and 3.9.68, with the summer 2002 transfers. Each click on the chosen tile changes the version, and the tile shows the version in use.</p></details>
       <details><summary>Something does not work</summary>
         <p>Open an issue on GitHub. Say which computer you use and what you clicked before the problem.</p></details>
     </div>

@@ -42,6 +42,7 @@ static int game_day(void)
 }
 
 void o_005cde40(void);
+void progress_log_end(void);
 
 /* RECOMP_SCREEN_LOG: a line with the game date at a human turn 7 or more game days after the last such line. The
  * screen log (waits.c) prints a line only when the screen changes, and the stall check of the test runs reads the
@@ -62,6 +63,7 @@ static void date_log_turn(void)
 /* The human turn, cdecl (short *last date): 1 while the turn goes on. */
 RT_WRAP(005cde40, human_turn)
 {
+    progress_log_end();            /* RECOMP_PROGRESS_LOG (display.c): the time of the last progress text */
     date_log_turn();
     holiday_next_turn();
     net_session_turn();

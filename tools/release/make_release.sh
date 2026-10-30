@@ -152,6 +152,8 @@ echo "== Linux"
 "$REPO/tools/linux/make_appimage.sh" --game "$GAME" --manifest "$MANIFEST" --out "$REPO/build/linux"
 APPIMAGE="$REPO/build/linux/CM0102-Bosman-Edition-$VERSION-x86_64.AppImage"
 [ -f "$APPIMAGE" ] || { echo "make_release.sh: the Linux build made no AppImage." >&2; exit 1; }
+# Arch, CachyOS and the Steam Deck: the AppImage must run with a graphics renderer on a current Arch image.
+"$REPO/tools/linux/arch_check.sh" "$APPIMAGE"
 cp "$APPIMAGE" "$OUT/"
 
 echo "== Site pictures"
