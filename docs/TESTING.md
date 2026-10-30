@@ -52,7 +52,7 @@ A date jump starts a new game in a far year, with every date of the database mov
 
 A Tier A run reaches a far year quickly. It plays only the competitions: the calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players, and save and load. It skips the AI transfer market, background matches, contracts, injuries and AI manager moves (sackings). Each match gets an instant result from the two sides' reputation, so the stronger side wins more often. The test switch is `RECOMP_TIER_A=1`. The program reads it once at the start, and it is off by default. The same-save set proves that the switch changes nothing when it is off.
 
-The script is `tests/seasons/soak_run.py` with `--env RECOMP_TIER_A=1`, and `--checkpoints 10` to keep one save per decade. A Tier A run counts as the same as the normal game when, after 10 years from the same start, database and seed, the two saves agree on editions, dates, hosts and entrant rules (`tests/seasons/future/tier_a_compare.py`). Winners can differ. The history checker then reads each checkpoint save.
+The script is `tests/seasons/soak_run.py` with `--env RECOMP_TIER_A=1`, and `--checkpoints 10` to keep one save per decade. Tier A counts as the same as the normal game when both play 10 years from the same start, database and seed, and each July save agrees on editions, dates, hosts and entrant rules. The script is `tests/seasons/future/tier_a_compare.py`. Winners can differ. The history checker then reads each checkpoint save.
 
 ## Memory and big saves
 

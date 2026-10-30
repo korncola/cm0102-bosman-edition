@@ -28,9 +28,9 @@ folder holds one folder per leg (leg00, leg01, ...) with its stderr.txt, report.
 with one line per leg (leg, the season it starts in, the result, seconds, the first box).
 
 --env sets a test variable for every leg, for example --env RECOMP_TIER_A=1 (the Tier A switch, 0.6.2 slice 3) or
---env RECOMP_DATE_JUMP=1. --checkpoints N keeps only the saves of the Julys of years that N divides (and the last
-one): each other save and its loaded copy is deleted when the next leg has passed, so a run to 2300 keeps one save
-per decade.
+--env RECOMP_DATE_JUMP=1. --checkpoints N keeps a checkpoint save in each July of a year that N divides, and the last
+save. When a leg passes, the script deletes the loaded copy of the leg before it, and that leg's save if it is not a
+checkpoint save. So a run to 2300 keeps one save a decade. (With --leg-days 365 each save comes in July.)
 
 A leg of Select All takes about 20 to 60 minutes on a loaded machine (a 2001 game to 2027/28: 27 legs). The script
 starts one game at a time and waits while /Users/max/Projects/cm0102/run-logs/HOLD exists, while 15 or more games
@@ -190,7 +190,7 @@ def main(argv):
          "extra": [e for e in arg(argv, "--extra", "").split(",") if e],
          "checkpoints": int(arg(argv, "--checkpoints", 0))}
     for i, a in enumerate(argv):
-        if a == "--env":
+        if a == "--env" and i + 1 < len(argv):
             name, value = argv[i + 1].split("=", 1)
             LEG_ENV[name] = value
     if o["last"] < o["start"]:

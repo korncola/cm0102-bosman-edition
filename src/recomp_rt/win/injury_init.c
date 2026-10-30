@@ -30,8 +30,7 @@
 #define STAFF_TABLE 0xae23bcu       /* the staff table, 0x6e bytes a staff */
 #define STAFF_SIZE 0x6eu
 
-static int in_init;                 /* init_records runs, in a season game */
-static int creating;                /* init_records runs */
+static int in_init;                 /* init_records runs */
 static int loop_row = -1;           /* the staff row of the loop: the row of the outer add_injury call */
 static int depth;                   /* add_injury calls in progress */
 
@@ -44,19 +43,17 @@ RT_WRAP(0062cf70, injury_init_records)
     in_init = season_game_changes();
     loop_row = -1;
     depth = 0;
-    creating = 1;
     o_0062cf70();
-    creating = 0;
     in_init = 0;
     depth = 0;
 }
 
 /* Injury::add_injury 0x62d250, thiscall, 8 arguments (ret 0x20 at 0x62dc8f). The staff is the third argument
  * (0x62d25a). The Tier A switch (tier_a.c) gives no new injury after the game is made: it returns -1 as
- * 0x62dc82 does. No caller reads eax (0x62bc8e, 0x62c28f, 0x62e69d, 0x62eb73). */
+ * 0x62dc82 does. No caller reads eax (0x62bc8e, 0x62c28f, 0x62e69d, 0x62eb73, 0x7a44c9, 0x7a44ff, 0x7e5f32). */
 RT_WRAP(0062d250, injury_add_injury)
 {
-    if (!creating && tier_a()) {
+    if (tier_a_in_play()) {
         rt_ret_stdcall(0xffffffffu, 8);
         return;
     }

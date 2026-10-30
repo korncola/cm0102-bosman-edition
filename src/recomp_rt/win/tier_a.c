@@ -7,16 +7,19 @@
  * research-skips.md, read again for each address cited here) and run-logs/future-3/profile.md (the share of a
  * normal year of each area).
  *
- * The skips, each a full no-op that pops the original's arguments (no caller reads eax, cited per wrap):
+ * The skips, each a full no-op that pops the original's arguments (no caller reads eax, cited per wrap). They act
+ * only when the game is made (0xdd711c), so a Tier A game is made as the normal game is:
  * - The AI transfer market: update_club_shortlist 0x83a730 (ret 4 at 0x83a772, called at 0x5cdd15),
- *   make_club_bids 0x84a020 (ret 4 at 0x84abbf, called at 0x5cdd6d), the position lists 0x839e60 (ret 4 at
- *   0x83a12c, called at 0x5cda46) and 0x83a780 (ret at 0x83a9c4, called at 0x5cda56), and
- *   add_player_to_club_shortlists 0x842c00 (ret 8 at 0x842dfe, 13 callers, none reads eax). The day loop's
+ *   make_club_bids 0x84a020 (ret 4 at 0x84abbf, called at 0x5cdd6d), the day loop's calls of the position lists
+ *   0x839e60 (ret 4 at 0x83a12c, called at 0x5cda46) and 0x83a780 (ret at 0x83a9c4, called at 0x5cda56; the
+ *   constructor 0x839cf8, the load 0x83b229 and 0x83a6b3 still build them), and add_player_to_club_shortlists
+ *   0x842c00 (ret 8 at 0x842dfe, 17 callers, none reads eax). The day loop's
  *   club loop 0x5cdc4e..0x5cdd9a still runs, so the media calls 0x754a30 and 0x757c70 in it (their only callers)
  *   keep the story log short. The original's flag 0x9cd1f8 would skip them too, so it is not used.
  * - Background matches: SimulatedStats::play_daily_matches 0x84be20 (ret at 0x84c4fb, called at 0x5cdac9). It
  *   writes no fixture, table or history row, only player stats of clubs with no loaded league.
- * - Contracts: the contract pass 0x4c7ac0 (ret 0xc at 0x4c9e2e, called at 0x5cd406) and the daily staff pass
+ * - Contracts: the day loop's call of the contract pass 0x4c7ac0 (ret 0xc at 0x4c9e2e, called at 0x5cd406; the
+ *   call at 0x5cc9ef in game creation stays) and the daily staff pass
  *   0x5ce2d0 (cdecl, ret at 0x5d590c, called at 0x5cd9f1), which makes the AI contract offers (0x4cda70 at
  *   0x5d19d7 and five more), morale, disputes, wishes and the shortlist offers. Contracts and loans then never
  *   end, so with no market a squad changes only by retirements and new players. The fee instalments, the nation
@@ -84,63 +87,70 @@ int tier_a(void)
     return on;
 }
 
-/* A skip pops the arguments as the original's ret does. (The recomp tool finds each wrap by its RT_WRAP line.) */
-static int skip(int nargs)
+#define GAME_MADE 0xdd711cu   /* not 0 when the game is made: create_game 0x828110 sets it at 0x829fe3,
+                                 load_game_data 0x82a9c0 at 0x82cd6a, free_game_data 0x82ff40 clears it at 0x830509 */
+
+int tier_a_in_play(void) { return tier_a() && rd32(g_mem, GAME_MADE) != 0; }
+
+/* A skip pops the arguments as the original's ret does, in play only: game creation stays as in the normal game.
+ * from: the return address of the one call to skip, or 0 for every call. (The recomp tool finds each wrap by its
+ * RT_WRAP line.) */
+static int skip(int nargs, uint32_t from)
 {
-    if (!tier_a()) return 0;
+    if (!tier_a_in_play() || (from && rd32(g_mem, cpu.esp) != from)) return 0;
     rt_ret_stdcall(0, nargs);
     return 1;
 }
 
 RT_WRAP(0083a730, tier_a_update_club_shortlist)
 {
-    if (!skip(1)) o_0083a730();
+    if (!skip(1, 0)) o_0083a730();
 }
 
 RT_WRAP(0084a020, tier_a_make_club_bids)
 {
-    if (!skip(1)) o_0084a020();
+    if (!skip(1, 0)) o_0084a020();
 }
 
 RT_WRAP(00839e60, tier_a_build_position_lists)
 {
-    if (!skip(1)) o_00839e60();
+    if (!skip(1, 0x5cda4b)) o_00839e60();
 }
 
 RT_WRAP(0083a780, tier_a_sort_position_lists)
 {
-    if (!skip(0)) o_0083a780();
+    if (!skip(0, 0x5cda5b)) o_0083a780();
 }
 
 RT_WRAP(00842c00, tier_a_add_to_shortlists)
 {
-    if (!skip(2)) o_00842c00();
+    if (!skip(2, 0)) o_00842c00();
 }
 
 RT_WRAP(0084be20, tier_a_background_matches)
 {
-    if (!skip(0)) o_0084be20();
+    if (!skip(0, 0)) o_0084be20();
 }
 
 RT_WRAP(004c7ac0, tier_a_contract_pass)
 {
-    if (!skip(3)) o_004c7ac0();
+    if (!skip(3, 0x5cd40b)) o_004c7ac0();
 }
 
 RT_WRAP(005ce2d0, tier_a_daily_staff_pass)
 {
-    if (!skip(0)) o_005ce2d0();
+    if (!skip(0, 0)) o_005ce2d0();
 }
 
 RT_WRAP(0069aba0, tier_a_consider_sacking)
 {
-    if (!skip(2)) o_0069aba0();
+    if (!skip(2, 0)) o_0069aba0();
 }
 
 RT_WRAP(006b66a0, tier_a_can_quick_simulate)
 {
     o_006b66a0();
-    if (tier_a()) cpu.eax = 1;
+    if (tier_a_in_play()) cpu.eax = 1;
 }
 
 /* The random numbers of the instant result: splitmix64, the same sequence in each program. */
@@ -196,7 +206,7 @@ static void penalties(uint32_t f)
 
 RT_WRAP(006beeb0, tier_a_quick_simulate_match)
 {
-    if (!tier_a()) { o_006beeb0(); return; }
+    if (!tier_a_in_play()) { o_006beeb0(); return; }
     uint32_t eng = cpu.ecx, f = rd32(g_mem, eng + 0x4792);
     double mh, ma;
     means(f, &mh, &ma);
