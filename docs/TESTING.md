@@ -90,6 +90,8 @@ Results:
 
 | 2026-10-29 | 4, the full run: 2001 to 4 September 2004, England, 10 legs of 120 days and a quit leg | online-0.7.0 6f12558e with slice 9 | PASS. Legs 0 and 1 over the LAN with a local lobby (leg 1 on slice 6's build with the send fix, after leg 1 on the earlier build found the "scrman 2480" box), legs 2 to 10 through the relay and the live lobby. Each leg: the three joiners took their clubs back with their passwords; every division moved on; the run crossed the World Cup 2002, the Euro 2004 and the season changes of 2002, 2003 and 2004. Quit leg: the host saved at its quit, and each joiner showed "The host left the game", then the start screen. Two test faults fixed on the way: Go on Holiday sits higher in the menu of a manager with no club (the board sacked the host in 2004), and the first quit leg's host stayed on Manager Status after Finish for 10 minutes with two joiners "Waiting" (not seen again in the second try; open). |
 
+| 2026-10-30 | 4, the quit leg 10 times through the live relay | online-0.7.0 877cac08 (slice 5's relay close, slice 6's hold of the other joiners' packets) | 10 of 10 PASS: no hang, the host saved at its quit, and every joiner showed "The host left the game", then the start screen. On slice 6's build before these fixes, 1 of 5 passed (2 with "The connection to the host was lost", 2 with the hang after Finish). |
+
 <!-- s9 results -->
 
 ## Platform checks
