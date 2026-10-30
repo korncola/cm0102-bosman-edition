@@ -175,8 +175,8 @@ if(NOT WIN32)
     target_include_directories(net_errors_test PRIVATE src/recomp_rt src/recomp_rt/win)
     target_link_libraries(net_errors_test PRIVATE Threads::Threads mbedtls)
     add_test(NAME net_errors COMMAND net_errors_test)
-    add_executable(invite_test tests/net/test_invite.c src/recomp_rt/win/invite.c src/recomp_rt/win/lobby_http.c
-        src/recomp_rt/win/lobby.c src/recomp_rt/win/secure.c src/recomp_rt/host/net_posix.c)
+    add_executable(invite_test tests/net/test_invite.c src/recomp_rt/win/invite.c src/recomp_rt/win/lobby_rows.c
+        src/recomp_rt/win/lobby_http.c src/recomp_rt/win/lobby.c src/recomp_rt/win/secure.c src/recomp_rt/host/net_posix.c)
     target_include_directories(invite_test PRIVATE src/recomp_rt src/recomp_rt/win)
     target_link_libraries(invite_test PRIVATE Threads::Threads mbedtls)
     add_test(NAME invite COMMAND invite_test)

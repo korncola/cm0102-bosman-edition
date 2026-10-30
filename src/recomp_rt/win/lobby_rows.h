@@ -34,6 +34,8 @@
 #define LR_HOST_AT 19
 #define LR_NET 0x00420000u           /* 0.66.0.0, host order */
 #define LR_FULL_ROW 0x0042ffffu      /* 0.66.255.255: the "full today" row */
+#define LR_GONE_ROW 0x0042fffdu      /* 0.66.255.253: no row, so a join gives "no longer in the list" (invite.c). It is
+                                       * not a relay peer: those are 0.66.255.0 to .15 */
 #define LR_RELAY_PEERS 0x0042ff00u   /* 0.66.255.<channel>: a human manager through the relay, on the host (relay.h) */
 #define LR_DOWN_ROW 0x0042fffeu      /* 0.66.255.254: the "lobby does not answer" row (0.7.0 slice 7) */
 #define LR_HOLD_MS 300
@@ -65,6 +67,13 @@ void lr_lobby(const LobbyRow *rows, int n, int result);
 /* The lobby row of a joiner's connect to addr (network order): the row, or NULL when addr is not a lobby row.
  * *full is 1 for the "full today" row and 2 for the "lobby does not answer" row. */
 const LobbyRow *lr_row_of(uint32_t addr, int *full);
+
+/* The text of the row that the game list shows now for the lobby game with this code: its lobby row, or its
+ * LAN row when the host is on this computer's LAN. 0 when the list shows no such row. For invite links
+ * (invite.c), which put this text in the Join field as a click on the row does. */
+int lr_shown_text(const char *code, char out[50]);
+/* The LhResult of the lobby's last answer to the game list. */
+int lr_lobby_result(void);
 
 /* Tests: the adapters (network order) and the default route; else the system's own. */
 void lr_set_adapters(const uint32_t *addr, const uint32_t *mask, int n, uint32_t route);

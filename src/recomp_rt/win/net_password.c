@@ -16,6 +16,7 @@
  * the Join field 0xdd70dc (0x81fd99..0x81fdc4). So the join runs again through the original's code, with the
  * password. A wrong password opens the box again, with a line that says so. */
 #include "win.h"
+#include "invite.h"
 #include "net_core.h"
 
 #include <stdio.h>
@@ -178,11 +179,22 @@ int net_password_ask(int was_wrong)
     return 1;
 }
 
+void invite_call(void (*original)(void), uint16_t command)
+{
+    uint16_t before = rd16(g_mem, COMMAND);
+    wr16(g_mem, COMMAND, command);
+    original();
+    wr16(g_mem, COMMAND, before);
+}
+
 void o_0081fbd0(void);
 
 /* setup_handle_select_network_game_input, cdecl (s16 widget): see the head of this file. */
 RT_WRAP(0081fbd0, select_network_game_input)
 {
+    /* An invite link (invite.c): its game's row text in the Join field, then Next as for a join again. */
+    if (!retry && (int16_t)rt_arg(0) == -1 && invite_list_join((char *)g_mem + JOIN_NAME, 50)) retry = 1;
+    if ((int16_t)rt_arg(0) >= 0) invite_clicked();
     if (!retry || (int16_t)rt_arg(0) != -1) {
         o_0081fbd0();
         return;

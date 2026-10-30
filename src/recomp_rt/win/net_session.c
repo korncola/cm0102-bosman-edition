@@ -37,6 +37,7 @@
  *   (net_core.c) gives "kicked", a connection that broke with no quit packet gives "the connection was lost", and
  *   the host's quit packet gives "the host left" (net_errors.c). */
 #include "win.h"
+#include "invite.h"
 #include "net_core.h"
 #include "season.h"
 #include "net_errors.h"
@@ -183,6 +184,12 @@ RT_WRAP(0081ef70, network_play_input)
         rt_ret_cdecl(0xfffffffeu);
         return;
     }
+    uint16_t invite = (int16_t)rt_arg(0) == -1 ? invite_command(INVITE_NETWORK_PLAY) : 0;
+    if (invite) {                  /* an invite link: Join Network Game (invite.c) */
+        invite_call(o_0081ef70, invite);
+        return;
+    }
+    if ((int16_t)rt_arg(0) >= 0) invite_clicked();
     o_0081ef70();
 }
 

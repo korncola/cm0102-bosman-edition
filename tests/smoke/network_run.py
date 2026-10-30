@@ -267,7 +267,7 @@ def lan_address():
         s.close()
 
 
-def start(program, game, work, name, steps, shots, slow=1, env_extra=None, online=True):
+def start(program, game, work, name, steps, shots, slow=1, env_extra=None, online=True, args=()):
     user = os.path.join(work, name)
     os.makedirs(user)
     with open(os.path.join(user, "settings.txt"), "w") as f:
@@ -284,7 +284,7 @@ def start(program, game, work, name, steps, shots, slow=1, env_extra=None, onlin
     env.pop("RECOMP_LOBBY_URL", None)
     env.update(env_extra or {})
     err = open(os.path.join(shots, f"{name}-stderr.txt"), "w", errors="replace")
-    return subprocess.Popen([program, "--game", game], env=env, stdout=subprocess.DEVNULL, stderr=err), err
+    return subprocess.Popen([program, "--game", game, *args], env=env, stdout=subprocess.DEVNULL, stderr=err), err
 
 
 def wait_for(path, text, proc, timeout):

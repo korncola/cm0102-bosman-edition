@@ -19,6 +19,7 @@ typedef struct {
     int over;                        /* past the cap: never delivered */
     uint64_t seen;
     uint8_t d[LR_DATAGRAM];          /* LAN, held: the ACK */
+    char text[50];                   /* a lobby row: its text in the list */
 } Game;
 
 static Game games[GAMES];
@@ -296,6 +297,7 @@ long lr_extra(uint8_t *buf, uint32_t room, uint32_t *addr)
             snprintf(g->key_host, sizeof g->key_host, "%s", rows[i].g.host_name);
             memcpy(g->key_name, name, sizeof name);
             g->lobby = g->delivered = 1;
+            memcpy(g->text, text, sizeof text);
             g->addr = to_net(LR_NET | (uint32_t)i);
             ack_of(d, rows[i].g.host_name, text);
             push(d, g->addr);
@@ -307,6 +309,22 @@ long lr_extra(uint8_t *buf, uint32_t room, uint32_t *addr)
     q_head = (q_head + 1) % QUEUE, q_n--;
     return LR_DATAGRAM;
 }
+
+int lr_shown_text(const char *code, char out[50])
+{
+    for (int i = 0; i < rows_n; i++) {
+        if (strcmp(rows[i].code, code)) continue;
+        char name[LOBBY_TEXT];
+        lobby_clean(name, LOBBY_TEXT, rows[i].g.name);
+        const Game *g = find(rows[i].g.host_name, name);
+        if (!g || !g->delivered) return 0;
+        snprintf(out, 50, "%.49s", g->lobby ? g->text : (const char *)g->d + LR_NAME_AT);
+        return 1;
+    }
+    return 0;
+}
+
+int lr_lobby_result(void) { return lobby_result; }
 
 void lr_lobby(const LobbyRow *r, int n, int result)
 {
