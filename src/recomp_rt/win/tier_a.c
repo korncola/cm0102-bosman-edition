@@ -1,9 +1,9 @@
 /* The Tier A switch (0.6.2 slice 3, decisions Q9, Q10, Q16 and Q31 of the future play spec). RECOMP_TIER_A=1 is a
  * test switch, read once at the start and off by default. Off, every wrap below runs the original at once, so the
  * game is the same (Q152). On, a game plays only the competitions, to reach far years quickly: the calendar, draws,
- * entrants, league tables, season changes, history, finances, retirements, new players, and save and load stay.
- * The AI transfer market, background matches, contracts, injuries and AI manager moves stop, and each match gets an
- * instant result from the two sides' reputation. Research: run-logs of slice 3 (research-match.md and
+ * entrants, league tables, season changes, history, finances, retirements, new players, contracts, and save and
+ * load stay. The AI transfer market, background matches, new injuries and AI manager moves stop, and each match gets
+ * an instant result from the two sides' reputation. Research: run-logs of slice 3 (research-match.md and
  * research-skips.md, read again for each address cited here) and run-logs/future-3/profile.md (the share of a
  * normal year of each area).
  *
@@ -18,12 +18,14 @@
  *   keep the story log short. The original's flag 0x9cd1f8 would skip them too, so it is not used.
  * - Background matches: SimulatedStats::play_daily_matches 0x84be20 (ret at 0x84c4fb, called at 0x5cdac9). It
  *   writes no fixture, table or history row, only player stats of clubs with no loaded league.
- * - Contracts: the day loop's call of the contract pass 0x4c7ac0 (ret 0xc at 0x4c9e2e, called at 0x5cd406; the
- *   call at 0x5cc9ef in game creation stays) and the daily staff pass
- *   0x5ce2d0 (cdecl, ret at 0x5d590c, called at 0x5cd9f1), which makes the AI contract offers (0x4cda70 at
- *   0x5d19d7 and five more), morale, disputes, wishes and the shortlist offers. Contracts and loans then never
- *   end, so with no market a squad changes only by retirements and new players. The fee instalments, the nation
- *   rules objects, work permits and the free transfer queue of 0x8c5880 stay (finances).
+ * Contracts stay. A skip of the contract pass 0x4c7ac0 (contract ends, called at 0x5cd406) and of the daily staff
+ * pass 0x5ce2d0 (the AI contract offers, 0x4cda70 at 0x5d19d7 and five more) left each player at his club after his
+ * contract ended, and such a player cannot play (an England game from 2025: Aston Villa had 50 players and 4 who
+ * could play its Champions League match in August 2028, and init_match 0x6b7f20 stopped at match_eng.cpp 652,
+ * 0x6b8aca). The top-up of match squads (0x90d2f0) counts the players at the club, not the ones who can play, so it
+ * did not help. With the contract code kept, a player whose contract ends leaves the club, and a club below 15
+ * gets virtual players for its matches. The shortlist offers of the daily staff pass (0x5cfaf6, 0x5d585f) are
+ * add_player_to_club_shortlists 0x842c00 and stop with the market.
  * - Injuries: Injury::add_injury 0x62d250 (ret 0x20, wrapped in injury_init.c) returns -1 after the game is made.
  *   The injuries of the database and of game creation stay, and heal by date when read (0x62c680 from 0x62c400
  *   and 0x62ed70), with no daily code.
@@ -70,8 +72,6 @@ void o_00839e60(void);
 void o_0083a780(void);
 void o_00842c00(void);
 void o_0084be20(void);
-void o_004c7ac0(void);
-void o_005ce2d0(void);
 void o_0069aba0(void);
 void o_006b66a0(void);
 void o_006beeb0(void);
@@ -130,16 +130,6 @@ RT_WRAP(00842c00, tier_a_add_to_shortlists)
 RT_WRAP(0084be20, tier_a_background_matches)
 {
     if (!skip(0, 0)) o_0084be20();
-}
-
-RT_WRAP(004c7ac0, tier_a_contract_pass)
-{
-    if (!skip(3, 0x5cd40b)) o_004c7ac0();
-}
-
-RT_WRAP(005ce2d0, tier_a_daily_staff_pass)
-{
-    if (!skip(0, 0)) o_005ce2d0();
 }
 
 RT_WRAP(0069aba0, tier_a_consider_sacking)
