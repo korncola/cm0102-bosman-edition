@@ -9,7 +9,8 @@
  *
  * The skips, each a full no-op that pops the original's arguments (no caller reads eax, cited per wrap). They act
  * only when the game is made (0xdd711c), so a Tier A game is made as the normal game is:
- * - The AI transfer market: update_club_shortlist 0x83a730 (ret 4 at 0x83a772, called at 0x5cdd15),
+ * - The AI transfer market: update_club_shortlist 0x83a730 (ret 4 at 0x83a772, called at 0x5cdd15; its squad
+ *   assessment stays, see its wrap),
  *   make_club_bids 0x84a020 (ret 4 at 0x84abbf, called at 0x5cdd6d), the day loop's calls of the position lists
  *   0x839e60 (ret 4 at 0x83a12c, called at 0x5cda46) and 0x83a780 (ret at 0x83a9c4, called at 0x5cda56; the
  *   constructor 0x839cf8, the load 0x83b229 and 0x83a6b3 still build them), and add_player_to_club_shortlists
@@ -102,9 +103,34 @@ static int skip(int nargs, uint32_t from)
     return 1;
 }
 
+/* Shortlist_Manager::update_club_shortlist 0x83a730, thiscall (club), ret 4 (0x83a772), one caller in the day loop
+ * (0x5cdd15, for a random share of the clubs each day). It frees the club's target slots (0x844660 at 0x83a749),
+ * assesses its squad (assess_club_squad 0x83cb40 at 0x83a763, args: the club's shortlist entry [this + 0xdc] +
+ * id * 9, the club, 1, 0) and updates its shortlist (0x83b6e0 at 0x83a76b). In Tier A only the assessment stays
+ * (0.6.2 open item 78). It is the one kept step of the market that makes a big squad smaller: above R / 500 + 25
+ * players (R the club's reputation +0x80) it queues weak players with a low value for a free transfer
+ * (queue_free_transfer 0x8c16b0 at 0x83db6b), and the kept TRANSFER_MANAGER::daily_update 0x8c5880 releases them
+ * (process_free_transfer_queue 0x8c18c0). With the whole call skipped, squads only grew: new players and youth
+ * joined, and nobody was sold or released before his contract ended. In July 2108 335 of 8,107 clubs had all 50
+ * squad slots filled against 29 in the normal game, so the top-up 0x90dae0 could not add virtual players, and a
+ * reserve side with an over-21 rule (3 allowed) fielded 10: Albion Rovers in January 2045 (talongx, box
+ * match_eng.cpp 652). The listing part of the assessment (transfer_list_player 0x842320 at 0x83dc42) calls
+ * add_player_to_club_shortlists 0x842c00, which Tier A skips below, so a listed player leaves at the end of his
+ * contract. */
 RT_WRAP(0083a730, tier_a_update_club_shortlist)
 {
-    if (!skip(1, 0)) o_0083a730();
+    if (!tier_a_in_play()) {
+        o_0083a730();
+        return;
+    }
+    uint32_t club = rt_arg(0), self = cpu.ecx;
+    Cpu saved = cpu;
+    uint32_t a[4] = {rd32(g_mem, self + 0xdc) + rd32(g_mem, club) * 9u, club, 1, 0};
+    cpu.ecx = self;
+    rt_callback(0x83cb40u, 4, a);
+    if (rt_unwinding) return;
+    cpu = saved;
+    rt_ret_stdcall(0, 1);
 }
 
 RT_WRAP(0084a020, tier_a_make_club_bids)
