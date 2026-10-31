@@ -354,6 +354,26 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
 
 void o_005f9970(void);
 
+/* 0.6.2 open item 46: the original's row of the 2002 ACN names Egypt (0x5f9f19, fixed at 0x5f9f2f), and the rows
+ * of the table come only at the first season change (hosts_apply from 2002/03), after the entrants of late 2001
+ * (0x4022c0). In a 2001 game that row takes the table hosts in place (Mali), with its day and its move kept and no
+ * new row. The other rows of 2001/02 (the 2002 World Cup) already name the table hosts. */
+static void first_season_hosts(uint32_t self)
+{
+    uint32_t rows = rd32(g_mem, self), key = rd32(g_mem, 0x9cf7acu);      /* african_nations, host_comps */
+    int count = (int16_t)rd16(g_mem, self + 4);
+    if (!readable(rows) || count <= 0 || count > 1000 || key == 0xffffffffu) return;
+    for (int i = 0; i < season_intl_edition_count; i++) {
+        const SeasonIntlEdition *e = &season_intl_editions[i];
+        uint32_t row = !strcmp(e->file, "african_nations") && e->season == SEASON_FIRST_YEAR
+                           ? row_find(rows, count, key, e->year) : 0;
+        if (!row || rd8(g_mem, row + ROW_CHOICE) != CHOICE_FIXED) continue;
+        uint8_t cycle = rd8(g_mem, row + ROW_CYCLE);
+        row_write(row, key, e);
+        wr8(g_mem, row + ROW_CYCLE, cycle);
+    }
+}
+
 /* HostCountry::init_default_table, thiscall (): the rows of a new game. The constructor sorts them after the
  * return (0x5f994a..0x5f995a), with the count of +4. The original's 57 random draws (0x5fa640..0x5fa70b) stay
  * as they are. */
@@ -365,7 +385,10 @@ RT_WRAP(005f9970, host_init)
     /* A game that starts in 2001/02 (changing rules on) keeps the original's host table at the new game, and
      * makes no game allocation there (Q152): the rows of the table come at the first season change
      * (intl_season). */
-    if (season_start_year() == SEASON_FIRST_YEAR) return;
+    if (season_start_year() == SEASON_FIRST_YEAR) {
+        first_season_hosts(self);
+        return;
+    }
     hosts_apply(self, season_start_year(), 0);
 }
 
@@ -412,15 +435,27 @@ RT_WRAP(005fab70, host_redraw)
 
 void o_00799e30(void);
 
+static uint32_t team_nation(uint32_t club);
+static void ofc_australia(uint32_t self);
+static void ofc_hosts(uint32_t self);
+
 /* OceaniaNations::pick_entrants, thiscall (): six teams at +0xee: Australia and New Zealand by key id
  * (0x799f9c, 0x799fc1), then the two best Melanesian and the two best Polynesian nations (0x79a03c,
  * 0x79a04d). With Australia in Asia its place goes to the Oceania nation with the highest reputation (nation
- * +0x8e, inference from docs/research/2026-10-17-season-date-shifts.md) that is not in the six. */
+ * +0x8e, inference from docs/research/2026-10-17-season-date-shifts.md) that is not in the six (ofc_australia).
+ * Then the hosts come in (ofc_hosts). */
 RT_WRAP(00799e30, ofc_entrants)
 {
     uint32_t self = cpu.ecx;
     o_00799e30();
-    if (rt_unwinding || !cpu.eax || !australia_in_asia()) return;
+    if (rt_unwinding || !cpu.eax) return;
+    ofc_australia(self);
+    if (!rt_unwinding) ofc_hosts(self);
+}
+
+static void ofc_australia(uint32_t self)
+{
+    if (!australia_in_asia()) return;
     uint32_t pool = rd32(g_mem, self + 0xee);
     int aus = key_nation(KEY_AUSTRALIA);
     if (!readable(pool) || aus < 0) return;
@@ -451,6 +486,53 @@ RT_WRAP(00799e30, ofc_entrants)
         }
     }
     if (best) wr32(g_mem, pool + 4u * (uint32_t)slot, best);
+}
+
+/* 0.6.2 open item 45: the original never calls find_hosts for this cup, so a host plays only when it is one of
+ * the six (Papua New Guinea 2016, Vanuatu 2024 did not). In a season game each host of the edition at +0x40
+ * (the table hosts, after the table the rotation host) that is not in the six takes the place of the team with
+ * the lowest reputation (club +0x80, the field of the sort compare 0x4b07d0 at 0x4b07f0) that is not a host. The
+ * count stays 6 (+0xf2, 0x799e42). */
+static void ofc_hosts(uint32_t self)
+{
+    if (!season_intl_on()) return;
+    const SeasonIntlEdition *e = season_intl_edition("oceania_nations", (int16_t)rd16(g_mem, self + 0x40u));
+    uint32_t pool = rd32(g_mem, self + 0xee);
+    int count = (int16_t)rd16(g_mem, self + 0xf2);
+    if (!e || !e->hosts || !readable(pool) || count <= 0 || count > 16) return;
+    uint32_t hosts[6];
+    int n = 0;
+    char one[128];
+    for (const char *p = e->hosts; *p && n < 6;) {
+        size_t len = strcspn(p, ";");
+        snprintf(one, sizeof one, "%.*s", (int)len, p);
+        p += len;
+        if (*p == ';') p++;
+        uint32_t t = season_intl_team_named(one);
+        if (rt_unwinding) return;
+        if (t) hosts[n++] = t;
+    }
+    for (int h = 0; h < n; h++) {
+        uint32_t nation = team_nation(hosts[h]);
+        int in = 0, low = -1, low_rep = 0;
+        for (int k = 0; k < count; k++) {
+            uint32_t t = rd32(g_mem, pool + 4u * (uint32_t)k);
+            in |= readable(t) && team_nation(t) == nation;
+        }
+        if (in) continue;
+        for (int k = 0; k < count; k++) {
+            uint32_t t = rd32(g_mem, pool + 4u * (uint32_t)k);
+            int host = 0;
+            for (int j = 0; j < n; j++) host |= readable(t) && team_nation(t) == team_nation(hosts[j]);
+            int rep = readable(t) ? (int16_t)rd16(g_mem, t + 0x80u) : -0x8000;
+            if (!host && (low < 0 || rep <= low_rep)) low = k, low_rep = rep;
+        }
+        if (low < 0) continue;
+        wr32(g_mem, pool + 4u * (uint32_t)low, hosts[h]);
+        if (logging())
+            fprintf(stderr, "recomp: season intl: oceania_nations %d host %s plays\n", e->year,
+                    win_str(nation + NATION_NAME));
+    }
 }
 
 /* ---- Finals that start before their qualifying can end ---- */

@@ -358,6 +358,14 @@ INSNS = {
     # another size gets a new array. The instruction after the step only moves this to ecx.
     0x401D85: ("mov ecx, esi", "SYNC(); rt_intl_cup_stages(esi); ecx = esi;"),
     0x40F785: ("mov ecx, esi", "SYNC(); rt_intl_cup_stages(esi); ecx = esi;"),
+    # 0.6.2 open items 44 and 46 (win/season_intl_cups.c): every host plays. The entrants take the two hosts of
+    # find_hosts first (ACN 0x402338, Asian Cup 0x40fea7). The hosts after the second (2027 ACN: Uganda; 2007
+    # Asian Cup: Thailand, Vietnam) join them before the ACN sort (0x402446, its start dl and the count edi) and
+    # before the Asian Cup pick from the list on the stack (0x4afbd0 at 0x40ffc8: list esp + 0x228, count ebp and
+    # [esp + 0x14], hosts in +0xee ebx). [esp + 0x13] keeps the host count dl in both (0x40234c, 0x40feb5). The
+    # replaced instructions only move; the flags are set again before they are read (0x40243d, 0x40ffbf).
+    0x40242F: ("mov ecx, dword ptr [esi + 0xee]", "SYNC(); t0 = rt_intl_cup_acn_hosts(esi, edi, edx & 0xffu); edi = t0 >> 8; edx = (edx & 0xffffff00u) | ((edx + t0) & 0xffu); W8(esp + 0x13u, edx & 0xffu); ecx = R32(esi + 0xeeu);"),
+    0x40FFB2: ("mov cl, byte ptr [esi + 0xf2]", "SYNC(); t0 = rt_intl_cup_asian_hosts(esi, esp + 0x228u, ebp, ebx); t1 = t0 & 0xffu; ebp = t0 >> 8; W32(esp + 0x14u, ebp); ebx += t1; edx = (edx & 0xffffff00u) | ((edx + t1) & 0xffu); W8(esp + 0x13u, edx & 0xffu); ecx = (ecx & 0xffffff00u) | R8(esi + 0xf2u);"),
 
     # Copa America of 16 teams (0.6.0 slice 27, win/season_intl_copa.c). Group A (0x5e11e0) takes the teams
     # 3 * k of +0xee: 4 * k with 16 teams. start_new_season 0x5e1530 keeps the stage array of the ctor: after
