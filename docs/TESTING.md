@@ -48,6 +48,10 @@ Long games run from 2001/02 to 2027/28 with all nations and different random see
 
 A date jump starts a new game in a far year, with every date of the database moved to that year. It needs an Update Team or Custom database. The test variable `RECOMP_START_SEASON` takes a start year up to 2099. With the date jump switch `RECOMP_DATE_JUMP=1` it takes a year up to 2300. The program reads the switch once at the start, and it is off by default. The same-save set proves that the switch changes nothing in a game of the normal start years (run `date-jump-on`). The season code itself has no year limit: its hooks, rules and save parts work in every year (ctest `future_2300` and `season_part` step them to 2301).
 
+## The run set
+
+The run set is the fixed list of games that a release must pass (from 0.6.2): Tier A games from seven starts with three seeds each to 2100, a game with England, Spain and Brazil, one Tier A game to 2300, the date jumps to 2098, 2198 and 2298, and two Tier B games of the full world to 2300. The list is `tests/seasons/future/run_set.tsv`. `tests/seasons/future/run_set.py` plays it several games at a time. It runs the history checker (`tests/seasons/future/history_check.py`) on the save of every leg and keeps one save a decade. For Tier B it also checks the world's health and the Tier B limits: a national side with no manager for more than a season, a game day twice as slow as in the first seasons, and a save that would pass 4 GB before 2300. It starts no game below 100 GB of free disk. Each game ends with pass or fail. The release script runs `run_set.py --verify` on the folder of a run of the whole set and stops unless every game passed on the same game code and the checker finds no fault on the kept saves. ctest `future_run_set` tests the script without a game.
+
 ## Memory and big saves
 
 A game with all nations uses more memory each season. The heap now has room for about 2 GB of game data. A code test (`tests/recomp/test_heap.c`) fills a small heap and checks that it still serves new blocks.

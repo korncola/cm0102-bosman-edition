@@ -34355,6 +34355,72 @@ static const SeasonHistRow rows_18[] = {
     {"US Open Cup", 2011, {"Seattle Sounders", "Chicago Fire", "", ""}, {"United States", "United States", "", ""}},
     {"US Open Cup", 2001, {"Los Angeles Galaxy", "New England Revolution", "", ""}, {"United States", "United States", "", ""}},
 };
+static const SeasonHistClear clears_19[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_19[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+};
+static const SeasonHistClear clears_20[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_20[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+};
+static const SeasonHistClear clears_21[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_21[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+};
+static const SeasonHistClear clears_22[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_22[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+};
+static const SeasonHistClear clears_23[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_23[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+};
+static const SeasonHistClear clears_24[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_24[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+};
+static const SeasonHistClear clears_25[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_25[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+};
+static const SeasonHistClear clears_26[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_26[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+};
+static const SeasonHistClear clears_27[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_27[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+};
+static const SeasonHistClear clears_28[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_28[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+};
+static const SeasonHistClear clears_29[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_29[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+};
 const SeasonHistDb season_history_dbs[] = {
     {"3.9.68", 2002, clears_0, 553, rows_0, 416},
     {"Summer 2002", 2002, clears_1, 553, rows_1, 416},
@@ -34375,5 +34441,16 @@ const SeasonHistDb season_history_dbs[] = {
     {"December 2010 SIM", 2010, clears_16, 0, rows_16, 10},
     {"September 2010 ODB", 2010, clears_17, 0, rows_17, 10},
     {"March 2012 SIM", 2011, clears_18, 0, rows_18, 11},
+    {"April 2021", 2020, clears_19, 1, rows_19, 1},
+    {"November 2020", 2020, clears_20, 1, rows_20, 1},
+    {"April 2022", 2021, clears_21, 1, rows_21, 1},
+    {"October 2021", 2021, clears_22, 1, rows_22, 1},
+    {"April 2023", 2022, clears_23, 1, rows_23, 1},
+    {"October 2022", 2022, clears_24, 1, rows_24, 1},
+    {"April 2024", 2023, clears_25, 1, rows_25, 1},
+    {"October 2023", 2023, clears_26, 1, rows_26, 1},
+    {"October 2024", 2024, clears_27, 1, rows_27, 1},
+    {"December 2025", 2025, clears_28, 1, rows_28, 1},
+    {"May 2026", 2025, clears_29, 1, rows_29, 1},
 };
-const int season_history_dbs_count = 19;
+const int season_history_dbs_count = 30;

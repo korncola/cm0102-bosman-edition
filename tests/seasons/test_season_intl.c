@@ -310,6 +310,27 @@ int main(void)
     CHECK(!season_intl_finals_busy(SEASON_CONF_AFRICA, 2016, doy_of(2016, 1, 20)), "2013 off: no ACN in 2016");
     CHECK(!season_intl_finals_busy(SEASON_CONF_AFRICA, 2013, doy_of(2013, 1, 26)), "2013 off: ACN 2013 lies before");
 
+    /* The days of the CONCACAF Gold Cup (open item 55): its own editions (season_nl_table.c), every two years after
+     * the last. The game asks only when it has a Gold Cup object (season_gold_cup.c). */
+    game(1, 2001, 0);
+    CHECK(!season_intl_gold_busy(2017, doy_of(2017, 7, 10)), "base game: no Gold Cup days");
+    game(1, 2001, 1);
+    CHECK(season_intl_gold_busy(2017, doy_of(2017, 7, 10)), "2001 on: Gold Cup 2017 from 7 July");
+    CHECK(season_intl_gold_busy(2017, doy_of(2017, 7, 5)), "2001 on: two days before the Gold Cup");
+    CHECK(!season_intl_gold_busy(2017, doy_of(2017, 7, 4)), "2001 on: three days before");
+    CHECK(!season_intl_gold_busy(2016, doy_of(2016, 7, 10)), "2001 on: no Gold Cup in 2016");
+    CHECK(season_intl_gold_busy(2017, doy_of(2017, 8, 6)), "2001 on: the last day of the 2017 span (7 July + 30)");
+    CHECK(!season_intl_gold_busy(2017, doy_of(2017, 8, 7)), "2001 on: the day after the span");
+    CHECK(season_intl_gold_busy(2019, doy_of(2019, 7, 10)), "2001 on: Gold Cup 2019 of 16 from 15 June");
+    CHECK(season_intl_gold_busy(2029, doy_of(2029, 6, 25)), "2001 on: after the table, every two years on 2027's days");
+    CHECK(!season_intl_gold_busy(2030, doy_of(2030, 6, 25)), "2001 on: none in 2030");
+    CHECK(season_intl_gold_edition(2017) && season_intl_gold_edition(2017)->teams == 12, "2001 on: the 2017 edition");
+    CHECK(!season_intl_gold_edition(2018), "2001 on: no 2018 edition");
+    game(1, 2013, 0);
+    CHECK(season_intl_gold_busy(2017, doy_of(2017, 7, 10)), "2013 off: 2015's Gold Cup every two years");
+    CHECK(!season_intl_gold_busy(2016, doy_of(2016, 7, 10)), "2013 off: no Gold Cup in 2016");
+    CHECK(!season_intl_gold_busy(2013, doy_of(2013, 7, 10)), "2013 off: the 2013 Gold Cup lies before the game");
+
     if (failures) {
         fprintf(stderr, "season_intl_test: %d failures\n", failures);
         return 1;

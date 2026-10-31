@@ -350,6 +350,43 @@ int season_intl_finals_busy(int conf, int y, int doy)
     return 0;
 }
 
+const SeasonNlGoldCup *season_intl_gold_edition(int year)
+{
+    static SeasonNlGoldCup repeat;
+    const SeasonNlGoldCup *base = NULL;
+    if (season_changing_rules()) {
+        for (int i = 0; i < season_nl_gold_cup_count; i++) {
+            if (season_nl_gold_cups[i].year == year) return &season_nl_gold_cups[i];
+            if (season_nl_gold_cups[i].year < year) base = &season_nl_gold_cups[i];
+        }
+    } else {
+        for (int i = 0; i < season_nl_gold_cup_count && !base; i++)
+            if (season_nl_gold_cups[i].year > season_start_year()) base = &season_nl_gold_cups[i];
+        if (!base && season_nl_gold_cup_count) base = &season_nl_gold_cups[season_nl_gold_cup_count - 1];
+        if (base && base->year == year) return base;
+        if (base && base->year > year) base = NULL;
+    }
+    if (!base || (year - base->year) % 2) return NULL;
+    repeat = *base;
+    repeat.year = year;
+    return &repeat;
+}
+
+/* The Gold Cup's first day is the edition's (season_gold_cup_date_shift moves the class's first group day, 6 July,
+ * to it). Only an edition after the start year is played (gold_first_after in season_gold_cup.c). */
+int season_intl_gold_busy(int y, int doy)
+{
+    if (!season_intl_on()) return 0;
+    long day = days_from_civil(y, 1, 1) + doy;
+    for (int year = y - 1; year <= y + 1; year++) {
+        const SeasonNlGoldCup *g = year > season_start_year() ? season_intl_gold_edition(year) : NULL;
+        if (!g || g->start.month < 1) continue;
+        long from = days_from_civil(year + g->start.year, g->start.month, g->start.day > 0 ? g->start.day : 1);
+        if (day >= from - 2 && day <= from + finals_span(g->teams)) return 1;
+    }
+    return 0;
+}
+
 void season_intl_shift_date(int shift, int *day, int *month0, int *year)
 {
     if (!shift) return;
@@ -396,7 +433,13 @@ int season_intl_uefa_from(const char *name)
 {
     /* UEFA Congress of 3 May 2016 (docs/research/rules-0.6.0/uefa-access.tsv, the 2016/17 rows: "Kosovo (55):
      * admitted May 2016"); the 2018-19 Nations League has Kosovo in League D (nations-league-tiers.tsv). */
-    return name && !strcasecmp(name, "Kosovo") ? 2016 : 0;
+    if (!name) return 0;
+    if (!strcasecmp(name, "Kosovo")) return 2016;
+    /* UEFA Congress of 25 April 2002 in Stockholm: Kazakhstan moves from the AFC (tests/seasons/future/nations.tsv;
+     * https://en.wikipedia.org/wiki/Kazakhstan_national_football_team, read 2026-10-30). The 2002/03 season is
+     * the first after it. */
+    if (!strcasecmp(name, "Kazakhstan")) return 2002;
+    return 0;
 }
 
 /* ---- The real draws of finals whose qualifying began before the game (O259 rows A9 and A16) ---- */

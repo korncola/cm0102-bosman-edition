@@ -137,7 +137,7 @@ if(NOT WIN32)
     # the editions and the rules of the code sites.
     add_test(NAME season_intl_table COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_intl.py" --check)
     add_executable(season_intl_test tests/seasons/test_season_intl.c src/recomp_rt/win/season_intl_rules.c
-        src/recomp_rt/win/season_intl_table.c)
+        src/recomp_rt/win/season_intl_table.c src/recomp_rt/win/season_nl_table.c)
     target_include_directories(season_intl_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_intl COMMAND season_intl_test)
     # Nations Leagues (0.6.0 slice 28): the C table of the editions and leagues matches the tables, and the
@@ -169,6 +169,13 @@ if(NOT WIN32)
     add_test(NAME season_rules COMMAND season_rules_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv"
         "${CMAKE_BINARY_DIR}/seasons")
     set_tests_properties(season_rules PROPERTIES FIXTURES_REQUIRED rules_table)
+    # Play-off winners that go up with no play-off of the game (0.6.2 open item 63): Série B from 2025 to 2301.
+    add_executable(season_playoff_winners_test tests/seasons/test_season_playoff_winners.c
+        src/recomp_rt/win/season_playoff_winners.c src/recomp_rt/win/season_rules.c
+        src/recomp_rt/win/season_league_table.c src/recomp_rt/host/posix.c)
+    target_include_directories(season_playoff_winners_test PRIVATE src/recomp_rt/win)
+    add_test(NAME season_playoff_winners COMMAND season_playoff_winners_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv")
+    set_tests_properties(season_playoff_winners PROPERTIES FIXTURES_REQUIRED rules_table)
     # Domestic cups that the rules table does not hold in some seasons (0.6.0 slice 21b).
     add_executable(season_cup_breaks_test tests/seasons/test_season_cup_breaks.c
         src/recomp_rt/win/season_cup_breaks.c src/recomp_rt/win/season_rules.c src/recomp_rt/host/posix.c)
@@ -188,6 +195,11 @@ if(NOT WIN32)
     add_test(NAME season_names_table COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_names.py" --check)
     # 0.6.1 item 2: the abbreviation column of the names table (Select Team shows it).
     add_test(NAME season_names_abbr COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/names_abbr_check.py")
+    # 0.6.2 open item 71: after the table each file keeps the names of its last season with a name, to 2301.
+    add_executable(season_names_test tests/seasons/test_season_names.c src/recomp_rt/win/season_names.c
+        src/recomp_rt/host/posix.c)
+    target_include_directories(season_names_test PRIVATE src/recomp_rt/win src/recomp_rt include)
+    add_test(NAME season_names COMMAND season_names_test "${CMAKE_BINARY_DIR}/seasons/names.tsv" "${CMAKE_BINARY_DIR}/seasons")
     # Future testing step 2: the history checker finds each planted fault of a small fixture save that it writes.
     add_test(NAME season_future_history_check COMMAND python3 -I
         "${CMAKE_SOURCE_DIR}/tests/seasons/future/history_check_test.py")
@@ -215,6 +227,9 @@ if(NOT WIN32)
         src/recomp_rt/win/season_fifa_days_table.c)
     target_include_directories(season_fifa_days_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_fifa_days COMMAND season_fifa_days_test)
+    add_executable(youth_pool_test tests/seasons/test_youth_pool.c src/recomp_rt/win/youth_pool_rule.c)
+    target_include_directories(youth_pool_test PRIVATE src/recomp_rt/win)
+    add_test(NAME youth_pool COMMAND youth_pool_test)
     # The UEFA league phase draw (0.6.0 slice 25): pots, opponents, nation rules and match days.
     add_executable(season_uefa_league_test tests/seasons/test_season_uefa_league.c
         src/recomp_rt/win/season_uefa_league_draw.c)
@@ -248,9 +263,16 @@ if(NOT WIN32)
     target_include_directories(season_subs_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_subs COMMAND season_subs_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv")
     set_tests_properties(season_subs PROPERTIES FIXTURES_REQUIRED rules_table)
+    # The club cup editions after the rules table (0.6.2 slice 9a): every year to 2301, the Club World Cup every 4.
+    add_executable(season_club_editions_test tests/seasons/test_season_club_editions.c
+        src/recomp_rt/win/season_club_editions.c src/recomp_rt/win/season_rules.c src/recomp_rt/host/posix.c)
+    target_include_directories(season_club_editions_test PRIVATE src/recomp_rt/win)
+    add_test(NAME season_club_editions COMMAND season_club_editions_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv")
+    set_tests_properties(season_club_editions PROPERTIES FIXTURES_REQUIRED rules_table)
     # The whole season part of a save (0.6.1 items 4 and 10): its write keeps inside its size.
     add_executable(season_part_test tests/seasons/test_season_part.c
-        src/recomp_rt/win/season_change.c src/recomp_rt/win/season_friendly_dates.c src/recomp_rt/win/season_years.c)
+        src/recomp_rt/win/season_change.c src/recomp_rt/win/season_friendly_dates.c src/recomp_rt/win/season_years.c
+        src/recomp_rt/win/caps_wide.c)
     target_include_directories(season_part_test PRIVATE src/recomp_rt/win src/recomp_rt)
     add_test(NAME season_part COMMAND season_part_test)
     # The key competition check of a load (0.6.1 item 10): the names of the player's cm0102.exe and its Data.
@@ -288,6 +310,8 @@ if(NOT WIN32)
     add_test(NAME future_2300 COMMAND future_2300_test "${CMAKE_SOURCE_DIR}/tests/seasons/future/known_faults.tsv")
     # The expected rule of every competition (the input of the history checker): its columns and values.
     add_test(NAME future_competitions COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/future/competitions_check.py")
+    # The run set and its release check (0.6.2 slice 15), without a game: tests/seasons/future/run_set_test.py.
+    add_test(NAME future_run_set COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/future/run_set_test.py")
     add_executable(winfit_test tests/winfit/test_winfit.c)
     target_include_directories(winfit_test PRIVATE src/recomp_rt/win)
     add_test(NAME winfit COMMAND winfit_test)
@@ -474,6 +498,9 @@ if(EXISTS "${CM0102_EXE}")
         --exe "${CM0102_EXE}" --classes "${CMAKE_BINARY_DIR}/seasons/comp_classes.c" --check)
     # League sizes (0.6.0 slice 18): the committed wraps of set_up_rules match tools/recomp/league_sizes.py.
     add_test(NAME season_size_wraps COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_size_wraps.py" --check)
+    # Cup lists (0.6.2 item 64): every cup list of the original starts cleared in a season game.
+    add_test(NAME cup_list_clear COMMAND "${RECOMP_PYTHON}" -I "${CMAKE_SOURCE_DIR}/tests/seasons/cup_list_clear_check.py"
+        --exe "${CM0102_EXE}")
     target_include_directories(cm0102_recomp PRIVATE src/recomp_rt src/recomp_rt/win "${RECOMP_OUT}/gen"
         ${SDL2_INCLUDE_DIRS})
     target_compile_definitions(cm0102_recomp PRIVATE CM0102_DEFAULT_EXE="${CM0102_EXE}"

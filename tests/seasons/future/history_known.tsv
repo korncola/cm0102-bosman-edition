@@ -157,7 +157,6 @@ duplicate	Irish Premier League	*	open items 3 and 17: two rows for one year (sta
 duplicate	J.League Division 1	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	J.League Division 2	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	J.League YBC Levain Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-same-final	J.League YBC Levain Cup / CONMEBOL Sudamericana Ch	*	open items 5 and 22: Suruga Bank finalists do not change
 duplicate	J.League Yamazaki Nabisco Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Japanese Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Johan Cruyff Shield	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
@@ -244,7 +243,6 @@ duplicate	Supercoppa di Lega di Serie C	*	open items 3 and 17: two rows for one 
 duplicate	Superettan	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Superliga Argentina	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Supertaça Cândido de Oliveira	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-same-final	Suruga Bank Championship	*	open items 5 and 22: Suruga Bank finalists do not change
 gap	Svenska Cupen	*	open items 2 and 19: editions not written
 duplicate	Taça de Portugal	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Tippeligaen	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
@@ -259,23 +257,11 @@ duplicate	Veikkausliiga	*	open items 3 and 17: two rows for one year (start-year
 gap	Welsh Cup	*	open items 2 and 19: editions not written
 duplicate	Ykkönen	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Ykkösliiga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-comp-continent	*UEFA Nations League*	*	open items 4 and 21: the Nations League record keeps continent Asia
-comp-name	*UEFA Nations League*	*	open item 4: the Nations League record keeps the short name Asian Cup Quals
-confederation	Asian Cup Quals	*	open item 4: European winners under the short name of the Nations League record
-entrant-confed	Asian Cup Quals	*	open item 4: European entrants under the short name of the Nations League record
-missing	FIFA Intercontinental Cup	*	open item 11: no edition after 2026
 gap	OFC Men's Nations Cup	2024	open items 2 and 19: editions not written
 missing	OFC Men's Nations Cup	2028	open items 2 and 19: editions not written
 same-final	CONCACAF Gold Cup	2009	real results: the same finalists count only in Tier B (spec, Decisions)
 same-final	CONCACAF Gold Cup	2023	real results: the same finalists count only in Tier B (spec, Decisions)
 entrant-route	*Finalissima	2022	open item 19: no Copa America after 2001 in a 2001 game, so no winner to enter
-side-name	Yugoslavia	*	open item 42: national sides keep the names that the season code gives their nations
-side-name	Czech Republic	*	open item 42
-side-name	FYR of Macedonia	*	open item 42
-side-name	Netherlands Antilles	*	open item 42
-side-name	Swaziland	*	open item 42
-side-name	Turkey	*	open item 42
-nation-confed	Kazakhstan	*	open item 43: Kazakhstan stays in the AFC after it joined UEFA in 2002
 entrant-count	AFC Asian Cup	2004	open item 44: the finals of 2004 to 2015 have 12 teams, the table 16
 entrant-count	AFC Asian Cup	2007	open item 44
 entrant-count	AFC Asian Cup	2011	open item 44
@@ -291,10 +277,5 @@ entrant-host	OFC*Nations Cup*	2016	open item 45
 entrant-host	OFC*Nations Cup*	2024	open item 45
 entrant-host	Africa*Cup of Nations	2002	open item 46: the host does not play (Mali 2002)
 entrant-host	Africa*Cup of Nations	2027	open item 46: Kenya, Tanzania and Uganda do not play in 2027
-entrant-route	Intercontinental Cup	*	open item 47: entrants that won neither the Champions League nor the Libertadores (ended 2004)
-entrant-confed	OFC Club Championship	2006	open item 48: Australian clubs in the 2006 edition, after Australia moved to the AFC
-entrant-confed	CONCACAF Champions*	2020	open item 49: the Argentine club Atlanta in the CONCACAF Champions Cup
-entrant-confed	CONCACAF Champions*	2021	open item 49
-entrant-confed	CONCACAF Champions*	2022	open item 49
-entrant-route	FIFA Intercontinental Cup	*	open item 50: entrants that are not the continental champions
-entrant-dead	*CONCACAF Nations League*	*	open item 51: the dead Netherlands Antilles plays beside Curaçao
+entrant-route	Intercontinental Cup	2002	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
+entrant-route	Intercontinental Cup	2003	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)

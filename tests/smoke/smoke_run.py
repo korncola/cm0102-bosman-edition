@@ -241,6 +241,11 @@ SAME_SAVE_RUNS = [
     # The date jump switch (0.6.2 slice 1, Q30) only raises the latest start year of a new game to 2300: with it on,
     # a game of the normal start years gives the save of normal.
     ("date-jump-on", {"faster_days": "off", "_env": {"RECOMP_DATE_JUMP": "1"}}),
+    # The fixes of faults of the original (0.6.2 slice 11, original_faults.c) act in every game, but only when a
+    # small nation's national team loses or misses its manager (at the latest at the first month change in play),
+    # for money above 2,147,483,647 (the top wage from about 1.65 billion) and at an age above 127: in these runs
+    # none of that happens, so with their test switch off the save is that of normal.
+    ("original-faults-keep", {"faster_days": "off", "_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
 ]
 
 # --ref-050 <0.5.0 program> (Q342): the run ref-0.5.0 plays the 0.5.0 build, and the run text-0.5.0 plays this
@@ -316,6 +321,7 @@ MATCH_RUNS = [
     ("season-code-off", {"_env": {"RECOMP_SEASON_CODE": "off"}}),
     ("box-fixes-off", {"_env": {"RECOMP_BOX_FIXES": "off"}}),
     ("host-loops-off", {"_env": {"RECOMP_QSORT": "original", "RECOMP_HOT": "original"}}),
+    ("original-faults-keep", {"_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
 ]
 MATCH_DAYS = 5      # 16.7.01 to 21.7.01
 # --match --sleep-danger adds this run: the idle sleep without its time rules (RECOMP_IDLE_SLEEP=force), so

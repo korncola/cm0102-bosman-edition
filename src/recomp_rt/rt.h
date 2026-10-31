@@ -304,6 +304,24 @@ uint32_t rt_league_row_read_failed(uint32_t league);
 /* The ban release's nation index (win/discipline_ban.c, tools/recomp/discipline_ban.py at 0x556dcf): the entry
  * of the staff id under any nation, 0 for none, or 1 when the fix is off (the original's box). */
 uint32_t rt_discipline_ban_entry(uint32_t discipline, uint32_t staff);
+/* 1 when a senior national team gets a manager vacancy that the original refuses (0.6.2 slice 11, Q23; win/original_faults.c,
+ * tools/recomp/original_faults.py at 0x69bb02, 0x7ab158, 0x68fe65, 0x69d0a5, 0x69b6d8: site 0 to 4). */
+uint32_t rt_national_vacancy(uint32_t club, uint32_t site);
+/* Money above 2,147,483,647 (0.6.2 slice 11, Q24; win/original_faults.c, tools/recomp/original_faults.py). */
+uint32_t rt_budget_hi(uint32_t lo, uint32_t hi);          /* get_transfer_budget: the high word in place of cdq */
+uint32_t rt_budget_floor(uint32_t finance, uint32_t less); /* the balance less 10m or 15m (0x599135, 0x599185) */
+uint32_t rt_budget_floor_low(uint32_t r);
+uint32_t rt_budget_floor_high(uint32_t lo);
+int64_t rt_budget_floor_wide(uint32_t r);
+void rt_cash_wide(uint32_t cash, uint32_t lo, uint32_t hi, uint32_t reads); /* a 64-bit amount put into a Cash */
+void rt_cash_wide_end(void);                                  /* a two-read hand-over ends (0x4639ee, 0x463a6e, 0x463b7a) */
+uint32_t rt_cash_wide_clamped(uint32_t cash, uint32_t lo, uint32_t hi, uint32_t reads); /* bid screen 0x8ea2c0 */
+void rt_news_wide(uint32_t item, uint32_t club, uint32_t value);  /* news slot 2 of a budget: slots 8 and 9 */
+void rt_news_read(uint32_t item, uint32_t value);                 /* a text writer reads slot 2 */
+void rt_cash_news(uint32_t cash, uint32_t value);                 /* ... and puts it into a Cash */
+int64_t rt_cash_amount(uint32_t cash);                       /* the amount that 0x43f460 reads from a Cash */
+void rt_max_wage_high(uint32_t edx, uint32_t eax);  /* get_max_wage 0x5968e8: the product of 1.3 x the balance */
+uint32_t rt_max_wage_sum(uint32_t term, uint32_t lo); /* get_max_wage 0x597019 */
 /* The rule-set load's Oceania body (win/season_intl.c, tools/recomp/discipline_ban.py at 0x55deb6): 1 when a
  * season game moved a selected Australia to Asia, so its saves hold the body. */
 uint32_t rt_discipline_oceania_body(void);
@@ -313,6 +331,16 @@ uint32_t rt_ruling_body_held(uint32_t body, uint32_t staff);
 /* The loan's ban hold and restore (win/season_new_cups.c, tools/recomp/discipline_ban.py at 0x55647d, 0x55671e): 1
  * when a domestic body of one nation applies at a club of the other through the All-Ireland cup. */
 uint32_t rt_ban_nation_applies(uint32_t club, uint32_t body);
+/* International caps above 255 (0.6.2 slice 12, win/caps_wide_game.c, tools/recomp/caps_wide.py): the caps byte
+ * after one more cap at 0x76b8ce (it stops at 255), and the full caps of a staff record for the screens, the sorts
+ * and the most caps record. */
+uint32_t rt_caps_add(uint32_t staff, uint32_t byte);
+uint32_t rt_caps_full(uint32_t staff);
+uint32_t rt_caps_word(uint32_t staff);       /* the same, at most 32767: the most caps record word */
+/* International goals above 255 (0.6.2 item 66): the goals byte after the goals of a match at 0x76b8d6, and the full
+ * goals of a staff record for the screens. */
+uint32_t rt_goals_add(uint32_t staff, uint32_t byte, uint32_t goals);
+uint32_t rt_goals_full(uint32_t staff);
 /* The club count of a league in a season game (0.6.0 slice 18, src/recomp_rt/win/season_sizes.c): the
  * patched stores of tools/recomp/league_sizes.py in create_table read it in place of the class's constant. */
 uint32_t rt_league_clubs(uint32_t obj, uint32_t original);
@@ -341,7 +369,7 @@ uint32_t rt_fra_lge_first(uint32_t original, uint32_t edx);   /* FraLgeCup first
 uint32_t rt_fa_cup_takes(uint32_t esp);   /* EngFaCup places by pool (0x56ffe4) */
 uint32_t rt_fra_cfa_lower_cap(uint32_t original);              /* FraCfa lower club cap (0x5b92e8) */
 uint32_t rt_ita_cup_first_position(uint32_t original);   /* ItaCup second loop start (0x63fb16) */
-uint32_t rt_cup_places_list(uint32_t list, uint32_t bytes);  /* provincial and Polish cup lists, cleared */
+uint32_t rt_cup_places_list(uint32_t list, uint32_t bytes);  /* a cup list from 0x944e46, cleared (season game) */
 uint32_t rt_promote_expected(uint32_t league, uint32_t up, uint32_t original);  /* ItaSerA chain counts (0x642476) */
 /* Italy's Serie C of three groups (0.6.0 slice 20b, win/season_divisions_ita.c, tools/recomp/new_divisions.py). */
 uint32_t rt_ita_table_bytes(uint32_t obj, uint32_t original);
@@ -385,6 +413,9 @@ uint32_t rt_oceania_step(uint32_t original);
 uint32_t rt_club_world_month(uint32_t original);
 uint32_t rt_club_world_day(uint32_t original);
 uint32_t rt_club_world_waits(uint32_t obj);
+/* The top-up's reputation rule for an under-21 side (0.6.2 fault 65, win/season_national_fill.c, tools/recomp/seasons.py
+ * at 0x90dd67): 1 keeps its virtual players. 0 in the base game. */
+uint32_t rt_u21_keeps_virtual(uint32_t club);
 /* The CONCACAF Champions Cup's club count of the edition of `year` (slice 26c, win/season_club_cups.c): 8 in the
  * base game and with no row. */
 uint32_t rt_concacaf_clubs(uint32_t year, uint32_t original);

@@ -23,6 +23,7 @@ int season_day_of_year(int y, int m, int d) { (void)y, (void)m; return d; }
 void season_from_day_of_year(int y, int doy, int *m, int *d) { (void)y; *m = 1, *d = doy; }
 int season_fifa_day(int y, int m, int want) { (void)y, (void)m; return want; }
 int season_intl_finals_busy(int conf, int y, int doy) { (void)conf, (void)y, (void)doy; return 0; }
+int season_gold_cup_busy(int y, int doy) { (void)y, (void)doy; return 0; }
 
 void season_friendly_dates_reset(void);
 uint32_t season_friendly_part_size(void);

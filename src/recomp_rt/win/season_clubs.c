@@ -186,8 +186,8 @@ static int same_name(uint32_t at, const char *name)
  * table and stops at its count (EngConf::create_table 0x56ecb0 at 0x56ed54..0x56ed7f). With fewer the table
  * is not made (0x56ed95..0x56edab), and the constructor stops at its assert (fra_first.cpp 108 for FraFirst).
  * The address is that of the write. These classes are not here, so their divisions keep the database count:
- * - classes that count the clubs of the data: IrePrm 0x63a740, IreFirst 0x635910, PolFirst 0x7c9450,
- *   NorFirst 0x7909a0;
+ * - classes that count the clubs of the data: IrePrm 0x63a740, IreFirst 0x635910, NorFirst 0x7909a0 (PolFirst
+ *   0x7c9450 stores a register, but it holds 8, and the class takes 16: it is in the table);
  * - classes that take groups: BraNatThird 0x42dc90, FraLower 0x5be230, SpaLower 0x8533d0,
  *   and the Belgian, Portuguese, Spanish, Swedish, Italian C2 and Turkish group classes;
  * - classes that take no club by the division pointer: the Brazilian state classes (BraRegSp::create_table
@@ -238,6 +238,11 @@ static const ClassSize CLASS_SIZE[] = {
     {"Northern Irish League First Division", "nir_first", 10, 10},    /* 0x78bc62 */
     {"Northern Irish League Premier Division", "nir_prm", 10, 10},  /* 0x78ec72 */
     {"Norwegian Premier Division", "nor_prm", 14, 14},              /* 0x7925f2 */
+    /* PolFirst::create_table 0x7c9450: two groups of 8 (+0x3e = 8 at 0x7c945a..0x7c9469) in a cleared table of 16
+     * slots (+0xee, 0x7c950e..0x7c951c); each club of [0x9cf858] goes to the slot of its last place (0x7c95a0..
+     * 0x7c963d). With 15 a slot stays 0, and a fixture with no home club stops the new game at Database.cpp 13471
+     * (2005 start, 3.9.68 data, 0.6.2 item 64). */
+    {"Polish First Division", "pol_first", 16, 16},
     {"Polish Second Division", "pol_second", 18, 20},                  /* 0x7cbdfd: 20 at 0x7cbe03 when +0x40 is 2001 */
     {"Portuguese Premier League", "por_prm", 18, 18},               /* 0x7cf812 */
     {"Portuguese Second League", "por_second", 18, 18},                /* 0x7d1532 */

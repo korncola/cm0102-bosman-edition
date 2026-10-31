@@ -376,9 +376,10 @@ typedef struct {
 static FileNation file_cache[256];
 static int file_cached;
 
-/* The nation of the competition class file in the season (the first table row of the file), and whether it is
- * the nation's first division. A limit with a number acts in the first division only; "no limit" acts in every
- * competition of the nation, as the English filler 0x579c50 sets the limit of 3 for all of them. */
+/* The nation of the competition class file in the season (the first table row of the file, after the table its
+ * last row: the after-table rule, 0.6.2 fault 60), and whether it is the nation's first division. A limit with a
+ * number acts in the first division only; "no limit" acts in every competition of the nation, as the English
+ * filler 0x579c50 sets the limit of 3 for all of them. */
 static const SeasonNation *file_nation(const char *file, int season, int *top)
 {
     for (int i = 0; i < file_cached; i++)
@@ -386,7 +387,8 @@ static const SeasonNation *file_nation(const char *file, int season, int *top)
             *top = file_cache[i].top;
             return file_cache[i].nation;
         }
-    const SeasonRule *r = season_rules_find(season, file, 0);
+    int last = season_rules_last_season(season, file);
+    const SeasonRule *r = last ? season_rules_find(last, file, 0) : NULL;
     const SeasonNation *n = r ? season_nation_find(r->nation) : NULL;
     int t = r && r->tier == 1;
     if (file_cached < (int)(sizeof file_cache / sizeof file_cache[0])) file_cache[file_cached++] = (FileNation){file, season, n, t};

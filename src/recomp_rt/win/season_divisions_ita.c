@@ -137,10 +137,55 @@ static int rules_season(int year)
     return season_changing_rules() ? year : season_start_year();
 }
 
+/* 1 when the table holds a row of a Serie C group in any season. Without one (no rules table: a missing or damaged
+ * Seasons/rules.tsv, season_rules.c "The game plays without the table", or a table with no Serie C group rows) the
+ * era is the state of the game, so that a save of the era goes on in the era. */
+static int groups_in_table(void)
+{
+    static const char *const comp[GROUPS] = {"Serie C group A", "Serie C group B", "Serie C group C"};
+    static const char *const file[GROUPS] = {"ita_ser_c1a", "ita_ser_c1b", "ita_ser_c2a"};
+    for (int i = 0, n = season_rules_count(); i < n; i++) {
+        const SeasonRule *r = season_rules_row(i);
+        for (int g = 0; g < GROUPS; g++)
+            if (!strcmp(r->comp_file, file[g]) && !strcmp(r->comp, comp[g])) return 1;
+    }
+    return 0;
+}
+
+#define IDLE_YEAR 2999                  /* Q395: a competition that never returns waits for year 2999 with no fixtures */
+
+static int extra_division_flag(void);
+
+/* The game is in the era by its state: the group C object exists, and with the extra division flag C2/B has ended.
+ * change_into_era ends C2/B and C2/C (year 2999, idle), and at the next load C2/B has no object (rt_ita_c2_none: its
+ * division has no clubs). In a two-group C2 season C2/C has ended and C2/B plays, so that season is not the era.
+ * Without the flag the module makes group C only in the era (season_ita_group_c), and a save of the era makes it again
+ * from its saved file (season_comps_before_comp_table). */
+static int era_by_state(void)
+{
+    uint32_t c2a = object_of(KEY_C2A), c2b = object_of(KEY_C2B);
+    if (!c2a) return 0;
+    if (!extra_division_flag()) return 1;
+    return !c2b || (int16_t)rd16(g_mem, c2b + 0x40) == IDLE_YEAR;
+}
+
 static int era_of_year(int year)
 {
     int s = rules_season(year);
+    if (s && !groups_in_table()) return era_by_state();
     return s && group_row(s, 0) && group_row(s, 1) && group_row(s, 2);
+}
+
+/* The clubs of group g in season s: its row, or with no group row in the table (above) the clubs its table holds
+ * now (+0x3e: the season just played while the season change runs), so the regroup keeps each group's count. */
+static int group_clubs(int s, int g)
+{
+    const SeasonRule *r = group_row(s, g);
+    if (r) return r->clubs;
+    if (!s || groups_in_table() || !era_by_state()) return 0;
+    uint32_t obj = object_of(GROUP_KEY[g]);
+    int n = obj ? (int16_t)rd16(g_mem, obj + 0x3e) : 0;
+    return n >= 2 && n <= MAX_CLUBS ? n : 0;
 }
 
 /* ---- The two-group Serie C2, 2011/12 to 2013/14 (Q529) ----
@@ -163,8 +208,6 @@ static const SeasonRule *c2_row(int s, int g)
     }
     return NULL;
 }
-
-static int extra_division_flag(void);
 
 static int two_c2_of_year(int year)
 {
@@ -235,9 +278,8 @@ int season_ita_division_size(const char *name, int season)
     if (!name || !era_of_year(season)) return -1;
     for (int k = 0; k < 5; k++)
         if (!strcmp(name, div[k])) {
-            const SeasonRule *r = k < GROUPS ? group_row(rules_season(season), k) : NULL;
             if (k >= GROUPS) return 0;          /* the division ends (Q290): no league is built for it (below) */
-            return r ? r->clubs : 0;
+            return group_clubs(rules_season(season), k);
         }
     return -1;
 }
@@ -404,8 +446,6 @@ static int by_reputation(const void *a, const void *b)
     int x = (int16_t)rd16(g_mem, *(const uint32_t *)a + 0x80), y = (int16_t)rd16(g_mem, *(const uint32_t *)b + 0x80);
     return (y > x) - (y < x);
 }
-
-#define IDLE_YEAR 2999                  /* Q395: a competition that never returns waits for year 2999 with no fixtures */
 
 /* An ended league leaves the links of the leagues: +0x1c the record of the league above, +0x20 the one below (-1
  * for none). The season change pass starts a nation's leagues only through its top league (vtable +0xc, 0x48ce10:
@@ -763,8 +803,7 @@ static void regroup(uint32_t serie_a)
     int s = next_season(serie_a), want[GROUPS], total = 0;
     uint32_t rec[GROUPS];
     for (int g = 0; g < GROUPS; g++) {
-        const SeasonRule *r = group_row(s, g);
-        want[g] = r ? r->clubs : 0;
+        want[g] = group_clubs(s, g);
         total += want[g];
         rec[g] = record_of(GROUP_KEY[g]);
     }

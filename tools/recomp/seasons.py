@@ -438,4 +438,8 @@ INSNS = {
     # the load only in a season game (season_intl_on): the base game keeps the original's path, also when a
     # save of a later year is loaded (the ctor runs with the game year of the save).
     0x57D021: ("jle 0x57d02a", "if (cc_le(F) || rt_euroq_skip_2002(esi)) goto L_57d02a;"),
+    # VIRTUAL_STAFF top-up 0x90dae0 (0.6.2 fault 65, win/season_national_fill.c): an under-21 side of a nation with
+    # a reputation above 500 gets no virtual players (0x90dd5d..0x90dd73). In a season game such a side whose
+    # nation has fewer players it can field than the squad check wants keeps them (the jump past the zeroing).
+    0x90DD67: ("jle 0x90dd97", "if (cc_le(F) || rt_u21_keeps_virtual(esi)) goto L_90dd97;"),
 }

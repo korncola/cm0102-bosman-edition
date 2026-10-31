@@ -182,7 +182,6 @@ static uint32_t strongest(uint32_t continent, const uint32_t *teams, int n)
 extern const SeasonCompDef season_gold_cup_comp, season_finalissima_comp;
 
 static uint32_t making_rec;             /* the record of an object whose ctor runs now (not yet in its entry) */
-static SeasonNlGoldCup repeat;
 
 static uint32_t gold_record(void)
 {
@@ -197,29 +196,10 @@ int season_gold_cup_of(uint32_t self)
     return rec && rd32(g_mem, self + F_RECORD) == rec;
 }
 
-/* The Gold Cup of a year in this game. With changing rules on, the table's edition; after the table's last
- * edition the last one again every two years (Q248). With changing rules off, the first edition from the start
- * season on, again every two years (Q232). NULL for a year with no edition. */
-static const SeasonNlGoldCup *gold_edition(int year)
-{
-    const SeasonNlGoldCup *base = NULL;
-    if (season_changing_rules()) {
-        for (int i = 0; i < season_nl_gold_cup_count; i++) {
-            if (season_nl_gold_cups[i].year == year) return &season_nl_gold_cups[i];
-            if (season_nl_gold_cups[i].year < year) base = &season_nl_gold_cups[i];
-        }
-    } else {
-        for (int i = 0; i < season_nl_gold_cup_count && !base; i++)
-            if (season_nl_gold_cups[i].year > season_start_year()) base = &season_nl_gold_cups[i];
-        if (!base && season_nl_gold_cup_count) base = &season_nl_gold_cups[season_nl_gold_cup_count - 1];
-        if (base && base->year == year) return base;
-        if (base && base->year > year) base = NULL;
-    }
-    if (!base || (year - base->year) % 2) return NULL;
-    repeat = *base;
-    repeat.year = year;
-    return &repeat;
-}
+/* The Gold Cup of a year in this game (season_intl_gold_edition, moved there for open item 55). */
+static const SeasonNlGoldCup *gold_edition(int year) { return season_intl_gold_edition(year); }
+
+int season_gold_cup_busy(int y, int doy) { return season_comps_on() && gold_record() && season_intl_gold_busy(y, doy); }
 
 /* The first Gold Cup after season s's start (in the year s + 1 or later), 0 with none. */
 static int gold_first_after(int s)

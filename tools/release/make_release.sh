@@ -3,7 +3,8 @@
 #
 # Usage:
 #   tools/release/make_release.sh --game <clean files> --data-3960 <folder> --data-3965 <folder>
-#       --sdl2-mac <folder> --sdl2-mingw <folder> --site-assets <folder> --season-dbs <folder> --own-dbs <folder> [--publish]
+#       --sdl2-mac <folder> --sdl2-mingw <folder> --site-assets <folder> --season-dbs <folder> --own-dbs <folder>
+#       --run-set <folder> [--publish]
 #
 #   --game         the clean files (tools/clean_files/make_clean_files.py). The script checks them
 #                  against tools/clean_files/manifest.tsv.
@@ -25,6 +26,10 @@
 #   --site-assets  the site's pictures (logo, screenshots). They go into site-assets.zip on the release,
 #                  where the Pages workflow fetches them, so git never holds them. logo.png also gives
 #                  the intro logo, Data/bosman_logo.rgn of each download (tools/release/make_intro_logo.py).
+#   --run-set      the --out folder of a run of the whole future run set (tests/seasons/future/run_set.py, 0.6.2 slice
+#                  15). Before any build the script runs its release check (run_set.py --verify) and stops when a
+#                  game of the set did not pass, when the checker of this checkout finds a fault on a save the run
+#                  kept, or when the game code changed after the run's commit (Q12). Not needed with --stage-only.
 #   --stage-only   stop after the game folder and its manifest are staged in build/release-<version> (before the
 #                  Mac, Windows and Linux builds). --sdl2-mac and --sdl2-mingw are then not needed. For tests.
 #   --publish      tag v<version>, push the tag and upload the release. Without it the script only builds
@@ -36,7 +41,8 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GH_REPO="maxevans60/cm0102-bosman-edition"
-GAME=""; DATA_3960=""; DATA_3965=""; SDL_MAC=""; SDL_MINGW=""; SITE=""; SEASON_DBS=""; OWN_DBS=""; STAGE_ONLY=0; PUBLISH=0
+GAME=""; DATA_3960=""; DATA_3965=""; SDL_MAC=""; SDL_MINGW=""; SITE=""; SEASON_DBS=""; OWN_DBS=""; RUN_SET=""; STAGE_ONLY=0
+PUBLISH=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --game) GAME="$2"; shift 2 ;;
@@ -47,12 +53,13 @@ while [ $# -gt 0 ]; do
         --site-assets) SITE="$2"; shift 2 ;;
         --season-dbs) SEASON_DBS="$2"; shift 2 ;;
         --own-dbs) OWN_DBS="$2"; shift 2 ;;
+        --run-set) RUN_SET="$2"; shift 2 ;;
         --stage-only) STAGE_ONLY=1; shift ;;
         --publish) PUBLISH=1; shift ;;
         *) echo "make_release.sh: unknown option $1" >&2; exit 2 ;;
     esac
 done
-NEEDED="GAME DATA_3960 DATA_3965 SDL_MAC SDL_MINGW SITE SEASON_DBS OWN_DBS"
+NEEDED="GAME DATA_3960 DATA_3965 SDL_MAC SDL_MINGW SITE SEASON_DBS OWN_DBS RUN_SET"
 [ "$STAGE_ONLY" = 1 ] && NEEDED="GAME DATA_3960 DATA_3965 SITE SEASON_DBS OWN_DBS"
 for v in $NEEDED; do
     [ -n "${!v}" ] || { echo "make_release.sh: give --$(echo $v | tr 'A-Z_' 'a-z-' | sed 's/sdl-/sdl2-/')." >&2; exit 2; }
@@ -67,6 +74,11 @@ if [ -n "$(git -C "$REPO" status --porcelain)" ]; then
     echo "make_release.sh: commit or remove every change and every new file first, so that the tag names the code that was built." >&2; exit 2
 fi
 
+# The future run set (0.6.2 slice 15, Q12): every game passed and the checker finds no fault on its saves.
+if [ "$STAGE_ONLY" = 0 ]; then
+    python3 -I "$REPO/tests/seasons/future/run_set.py" --verify "$RUN_SET" ||
+        { echo "make_release.sh: the run set in $RUN_SET does not pass (above)." >&2; exit 1; }
+fi
 OUT="$REPO/build/release-$VERSION"
 mkdir -p "$OUT"
 CLEAN="$REPO/tools/clean_files"

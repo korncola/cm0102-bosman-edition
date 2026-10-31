@@ -12,6 +12,14 @@ int season_playoffs_advance(uint32_t obj);
  * the direct places); *direct (may be NULL) gets the direct promotion places. */
 int season_playoffs_shape(const char *file, int season, int *direct);
 
+/* The play-off winners that the rules row of file and season sends up although this kind plays no play-off for
+ * them: 2 for 4 places just below the direct places in two ties whose winners both go up (Série B from 2025:
+ * "two-legged ties 3rd v 6th and 4th v 5th, the two winners go up"), else 0. The game plays no such play-off, so
+ * the nearest form (Q247) sends the first two play-off places up directly: season_sizes.c adds them to the direct
+ * places. Without them Série A sent 4 down and took 2 up, and lost 2 clubs every season (0.6.2 open item 63).
+ * season_playoff_winners.c, host code only. */
+int season_playoffs_winners_up(const char *file, int season);
+
 /* After set_up_rules of a league (season_sizes_rules calls it): the places and the stage count of the play-off
  * of the season, or none. */
 void season_playoffs_rules(uint32_t obj);

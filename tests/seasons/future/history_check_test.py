@@ -10,7 +10,8 @@ their history rows, a news list, the .tmp parts of finals classes, three fixture
 finance records. The game starts in 2025 and the save is on day 189 of 2040. The data holds one fault for each
 check of the checker, and some competitions hold none. The test runs the checker and compares its faults with the
 planted list, then runs it again with a rules file, a finals table, an access file and a known-fault list, then
-with changing rules off, then with --health. It also compares the renames of nations.tsv with the season code.
+with changing rules off, then with --health. It also compares the renames and UEFA moves of nations.tsv with the
+season code.
 All data is made up, so the fixture holds no data of a database.
 """
 import csv
@@ -274,6 +275,55 @@ def renames_match():
     return []
 
 
+def uefa_moves_match():
+    """The UEFA rows of nations.tsv against season_intl_uefa_from (season_intl_rules.c): each nation that the season
+    code moves to UEFA, and its season (open item 43 of 0.6.2: Kazakhstan from 2002)."""
+    src = open(os.path.join(ROOT, "src", "recomp_rt", "win", "season_intl_rules.c"), encoding="latin-1").read()
+    body = re.search(r"int season_intl_uefa_from\(const char \*name\)\s*\{(.*?)\n\}", src, re.S)
+    # both forms: `if (!strcasecmp(name, "X")) return 2002;` and `!strcasecmp(name, "X") ? 2016 : 0`
+    code = {(int(y), n) for n, y in re.findall(r'strcasecmp\(name, "([^"]+)"\)\)?\s*(?:return|\?)\s*(\d{4})',
+                                               body.group(1) if body else "")}
+    with open(os.path.join(HERE, "nations.tsv"), encoding="utf-8") as f:
+        rows = {(int(r["season"]), r["nation"])
+                for r in csv.DictReader((l for l in f if not l.startswith("#")), delimiter="\t")
+                if r["kind"] == "confed" and r["to"] == "UEFA"}
+    if not code or rows != code:
+        return [f"nations.tsv UEFA moves differ from season_intl_uefa_from: only in the file {sorted(rows - code)}, "
+                f"only in the code {sorted(code - rows)}"]
+    return []
+
+
+def uefa_missing_rule():
+    """entrant-missing (open item 57): the European host of the World Cup, Russia from the 2026 cycle and a nation
+    that joins UEFA after the edition's first year are no fault; a member that does not enter is."""
+    import types
+    sys.path.insert(0, HERE)
+    import history_check
+    game = types.SimpleNamespace(
+        nations={0: ("Aland", "UEFA"), 1: ("Borduria", "UEFA"), 2: ("Russia", "UEFA"), 3: ("Kosovo", "UEFA"),
+                 4: ("Carpania", "AFC"), 5: ("Dead Land", "")},
+        side_names=[("Aland", 0), ("Borduria", 1), ("Russia", 2), ("Kosovo", 3), ("Carpania", 4), ("Dead Land", 5)])
+    access = history_check.Access({"world_cup": [(2006, 32, ["Borduria"]), (2026, 48, [])]})
+    changes = [{"kind": "confed", "season": 2016, "nation": "Kosovo", "to": "UEFA"}]
+    bad = []
+    for start, changing, year, want in ((2001, 0, 2005, 0), (2001, 1, 2001, 0), (2001, 1, 2005, 1),
+                                        (2013, 0, 2017, 1), (2013, 0, 2025, 0), (2013, 1, 2025, 1),
+                                        (2025, 0, 2029, 1)):
+        game.start, game.changing = start, changing
+        if history_check.uefa_all(game, year) != want:
+            bad.append(f"uefa_all of a {start} start (changing rules {changing}) in {year}: not {want}")
+    for year, first, entered, want in ((2005, 2004, {"Aland", "Russia"}, []),          # Borduria hosts 2006
+                                       (2005, 2004, {"Russia"}, ["Aland"]),
+                                       (2021, 2021, {"Aland", "Borduria", "Kosovo"}, ["Russia"]),  # in up to 2022
+                                       (2025, 2025, {"Aland", "Borduria", "Kosovo"}, []),  # Russia out from 2026
+                                       (2013, 2012, {"Aland", "Borduria", "Russia"}, []),  # Kosovo joins in 2016
+                                       (2017, 2016, {"Aland", "Borduria", "Russia"}, ["Kosovo"])):
+        got = history_check.uefa_missing(game, access, changes, year, first, entered)
+        if got != want:
+            bad.append(f"entrant-missing of {year}: {got}, not {want}")
+    return bad
+
+
 def main():
     work = tempfile.mkdtemp(prefix="history-check-")
     members, want = records()
@@ -413,6 +463,8 @@ def main():
 
     # nations.tsv holds the renames of the season code.
     bad += renames_match()
+    bad += uefa_moves_match()
+    bad += uefa_missing_rule()
 
     for b in bad:
         print("FAIL  " + b)

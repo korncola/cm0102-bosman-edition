@@ -47,6 +47,12 @@
 #define NATION_SIZE 0x122u
 #define NATION_NAME 0x4u
 #define NATION_CONTINENT 0x71u          /* continent record; its +0 is the continent id */
+#define NATION_SHORT 0x38u              /* short name, 26 bytes */
+#define CLUBS 0xae23b4u                 /* club records, 0x245 bytes (0x53b4c2..0x53b4e0) */
+#define CLUB_COUNT 0xae235cu
+#define CLUB_SIZE 0x245u
+#define CLUB_NAME_AT 0x4u               /* long name, 51 bytes */
+#define CLUB_SHORT_AT 0x38u             /* short name, 26 bytes */
 #define CONTINENT_ASIA 0x9cfa0cu        /* key continent ids (sweep section 8) */
 #define CONTINENT_OCEANIA 0x9cfa18u
 #define CONTINENT_EUROPE 0x9cfa10u
@@ -1049,13 +1055,55 @@ static int nations_rename(int season, int news)
         if (id < 0 || later) continue;
         uint32_t rec = nation_at(id);
         put_field(rec + NATION_NAME, nation_renames[i].name, 51);
-        put_field(rec + 0x38u, nation_renames[i].short_name, 26);
+        put_field(rec + NATION_SHORT, nation_renames[i].short_name, 26);
         put_field(rec + 0x53u, nation_renames[i].code, 4);
         put_field(rec + 0x57u, nation_renames[i].adjective, 26);
         if (logging())
             fprintf(stderr, "recomp: season intl: nation %s is now %s (%s)\n", nation_renames[i].old,
                     nation_renames[i].name, nation_renames[i].row);
         if (news) season_change_news("%s is now called %s.", nation_renames[i].old, nation_renames[i].name);
+        done++;
+    }
+    return done;
+}
+
+static int same_name(const char *name, void *now) { return !strcasecmp(name, (const char *)now); }
+
+/* 1 when old is an earlier name of now in a chain of the rename table (Yugoslavia for Serbia and Montenegro and
+ * for Serbia), without case (season_intl_later_held). */
+static int earlier_name(const char *old, const char *now)
+{
+    for (int i = 0; i < NATION_RENAMES; i++)
+        if (!strcasecmp(nation_renames[i].old, old)) return season_intl_later_held(i, same_name, (void *)now);
+    return 0;
+}
+
+/* The national sides of a renamed nation (open item 42 of 0.6.2): the senior and under-21 sides (the rows from
+ * clubs - 2 * nations, 0x53b4c2) keep their own name at club +4 (51 bytes) and short name at +0x38 (26 bytes),
+ * which the fixtures, results and history screens show. A side whose name is an earlier name of its nation's name
+ * takes the nation's name and short name: after nations_rename, and in the data that already holds the new name
+ * beside an old side (December 2025: the nations Czechia and Türkiye, the sides "Czech Republic" and "Turkey").
+ * These rows are the nat_club.dat part of a save; a side that the data puts elsewhere (team_nation: Denmark in
+ * October 2019) is not renamed. A dead record beside the live one (Yugoslavia beside Serbia) keeps its side,
+ * which has its own name. No key club
+ * of set_key_ids 0x601a40 (the club chain of 0x6146b0) is a national side, so a load keeps every key. Returns the
+ * count. */
+static int sides_rename(void)
+{
+    int done = 0, clubs = (int)rd32(g_mem, CLUB_COUNT), nations = nation_count();
+    uint32_t base = rd32(g_mem, CLUBS);
+    if (!readable(base) || !readable(rd32(g_mem, NATIONS)) || clubs < 2 * nations) return 0;
+    for (int i = clubs - 2 * nations; i < clubs; i++) {
+        uint32_t club = base + (uint32_t)i * CLUB_SIZE, n = team_nation(club);
+        if (!n) continue;
+        const char *side = win_str(club + CLUB_NAME_AT), *name = win_str(n + NATION_NAME);
+        if (!strcmp(side, name) || !earlier_name(side, name)) continue;
+        if (logging()) fprintf(stderr, "recomp: season intl: national side %s is now %s\n", side, name);
+        char now[51], shown[26];
+        snprintf(now, sizeof now, "%s", name);
+        snprintf(shown, sizeof shown, "%s", win_str(n + NATION_SHORT));
+        put_field(club + CLUB_NAME_AT, now, 51);
+        put_field(club + CLUB_SHORT_AT, shown, 26);
         done++;
     }
     return done;
@@ -1083,9 +1131,10 @@ static int dead_records(void)
     return done;
 }
 
-/* A UEFA member that the data holds with no continent (season_intl_uefa_from: Kosovo in the April 2015, October
- * 2015 and April 2016 databases) gets the continent pointer of a European nation from the season it joined, as
- * Australia moves to Asia. Returns the count. news: 1 to add a sentence. */
+/* A UEFA member that the data holds with no continent or in another confederation (season_intl_uefa_from: Kosovo
+ * in the April 2015, October 2015 and April 2016 databases, with no continent; Kazakhstan in Asia in the 3.9.68
+ * data and the 2002 databases, open item 43 of 0.6.2) gets the continent pointer of a European nation from the
+ * season it joined, as Australia moves to Asia. Returns the count. news: 1 to add a sentence. */
 static int uefa_members(int season, int news)
 {
     uint32_t europe = 0, key = rd32(g_mem, CONTINENT_EUROPE);
@@ -1098,7 +1147,7 @@ static int uefa_members(int season, int news)
     for (int id = 0; id < nation_count(); id++) {
         const char *name = win_str(nation_at(id) + NATION_NAME);
         int from = season_intl_uefa_from(name);
-        if (!from || from > season || readable(rd32(g_mem, nation_at(id) + NATION_CONTINENT))) continue;
+        if (!from || from > season || continent_id(id) == key) continue;
         wr32(g_mem, nation_at(id) + NATION_CONTINENT, europe);
         if (logging()) fprintf(stderr, "recomp: season intl: nation %s joins UEFA (%d)\n", name, from);
         if (news) season_change_news("%s now plays in UEFA.", name);
@@ -1200,6 +1249,7 @@ static void intl_season(int season)
 {
     if (season_change_is_start()) return;
     nations_rename(season, 1);
+    sides_rename();
     uefa_members(season, 1);
     host_news(season);
     /* The host rows of the table in a game that started in 2001/02: at its first season change, for the
@@ -1219,4 +1269,15 @@ static void intl_entry(const SeasonChange *c)
         season_change_news("Australia now plays in the Asian Football Confederation.");
 }
 
-const SeasonRuleKind season_kind_intl = {"international", NULL, NULL, intl_season, intl_entry, NULL, NULL};
+/* A new game and a load: the national sides of the renamed nations (sides_rename). In a new game the club records
+ * point at their nations only once the original has made the game; a save of 0.6.1 or before holds the old side
+ * names, which the load gives the nation's name. A load moves no nation to UEFA: a 0.6.1 save with Kazakhstan in
+ * the AFC keeps it there to its next season point, so no competition loses an entrant in the middle of a season. */
+static void intl_sides(int start_year)
+{
+    (void)start_year;
+    sides_rename();
+}
+
+const SeasonRuleKind season_kind_intl = {"international", intl_sides, intl_sides, intl_season, intl_entry, NULL,
+                                         NULL};
