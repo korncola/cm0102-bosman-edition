@@ -23,6 +23,7 @@
  * https://en.wikipedia.org/wiki/2019_AFC_Asian_Cup_knockout_stage. Both give the same 15-row table as
  * UEFA Euro 2016 (season_intl_euro.c). The CAF and AFC regulations were not read: second source needed. */
 #include "win.h"
+#include "season.h"
 #include "season_intl.h"
 
 #include <stdio.h>
@@ -176,12 +177,16 @@ static int cup24(uint32_t self)
 
 /* 1 when the edition at +0x40 is an Asian Cup of 16 teams in a season game (2004 to 2015; 0.6.2 open item 44:
  * the original's 12 played there). Its shape is the ACN's of 16: group A, stage[0..2] groups B to D, stage[3] the
- * quarter-finals of the top two of each group. */
+ * quarter-finals of the top two of each group. A game that starts in 2001/02 keeps the Asian Cup 2004 that it
+ * builds at the new game with 12 teams (Q152: a 2001 game with changing rules on equals the base game at the
+ * start, as the dates and round flags of season_intl_rules.c start_edition_2001); its later editions have 16. */
 static int asian16_edition(uint32_t self)
 {
     if (!season_intl_on() || cup_of(self) != ASIAN) return 0;
     const SeasonIntlEdition *e = season_intl_rule_edition(cups[ASIAN].file, year_of(self));
-    return e && e->teams == TEAMS16;
+    if (!e || e->teams != TEAMS16) return 0;
+    const SeasonIntlEdition *first = season_intl_first(cups[ASIAN].file, SEASON_FIRST_YEAR);
+    return !(season_start_year() == SEASON_FIRST_YEAR && first && first->year == year_of(self));
 }
 
 /* An object of that edition with its array of 4 stages (+0x2c, made by the ctor or by rt_intl_cup_stages). A
