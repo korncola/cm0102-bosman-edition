@@ -323,20 +323,47 @@ static void put_round(uint32_t rec, int round, const Round *o, int shift, int te
     round_fields(rec, round, o->value, teams, 0, o->flags);
 }
 
-/* The knockout of 24 teams. The round of 16 takes the 8 kick-off slots of the World Cup round of 16
- * (0x92c8c0..0x92c958) on Friday to Monday (weekday flags 5, 6, 0, 1), value 0x14 at +7 as there (0x92c95d), and
- * the World Cup's window for them: 5 days, the first with weekday flag 4, the last with 1, x and y 1 (26 to 30 June
- * at 0x92c8a1 and 0x92c8b8). It starts 2 days after the original's quarter-finals start (ACN 20 to 24 February,
- * Asian Cup 23 to 27 October), and the later rounds keep the original's slots, flags and values 7 days later.
- * Up to 0.6.2 the round of 16 took the original's quarter-final window (ACN 18 to 21 February, Asian Cup 21 to 23
- * October), where the slots of some weekdays had no day: those matches clashed, add_fixture 0x5aa680 moved them 4
- * days (0x5aa96e) into the days of the quarter-finals, and the finals stalled with no final (0.6.2 open item 54,
- * cause 2: the Asian Cup 2099 of a 2098 date jump moved two matches from day 16 to day 20,
- * run-logs/0.6.2-s4a/j2099). Inference: in 2019 both finals played the round of 16 from 3 to 6 days after the
- * groups. The table's first day moves all dates (the date shift of the caller). The Asian Cup of 24 has no
- * third-place match: R16, QF, SF, F (4 rounds), the ACN 5 rounds. */
-#define R16_AFTER 2                     /* days from the original's quarter-final start to the round of 16 */
-#define LATER_ROUNDS 7                  /* days by which the quarter-finals and later rounds move */
+/* The knockout of 24 teams. The round of 16 takes the original's quarter-final dates and the 8 kick-off slots
+ * of the World Cup round of 16 (0x92c8c0..0x92c958), and value 0x14 at +7 as there (0x92c95d). The later rounds
+ * keep the original's slots, flags and values, 5 days later (inference: in 2019 both finals played the round
+ * of 16 from 3 to 6 days after the groups). The table's first day moves all dates (the date shift of the
+ * caller). The Asian Cup of 24 has no third-place match: R16, QF, SF, F (4 rounds), the ACN 5 rounds.
+ * All rounds move by whole weeks when the groups end too late for the round of 16 (rest_delay below). */
+#define REST_DAYS 3                     /* the round of 16 starts no sooner after the day it is made */
+#define GAME_DATE 0xae2c90u             /* s16 day of the year from 0, s16 year */
+
+static int day_of_year(Day d, int year)
+{
+    static const int len[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int n = d.day - 1;
+    for (int m = 0; m < d.month0; m++) n += len[m] + (m == 1 && leap(year));
+    return n;
+}
+
+/* The days by which every round must move so that the round of 16 starts REST_DAYS or more after today: whole
+ * weeks, so each kick-off slot keeps its weekday (the slots place the matches on the weekdays of the block around
+ * the first date: the Asian Cup 2099 of a 2098 date jump, made on day 15, kept its Saturday matches on day 16 when
+ * its first date moved 2 days, run-logs/0.6.2-s4a/j2099d). The template runs inside
+ * the date shift of the class (season_intl.c stage_builder: every Date::Date moves by season_intl_date_shift), so
+ * today is compared in the template's days. The knockout is made when the groups end (the stage step 0x401e8c,
+ * 0x40f88f), and a group of 24 can end later than the original's groups: a team that played the day before got a
+ * round of 16 match on its next day, find_fixture_clashes 0x5ad780 gave severity 22 (0x5adf66) and add_fixture moved
+ * the match 4 days into the quarter-finals (0.6.2 open item 54, cause 2). */
+static int rest_delay(int c, uint32_t self, Day first, int y)
+{
+    int today = (int16_t)rd16(g_mem, GAME_DATE), today_year = (int16_t)rd16(g_mem, GAME_DATE + 2u);
+    int shift = season_intl_date_shift(cups[c].cls, y);
+    long from = (long)day_of_year(first, y) + shift, now = today;
+    for (int k = y; k < today_year; k++) now += 365 + leap(k);
+    for (int k = today_year; k < y; k++) now -= 365 + leap(k);
+    long delay = now + REST_DAYS - from;
+    delay = delay > 0 ? (delay + 6) / 7 * 7 : 0;
+    if (logging())
+        fprintf(stderr, "recomp: season intl: %s %d round of 16 made on day %d of %d, first day %ld, delay %ld\n",
+                cups[c].file, year_of(self), today, today_year, from, delay);
+    return (int)delay;
+}
+
 static uint32_t knockout_template(int c, uint32_t self, uint32_t out_rounds, uint32_t out_id, uint32_t out_flag)
 {
     int rounds = cups[c].third_place ? 5 : 4;
@@ -347,11 +374,9 @@ static uint32_t knockout_template(int c, uint32_t self, uint32_t out_rounds, uin
     if (rt_unwinding || !rec) return 0;
     int y = year_of(self);
     const Round *qf = &cups[c].qf;
-    Day first = later(qf->first, R16_AFTER, y), last = later(qf->first, R16_AFTER + 4, y);
-    first.weekday = 4;
-    last.weekday = 1;
-    first_date(rec, 0, first, y);
-    last_date(rec, 0, last, 1, y, 1);
+    int delay = rest_delay(c, self, qf->first, y);
+    first_date(rec, 0, later(qf->first, delay, y), y);
+    last_date(rec, 0, later(qf->last, delay, y), qf->x, y, qf->y);
     slot(rec, 0, 0, 5, 1, 3, 0x40);
     slot(rec, 0, 1, 5, 2, 3, 0x80);
     slot(rec, 0, 2, 6, 2, 3, 0x200);
@@ -361,11 +386,11 @@ static uint32_t knockout_template(int c, uint32_t self, uint32_t out_rounds, uin
     slot(rec, 0, 6, 1, 2, 3, 0x1000);
     slot(rec, 0, 7, 1, 1, 3, 0x2000);
     round_fields(rec, 0, 0x14, 16, 1, qf->flags);
-    put_round(rec, 1, qf, LATER_ROUNDS, 8, y);
-    put_round(rec, 2, &cups[c].sf, LATER_ROUNDS, 4, y);
+    put_round(rec, 1, qf, delay + 5, 8, y);
+    put_round(rec, 2, &cups[c].sf, delay + 5, 4, y);
     int r = 3;
-    if (cups[c].third_place) put_round(rec, r++, &cups[c].third, LATER_ROUNDS, 2, y);
-    put_round(rec, r, &cups[c].final, LATER_ROUNDS, 2, y);
+    if (cups[c].third_place) put_round(rec, r++, &cups[c].third, delay + 5, 2, y);
+    put_round(rec, r, &cups[c].final, delay + 5, 2, y);
     if (rt_unwinding) return 0;
     for (int k = 0; k < rounds; k++) wr16(g_mem, rec + (uint32_t)k * ROUND_SIZE + 9u, (uint32_t)k);
     return rec;

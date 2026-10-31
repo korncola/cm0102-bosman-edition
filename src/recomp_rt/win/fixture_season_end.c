@@ -239,6 +239,29 @@ static int free_day(uint32_t manager, uint32_t fix, int y, int d)
     return ok;
 }
 
+/* Test log (RECOMP_TEST_FIXTURE_HOLD=log): the severity that find_fixture_clashes gives a fixture at its date, and
+ * the nations of a national side's teams (club +0x53). It calls the original once more, so only the test mode. */
+static void log_clash(uint32_t manager, uint32_t fix)
+{
+    uint32_t esp = cpu.esp;
+    cpu.esp -= 0x40u;
+    uint32_t sev = cpu.esp + 0x30u, a[3] = {fix, sev, 0};
+    wr32(g_mem, sev, 0);
+    uint32_t list = call_this(FIND_CLASHES, manager, 3, a);
+    int severity = rt_unwinding ? -1 : (int32_t)rd32(g_mem, sev);
+    if (list && !rt_unwinding) {
+        call_this(LIST_FREE, list, 0, a);
+        a[0] = list;
+        if (!rt_unwinding) rt_callback(GAME_DELETE, 1, a);
+    }
+    if (!rt_unwinding) cpu.esp = esp;
+    uint32_t h = rd32(g_mem, fix + FIX_HOME), w = rd32(g_mem, fix + FIX_AWAY);
+    uint32_t hn = readable(h) ? rd32(g_mem, h + 0x53u) : 0, wn = readable(w) ? rd32(g_mem, w + 0x53u) : 0;
+    fprintf(stderr, "recomp: fixtures: test: clash severity %d, priority %d, %s v %s\n", severity,
+            (int8_t)g_mem[fix + FIX_PRIORITY], readable(hn) ? win_str(hn + 4u) : "?",
+            readable(wn) ? win_str(wn + 4u) : "?");
+}
+
 void o_005ab510(void);
 
 RT_WRAP(005ab510, fixture_new_date)
@@ -250,6 +273,7 @@ RT_WRAP(005ab510, fixture_new_date)
         o_005ab510();
         return;
     }
+    if (test_mode()) log_clash(manager, fix);
     kept = 0;               /* a kept fixture's add and news come before the next covered move (none nests there) */
     int year = (int16_t)rd16(g_mem, fix + FIX_YEAR), day = (int16_t)rd16(g_mem, fix + FIX_DAY);
     uint8_t slice = g_mem[fix + FIX_SLICE];
