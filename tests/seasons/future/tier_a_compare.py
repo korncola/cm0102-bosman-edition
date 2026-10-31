@@ -11,9 +11,9 @@ the fixtures are compared in a window that both saves hold: per competition, fro
 fixture days to the earlier save day. The checks, from the history checker (history_check.py) of each save:
     editions    the history rows (competition, year) from the start year on, the editions in the window
                 (history_check.editions_of), and the edition that each finals class waits for
-    dates       the fixtures in the window split into parts at each gap of more than PART_GAP days (a season,
-                or a half before a long winter break): the same number of parts, the first day of each part
-                within FIRST_DAYS days, and its last day within LAST_DAYS days
+    dates       the match days of both saves in the window split into parts at each gap of more than PART_GAP
+                days (a season, or a half before a long winter break). Each part has matches in both saves,
+                its first day in the two saves is within FIRST_DAYS days, and its last day within LAST_DAYS
     hosts       the host of each history row from the start year on
     entrants    the entrant faults of the checker (entrant-confed, -count, -host, -route, -holder, -dead: the
                 year's access rule)
@@ -22,7 +22,7 @@ any check differs, or when a save gives no edition or the two saves have other s
 
 Results move some days, some edition years and some entrants, as they move the winners. These are NOTE lines
 and do not fail:
-    - match days in one save only: replays of drawn ties, matches moved for a cup or European tie, the
+    - a part with one match in one save only, and match days in one save only: replays of drawn ties, matches moved for a cup or European tie, the
       Saturday or Sunday of a match
     - an edition whose year is one year off in the other save, when its last match moves across 31 December
     - the number of teams in the window (which champions start in an earlier qualifying round follows the club
@@ -70,17 +70,22 @@ LAST_DAYS = 21       # days that replays or moved matches can shift the last day
 FRIENDLY = re.compile(r"Friendly|Reserve|'B' International|Under 21 International")   # arranged in play
 
 
-def parts(fx):
-    """[(first day, last day, teams, Counter of matches per day)]: the fixtures split at each gap of more than
-    PART_GAP days."""
+def spans(days):
+    """[(first day, last day)]: the sorted days split at each gap of more than PART_GAP days."""
     out = []
-    for day, home, away in sorted(fx):
+    for day in days:
         if not out or day - out[-1][1] > PART_GAP:
-            out.append([day, day, set(), collections.Counter()])
+            out.append([day, day])
         out[-1][1] = day
-        out[-1][2].update(t for t in (home, away) if t >= 0)
-        out[-1][3][day] += 1
     return out
+
+
+def part(fx):
+    """(first day, last day, teams, Counter of matches per day) of the fixtures, or None."""
+    if not fx:
+        return None
+    return (min(x[0] for x in fx), max(x[0] for x in fx), {t for x in fx for t in x[1:] if t >= 0},
+            collections.Counter(x[0] for x in fx))
 
 
 def span(ps):
@@ -111,27 +116,29 @@ def compare(a, b):
             (diffs if recent else notes).append(("editions", comp, "", f"{len(recent or fx)} fixtures, {who}"))
             continue
         first = max(min(x[0] for x in fa), min(x[0] for x in fb))
-        pa = parts([x for x in fa if first <= x[0] <= end])
-        pb = parts([x for x in fb if first <= x[0] <= end])
-        if len(pa) != len(pb):
-            (notes if FRIENDLY.search(comp) else diffs).append(("dates", comp, "", f"{len(pa)} / {len(pb)} parts in the window: "
-                                             f"{span(pa)} / {span(pb)}"))
-            continue
-        for i, (x, y) in enumerate(zip(pa, pb)):
-            year = datetime.date.fromordinal(x[1]).year
-            soft = FRIENDLY.search(comp)
+        fa = [x for x in fa if first <= x[0] <= end]
+        fb = [x for x in fb if first <= x[0] <= end]
+        soft = FRIENDLY.search(comp)
+        for p0, p1 in spans(sorted({x[0] for x in fa + fb})):
+            x = part([d for d in fa if p0 <= d[0] <= p1])
+            y = part([d for d in fb if p0 <= d[0] <= p1])
+            year = datetime.date.fromordinal(p1).year
+            if not x or not y:
+                z, who = (x, "normal only") if x else (y, "Tier A only")
+                (notes if soft or sum(z[3].values()) == 1 else diffs).append(
+                    ("dates", comp, year, f"{span([z])}: {sum(z[3].values())} matches, {who}"))
+                continue
             if (abs(x[0] - y[0]) > FIRST_DAYS and min(x[0], y[0]) > first) or abs(x[1] - y[1]) > LAST_DAYS:
                 (notes if soft else diffs).append(("dates", comp, year, f"{span([x])} / {span([y])}"))
             elif x[:2] != y[:2]:
                 notes.append(("dates", comp, year, f"{span([x])} / {span([y])}"))
             if len(x[2]) != len(y[2]):
                 notes.append(("entrants", comp, year, f"{len(x[2])} / {len(y[2])} teams in the window"))
-            ca, cb = x[3], y[3]
-            moved = sorted(set(ca) ^ set(cb))
+            moved = sorted(set(x[3]) ^ set(y[3]))
             if moved:
                 notes.append(("dates", comp, year, f"{len(moved)} match days in one save only, for example "
-                              + ", ".join(f"{datetime.date.fromordinal(d)} ({ca[d] or cb[d]}, "
-                                          f"{'normal' if d in ca else 'Tier A'})" for d in moved[:3])))
+                              + ", ".join(f"{datetime.date.fromordinal(d)} ({x[3][d] or y[3][d]}, "
+                                          f"{'normal' if d in x[3] else 'Tier A'})" for d in moved[:3])))
     for check, ka, kb in (("editions", a["rows"], b["rows"]),):
         what = " (history row)"
         for only, other, who in ((ka - kb, kb, "normal only"), (kb - ka, ka, "Tier A only")):
