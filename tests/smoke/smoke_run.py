@@ -246,6 +246,9 @@ SAME_SAVE_RUNS = [
     # for money above 2,147,483,647 (the top wage from about 1.65 billion) and at an age above 127: in these runs
     # none of that happens, so with their test switch off the save is that of normal.
     ("original-faults-keep", {"faster_days": "off", "_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
+    # The merged parts of a save (0.6.2 slice 13, save_parts.c) change only how the temporary files go into the
+    # save: with their test switch off the save holds the same files as normal.
+    ("save-parts-keep", {"faster_days": "off", "_env": {"RECOMP_SAVE_PARTS": "keep"}}),
 ]
 
 # --ref-050 <0.5.0 program> (Q342): the run ref-0.5.0 plays the 0.5.0 build, and the run text-0.5.0 plays this
@@ -322,6 +325,7 @@ MATCH_RUNS = [
     ("box-fixes-off", {"_env": {"RECOMP_BOX_FIXES": "off"}}),
     ("host-loops-off", {"_env": {"RECOMP_QSORT": "original", "RECOMP_HOT": "original"}}),
     ("original-faults-keep", {"_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
+    ("save-parts-keep", {"_env": {"RECOMP_SAVE_PARTS": "keep"}}),
 ]
 MATCH_DAYS = 5      # 16.7.01 to 21.7.01
 # --match --sleep-danger adds this run: the idle sleep without its time rules (RECOMP_IDLE_SLEEP=force), so
@@ -357,6 +361,17 @@ def save_parts(path):
         end = rows[i + 1][0] if i + 1 < len(rows) else len(data)
         parts[name] = (data[offset:end], size, check)
     return parts
+
+
+def save_files(path):
+    """The files of a saved game as the game reads them: {name: (decoded bytes, size)}. A merged part (0.6.2 slice
+    13, tools/save/savfile.py) gives each file it holds, so a save with merged parts and one without compare by
+    their contents."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools", "save"))
+    import savfile
+    sav = savfile.Sav(path)
+    return {m.name: (sav.read_member(m.name), m.size) for m in sav.members
+            if not m.name.lower().endswith(savfile.MERGED)}
 
 
 def without_intro_click(steps):
@@ -481,7 +496,15 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
                 print(f"ok    {name}: the save is the same as {base}")
                 continue
             a, b = save_parts(saves[base]), save_parts(saves[name])
+            merged = any(k.lower().endswith(".parts") for k in list(a) + list(b))
+            if merged:      # a save of 0.6.2 or later with merged parts (slice 13): compare the files
+                a, b = save_files(saves[base]), save_files(saves[name])
             differ = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+            if merged and open(saves[base], "rb").read(8) != open(saves[name], "rb").read(8):
+                differ.append("the file header (version and flags)")
+            if merged and not differ:
+                print(f"ok    {name}: the save holds the same files as {base} (merged parts)")
+                continue
             ok_parts = allowed.get(name, ()) if isinstance(allowed, dict) else allowed
             if differ and set(differ) <= set(ok_parts):
                 print(f"ok    {name}: the save differs from {base} only in accepted parts: {', '.join(differ)}")

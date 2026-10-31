@@ -23,7 +23,23 @@
  * United, which the shift of slice 11b makes 2010; tests/seasons/history_duplicates_check.py lists every
  * database). The winners tab 0x4991f0 then shows the year twice. Before the fill, every season database load
  * with a shift (season_dates.c) clears the second and later copy of each such row in the same way, and the undo
- * gives them back. The base game and its 3.9.68 data (2 such rows) are not touched. */
+ * gives them back. The base game and its 3.9.68 data (2 such rows) are not touched.
+ *
+ * Rows after the start (0.6.2 slice 7, open items 3 and 17). The data holds results of editions that the game
+ * then plays itself: the 3.9.68 data holds 128 club rows and 3 nation rows of the label year 2002 (the 2001/02
+ * season, Arsenal) and the results of August to December 2001 (Charity Shield 2001 Liverpool / Manchester
+ * United), in a game that starts in July 2001; the season databases hold the calendar-year leagues and the
+ * super cups of their start year. The game then writes the same edition again, so the history shows the year
+ * twice, and it reads the newest row (Con_Champ::pick_clubs 0x4c11a0 through 0x4afd80): its 2001 Charity Shield
+ * is Liverpool against Arsenal, the 2002 champion. So at the creation of a new game every row with a label after
+ * the start year S goes (season_history_drop_after_start, with the undo record; in the official data also the
+ * label S of a split season, which that data labels by the year where it starts), and when the game writes a row
+ * (0x4afce0), every other row of that competition with a later label goes, and in the calendar year S the row of
+ * the data with the same label (not when the data holds two or more of them: the halves of a split season). A row
+ * of the year S of a competition that ends before July (the English Premier Division 2001 in a 2001/02 game)
+ * stays: the game writes no row of that label. A second edition of a competition in one calendar year (a final that
+ * moves across the new year, as the Emperor's Cup) takes the next free label, unless the competition is a split
+ * season or the row of that label is one the game wrote on the same day (the Inter-Toto Cup winners). */
 #ifndef RECOMP_SEASON_HISTORY_H
 #define RECOMP_SEASON_HISTORY_H
 
@@ -57,6 +73,14 @@ extern const int season_history_dbs_count;
  * year N: first the duplicate rows go (above), then the researched rows. Nothing more when the table has no
  * entry for that database and year. */
 void season_history_fill(const char *name, int N);
+
+/* At the creation of a new game, after the shift and the fill: clears every row with a label after S (above), and
+ * with official (the 3.9.60, 3.9.65 or 3.9.68 data) the rows of S of a split season. */
+void season_history_drop_after_start(int S, int official);
+
+/* 1 when the rows after the start go (the head): the season code is on (and, with FIX_BASE_GAME 0, the game is
+ * not the base game). */
+int season_history_after_start_on(void);
 
 /* Before a new shift (season_dates.c): gives back the rows and the row count of the last fill. */
 void season_history_undo(void);

@@ -30,7 +30,9 @@ classes after their table 2200, the ended cups 2999). An edition in progress wri
 pattern is absent; then the check reads nothing.
 
 Checks (one row of <label>.faults.tsv each, check names in the first column):
-    duplicate     a competition holds the same label year twice
+    duplicate     a competition holds the same label year twice (three times for a split season: two rows a year in
+                  most of the 10 years before the start, or an Argentine or Mexican competition with two rows in any
+                  year before it: the game plays two titles a year there; the formats of SEVERAL_TITLES)
     no-host       a row with no host in a competition whose rows have hosts (more than half of its rows)
     confederation a winner or runner-up from another confederation, in a row from the start year on. The
                   confederation is the rules file's, else the competition's continent, else the continent of
@@ -163,11 +165,17 @@ class LazySav:
         for i, (off, size, name) in enumerate(order):
             nxt = order[i + 1][0] if i + 1 < len(order) else end
             self.members[name] = (off, size, nxt - off)
+        # The files of merged parts (0.6.2 slice 13, tools/save/savfile.py): read once, kept in memory.
+        self.files = {}
+        for name in [n for n in self.members if n.lower().endswith(savfile.MERGED)]:
+            self.files.update(savfile.split_merged(self.read(name)))
 
     def names(self):
-        return list(self.members)
+        return list(self.members) + list(self.files)
 
     def read(self, name):
+        if name in self.files:
+            return self.files[name]
         off, size, raw = self.members[name]
         self.f.seek(off)
         data = self.f.read(raw)
@@ -320,6 +328,11 @@ def cycle_of(years, start):
     return max(s for s, n in best if n == best[0][1]) if len(steps) > 1 else steps[0]
 
 
+# Competitions with several rows of one label by their format (docs/research/2026-10-17-competition-history-fill.md,
+# "Two rows per label year"): (name pattern, first label year, rows a year).
+SEVERAL_TITLES = ((re.compile(r"(UEFA )?Inter-?Toto Cup", re.I), 0, 3),               # one row per joint winner
+                  (re.compile(r"Danish (2nd|Second) Divisions?", re.I), 2006, 2))       # East and West from 2006
+
 FRIENDLY = re.compile(r"^(Friendly|Reserve|'B' International|Under 21 International)")
 
 
@@ -350,9 +363,17 @@ def check(game, rules=None, changes=()):
         international = comp["nation"] < 0
         years = [r[3] for r in rs]
         game_rows = [r for r in rs if r[3] >= start]
-        # the same year twice (from the year before the start: older duplicates are rows of the database)
-        for y, n in sorted(collections.Counter(years).items()):
-            if n > 1 and y >= start - 1:
+        # the same year twice (from the year before the start: older duplicates are rows of the database); a split
+        # season (Apertura and Clausura) holds two rows a year
+        per_year = collections.Counter(years)
+        before = [per_year[y] for y in range(start - 10, start) if per_year[y]]
+        split_nation = game.nations.get(comp["nation"], ("", ""))[0] in ("Argentina", "Mexico")
+        most = 2 if before and (sum(1 for k in before if k == 2) * 2 > len(before) or
+                                (split_nation and any(per_year[y] == 2 for y in per_year if y < start))) else 1
+        several = next((k, f) for pat, f, k in SEVERAL_TITLES if pat.fullmatch(name)) \
+            if any(pat.fullmatch(name) for pat, f, k in SEVERAL_TITLES) else (1, 0)
+        for y, n in sorted(per_year.items()):
+            if n > max(most, several[0] if y >= several[1] else 1) and y >= start - 1:
                 pairs = "; ".join(f"{r[4][0]} / {r[5][0]}" for r in rs if r[3] == y)
                 faults.append(("duplicate", name, y, f"{n} rows: {pairs}"))
         # a missing host where the competition has hosts

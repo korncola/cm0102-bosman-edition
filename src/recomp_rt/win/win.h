@@ -47,6 +47,15 @@ int win_host_path(const char *winpath, char *out, size_t room);
 /* The host path that a read of a Windows path opens (the user folder first, then the game folder); 0 when
  * the file does not exist. */
 int win_existing_file(const char *winpath, char *out, size_t room);
+/* The parts of a save merged across seasons (save_parts.c). win_list_files calls each with the name and host path
+ * of every file of a Windows folder that matches mask, as FindFirstFileA lists them (the user folder first), and
+ * gives the count, -1 when the folder has no host path. While win_find_hide is set, a find leaves out the names for
+ * which it gives 1. win_create_file opens a Windows path to write from the start, as CreateFileA with CREATE_ALWAYS
+ * (in the user folder): a host descriptor, or -1. */
+int win_list_files(const char *folder, const char *mask, void (*each)(const char *name, const char *host, void *ctx),
+                   void *ctx);
+void win_find_hide(int (*hidden)(const char *name));
+int win_create_file(const char *winpath);
 /* The Windows path of a host folder (C:\ plus the host path). */
 void win_windows_path(const char *host, char *out, size_t room);
 extern char win_cwd[1024];             /* current folder, as a Windows path */
