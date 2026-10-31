@@ -194,3 +194,16 @@ from save_size import INSNS as SAVE_SIZE_INSNS  # noqa: E402
 
 assert not set(SAVE_SIZE_INSNS) & (set(INSNS) | set(PATCHES))
 INSNS.update(SAVE_SIZE_INSNS)
+
+# Faults of the original that long games reach (0.6.2 slice 11, original_faults.py): national managers, money above
+# 2,147,483,647 and the human manager's age.
+from original_faults import INSNS as ORIGINAL_FAULT_INSNS  # noqa: E402
+
+assert not set(ORIGINAL_FAULT_INSNS) & (set(INSNS) | set(PATCHES))
+INSNS.update(ORIGINAL_FAULT_INSNS)
+
+# International caps above 255 (0.6.2 slice 12) in the same way.
+from caps_wide import INSNS as CAPS_INSNS  # noqa: E402
+
+assert not set(CAPS_INSNS) & (set(INSNS) | set(PATCHES))
+INSNS.update(CAPS_INSNS)

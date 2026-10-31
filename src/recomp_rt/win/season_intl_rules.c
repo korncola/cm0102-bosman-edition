@@ -396,7 +396,13 @@ int season_intl_uefa_from(const char *name)
 {
     /* UEFA Congress of 3 May 2016 (docs/research/rules-0.6.0/uefa-access.tsv, the 2016/17 rows: "Kosovo (55):
      * admitted May 2016"); the 2018-19 Nations League has Kosovo in League D (nations-league-tiers.tsv). */
-    return name && !strcasecmp(name, "Kosovo") ? 2016 : 0;
+    if (!name) return 0;
+    if (!strcasecmp(name, "Kosovo")) return 2016;
+    /* UEFA Congress of 25 April 2002 in Stockholm: Kazakhstan moves from the AFC (tests/seasons/future/nations.tsv;
+     * https://en.wikipedia.org/wiki/Kazakhstan_national_football_team, read 2026-10-30). The 2002/03 season is
+     * the first after it. */
+    if (!strcasecmp(name, "Kazakhstan")) return 2002;
+    return 0;
 }
 
 /* ---- The real draws of finals whose qualifying began before the game (O259 rows A9 and A16) ---- */

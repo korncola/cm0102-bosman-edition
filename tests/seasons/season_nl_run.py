@@ -32,6 +32,15 @@ The checks (each run):
       that the log names in its real league and group, and no league holds more nations than the edition
     - each finals line names four nations, all of League A of that edition's draw
     - a nation that moves between editions moves one league, and the next draw puts it there
+    repair  0.6.2 slice 8 (open items 4 and 21): loads a save of 0.6.1 (October 2018 start, England, changing
+            rules on, the save of run "save" made by the 0.6.1 build: September 2019) whose Nations League record
+            keeps the short name "Asian Cup Quals" and continent Asia, plays 400 days (to October 2020: the
+            2020-21 draw and its first matchdays) and saves. The log must name the repair at load, and the
+            history checker must find the fault in the 0.6.1 save and none in the new save. The save:
+            RECOMP_NL_REPAIR_SAVE, else test-fixtures/nl-asia-record-0.6.1.sav; with neither the run fails.
+The history checker (tests/seasons/future/history_check.py) also reads the save of the first game of run "save":
+no comp-continent, comp-name, confederation or entrant-confed fault may name the UEFA Nations League or the
+"Asian Cup Quals" (open items 4 and 21).
 A run takes about 6 to 10 minutes. --jobs (default 1) runs that many at the same time. --reuse checks the
 logs already in the --keep folder again without a new run.
 """
@@ -66,7 +75,13 @@ RUNS = {
     "off": (2018, "October 2018", "off", 2019, "2018-19", ["2018-19", "2018-19"]),
     "save": (2018, "October 2018", "on", 2019, "2018-19", ["2018-19", "2020-21"]),
     "2010": (2010, "September 2010", "on", 2010, None, []),
+    "repair": (2018, "October 2018", "on", 2020, None, []),
 }
+REPAIR_SAVE = os.environ.get("RECOMP_NL_REPAIR_SAVE") or "/Users/max/Projects/cm0102/test-fixtures/nl-asia-record-0.6.1.sav"
+REPAIR_DAYS = 400
+CHECKER = os.path.join(HERE, "future", "history_check.py")
+RECORD_CHECKS = ("comp-continent", "comp-name", "confederation", "entrant-confed")
+RECORD_NAMES = re.compile(r"UEFA Nations League|Asian Cup Qual")
 # The CONCACAF Nations League editions drawn in each run (part b), in the log's names.
 CONCACAF = {"2018": ["CONCACAF-2019-20"], "2020": ["CONCACAF-2022-23"],
             "2022": ["CONCACAF-2023-24", "CONCACAF-2024-25"], "2024": ["CONCACAF-2024-25"],
@@ -227,9 +242,31 @@ def leagues_of(log, edition):
     return {}
 
 
-def load_and_jump(program, game, database, save, work, last, timeout):
+def record_faults(save, work, label):
+    """The faults of the history checker on `save` that name the UEFA Nations League or the Asian Cup Quals and
+    come from its record (open items 4 and 21), as lines; None when the checker does not run."""
+    out = os.path.join(work, "check")
+    os.makedirs(out, exist_ok=True)
+    faults = os.path.join(out, label + ".faults.tsv")
+    if os.path.exists(faults):                           # a file of an earlier run in --keep proves nothing
+        os.remove(faults)
+    r = subprocess.run([sys.executable, "-I", CHECKER, save, "--out", out, "--label", label],
+                       capture_output=True, text=True, encoding="latin-1")
+    with open(os.path.join(out, label + ".txt"), "w", encoding="latin-1") as f:
+        f.write(r.stdout + r.stderr)
+    if r.returncode not in (0, 1) or not os.path.exists(faults):
+        return None
+    lines = []
+    for x in r.stdout.split("\n"):
+        parts = x.split()
+        if len(parts) >= 3 and parts[0] in ("known", "FAULT") and parts[1] in RECORD_CHECKS and RECORD_NAMES.search(x):
+            lines.append(x.strip())
+    return lines
+
+
+def load_and_jump(program, game, database, save, work, last, timeout, extra_env=None):
     """Loads a save in a new user folder and plays the season jump to the end of `last`, as rules_report_check.run
-    does for a new game."""
+    does for a new game. extra_env: more switches (RECOMP_SAVE_AFTER_DAYS: the game saves and ends then)."""
     user, home, shots = (os.path.join(work, d) for d in ("user", "home", "shots"))
     for d in (user, home, shots):
         os.makedirs(d, exist_ok=True)
@@ -245,7 +282,7 @@ def load_and_jump(program, game, database, save, work, last, timeout):
     env = dict(os.environ, HOME=home, SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy", RECOMP_NO_BOX="1",
                RECOMP_USER_DIR=user, RECOMP_FIXED_CLOCK="1", RECOMP_SEASON_JUMP=str(last), RECOMP_SCREEN_LOG="1",
                RECOMP_RULES_TABLE=table, RECOMP_SCRIPT="; ".join(smoke_run.scaled_steps("classic", shots, steps)),
-               **BASE_ENV)
+               **dict(BASE_ENV, **(extra_env or {})))
     start = time.time()
     with open(os.path.join(work, "stderr.txt"), "w") as log:
         try:
@@ -291,12 +328,52 @@ def save_run(program, game, keep, reuse):
             fails.append(f"save: {n} in league {got.get(n)} after the load, {want.get(n)} in run 2018")
     if not any("season nl: 2018-19 finals:" in x for x in open(os.path.join(first, "stderr.txt"), encoding="latin-1")):
         fails.append("save: the first game made no finals before the save")
+    found = record_faults(os.path.join(first, "user", smoke_run.SAVE_NAME), first, "save-a")
+    if found is None:
+        fails.append(f"save: the history checker did not read the save ({first}/check)")
+    fails += [f"save: the history checker: {x}" for x in found or []]
+    return fails
+
+
+def repair_run(program, game, keep, reuse):
+    """Run "repair" (see the top): a 0.6.1 save with the record of the Asian Cup qualifiers is repaired at load."""
+    _, database, _, last, _, _ = RUNS["repair"]
+    if not os.path.exists(REPAIR_SAVE):
+        return [f"repair: no 0.6.1 save {REPAIR_SAVE} (RECOMP_NL_REPAIR_SAVE)"]
+    work = os.path.join(keep, "repair") if keep else tempfile.mkdtemp(prefix="cm0102-season-nl-repair-")
+    os.makedirs(work, exist_ok=True)
+    save = os.path.join(work, "user", smoke_run.SAVE_NAME)
+    if not reuse:
+        if os.path.exists(save):
+            os.remove(save)
+        code = load_and_jump(program, game, database_folder(database), REPAIR_SAVE, work, last, 7200,
+                             {"RECOMP_SAVE_AFTER_DAYS": str(REPAIR_DAYS)})
+        if code != 0:
+            return [f"repair: the loaded game ended with code {code} ({work})"]
+    fails = []
+    before = record_faults(REPAIR_SAVE, work, "before")
+    if not before or not any(x.split()[1] == "comp-continent" for x in before):
+        fails.append(f"repair: the 0.6.1 save holds no Nations League record on continent Asia ({work}/check)")
+    log = open(os.path.join(work, "stderr.txt"), encoding="latin-1").read().split("\n")
+    fails += [f"repair: {x.strip()}" for x in log if "recomp: message box from" in x]
+    if not any("season nl: record" in x and "(repaired at load)" in x for x in log):
+        fails.append("repair: the log names no repair of the record at load")
+    if not any(DRAW.search(x) and DRAW.search(x).group(1) == "2020-21" for x in log):
+        fails.append("repair: no 2020-21 draw after the load")
+    if not os.path.exists(save):
+        return fails + [f"repair: the loaded game did not save ({work})"]
+    after = record_faults(save, work, "after")
+    if after is None:
+        fails.append(f"repair: the history checker did not read the new save ({work}/check)")
+    fails += [f"repair: the history checker: {x}" for x in after or []]
     return fails
 
 
 def one(program, game, name, keep, reuse):
     if name == "save":
         return save_run(program, game, keep, reuse)
+    if name == "repair":
+        return repair_run(program, game, keep, reuse)
     start, database, rules, last, _, _ = RUNS[name]
     work = os.path.join(keep, name) if keep else tempfile.mkdtemp(prefix=f"cm0102-season-nl-{name}-")
     if not reuse:

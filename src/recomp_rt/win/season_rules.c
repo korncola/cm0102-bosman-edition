@@ -25,6 +25,7 @@ static const char *const COLUMNS[] = {
 static char *text;                 /* the file, with a NUL at the end of each field */
 static SeasonRule *rows;
 static int nrows;
+static int last_row_season;        /* the latest season of a row, 0 until season_rules_last_season reads it */
 
 static void drop_index(void);
 
@@ -36,6 +37,7 @@ static void drop(void)
     text = NULL;
     rows = NULL;
     nrows = 0;
+    last_row_season = 0;
 }
 
 /* A count of the file: digits, or a code. -100 when the field fits neither. */
@@ -352,4 +354,15 @@ const SeasonRule *season_rules_find(int season, const char *file, int n)
     if (!keys) return season_rules_find_scan(season, file, n);
     FindKey *k = key_slot(season, file, strlen(file));
     return k->file && n >= 0 && n < k->n ? &rows[k->rows[n]] : NULL;
+}
+
+int season_rules_last_season(int season, const char *file)
+{
+    if (!last_row_season)
+        for (int i = 0; i < nrows; i++)
+            if (rows[i].season > last_row_season) last_row_season = rows[i].season;
+    if (season >= SEASON_RULE_ENDED) return 0;
+    for (int s = season < last_row_season ? season : last_row_season; s >= SEASON_RULE_FIRST; s--)
+        if (season_rules_find(s, file, 0)) return s;
+    return 0;
 }

@@ -11,6 +11,7 @@
 #include "win.h"
 #include "season_rules.h"
 #include "season_change.h"
+#include "caps_wide.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -54,7 +55,6 @@ const SeasonRuleKind season_kind_club_cups, season_kind_club_world, season_kind_
 
 uint32_t season_change_part_size(void);
 void season_change_part_write(uint8_t *out);
-int season_change_part_read(const uint8_t *in, uint32_t n);
 void season_change_reset(void);
 
 #define NAME_ROOM 51u
@@ -93,6 +93,94 @@ static uint32_t make_part(uint8_t *p, uint32_t len)
     return at;
 }
 
+/* 0.6.2 slice 12 (fault 30): caps above 255 stay in the byte as 255 and in the store, and the season part of version
+ * 3 keeps them. */
+static void caps_test(void)
+{
+    char text[200];
+    caps_wide_reset();
+    uint32_t b = 253;
+    b = caps_wide_add(7, b);
+    check(b == 254 && caps_wide_full(7, b) == 254 && !caps_wide_count(), "caps 253 + 1: byte 254, nothing stored");
+    b = caps_wide_add(7, b);
+    check(b == 255 && caps_wide_full(7, b) == 255 && !caps_wide_count(), "caps 254 + 1: byte 255, nothing stored");
+    b = caps_wide_add(7, b);
+    check(b == 255 && caps_wide_full(7, b) == 256, "caps 255 + 1: byte 255 (not 0, so no second first cap), 256 caps");
+    b = caps_wide_add(7, b);
+    check(b == 255 && caps_wide_full(7, b) == 257 && caps_wide_count() == 1, "caps 256 + 1: 257 caps, one player");
+    check(caps_wide_full(8, 255) == 255 && caps_wide_full(8, 40) == 40, "another player: his byte");
+    check(caps_wide_full(7, 12) == 12, "a byte below 255 is the caps, whatever is stored");
+    check(caps_wide_add(7, 254) == 255 && caps_wide_full(7, 255) == 255 && !caps_wide_count(),
+          "a byte that reaches 255 again (a staff id used again): the old count goes");
+    for (int i = 0; i < 300; i++) caps_wide_add(9, 255);
+    check(caps_wide_full(9, 255) == 555, "300 caps after 255: 555");
+
+    /* A part of version 2 with no caps writes the same bytes as before: the 0.6.1 layout. */
+    {
+        uint8_t in[ROOM], out[ROOM];
+        caps_wide_reset();
+        uint32_t n = make_part(in, 5);
+        int read = season_change_part_read(in, n, 2);
+        check(read == 1 && season_change_part_form() == 2 && season_change_part_size() == n,
+              "a 0.6.1 part (version 2): read, version 2 again, same size");
+        if (read) season_change_part_write(out);
+        check(!memcmp(in, out, n) && !caps_wide_count(), "a 0.6.1 part: same bytes back, no caps above 255");
+    }
+    /* Version 3: news, renames, an empty row A18 list (its count 0 now written) and two players. */
+    for (int list = 0; list < 2; list++) {
+        static uint8_t in[ROOM], out[ROOM], again[ROOM];
+        uint32_t at = make_part(in, 3);
+        at += put32(in + at, (uint32_t)list);
+        for (int e = 0; e < list; e++) {
+            memset(in + at, 0, SEASON_FRIENDLY_ENTRY);
+            put32(in + at, 99);
+            at += SEASON_FRIENDLY_ENTRY;
+        }
+        uint32_t caps_at = at;
+        at += put32(in + at, 2);
+        at += put32(in + at, 1234);
+        at += put32(in + at, 256);
+        at += put32(in + at, 77);
+        at += put32(in + at, 301);
+        int read = season_change_part_read(in, at, 3);
+        snprintf(text, sizeof text, "version 3 with %d row A18 entries: read, caps 256 and 301", list);
+        check(read == 1 && caps_wide_full(1234, 255) == 256 && caps_wide_full(77, 255) == 301, text);
+        uint32_t size = season_change_part_size();
+        memset(out, MARK, sizeof out);
+        if (read && size <= ROOM) season_change_part_write(out);
+        int past = 0;
+        for (uint32_t i = size; i < ROOM; i++)
+            if (out[i] != MARK) past++;
+        snprintf(text, sizeof text, "version 3 with %d row A18 entries: version 3, size %u of %u, same bytes back, "
+                 "%d past", list, size, at, past);
+        check(season_change_part_form() == 3 && size == at && !past && !memcmp(in, out, at), text);
+        /* A reader of version 2 (the read of 0.6.0 and 0.6.1: the list to its end) takes the news, names and list. */
+        caps_wide_reset();
+        read = season_change_part_read(in, at, 2);
+        snprintf(text, sizeof text, "version 3 with %d row A18 entries, read as version 2: read, the caps left", list);
+        check(read == 1 && !caps_wide_count(), text);
+        if (read) season_change_part_write(again);
+        uint32_t kept = list ? caps_at : caps_at - 4;   /* version 2 writes no count for an empty list */
+        check(season_change_part_size() == kept && !memcmp(in, again, kept),
+              "  and its news, names and row A18 list are those of the part");
+        /* Damaged caps fields. */
+        put32(in + caps_at, 3);
+        check(season_change_part_read(in, at, 3) == 0 && !caps_wide_count(), "a caps count larger than the part: damaged");
+        put32(in + caps_at, 2);
+        put32(in + caps_at + 8, 200);
+        check(season_change_part_read(in, at, 3) == 0, "a stored count of 255 or less: damaged");
+        put32(in + caps_at + 8, 256);
+        put32(in + caps_at + 12, 1234);
+        check(season_change_part_read(in, at, 3) == 0, "one player twice: damaged");
+        put32(in + caps_at + 12, 77);
+        put32(in + at, 0xdeadbeefu);
+        check(season_change_part_read(in, at + 4, 3) == 0, "bytes after the caps in version 3: damaged");
+        check(season_change_part_read(in, at + 4, 4) == 1 && caps_wide_full(77, 255) == 301,
+              "  but a later version keeps its own fields after the caps");
+    }
+    caps_wide_reset();
+}
+
 int main(void)
 {
     char text[200];
@@ -100,7 +188,7 @@ int main(void)
         uint8_t in[ROOM], out[ROOM];
         uint32_t n = make_part(in, len);
         season_change_reset();
-        int read = season_change_part_read(in, n);
+        int read = season_change_part_read(in, n, 2);
         uint32_t size = season_change_part_size();
         memset(out, MARK, sizeof out);
         if (read && size <= ROOM) season_change_part_write(out);
@@ -128,7 +216,7 @@ int main(void)
         at += put32(in + at, 0);
         at += put32(in + at, 2301);
         season_change_reset();
-        int read = season_change_part_read(in, at);
+        int read = season_change_part_read(in, at, 2);
         uint32_t size = season_change_part_size();
         if (read && size <= sizeof out) season_change_part_write(out);
         snprintf(text, sizeof text, "news in 301 seasons, 2001 to 2301, season point 2301: read %d, size %u of %u, "
@@ -136,9 +224,11 @@ int main(void)
         check(read == 1 && size == at && !memcmp(in, out, at), text);
         put32(in, 302);
         season_change_reset();
-        check(season_change_part_read(in, at) == 0, "a news count larger than the part holds: damaged");
+        check(season_change_part_read(in, at, 2) == 0, "a news count larger than the part holds: damaged");
     }
+    caps_test();
     season_change_reset();
+    caps_wide_reset();
     check(season_change_part_size() == 0, "after a reset: no part");
     printf("%s\n", failures ? "FAIL" : "PASS");
     return failures ? 1 : 0;

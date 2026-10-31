@@ -15,6 +15,8 @@
  * Version 2 (0.6.0 slice 16) adds the news texts, the changed names and the last season point of the season
  * change after +16 (season_change.h). A game with none of them writes version 1. A later version keeps the
  * fields of version 2 first, so this reader takes them and leaves what follows.
+ * Version 3 (0.6.2 slice 12) adds the caps above 255 after the row A18 list (season_change.h, caps_wide.h). A game
+ * with no player above 255 caps writes version 1 or 2 as before.
  *
  * The original opens a part by its exact name (zopen 0x9326e0, the name scan at 0x93293b) and extracts only
  * the parts whose name ends in .tmp (load_game_data 0x82a9c0 calls 0x933320 with "*.tmp" at 0x82acbc), so it
@@ -26,6 +28,7 @@
 #include "season.h"
 #include "season_names.h"
 #include "season_change.h"
+#include "caps_wide.h"
 #include "season_dates.h"
 #include "season_intl.h"
 #include "season_load_check.h"
@@ -49,6 +52,7 @@ static int game_on;                             /* 1 from a made or loaded game 
 #define PART_NAME "bosman_season.dat"
 #define PART_VERSION 1u
 #define PART_VERSION_NEWS 2u       /* with the news texts of season_change.c */
+#define PART_VERSION_CAPS 3u       /* also the caps above 255 (0.6.2 slice 12, caps_wide.c) */
 #define PART_SIZE 16u
 #define HEADER_ROWS 1000u
 #define ROW_SIZE 0x10cu
@@ -161,7 +165,8 @@ static void season_box(const char *title, const char *text)
 }
 
 /* The part of a game: written only when the game is not 2001 with changing rules off, or when the season
- * code holds news or changed names (season_change.c): a load needs the names in the data (season_change_rename). */
+ * code holds news or changed names (season_change.c): a load needs the names in the data (season_change_rename).
+ * Also when a player has more than 255 caps (caps_wide.c, in the size): a 2001 game keeps them too. */
 static int part_needed(void)
 {
     return rt_season_year != SEASON_FIRST_YEAR || rules_now || season_change_part_size() != 0;
@@ -237,7 +242,7 @@ static int add_part(const char *host)
         free(stored);
         goto done;
     }
-    put32(data, extra ? PART_VERSION_NEWS : PART_VERSION);
+    put32(data, (uint32_t)season_change_part_form());
     put32(data + 4, size);
     put32(data + 8, rt_season_year);
     put32(data + 12, (uint32_t)rules_now);
@@ -312,7 +317,7 @@ static int read_part(const char *host, int *year, int *rules, int news)
          * cannot read them is refused: the changed names in them are needed to load the game's data
          * (season_change_rename). */
         if (news && form >= PART_VERSION_NEWS &&
-            (length < PART_SIZE + 12 || !season_change_part_read(data + PART_SIZE, length - PART_SIZE))) {
+            (length < PART_SIZE + 12 || !season_change_part_read(data + PART_SIZE, length - PART_SIZE, form))) {
             season_change_reset();
             break;
         }
@@ -475,6 +480,7 @@ void o_0082a9c0(void);
 RT_WRAP(0082a9c0, load_game)
 {
     season_dates_forget();                      /* slice 11b: the data comes from the save */
+    caps_wide_reset();                          /* 0.6.2 slice 12: the season part below gives the caps back */
     if (!season_code_on()) {
         o_0082a9c0();
         if (!rt_unwinding && cpu.eax) game_on = 1;
@@ -498,6 +504,7 @@ RT_WRAP(0082a9c0, load_game)
     }
     if (part < 0) {
         season_change_reset();
+        caps_wide_reset();
         /* A damaged part: the season of the game is not known, so the game is not loaded. The load fails
          * before any code of the original runs, as its own early failures do (0x82aa28), and the callers
          * report a failed load (for example 0x81bef1). */
@@ -522,6 +529,7 @@ RT_WRAP(0082a9c0, load_game)
         rt_season_year = (uint32_t)new_year;
         rules_now = 0;
         season_change_reset();
+        caps_wide_reset();
     }
 }
 
@@ -534,6 +542,7 @@ RT_WRAP(00828110, create_game)
     rt_season_year = (uint32_t)new_year;
     rules_now = !season_code_on() ? 0 : new_rules < 0 ? options_bool(OPT_CHANGING_RULES) : new_rules;
     season_change_reset();
+    caps_wide_reset();
     season_dates_at_create();                   /* slice 11b: the dates of the loaded data fit this year */
     season_intl_at_create();                    /* slice 27: Australia in Asia from 2006/07 */
     season_change_creating(1);
@@ -556,6 +565,7 @@ RT_WRAP(0082ff40, free_game)
     rt_season_year = (uint32_t)new_year;
     rules_now = 0;
     season_change_reset();
+    caps_wide_reset();
     o_0082ff40();
 }
 

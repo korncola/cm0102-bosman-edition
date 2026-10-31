@@ -78,13 +78,17 @@ After-table rules:
 Saves:
 - A save from 0.6.0 or 0.6.1 with a competition waiting for the idle year moves it to its next edition after the save's date, at load (Q8).
 - Saves, season parts and news parts accept years up to at least 2300 and news in more than 200 seasons.
-- Caps go in a wider field, kept in the season part of the save. The original byte stays as the low part for older readers (Q25).
+- Caps go in a wider field, kept in the season part of the save. The original byte stops at 255 (Q25).
 - The save keeps each type of data in one part, merged across seasons, so the part count stops growing. Older saves still load (Q26).
 
 Original game faults, fixed in every game, base game included (Q23, Q24, Q27):
 - Every national team opens a vacancy when its manager retires.
 - The club info screen and the AI transfer budget use the full 64-bit balance.
 - The human manager's age comes from the birth date.
+- Every national team with no manager gets one at the first month change in play, also a team that had none at the start of the game. A nation that no longer exists in that year gets no manager (Q43).
+- The top wage fix acts from a balance of about £1.65 billion, where the original's 32-bit sum already wraps (Q44).
+- The human manager's age stops at 127, the largest age the game's byte holds, in place of the age from the birth date (Q45).
+- Every money text that can pass £2,147,483,647 is traced and shows the full amount, news items included (Q46).
 
 The same game (Q152): every game code change keeps the same saves in the same-save set, unless the change acts only after a table end year, after 2099 or above £2.1 billion, which the set does not reach. The speed fixes give the same results as the code they replace (Q18).
 
@@ -204,8 +208,8 @@ Merge danger: two-way door. Blast radius: the history screens of every start.
 Blocked by: 2, 3
 Delivers: the UEFA Nations League has its own European record. The Asian Cup qualifiers hold only Asian nations. Saves with the wrong record are repaired at load. Faults 4 and 21.
 Merge danger: one-way door, because the repair changes saves at load. Blast radius: both competitions and their history.
-- [ ] The checker finds no nation from the wrong confederation in either competition to 2100.
-- [ ] A 0.6.1 save with the fault loads and plays both competitions correctly.
+- [ ] The checker finds no nation from the wrong confederation in either competition to 2100. (Slice 8: none in a game from 2018 to April 2030, before slice 3. A game to 2100 waits for the Tier A switch. A 2098 date jump makes no Nations League, a separate fault.)
+- [x] A 0.6.1 save with the fault loads and plays both competitions correctly. (Run "repair" of tests/seasons/season_nl_run.py. No code plays the Asian Cup qualifiers: their record is the Nations League's.)
 
 ### 9a. Club cups after the table
 Blocked by: 1, 2, 3
@@ -224,24 +228,24 @@ Merge danger: two-way door. Blast radius: these two competitions.
 Blocked by: 1, 2, 3
 Delivers: leagues, play-offs and Brazilian state leagues keep their last rules with no end year. Faults 8 and 9.
 Merge danger: two-way door. Blast radius: promotion and relegation in every league.
-- [ ] Tier A to 2100: league sizes, promotion and play-off places stay as in the last table row.
-- [ ] Unit tests to 2301: no lookback limit ends a rule.
+- [ ] Tier A to 2100: league sizes, promotion and play-off places stay as in the last table row. Run as a date jump from 2098 to 2100 (slice 3 not on main yet): every division keeps the places and sizes of a 2027 start, except the Brazilian Série A and B, which drift inside the table too (fault 63, open).
+- [x] Unit tests to 2301: no lookback limit ends a rule.
 
 ### 11. Original faults: national managers, money, manager age
 Blocked by: none
 Delivers: every national team gets a new manager, money above £2.1 billion is right on every screen and in AI budgets, and the manager's age is right after 2100. Faults 26, 27, 28 and 33.
-Merge danger: two-way door. The base game changes after the first national manager retires. The same-save set does not reach that point, so it must PASS. A loaded save with a national team that has no manager gets one at the next month change. That is an expected change. Blast radius: national team jobs, money screens and AI transfer budgets.
-- [ ] A save with a retired national manager of a small nation opens a vacancy. A save where a national team already has no manager fills it at the next month change.
-- [ ] Saves edited to balances of £2.5 billion, £5 billion and £12 billion show the right balance, and the club still bids.
-- [ ] Every screen that formats money through the 32-bit Cash object is traced and fixed.
-- [ ] Same-save set PASS.
+Merge danger: two-way door. The base game changes at the first month change in play (1 August in a 2001 game): about 95 national teams of the 3.9.68 data have no manager from the start and get one then (Q43). The same-save set does not reach that point, so it must PASS. A loaded save with a national team that has no manager gets one at the next month change. That is an expected change. Blast radius: national team jobs, money screens and AI transfer budgets.
+- [x] A save with a retired national manager of a small nation opens a vacancy. A save where a national team already has no manager fills it at the next month change.
+- [x] Saves edited to balances of £2.5 billion, £5 billion and £12 billion show the right balance, and the club still bids.
+- [x] Every screen that formats money through the 32-bit Cash object is traced and fixed.
+- [x] Same-save set PASS.
 
 ### 12. Caps in a wider field
 Blocked by: 1
 Delivers: caps count above 255. Fault 30.
 Merge danger: one-way door, because the save holds a new field. Blast radius: caps and first-cap history rows.
-- [ ] A player edited to 255 caps gets 256 at the next cap, and no second "first cap" row.
-- [ ] A 0.6.1 save loads with the right caps.
+- [x] A player edited to 255 caps gets 256 at the next cap, and no second "first cap" row.
+- [x] A 0.6.1 save loads with the right caps.
 
 ### 13. Save parts merged across seasons
 Blocked by: 12
@@ -283,3 +287,23 @@ Blocked by: 15
 Delivers: if a Select All save grows about 25 MB a season, it reaches the 4 GB file limit in about 2160. Tier B measures the growth. If the growth holds, this slice finds what grows and keeps the save under the limit to 2300.
 Merge danger: one-way door if it changes the save format. Blast radius: every save.
 - [ ] Tier B save size stays under 4 GB to 2300 at the measured rate.
+
+### 19. Nation names, Kazakhstan and the Netherlands Antilles
+Blocked by: none
+Delivers: the national sides of a renamed nation take the nation's name, in a new game, at each season point and at the load of an older save. Kazakhstan moves from the AFC to UEFA from the 2002/03 season. The dead Netherlands Antilles plays no competition beside Curaçao (fault 51, already fixed on main). Faults 42, 43 and 51.
+Merge danger: two-way door. The load of a 0.6.1 save gives its old side names the nation's names, and that changes only names. Blast radius: the names that the fixtures, results and history screens show for six national sides, and the international competitions of 2001 and 2002 starts, where Kazakhstan now plays the UEFA qualifiers and no longer the AFC ones.
+- [x] The checker finds no side-name and no nation-confed fault in a 2001 start with changing rules on, played past the 2002 season point, and in a 2025 start on the December 2025 data.
+- [x] The checker finds no entrant-dead fault in the CONCACAF Nations League of a 2022 start played to November 2023. Fault 51 is not on main: only saves of builds before 29b9dc82 show it, so this slice changes no code for it.
+- [x] history_check_test.py: the UEFA moves of nations.tsv match the season code.
+- [x] Same-save set PASS.
+
+### 20. A youth pool for every nation
+Blocked by: none
+Delivers: every nation with 23 players or more keeps players under 21 and under 23 (Q35). Open item 52.
+- The cause, read in code: a new player (regenerate_as_youth_player 0x7abac0) takes the nation of a retired player. Some nations are not loaded and had 349 players or fewer at the start (+0x88, counted once by 0x524d70). Their new players are 23 to 27 in most cases (0x7abe87..0x7abeee). Their young players grow up and none follow.
+- The fix, in every game: a short nation gets the young ages of the original. Short means fewer than 1 in 20 players under 21, or fewer than 1 in 10 under 23. A nation that will have none under 21 or none under 23 within a year gets the next new player of a nation that is not short.
+Merge danger: two-way door. The base game changes from the first new player of a nation that is short or runs out. In an England-only 2001 game (start.sav) that is 24 March 2002, a new player for Croatia. In the 2025 start of the gate runs it is the first new player after the July 2027 save. No nation is short or runs out at the start of a 2001 game, so the same-save set must PASS. Blast radius: the age and nation of new players.
+- [x] Unit test: the rule cases, and a 300-year model where no nation runs out.
+- [x] The 2041 forum save played one year: main has 27 no-youth faults, the fix none.
+- [x] An England-only 2001 game to July 2009: main has 15 no-youth faults, the fix none. A 2025 start from July 2027 to May 2028: main has 21, the fix none.
+- [x] Same-save set PASS against main.

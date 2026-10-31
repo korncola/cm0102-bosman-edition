@@ -78,6 +78,15 @@
 #define CLUB_SIZE 0x245u
 #define CLUB_NATION 0x53u
 #define GAME_YEAR 0xae2c92u
+#define EURO_QUAL_KEY 0x9cf784u          /* key id of "European Championship Qualifying" (0x606e24) */
+#define COMP_RECORDS 0xae23d0u          /* comp records, 0x6b bytes */
+#define COMP_RECORD_COUNT 0xae2378u     /* s32: club, nation and friendly records (new-comp-records doc 1.3) */
+#define COMP_RECORD_SIZE 0x6bu
+#define REC_SHORT 0x38u
+#define REC_SHORT_ROOM 0x1bu
+#define REC_CONTINENT 0x59u
+#define REC_COLOURS_END 0x69u           /* +0x59 continent, +0x5d nation, +0x61 and +0x65 colours */
+#define REC_NATION 0x5du
 
 /* Object fields (class doc 2 and 3). */
 #define F_RECORD 0x4u
@@ -1023,6 +1032,44 @@ static uint32_t build_vtable(const SeasonCompDef *d)
 static int in_ctor;
 int season_nl_in_ctor(void) { return in_ctor; }
 
+/* 0.6.2 slice 8, open items 4 and 21: the record "Asian Cup Qualifying" keeps its short name "Asian Cup Quals"
+ * (+0x38, the name of the history screen) and its continent Asia (+0x59) after the rename of its long name, so the
+ * history screen showed European winners of the "Asian Cup Quals". The record takes the short name of the
+ * competition and the continent and colours (+0x59, +0x61, +0x65) of the record "European Championship
+ * Qualifying" (key id 0x9cf784: its name check at 0x606e24 names EUROPEAN_CHAMPIONSHIP_QUALIFYING, 0x9d7a68). The
+ * copy holds whatever the fields hold, ids before the id pass or pointers after it, as the two records are in the
+ * same state. The nation (+0x5d, -2 for both) and the level (+0x69: 12; the officials code compares it at 0x79d447)
+ * stay. The type of its fixtures does not change: 0x48dd70 asks the list 0x669ae0 before 0x669470, and the wrap
+ * nl_international below holds the Nations League. The game's decisions do change, as intended: the match day
+ * code plays the matches of a continental competition on the full engine when its continent (+0x59) holds a
+ * loaded nation (0x6b66b6..0x6b66ce mark the continents, 0x6b6919..0x6b692d test the record's), so on continent
+ * Asia the Nations League of a European game had quick results, and now it plays as the Euro qualifying does.
+ * Other readers of +0x59 (inference from a search, not each read): the human interest flags 0x6b634b, the entrant
+ * test 0x48dba5 and the key nation entry 0x669597. The make function runs at the first edition and at every load,
+ * so a save of 0.6.0 or 0.6.1 gets the record at load, and its next save keeps it (the record is in
+ * nation_comp.dat of the save). Only the Nations League uses the record (nations doc 5.5), so no other
+ * competition changes. */
+
+static void nl_record_to_europe(const SeasonCompDef *d, uint32_t rec, int loading)
+{
+    uint32_t base = rd32(g_mem, COMP_RECORDS), key = rd32(g_mem, EURO_QUAL_KEY);
+    uint32_t count = rd32(g_mem, COMP_RECORD_COUNT);
+    if (!readable(rec) || !readable(base) || key >= count || count > 100000u) return;
+    uint32_t euro = base + key * COMP_RECORD_SIZE;
+    if (euro == rec) return;
+    int changed = memcmp(g_mem + rec + REC_SHORT, d->comp, strlen(d->comp) + 1) != 0;
+    for (uint32_t f = REC_CONTINENT; f < REC_COLOURS_END; f += 4) {
+        if (f == REC_NATION) continue;
+        if (rd32(g_mem, rec + f) != rd32(g_mem, euro + f)) changed = 1;
+        wr32(g_mem, rec + f, rd32(g_mem, euro + f));
+    }
+    memset(g_mem + rec + REC_SHORT, 0, REC_SHORT_ROOM);
+    snprintf((char *)g_mem + rec + REC_SHORT, REC_SHORT_ROOM, "%s", d->comp);
+    if (changed)
+        fprintf(stderr, "recomp: season nl: record %d takes the short name %s and the continent of record %d%s\n",
+                (int)rd32(g_mem, rec), d->comp, (int)rd32(g_mem, euro), loading ? " (repaired at load)" : "");
+}
+
 static uint32_t nl_make(const SeasonCompDef *d, uint32_t rec, int year, int loading)
 {
     NlConf *c = conf_of_def(d);
@@ -1038,6 +1085,7 @@ static uint32_t nl_make(const SeasonCompDef *d, uint32_t rec, int year, int load
     in_ctor = 0;
     if (rt_unwinding || !readable(obj)) return 0;
     wr32(g_mem, obj, v);
+    if (c == &confs[0]) nl_record_to_europe(d, rec, loading);  /* the CONCACAF def has its own record (`like`) */
     if (loading) {
         if (held_groups(obj) >= 2) set_stage_bytes(obj, held_groups(obj));
         return obj;

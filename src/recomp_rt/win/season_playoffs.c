@@ -171,14 +171,12 @@ static const SeasonLeagueRule *league_rule(const char *file, int season)
     return NULL;
 }
 
-/* The row of the rules of a season, or the last before it (Q248), as season_sizes.c reads it. */
+/* The row of the rules of a season, or the last before it with no end year (the after-table rule, Q248), as
+ * season_sizes.c reads it. */
 static const SeasonRule *row_of_season(const char *file, int season)
 {
-    for (int s = season; s >= SEASON_FIRST_YEAR && s > season - 10; s--) {
-        const SeasonRule *r = season_rules_find(s, file, 0);
-        if (r) return r;
-    }
-    return NULL;
+    int s = season_rules_last_season(season, file);
+    return s ? season_rules_find(s, file, 0) : NULL;
 }
 
 /* 1 when the row of season gives a play-off that this kind plays: 4 places in a row, directly below the direct

@@ -34,6 +34,7 @@
 #include "season_rules.h"
 #include "season_intl.h"
 #include "season_uefa_league.h"
+#include "caps_wide.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -427,13 +428,25 @@ void season_change_reset(void)
     creating = 0;                               /* also when a longjmp left create_game */
 }
 
+/* Version 3 (0.6.2 slice 12) when the game has caps above 255 (caps_wide.c): the row A18 list then always has its
+ * count, so the readers of 0.6.0 and 0.6.1 take the list and leave the caps after it (season_friendly_part_read of
+ * those versions reads the entries that the count gives and ignores the bytes after them). Else version 2 or 1, as
+ * before. */
+static int part_caps(void) { return caps_wide_count() > 0; }
+
 uint32_t season_change_part_size(void)
 {
-    uint32_t pending = season_friendly_part_size();
-    if (!news_count && !rename_count && season_point <= season_start_year() && !pending) return 0;
-    uint32_t n = 4 + 4 + (uint32_t)rename_count * (4 + NAME_ROOM) + 4 + pending;
+    uint32_t pending = season_friendly_part_size(), caps = caps_wide_part_size();
+    if (!news_count && !rename_count && season_point <= season_start_year() && !pending && !caps) return 0;
+    if (caps && !pending) pending = 4;          /* the count 0 of an empty list */
+    uint32_t n = 4 + 4 + (uint32_t)rename_count * (4 + NAME_ROOM) + 4 + pending + caps;
     for (int i = 0; i < news_count; i++) n += 12 + news[i].len;
     return n;
+}
+
+int season_change_part_form(void)
+{
+    return part_caps() ? 3 : season_change_part_size() ? 2 : 1;
 }
 
 static void put32(uint8_t *p, uint32_t v) { memcpy(p, &v, 4); }
@@ -458,12 +471,21 @@ void season_change_part_write(uint8_t *out)
         at += 4 + NAME_ROOM;
     }
     put32(out + at, (uint32_t)season_point);
-    season_friendly_part_write(out + at + 4);   /* row A18: the qualifiers that wait for the first running season */
+    at += 4;
+    uint32_t pending = season_friendly_part_size();
+    season_friendly_part_write(out + at);       /* row A18: the qualifiers that wait for the first running season */
+    if (!part_caps()) return;
+    if (!pending) {
+        put32(out + at, 0);
+        pending = 4;
+    }
+    caps_wide_part_write(out + at + pending);   /* version 3 */
 }
 
-int season_change_part_read(const uint8_t *in, uint32_t n)
+int season_change_part_read(const uint8_t *in, uint32_t n, uint32_t form)
 {
     season_change_reset();
+    caps_wide_reset();
     if (n < 4) return 0;
     uint32_t count = get32(in), at = 4;
     if (count > (n - 4) / 12) return 0;            /* 12 bytes a season at least: no limit of seasons (0.6.2 fault 31) */
@@ -507,7 +529,21 @@ int season_change_part_read(const uint8_t *in, uint32_t n)
     if (point && (point > SEASON_YEAR_MAX || !season_year_ok((int)point))) return 0;
     season_point = (int)point;
     at += 4;
-    return season_friendly_part_read(in + at, n - at);   /* row A18; nothing more in a save before it */
+    if (form < 3) return season_friendly_part_read(in + at, n - at);   /* row A18; nothing more in a save before it */
+    /* Version 3: the row A18 list with its count and whole entries, then the caps above 255. */
+    if (n - at < 4) return 0;
+    uint32_t pending = get32(in + at);
+    if (pending > (n - at - 4) / SEASON_FRIENDLY_ENTRY) return 0;
+    uint32_t list = 4 + pending * SEASON_FRIENDLY_ENTRY;
+    if (!season_friendly_part_read(in + at, list)) return 0;
+    uint32_t caps = n - at - list;
+    /* A later version keeps the caps field (u32 count, 8 bytes a player) here and adds its own after it. */
+    if (form > 3 && caps >= 4 && get32(in + at + list) <= (caps - 4) / 8) caps = 4 + 8 * get32(in + at + list);
+    if (!caps_wide_part_read(in + at + list, caps)) {
+        season_change_reset();
+        return 0;
+    }
+    return 1;
 }
 
 /* ---- The news item ---- */
