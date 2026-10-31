@@ -431,7 +431,14 @@ uint32_t season_intl_cup_template(uint32_t cls, void (*original)(void))
         int mapped = idx == KO16 ? cups[ASIAN].ko : (idx + 1) % cups[ASIAN].groups - 1;
         uint32_t out_id = rd32(g_mem, sp + 0xcu);
         wr8(g_mem, sp + 4u, (uint32_t)mapped);
+        /* Group D plays in the kick-off slots of group A, so the game moves some group matches a week (find_fixture_
+         * clashes 0x5ad780, severity 20 at 0x5adf9b: the Asian Cup 2007 of a 2001 game moved Guam v Malaysia from
+         * day 187 to 194, run-logs/0.6.2-s4a/a2001t) and the groups end late. The quarter-finals then move by
+         * whole weeks as the knockout of 24 does (rest_delay). */
+        int delay = idx == KO16 ? rest_delay(ASIAN, self, cups[ASIAN].qf.first, year_of(self)) : 0;
+        season_intl_shift_more(delay);
         original();
+        season_intl_shift_more(-delay);
         if (rt_unwinding) return cpu.eax;
         if (idx < KO16 && mapped != idx && readable(out_id)) wr16(g_mem, out_id, (uint32_t)(idx + cups[ASIAN].id_base));
         return cpu.eax;

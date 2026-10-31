@@ -879,6 +879,8 @@ uint32_t rt_intl_euro_no_host(void)
  * (season_intl_date_shift). The original's weekday flag (the fourth argument) stays. */
 static int date_shift;
 
+void season_intl_shift_more(int days) { date_shift += days; }
+
 /* The event dates that a builder keeps as a day word and a year offset from +0x40 (Date +0 is the day of the
  * year, +2 the year: the World Cup's update_for_date 0x92f1a0 seeds when today's day word equals +0x18e
  * (0x92f1b4) and today's year equals +0x40 plus the s16 at +0x190 (0x92f1b9..0x92f1ce)). Each builder writes
