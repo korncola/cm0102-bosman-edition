@@ -479,7 +479,6 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
             if (rd32(g_mem, row + ROW_COMP) != key || year <= 0 || k < 0 || have[c][k]) continue;
             memcpy(taken[c][k], g_mem + row, ROW_SIZE);
             have[c][k] = 1;
-            }
         }
     }
     PlannedRow plan[MAX_PLANNED];
