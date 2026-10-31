@@ -239,8 +239,9 @@ static int free_day(uint32_t manager, uint32_t fix, int y, int d)
     return ok;
 }
 
-/* Test log (RECOMP_TEST_FIXTURE_HOLD=log): the severity that find_fixture_clashes gives a fixture at its date, and
- * the nations of a national side's teams (club +0x53). It calls the original once more, so only the test mode. */
+/* Test log (any RECOMP_TEST_FIXTURE_HOLD test mode): the severity that find_fixture_clashes gives a fixture at its
+ * date, and the nations of a national side's teams (club +0x53). It calls the original once more, so only the test
+ * mode. */
 static void log_clash(uint32_t manager, uint32_t fix)
 {
     uint32_t esp = cpu.esp;
@@ -273,7 +274,10 @@ RT_WRAP(005ab510, fixture_new_date)
         o_005ab510();
         return;
     }
-    if (test_mode()) log_clash(manager, fix);
+    if (test_mode()) {
+        log_clash(manager, fix);
+        if (rt_unwinding) return;
+    }
     kept = 0;               /* a kept fixture's add and news come before the next covered move (none nests there) */
     int year = (int16_t)rd16(g_mem, fix + FIX_YEAR), day = (int16_t)rd16(g_mem, fix + FIX_DAY);
     uint8_t slice = g_mem[fix + FIX_SLICE];

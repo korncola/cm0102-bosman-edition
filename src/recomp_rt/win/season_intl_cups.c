@@ -25,6 +25,7 @@
 #include "win.h"
 #include "season.h"
 #include "season_intl.h"
+#include "season_uefa_days.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -326,46 +327,49 @@ static void put_round(uint32_t rec, int round, const Round *o, int shift, int te
 /* The knockout of 24 teams. The round of 16 takes the original's quarter-final dates and the 8 kick-off slots
  * of the World Cup round of 16 (0x92c8c0..0x92c958), and value 0x14 at +7 as there (0x92c95d). The later rounds
  * keep the original's slots, flags and values, 12 days later: the round of 16 plays on four weekdays (Saturday
- * to Tuesday) where the original's quarter-finals play on two, so up to 0.6.2 the quarter-finals 5 days later met
+ * to Tuesday) where the original's quarter-finals play on two, so up to 0.6.1 the quarter-finals 5 days later met
  * a team 2 days after its round of 16 match, find_fixture_clashes 0x5ad780 gave severity 22 (0x5adf66) and
  * add_fixture 0x5aa680 moved the match (Jordan v Uzbekistan, Asian Cup 2099 of a 2098 date jump, day 28 to day 34,
- * run-logs/0.6.2-s4a/j2099e). 12 days keeps the weekdays of 5 a week later. Inference: in 2019 both finals played
+ * run-logs/0.6.2-s4a/j2099e.out). 12 days keeps the weekdays of 5 a week later. Inference: in 2019 both finals played
  * the round of 16 from 3 to 6 days after the groups. The table's first day moves all dates (the date shift of the
  * caller). The Asian Cup of 24 has no third-place match: R16, QF, SF, F (4 rounds), the ACN 5 rounds.
  * All rounds move by whole weeks when the groups end too late for the round of 16 (rest_delay below). */
 #define LATER_ROUNDS 12                 /* days by which the quarter-finals and later rounds move */
 #define REST_DAYS 3                     /* the round of 16 starts no sooner after the day it is made */
+#define MAX_DELAY 14                    /* the latest move (season_intl_rules.c finals_span counts it) */
 #define GAME_DATE 0xae2c90u             /* s16 day of the year from 0, s16 year */
-
-static int day_of_year(Day d, int year)
-{
-    static const int len[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    int n = d.day - 1;
-    for (int m = 0; m < d.month0; m++) n += len[m] + (m == 1 && leap(year));
-    return n;
-}
 
 /* The days by which every round must move so that the round of 16 starts REST_DAYS or more after today: whole
  * weeks, so each kick-off slot keeps its weekday (the slots place the matches on the weekdays of the block around
  * the first date: the Asian Cup 2099 of a 2098 date jump, made on day 15, kept its Saturday matches on day 16 when
- * its first date moved 2 days, run-logs/0.6.2-s4a/j2099d). The template runs inside
- * the date shift of the class (season_intl.c stage_builder: every Date::Date moves by season_intl_date_shift), so
- * today is compared in the template's days. The knockout is made when the groups end (the stage step 0x401e8c,
- * 0x40f88f), and a group of 24 can end later than the original's groups: a team that played the day before got a
- * round of 16 match on its next day, find_fixture_clashes 0x5ad780 gave severity 22 (0x5adf66) and add_fixture moved
- * the match 4 days into the quarter-finals (0.6.2 open item 54, cause 2). */
+ * its first date moved 2 days, run-logs/0.6.2-s4a/j2099d.out). The template runs inside the date shift of the class
+ * (season_intl.c stage_builder: every Date::Date moves by season_intl_date_shift) and Date::Date then moves the
+ * date to its weekday, up to 3 days either way (season_weekday_date), so that date is compared with today. The
+ * delay stops at MAX_DELAY (a template made long after its groups, which no run showed), so every date stays in its
+ * year. The knockout is made when the groups end (the stage step 0x401e8c, 0x40f88f), and a group of 24 can end
+ * later than the original's groups: a team that played the day before got a round of 16 match on its next day,
+ * find_fixture_clashes 0x5ad780 gave severity 22 (0x5adf66) and add_fixture moved the match 4 days into the
+ * quarter-finals (0.6.2 open item 54, cause 2). */
 static int rest_delay(int c, uint32_t self, Day first, int y)
 {
     int today = (int16_t)rd16(g_mem, GAME_DATE), today_year = (int16_t)rd16(g_mem, GAME_DATE + 2u);
-    int shift = season_intl_date_shift(cups[c].cls, y);
-    long from = (long)day_of_year(first, y) + shift, now = today;
-    for (int k = y; k < today_year; k++) now += 365 + leap(k);
-    for (int k = today_year; k < y; k++) now -= 365 + leap(k);
+    int shift = season_intl_date_shift(cups[c].cls, y), fy, fm, fd, wy, wm0, wd;
+    /* The first date as Date::Date 0x549f70 makes it: moved by the class's shift, then to its weekday (0x54a2d0). */
+    season_from_abs_day(season_abs_day(y, first.month0 + 1, first.day) + shift, &fy, &fm, &fd);
+    wy = fy, wm0 = fm - 1, wd = fd;
+    if (first.weekday >= 0 && first.weekday <= 6) season_weekday_date(fy, fm - 1, fd, first.weekday, &wy, &wm0, &wd);
+    long from = season_abs_day(wy, wm0 + 1, wd);
+    long now = season_abs_day(today_year, 1, 1) + today;
     long delay = now + REST_DAYS - from;
     delay = delay > 0 ? (delay + 6) / 7 * 7 : 0;
+    if (delay > MAX_DELAY) {
+        fprintf(stderr, "recomp: season intl: %s %d round of 16 made on day %d of %d, %ld days late: %d kept\n",
+                cups[c].file, year_of(self), today, today_year, delay, MAX_DELAY);
+        delay = MAX_DELAY;
+    }
     if (logging())
-        fprintf(stderr, "recomp: season intl: %s %d round of 16 made on day %d of %d, first day %ld, delay %ld\n",
-                cups[c].file, year_of(self), today, today_year, from, delay);
+        fprintf(stderr, "recomp: season intl: %s %d round of 16 made on day %d of %d, first day %d of %d, delay %ld\n",
+                cups[c].file, year_of(self), today, today_year, season_day_of_year(wy, wm0 + 1, wd), wy, delay);
     return (int)delay;
 }
 
