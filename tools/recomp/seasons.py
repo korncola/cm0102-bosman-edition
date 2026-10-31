@@ -154,9 +154,9 @@ PATCHES = {
     # docs/research/2026-10-19-world-cup-48.md, "Qualifying"). Each gives the original's value outside the gate (a
     # section whose campaign +0x40 + 2 is a World Cup of 48 teams, in a season game). this in the register named.
     0x921098: (0x4, "rt_wcq26_south_america_direct(esi, 4u)"),     # set_up_rules 0x921040: direct places, 6
-    0x91377F: (0x2, "rt_wcq26_asia_direct(esi, 2u)"),               # final groups 0x913740: direct places, 4
-    0x913BCE: (0x2, "rt_wcq26_asia_playoff_row(esi, 2u)"),          # play-off 0x913b60: the fifths of stage 9
-    0x913BDA: (0x2, "rt_wcq26_asia_playoff_row(esi, 2u)"),          # and of stage 10
+    0x91377F: (0x2, "rt_wcq26_asia_direct(esi, 2u)"),               # final groups 0x913740: group A's places
+    0x913BCE: (0x2, "rt_wcq26_asia_playoff_row(esi, 0, 2u)"),       # play-off 0x913b60: the row after them, stage 9
+    0x913BDA: (0x2, "rt_wcq26_asia_playoff_row(esi, 1, 2u)"),       # and stage 10
     0x911CF6: (0xD, "rt_wcq26_asia_stages(esi, 0xdu)"),             # ctor: no stage 12 (tie with Europe)
     0x910133: (0x32, "rt_wcq26_africa_first(esi, 0x32u)"),          # first round 0x910120: 2 x (pool - 45)
     0x90F6F0: (0x32, "rt_wcq26_africa_first(edi, 0x32u)"),          # template 0x90f600: first round teams
@@ -400,6 +400,14 @@ INSNS = {
     # the final groups (0x913740), the play-off (0x913bc1) and the statuses (0x912642) take the format of no
     # host. The flags are not read before pop and ret.
     0x9141EA: ("mov dword ptr [esi + 0xf3], ecx", "W32(esi + 0xf3u, ecx); rt_wcq_asia_format(esi); rt_wcq26_asia_format(esi);"),
+    # World Cup qualifying from the 2026 cycle (0.6.2 slice 5, open item 59, win/season_wcq26.c): the AFC and OFC
+    # pools leave out every host. The count of hosts and holder +0xee that the pool size takes off (Asia 44 -
+    # count, Oceania 10 - count) gets the hosts that the pool wraps left out (this in esi). Final groups 0x913740:
+    # after group A is made the status counts at [esp + 0x10] get group B's direct places (this in esi; the
+    # stack holds no push here, 0x913983). The flags of none of them are read.
+    0x9140B2: ("movsx edx, byte ptr [esi + 0xee]", "edx = (uint32_t)(int32_t)(int8_t)rt_wcq26_pool_exempt(esi, R8(esi + 0xeeu));"),
+    0x91FBD3: ("movsx edx, byte ptr [esi + 0xee]", "edx = (uint32_t)(int32_t)(int8_t)rt_wcq26_pool_exempt(esi, R8(esi + 0xeeu));"),
+    0x9139C0: ("mov edi, ebx", "edi = ebx; W8(esp + 0x10u, rt_wcq26_asia_direct_b(esi, R8(esp + 0x10u)));"),
     # A2: Asia stage 12 (0x913d50, this in esi, the two teams at [ebp]) takes its partner from the European
     # section (0x91def0, ecx the Europe object). The partner of the cycle replaces it; the European runner-up
     # stays the fallback.
