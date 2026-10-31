@@ -142,7 +142,13 @@ def fixture_part(fixtures):
 # player has a wrong age field; Carpania FC's balance has wrapped.
 # Aland's players are in its senior squad; Borduria's in no squad, so its senior and under-21 squads are empty.
 HEALTH_FAULTS = {("no-youth", "Aland", 2040), ("empty-squad", "Borduria", 2040),
-                 ("empty-squad", "Borduria under-21", 2040), ("overflow", "age", 2040), ("overflow", "balance", 2040)}
+                 ("empty-squad", "Borduria under-21", 2040), ("overflow", "age", 2040), ("overflow", "balance", 2040),
+                 ("full-squad", "Carpania FC", 2040)}
+# Full squads (open item 78): Carpania FC fills its 50 slots with Aland's players (staff 0 to 29, then 0 to 19
+# again), none aged 21 or under; Durania Stars fills them with Borduria's 30 (20 aged 21 or under) and 20 of
+# Aland's, so only Carpania FC is a fault. The other clubs have empty slots (-1).
+FULL_SQUADS = {"Carpania FC": list(range(30)) + list(range(20)),
+               "Durania Stars": list(range(30, 60)) + list(range(20))}
 
 
 def staff():
@@ -185,15 +191,17 @@ def records(changing=1):
         struct.pack_into("<i", r, 0x71, c)
         nat += r
 
-    def club(cid, name, nation, manager=-1):
+    def club(cid, name, nation, manager=-1, squad=()):
         r = bytearray(0x245)
         struct.pack_into("<i", r, 0, cid)
+        for j in range(50):                                          # squad slots, -1 when empty
+            struct.pack_into("<i", r, 0xD7 + 4 * j, squad[j] if j < len(squad) else -1)
         r[4:4 + len(name)] = name.encode()
         struct.pack_into("<i", r, 0x53, nation)
         struct.pack_into("<i", r, 0xCF, manager)
         return bytes(r)
 
-    clubs = b"".join(club(i, n, nat_) for i, (n, nat_) in enumerate(CLUBS))
+    clubs = b"".join(club(i, n, nat_, squad=FULL_SQUADS.get(n, ())) for i, (n, nat_) in enumerate(CLUBS))
     sides = b"".join(club(side(i), SIDE_NAMES.get(n, n), i, 0 if i < 2 else -1) for i, (n, _) in enumerate(NATIONS))
     sides += b"".join(club(side(len(NATIONS) + i), n + " U21", i, -1) for i, (n, _) in enumerate(NATIONS))
     comp = {"club": bytearray(), "nation": bytearray()}
@@ -374,7 +382,7 @@ def main():
 
     # World health: the report and its faults.
     run([sav, "--out", work, "--label", "health", "--known", empty, "--nations", nations, "--health"])
-    got = {k for k in faults(work, "health") if k[0] in ("empty-squad", "no-youth", "overflow")}
+    got = {k for k in faults(work, "health") if k[0] in ("empty-squad", "no-youth", "overflow", "full-squad")}
     if got != HEALTH_FAULTS:
         bad.append(f"health run: faults {sorted(got)}, not {sorted(HEALTH_FAULTS)}")
     # no-youth alone fails the run (Q35): every other fault of the save is known.
