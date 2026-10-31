@@ -188,8 +188,8 @@ Blocked by: 4a
 Delivers: hosts from the announced editions, then from the original host rule, with the rotation of Q32 where the original rule does not fit. Every final writes its host into its history row. Euro 2020 and 2028 and the Gold Cup after 2031 have hosts. Faults 3 (hosts), 12, 14 and 18.
 Merge danger: two-way door. Blast radius: hosts and automatic host places.
 - [ ] The checker finds no final without a host to 2300.
-- [ ] A host drawn as a nation that no longer exists is drawn again (unit test), including the case where all pairs name such nations.
-- [ ] The host of each announced edition matches its source.
+- [x] A host drawn as a nation that no longer exists is drawn again (unit test), including the case where all pairs name such nations.
+- [x] The host of each announced edition matches its source.
 
 ### 6. Finals that stop before their table ends
 Blocked by: 2
