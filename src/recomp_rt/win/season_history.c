@@ -252,7 +252,7 @@ static void drop_duplicates(void)
     }
 }
 
-/* Open item 67 (0.6.2, the forum): the past editions of a competition whose record the season code adds
+/* Open item 74 (0.6.2, the forum): the past editions of a competition whose record the season code adds
  * (season_comps.h, `like`), so no database holds its history. A row goes in when its label year is not after
  * the start year N (a game from 2021/22 plays the 2022 Finalissima itself). Source: Wikipedia, "Finalissima",
  * Results (31 October 2026): 1985 France 2-0 Uruguay, Parc des Princes, Paris; 1993 Argentina 1-1 Denmark,

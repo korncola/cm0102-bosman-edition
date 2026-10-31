@@ -45,7 +45,7 @@ The checks (each run):
     late-off  the same with changing rules off (Q232: the start season's rules, the last row after the table).
     late-2027 an odd start: 2027 (no date jump), changing rules on, saved after 760 days (August 2029): the first
             edition is the 2028 one, made in 2027, and the 2029 rows of both follow.
-    fin-2001  open item 67 (the forum): the Finalissima's past editions. A 2001 game with the 3.9.68 data and
+    fin-2001  open item 74 (the forum): the Finalissima's past editions. A 2001 game with the 3.9.68 data and
             changing rules on (the forum game), saved after 14 days: the history holds 1985 France / Uruguay and
             1993 Argentina / Denmark (Wikipedia, Finalissima, Results), and no 2022 row yet.
     fin-2025  the same from 2025 with the December 2025 data: also 2022 Argentina / Italy.
@@ -96,7 +96,7 @@ RUNS = {
     "fin-2025": (2025, "December 2025", "on", 2025, None, []),
     "fin-2020": (2020, "November 2020", "on", 2022, None, []),
 }
-# The Finalissima runs (open item 67; start, database (None: 3.9.68), rules and last season in RUNS): days to the
+# The Finalissima runs (open item 74; start, database (None: 3.9.68), rules and last season in RUNS): days to the
 # save, the rows that must be there (label year, winner, runner-up; None: any teams) and the label years of every row.
 FIN = {"fin-2001": (14, [(1985, "France", "Uruguay"), (1993, "Argentina", "Denmark")], [1985, 1993]),
        "fin-2025": (14, [(1985, "France", "Uruguay"), (1993, "Argentina", "Denmark"), (2022, "Argentina", "Italy")],

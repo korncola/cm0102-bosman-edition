@@ -530,7 +530,7 @@ static void shift_for(int N)
         applied_year = N;
         log_stats();
     }
-    /* slice 11c: the history between 2001 and the start; open item 67: with or without a plan (a 2001 game with
+    /* slice 11c: the history between 2001 and the start; open item 74: with or without a plan (a 2001 game with
      * changing rules on), the past editions of the records that the season code adds */
     season_history_fill(plan ? p.name : NULL, N);
 }
