@@ -59,6 +59,14 @@ A date jump starts a new game in a far year, with every date of the database mov
 
 The run set is the fixed list of games that a release must pass (from 0.6.2): Tier A games from seven starts with three seeds each to 2100, a game with England, Spain and Brazil, one Tier A game to 2300, the date jumps to 2098, 2198 and 2298, and two Tier B games of the full world to 2300. The list is `tests/seasons/future/run_set.tsv`. `tests/seasons/future/run_set.py` plays it several games at a time. It runs the history checker (`tests/seasons/future/history_check.py`) on the save of every leg and keeps one save a decade. For Tier B it also checks the world's health and the Tier B limits: a national side with no manager for more than a season, a game day twice as slow as in the first seasons, and a save that would pass 4 GB before 2300. It starts no game below 100 GB of free disk. Each game ends with pass or fail. The release script runs `run_set.py --verify` on the folder of a run of the whole set and stops unless every game passed on the same game code and the checker finds no fault on the kept saves. ctest `future_run_set` tests the script without a game.
 
+## Tier A runs
+
+A Tier A run reaches a far year quickly. It plays only the competitions: the calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players, contracts, and save and load. It skips the AI transfer market, background matches, new injuries and AI manager moves (sackings). Each match gets an instant result from the two sides' reputation, so the stronger side wins more often. The test switch is `RECOMP_TIER_A=1`. The program reads it once at the start, and it is off by default. The same-save set proves that the switch changes nothing when it is off.
+
+A Tier A year takes 4 to 6 minutes with all nations on the M5 Max at load 6 to 12, about 7 times faster than the normal game at the same load. The time does not grow from 2013 to 2066. The save grows by about 9 MB a year.
+
+The script is `tests/seasons/soak_run.py` with `--env RECOMP_TIER_A=1`, and `--checkpoints 10` to keep one save per decade. Tier A counts as the same as the normal game when both play 10 years from the same start, database and seed, and each July save agrees on editions, dates, hosts and entrant rules. The script is `tests/seasons/future/tier_a_compare.py`. Winners can differ. The history checker then reads each checkpoint save.
+
 ## Memory and big saves
 
 A game with all nations uses more memory each season. The heap now has room for about 2 GB of game data. A code test (`tests/recomp/test_heap.c`) fills a small heap and checks that it still serves new blocks.

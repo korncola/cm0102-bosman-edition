@@ -27,6 +27,7 @@
  * proof: docs/research/2026-10-17-season-save-part.md. */
 #include "win.h"
 #include "season.h"
+#include "tier_a.h"
 #include "season_names.h"
 #include "season_change.h"
 #include "caps_wide.h"
@@ -85,6 +86,7 @@ int season_code_on(void)
 void season_init(void)
 {
     if (!season_code_on()) return;
+    tier_a();                            /* the Tier A switch: read once, at the start (tier_a.c) */
     if (season_date_jump()) fprintf(stderr, "recomp: date jump switch on: a new game starts up to %d\n", SEASON_JUMP_LAST);
     const char *v = getenv("RECOMP_START_SEASON");     /* test only, until the Choose Season screen */
     if (!v || !*v) return;
