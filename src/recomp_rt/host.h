@@ -35,7 +35,7 @@ int host_close(int fd);
 /* fopen for a UTF-8 host path. */
 FILE *host_fopen(const char *utf8_path, const char *mode);
 
-typedef struct { int is_dir; uint64_t size; int64_t mtime; } HostStat;
+typedef struct { int is_dir; uint64_t size; int64_t mtime; int64_t mtime_ns; } HostStat;   /* mtime_ns: 0 to 999999999 */
 int host_stat(const char *path, HostStat *st);   /* 0 on success */
 int host_mkdir(const char *path);                /* 0 on success */
 int host_unlink(const char *path);               /* 0 on success */

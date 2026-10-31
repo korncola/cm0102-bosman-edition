@@ -26,6 +26,7 @@
 #include "options.h"
 #include "dbfolders.h"
 #include "cp1252.h"
+#include "folder_names.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -40,20 +41,13 @@ char win_user_dir[1024];
 static int exists(const char *p) { HostStat st; return host_stat(p, &st) == 0; }
 static int is_dir(const char *p) { HostStat st; return host_stat(p, &st) == 0 && st.is_dir; }
 
-/* The spelling of a name in a folder, ignoring case: found = the entry, or empty. A host that ignores
- * case needs no lookup. */
+/* The spelling of a name in a folder, ignoring case: found = the entry, or empty (folder_names.c). A
+ * host that ignores case needs no lookup. */
 static void ci_lookup(const char *dir, const char *part, char *found, size_t room)
 {
     found[0] = 0;
     if (HOST_FOLDS_CASE) return;
-    HostDir *d = host_opendir(dir[0] ? dir : "/");
-    if (!d) return;
-    const char *e;
-    while ((e = host_readdir(d))) {
-        if (!strcmp(e, part)) { snprintf(found, room, "%s", e); break; }
-        if (!found[0] && !strcasecmp(e, part)) snprintf(found, room, "%s", e);
-    }
-    host_closedir(d);
+    folder_lookup(dir[0] ? dir : "/", part, found, room);
 }
 
 /* The start of a host path is the game folder (the whole path or the part before a '/'). */

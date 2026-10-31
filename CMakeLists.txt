@@ -113,6 +113,8 @@ if(NOT WIN32)
     # The Open folder buttons (0.6.1 item 5): host_open_folder starts the file manager with the folder.
     add_executable(host_folder_test tests/host/test_open_folder.c src/recomp_rt/host/posix.c)
     add_test(NAME host_folder COMMAND host_folder_test)
+    add_executable(folder_names_test tests/host/test_folder_names.c src/recomp_rt/win/folder_names.c src/recomp_rt/host/posix.c)
+    add_test(NAME folder_names COMMAND folder_names_test)
     # Season databases in the download (0.6.0 slice 14): zip reader, SHA-256, recognition, first pick.
     add_executable(seasons_db_test tests/seasons/test_seasons_db.c src/recomp_rt/win/seasons_db.c
         src/recomp_rt/win/seasons_zip.c src/recomp_rt/win/seasons_table.c src/recomp_rt/win/dbfolders.c

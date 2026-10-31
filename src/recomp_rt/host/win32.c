@@ -115,6 +115,7 @@ int host_stat(const char *path, HostStat *out)
     out->is_dir = (st.st_mode & _S_IFDIR) != 0;
     out->size = (uint64_t)st.st_size;
     out->mtime = (int64_t)st.st_mtime;
+    out->mtime_ns = 0;
     return 0;
 }
 
