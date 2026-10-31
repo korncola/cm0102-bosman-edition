@@ -425,8 +425,8 @@ uint32_t season_intl_cup_template(uint32_t cls, void (*original)(void))
     uint32_t self = cpu.ecx, sp = cpu.esp;
     int c = cup24(self), idx = (int8_t)rd8(g_mem, sp + 4u);
     /* The Asian Cup of 16: group D (index 2) takes the template of group A, as the groups of 24 above; the
-     * quarter-finals (index 3) take the original's knockout template (index 2: quarter-final, semi-final, third
-     * place and final, 0x40edb1..0x40f113), which fits the 8 of the top two. */
+     * quarter-finals (index 3) take the original's knockout template (index 2: quarter-final, semi-final, final
+     * and third place, 0x40edb1..0x40f113), which fits the 8 of the top two. */
     if (cls == INTL_ASIAN && asian16(self) && idx >= -1 && idx <= KO16) {
         int mapped = idx == KO16 ? cups[ASIAN].ko : (idx + 1) % cups[ASIAN].groups - 1;
         uint32_t out_id = rd32(g_mem, sp + 0xcu);
