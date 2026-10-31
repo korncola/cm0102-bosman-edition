@@ -213,6 +213,9 @@ SAME_SAVE_RUNS = [
     ("search-off", {"faster_days": "off", "full_player_search": "off"}),
     # Changing rules (0.6.0 slice 11): a new game with it on gets the season part bosman_season.dat in its save
     # and must equal the game with it off in every other part (RULES_PART). A loaded old save has it off.
+    # From 0.6.2 (Q48) the history rows of editions after the start go in every game, which changes the first-season
+    # holders and so the play of a new game: rules-on plays with that fix off and is compared with history-q48-off
+    # (q48_runs below).
     ("rules-on", {"faster_days": "off", "changing_rules": "on"}),
     ("rules-off", {"faster_days": "off", "changing_rules": "off"}),
     # Idle CPU (#58) has no option: a test-only variable turns the sleep of an idle pass off.
@@ -220,6 +223,9 @@ SAME_SAVE_RUNS = [
     # Q342: the season code off (slice 11 year sites, the season part, the Choose Season code) gives the save of
     # normal, a 2001/02 game with changing rules off. From slice 13 the base game of 0.6.0 is the reference.
     ("season-code-off", {"faster_days": "off", "_env": {"RECOMP_SEASON_CODE": "off"}}),
+    # Q48 (0.6.2 slice 7): the reference built from the decision, the game with the history fix off
+    # (RECOMP_HISTORY_AFTER_START=off, season_history.c). See Q48_RUNS.
+    ("history-q48-off", {"faster_days": "off", "_env": {"RECOMP_HISTORY_AFTER_START": "off"}}),
     # The season change (0.6.0 slice 16) calls no rule kind in the base game (2001, changing rules off): with the
     # test kind that writes the game in every hook (RECOMP_SEASON_CHANGE_TEST=write) the save is that of normal.
     ("kinds-base", {"faster_days": "off", "_env": {"RECOMP_SEASON_CHANGE_TEST": "write"}}),
@@ -411,7 +417,8 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
         unknown = [n for n in ONLY_RUNS if n not in [r[0] for r in runs]]
         if unknown:
             raise SystemExit(f"--runs: no run named {', '.join(unknown)} in this check")
-        runs = [r for i, r in enumerate(runs) if i == 0 or r[0] in ONLY_RUNS]
+        keep = set(ONLY_RUNS) | {r[1].get("_against") for r in runs if r[0] in ONLY_RUNS}     # and their references
+        runs = [r for i, r in enumerate(runs) if i == 0 or r[0] in keep]
         if len(runs) + bool(REF_BUILD) + bool(REF_050 and text_050) < 2:
             raise SystemExit("--runs: fewer than two runs are left, so nothing is compared")
     if REF_BUILD:
@@ -592,6 +599,34 @@ RULES_ON_PARTS = ("fifa_rankings.dat", "general.dat", "national_teams.dat", "sta
 NEW_GAME_LAYOUT_PARTS = ("club records.dat",)
 
 
+# Q48 (0.6.2 slice 7, decided 30 and 31 October 2026): the history rows of editions after the start go in every game,
+# and the game's own row replaces the data row of the same edition. That is a change of the game by decision, so
+# three runs that equalled normal before compare with history-q48-off, the same game with the fix off, instead:
+# - season-code-off must equal history-q48-off in every part (the season code off includes the fix off).
+# - rules-on plays with the fix off too and must equal history-q48-off up to the rules-on parts (new game). With
+#   the fix on it differs from normal through the Asian Cup Winners' Cup holder (Q48 in the spec), which no part
+#   list can hold, so the fix's own effect is checked by the history checker (tests/seasons/future), not here.
+# - history-q48-off itself: in a saved test game it may differ from normal only in Q48_SAVE_PARTS (start.sav and
+#   prematch.sav: the 3.9.68 row Copa America 2001, which goes when the game writes its own 2001 final on 29 July).
+#   In a new game it is the reference only: its difference from normal is the whole decision (first-season holders).
+Q48_REFERENCE = "history-q48-off"
+Q48_SAVE_PARTS = ("index.dat", "nation_comp_history.dat")
+
+
+def q48_runs(runs, new_game):
+    """The runs with the Q48 comparisons (above)."""
+    out = []
+    for name, o in runs:
+        if name == "season-code-off":
+            o = dict(o, _against=Q48_REFERENCE)
+        elif name == "rules-on":
+            o = dict(o, _env=dict(o.get("_env", {}), RECOMP_HISTORY_AFTER_START="off"), _against=Q48_REFERENCE)
+        elif name == Q48_REFERENCE and new_game:
+            o = dict(o, _against="")
+        out.append((name, o))
+    return out
+
+
 # A saved test game that opens on another screen than the news ends its load at another wait (0.6.0 slice 11).
 # yeovil.sav (a copy of Max's save, 20.8.02) opens on the squad screen: the load ends when Continue Game shows.
 LOAD_END = {"yeovil.sav": "wait continue"}
@@ -622,7 +657,7 @@ def same_save(program, game, mode, days, save_name=None, search=False, options=F
     # No click ends the intro (without_intro_click).
     if save_name is None:
         steps = [s for s in STEPS if "5-holiday" not in s and "quit" not in s]
-        return compare_runs(program, game, mode, new_game_runs(SAME_SAVE_RUNS),
+        return compare_runs(program, game, mode, q48_runs(new_game_runs(SAME_SAVE_RUNS), True),
                             without_intro_click(steps) + ["400000 quit"], days,
                             allowed={"rules-on": (RULES_PART,) + RULES_ON_PARTS, "off": NEW_GAME_LAYOUT_PARTS,
                                      "foreign-off": NEW_GAME_LAYOUT_PARTS},
@@ -647,7 +682,8 @@ def same_save(program, game, mode, days, save_name=None, search=False, options=F
     if save_name in LOAD_END:
         load[load.index("wait first-news")] = LOAD_END[save_name]
     steps = without_intro_click(load) + holiday + ["400000 quit"]
-    return compare_runs(program, game, mode, keep_runs(SAME_SAVE_RUNS, save_name), steps, days, save, text_050=True)
+    return compare_runs(program, game, mode, q48_runs(keep_runs(SAME_SAVE_RUNS, save_name), False), steps, days, save,
+                        allowed={Q48_REFERENCE: Q48_SAVE_PARTS}, text_050=True)
 
 
 # --speed fastest: the Fastest item (#31, commentary.c), one row above Very Fast.
