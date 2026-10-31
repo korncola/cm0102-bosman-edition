@@ -1294,8 +1294,11 @@ static void intl_sides(int start_year)
 #define COMP_TABLE 0xadadfcu
 #define DRAW_DAY 0xb6u                  /* the draw day word and its s16 year offset from +0x40 (fix_offsets) */
 #define DRAW_OFFSET 0xb8u
-#define FINALS_DAY 120                  /* a World Cup or Euro after the table starts in June: before day 120 of its
-                                           year its qualifying's finals are still to come */
+#define FINALS_DAY 59                   /* 1 March: the qualifying's finals are still to come before it. Their last
+                                           ties and the draw come later in March and April (World Cup of 48: seeding
+                                           1 April and draw 2 April, season_wc48.c; Euro: the path finals of late
+                                           March, season_nl_euro.c), so a load from 1 March of the finals year takes
+                                           the next edition (inference: a draw day in the past is not made up) */
 static const struct { uint32_t cls, new_season; int step; } repair_classes[] = {
     {INTL_WORLD_CUP, 0x0092d330u, 4}, {INTL_EURO, 0x0057b750u, 4}, {INTL_CONFED, 0x0058bff0u, 2},
     {INTL_COPA, 0x005e1530u, 2}, {INTL_ACN, 0x00401d20u, 2}, {INTL_ASIAN, 0x0040f720u, 4},
@@ -1418,11 +1421,19 @@ static void repair_idle(void)
     if (!rt_unwinding) repair_confed_row();
 }
 
-/* A load: the side names of intl_sides, then the repair of finals at the idle year. */
+/* A load: the side names of intl_sides, then the repair of finals at the idle year. The rules bytes of a Euro
+ * qualifying (+0xbe, +0xbf, +0xff to +0x101) are not in the save: the load's constructor sets them at 0x57d03b
+ * (rt_euroq_rules), before the competition table holds the object, so a marked campaign of a version 5 save got
+ * the new shape's bytes there. They are set again now that the marks find their objects. */
+#define EUROQ_VTABLE 0x0096a0d4u        /* the Euro qualifying class (season_intl_euroq.c QUAL_VTABLE) */
 static void intl_loaded(int start_year)
 {
     intl_sides(start_year);
     if (!rt_unwinding) repair_idle();
+    for (int i = 0; i < season_intl_marks_count() && !rt_unwinding; i++) {
+        uint32_t obj = season_intl_mark_object(i);
+        if (obj && rd32(g_mem, obj) == EUROQ_VTABLE) rt_euroq_rules(obj);
+    }
 }
 
 const SeasonRuleKind season_kind_intl = {"international", intl_sides, intl_loaded, intl_season, intl_entry, NULL,

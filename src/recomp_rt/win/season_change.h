@@ -187,9 +187,6 @@ int season_change_point(void);
  * while the repair of an old save restarts its finals (season_intl.c repair_idle). At most 8 at once. */
 void season_change_hold(uint32_t comp, int on);
 
-/* 1 while the start_new_season of this object runs (inside a season pass or not). */
-int season_change_starting(uint32_t comp);
-
 /* season_starts.c calls it around each start_new_season (this, 0 before and 1 after). */
 int season_change_start(uint32_t comp, int after);   /* 1 before: a kind skips this season */
 

@@ -741,26 +741,10 @@ void season_change_hold(uint32_t comp, int on)
         }
 }
 
-static uint32_t starting[16];           /* the objects whose start_new_season runs now, inner last */
-static int starting_depth;
-
-int season_change_starting(uint32_t comp)
-{
-    for (int i = 0; i < starting_depth && i < 16; i++)
-        if (starting[i] == comp) return 1;
-    return 0;
-}
-
 int season_change_start(uint32_t comp, int after)
 {
     for (int i = 0; comp && i < 8; i++)
         if (held[i] == comp) return !after;
-    if (!after) {
-        if (starting_depth < 16) starting[starting_depth] = comp;
-        starting_depth++;
-    } else if (starting_depth > 0) {
-        starting_depth--;
-    }
     if (!in_pass) return 0;
     if (!after) {
         int e = depth > 0 ? stack[depth - 1] : entry_for(comp);

@@ -276,7 +276,10 @@ static void marks_test(void)
     if (read && size <= ROOM) season_change_part_write(out);
     snprintf(text, sizeof text, "version 5: version %d, size %u of %u, same bytes back", season_change_part_form(),
              size, at);
-    check(season_change_part_form() == 5 && size == at && !memcmp(in, out, at), text);
+    int past = 0;
+    for (uint32_t i = size; i < ROOM; i++)
+        if (out[i] != MARK) past++;
+    check(season_change_part_form() == 5 && size == at && !past && !memcmp(in, out, at), text);
     wr16(g_mem, objects + 0x500u + 0x40u, 2099);  /* record 5 starts its next campaign: its mark goes */
     check(!season_intl_old_shape(objects + 0x500u) && season_change_part_size() == at - 8,
           "version 5: a mark whose object moved to another year is not kept");
@@ -287,8 +290,13 @@ static void marks_test(void)
           "version 5: the load repair marks record 6 in its year 2096");
     read = season_change_part_read(in, at - 20, 4);   /* the same part without the marks field, as version 4 */
     check(read == 1 && !season_intl_old_shape(objects + 0x600u), "version 4 part: no marks");
-    put32(in + at - 20, 17);
-    check(season_change_part_read(in, at, 5) == 0, "version 5: a mark count of 17: damaged");
+    uint32_t many = at - 20;                  /* 17 whole marks: more than the 16 that the reader keeps */
+    many += put32(in + many, 17);
+    for (uint32_t i = 0; i < 17; i++) {
+        many += put32(in + many, i % 8);
+        many += put32(in + many, 2090 + i % 8);
+    }
+    check(season_change_part_read(in, many, 5) == 0, "version 5: 17 marks (all whole): damaged");
     free(g_mem);
     g_mem = NULL;
     season_change_reset();

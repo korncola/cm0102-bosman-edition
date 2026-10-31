@@ -56,6 +56,15 @@ void season_intl_mark_old(uint32_t obj)
 
 void season_intl_marks_reset(void) { mark_count = 0; }
 
+int season_intl_marks_count(void) { return mark_count; }
+
+uint32_t season_intl_mark_object(int i)
+{
+    if (i < 0 || i >= mark_count) return 0;
+    uint32_t obj = object_of(marks[i].id);
+    return readable(obj) && (int16_t)rd16(g_mem, obj + 0x40u) == marks[i].year ? obj : 0;
+}
+
 /* The live marks: an object whose year moved on has no mark any more. */
 static int live_mark(int i)
 {

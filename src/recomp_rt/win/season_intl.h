@@ -137,6 +137,8 @@ void season_intl_qual_reset(void);             /* a load or new game: no ties (l
 int season_intl_old_shape(uint32_t obj);
 void season_intl_mark_old(uint32_t obj);       /* the load repair: the object's running campaign */
 void season_intl_marks_reset(void);
+int season_intl_marks_count(void);
+uint32_t season_intl_mark_object(int i);       /* the object of mark i while it holds its year, else 0 */
 uint32_t season_intl_marks_size(void);         /* 0: no mark, no field */
 void season_intl_marks_write(uint8_t *out);
 int season_intl_marks_read(const uint8_t *in, uint32_t n);
