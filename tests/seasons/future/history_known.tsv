@@ -3,23 +3,10 @@
 check	competition	year	note
 duplicate	1. divisjon	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	2. Bundesliga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-no-host	2005 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2007 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2009 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2011 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2013 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2015 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2017 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2019 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
 confederation	2020-21 Finals; 2022-23 UEFA Nations League (start	*	real history: a guest nation or club, or Australia in OFC before 2006
-no-host	2021 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2023 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2025 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2027 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
 duplicate	A-League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	A-League Men	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	AFC Asian Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-no-host	AFC Asian Cup	*	open items 3 and 18: game rows without a host
 duplicate	AFC Champions League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 gap	AFC Champions League	*	open items 2 and 19: editions not written
 missing	AFC Champions League	*	open items 1, 2, 19 and 20: editions stop or are not written
@@ -29,9 +16,7 @@ duplicate	Adidas Cup	*	open items 3 and 17: two rows for one year (start-year ov
 duplicate	Africa Cup of Nations	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 gap	Africa Cup of Nations	*	open items 2 and 19: editions not written
 missing	Africa Cup of Nations	*	open items 1, 2, 19 and 20: editions stop or are not written
-no-host	Africa Cup of Nations	*	open items 3 and 18: game rows without a host
 duplicate	African Cup of Nations	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-no-host	African Cup of Nations	*	open items 3 and 18: game rows without a host
 duplicate	Allsvenskan	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Asian Club Championship	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Asian Cup Winners' Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
@@ -51,7 +36,6 @@ duplicate	CONCACAF Champions Cup	*	open items 3 and 17: two rows for one year (s
 duplicate	CONCACAF Champions League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	CONCACAF Champions' Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	CONCACAF Gold Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-no-host	CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
 duplicate	Campeonato Baiano	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Campeonato Brasileiro Série A	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Campeonato Brasileiro Série B	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
@@ -75,15 +59,12 @@ duplicate	Challenger Pro League	*	open items 3 and 17: two rows for one year (st
 duplicate	Championnat National	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	Conference Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 duplicate	Copa America	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-no-host	Copa America	*	open items 3 and 18: game rows without a host
 duplicate	Copa América	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	Copa América	*	open items 1, 2, 19 and 20: editions stop or are not written
 next-edition	Copa América	*	open item 1: the class waits for 2200
-no-host	Copa América	*	open items 3 and 18: game rows without a host
 same-final	Copa América	*	a game result: check by hand
 duplicate	Copa América Centenario	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	Copa América Centenario	*	open items 1, 2, 19 and 20: editions stop or are not written
-no-host	Copa América Centenario	*	open items 3 and 18: game rows without a host
 duplicate	Copa Libertadores	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Copa Merconorte	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Copa Mercosur	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
@@ -129,8 +110,7 @@ duplicate	FA Premier League	*	open items 3 and 17: two rows for one year (start-
 duplicate	FAI Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	FAI Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	FIFA Club World Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-no-host	FIFA Club World Cup	*	open items 3 and 18: game rows without a host
-no-host	FIFA Confederations Cup	*	open items 3 and 18: game rows without a host
+no-host	FIFA Club World Cup	*	not a fault: the original writes no host for the Club World Cup (slot +0x88 0x5dce00); its row of every year holds a random nation (0.6.2 slice 5)
 missing	FIFA World Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 duplicate	Football League Championship	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Football League Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
@@ -252,7 +232,6 @@ duplicate	Trophée des Champions	*	open items 3 and 17: two rows for one year (s
 duplicate	Turkish Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	UEFA European Championship	*	open items 1, 2, 19 and 20: editions stop or are not written
 next-edition	UEFA European Championship	*	open item 1: the class waits for 2200
-no-host	UEFA European Championship	*	open items 3 and 18: game rows without a host
 duplicate	UEFA Intertoto Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	UEFA Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 duplicate	Veikkausliiga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
