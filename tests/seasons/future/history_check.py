@@ -173,6 +173,14 @@ class LazySav:
     def names(self):
         return list(self.members) + list(self.files)
 
+    def has(self, name):
+        """1 when the save holds the file, as a member or in a merged part."""
+        return name in self.members or name in self.files
+
+    def size(self, name):
+        """The size of a file, as a member or in a merged part."""
+        return len(self.files[name]) if name in self.files else self.members[name][1]
+
     def read(self, name):
         if name in self.files:
             return self.files[name]
@@ -232,7 +240,7 @@ class Game:
         dates = [(y, d) for d, y in dates if 0 <= d < 366 and 1900 < y < 3000]
         self.date = max(dates) if dates else (0, 0)
         self.start, self.changing = 2001, 0
-        if "bosman_season.dat" in sav.members:
+        if sav.has("bosman_season.dat"):
             part = sav.read("bosman_season.dat")
             if len(part) >= 16:
                 self.start, self.changing = struct.unpack_from("<ii", part, 8)
@@ -244,7 +252,7 @@ class Game:
             if not m or int(m.group(2)) not in self.comps:
                 continue
             self.parts.add(int(m.group(2)))
-            if sav.members[n][1] > 1 << 20:
+            if sav.size(n) > 1 << 20:
                 continue
             found = EDITION.search(sav.read(n))
             if found:
@@ -793,7 +801,7 @@ def health(game):
     senior side of nation n is row n of nat_club.dat. Balance: finance.dat, 0x167 bytes a team, clubs first,
     +0x00 s64 (the finance record, 0x596587; run-logs/future-audit/audit.md)."""
     sav = game.sav
-    staff = sav.read("staff.dat") if "staff.dat" in sav.members else b""
+    staff = sav.read("staff.dat") if sav.has("staff.dat") else b""
     year, day = game.date
     players, u21, u23 = collections.Counter(), collections.Counter(), collections.Counter()
     squad = collections.Counter()
@@ -823,7 +831,7 @@ def health(game):
         n = s32(sides, o + 0x53)
         side_manager.setdefault(n, s32(sides, o + 0xCF) >= 0)    # the first row of a nation is its senior side
         side_ids[n].append(s32(sides, o))                        # then its under-21 side
-    finance = sav.read("finance.dat") if "finance.dat" in sav.members else b""
+    finance = sav.read("finance.dat") if sav.has("finance.dat") else b""
     balances = [struct.unpack_from("<q", finance, k * FINANCE)[0]
                 for k in range(min(club_count, len(finance) // FINANCE))]
     live = {nid: (name, conf) for nid, (name, conf) in game.nations.items() if conf}

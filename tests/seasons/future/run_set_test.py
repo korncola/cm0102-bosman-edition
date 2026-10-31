@@ -68,6 +68,26 @@ def main():
     if [c for c, _ in run_set.tier_b_limits(good[:3] + [leg(3, 2005, 1000, 4 * GB)])] != ["size"]:
         bad.append("Tier B limits: a save of 4 GB is not a fault")
 
+    # Open item 68: one group of the Greek Super League 2 plays from 2026/27, the other waits at 2998.
+    def gre(season, year1, year2, clubs=14):
+        return [{"season": season, "phase": "start", "file": "gre_second", "year": year1, "clubs": clubs,
+                 "name": "Super League 2"},
+                {"season": season, "phase": "start", "file": "gre_second", "year": year2, "clubs": 10,
+                 "name": "Super League 2"}]
+    # a loaded leg's end line of the season before already shows the next year: not a group that plays
+    late = [dict(c, phase="end", year=2027) if c["year"] == 2026 else dict(c, phase="end") for c in gre(2026, 2026, 2998)]
+    one_group = gre(2025, 2025, 2025) + gre(2026, 2026, 2998) + late + gre(2027, 2027, 2998)
+    if run_set.greek_second(one_group):
+        bad.append(f"Greek Super League 2: faults in a game with one group from 2026: {run_set.greek_second(one_group)}")
+    for name, comps, want in (("two groups", gre(2026, 2026, 2998) + gre(2027, 2027, 2027), 2027),
+                              ("small group", gre(2026, 2026, 2998, clubs=10), 2026),
+                              ("no group", gre(2026, 2998, 2998), 2026)):
+        got = run_set.greek_second(comps)
+        if [s_ for s_, _ in got] != [want]:
+            bad.append(f"Greek Super League 2 ({name}): {got}, not one fault in {want}")
+    if run_set.greek_second(gre(2025, 2025, 2025)):
+        bad.append("Greek Super League 2: two groups in 2025/26 are a fault")
+
     # A passed leg: a kept leg keeps its save and the gzipped log, another leg the log only.
     work = tempfile.mkdtemp(prefix="run-set-")
     for keep in (True, False):
