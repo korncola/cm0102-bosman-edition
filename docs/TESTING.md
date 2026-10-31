@@ -24,6 +24,13 @@ The script is `tests/smoke/smoke_run.py --same-save`, with `--match` for the mat
 
 The checks run before each merge of game code and again on the merged build. The pass rule is equal saves. Five files can differ only when the option opens a screen that the off run does not open, because that moves memory. We record each such case and tell Max. Any other difference stops the merge until we find the cause.
 
+Some changes alter the game by decision. Since 0.6.2 (Q48), the history rows of editions after the start date are removed in every game. This changes the first-season holders and so the play of a new game. The reference run `history-q48-off` plays the same game with that fix off (`RECOMP_HISTORY_AFTER_START=off`). The checks use it this way:
+- `season-code-off` must equal `history-q48-off` in every part.
+- In a new game, `rules-on` plays with the fix off and must equal `history-q48-off` except in the accepted rules-on parts. The run `rules-on-q48` plays the shipped default (changing rules on, fix on) and must equal the same run of `--ref-build`.
+- In start.sav and prematch.sav, `history-q48-off` may differ from `normal` only in `index.dat` and `nation_comp_history.dat`, and there only by the 3.9.68 row of the Copa América 2001, which goes when the game plays its own final. In any other saved game it must equal `normal`. In a new game it is a reference run only.
+
+The runs, parts and rows are in `q48_runs`, `Q48_SAVE_PARTS` and `Q48_SAVE_ROWS` in `smoke_run.py`. Any other difference still fails, and a check that compares no run fails. The effect of the fix itself is checked by the history checker (`tests/seasons/future/history_check.py`).
+
 ## Start-season soaks
 
 For each start season from 2001/02 to 2025/26, a soak plays a new game with all nations loaded and the changing rules on. The manager goes on holiday and the quick result engine plays the matches.
