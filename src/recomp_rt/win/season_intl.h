@@ -115,6 +115,10 @@ int season_intl_gold_busy(int y, int doy);
 /* The source file of a class of the code sites ("?" for none). */
 const char *season_intl_class_file(uint32_t cls);
 
+/* Inside a template function of a class (its stage builder): every date that the template makes moves days more,
+ * until the same call with -days (season_intl_cups.c: the quarter-finals of the Asian Cup of 16). */
+void season_intl_shift_more(int days);
+
 /* Moves a date (day 1 to 31, month from 0, year) by shift days. */
 void season_intl_shift_date(int shift, int *day, int *month0, int *year);
 
