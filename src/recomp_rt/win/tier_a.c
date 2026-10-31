@@ -113,20 +113,21 @@ static int skip(int nargs, uint32_t from)
  * (process_free_transfer_queue 0x8c18c0). With the whole call skipped, squads only grew: new players and youth
  * joined, and nobody was sold or released before his contract ended. In July 2108 335 of 8,107 clubs had all 50
  * squad slots filled against 29 in the normal game, so the top-up 0x90dae0 could not add virtual players, and a
- * reserve side with an over-21 rule (3 allowed) fielded 10: Albion Rovers in January 2045 (talongx, box
+ * reserve side with an over-21 rule (3 allowed) fielded 10: Albion Rovers in January 2045 of a 2013 start (box
  * match_eng.cpp 652). The listing part of the assessment (transfer_list_player 0x842320 at 0x83dc42) calls
  * add_player_to_club_shortlists 0x842c00, which Tier A skips below, so a listed player leaves at the end of his
- * contract. */
+ * contract. The assessment needs neither skipped step: create_initial_shortlists 0x83a1b0 calls it for every
+ * club with no 0x844660 before it (0x83a227), and it clears stale targets itself. With its third argument 1 it
+ * returns at once for a human club (0x600a50 at 0x83cbdf, 0x83cbf4), as in the normal game. */
 RT_WRAP(0083a730, tier_a_update_club_shortlist)
 {
     if (!tier_a_in_play()) {
         o_0083a730();
         return;
     }
-    uint32_t club = rt_arg(0), self = cpu.ecx;
+    uint32_t club = rt_arg(0);
     Cpu saved = cpu;
-    uint32_t a[4] = {rd32(g_mem, self + 0xdc) + rd32(g_mem, club) * 9u, club, 1, 0};
-    cpu.ecx = self;
+    uint32_t a[4] = {rd32(g_mem, cpu.ecx + 0xdc) + rd32(g_mem, club) * 9u, club, 1, 0};
     rt_callback(0x83cb40u, 4, a);
     if (rt_unwinding) return;
     cpu = saved;
