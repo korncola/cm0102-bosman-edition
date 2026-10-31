@@ -97,7 +97,8 @@ save date (a confederation check for every edition):
                   row written in the game (a year after the start) in the year or one cycle before did not play
                   (its nations are not selected), and its place goes to a drawn club, as the original draws one
                   (WorldClubChamp::pick_entrant 0x92ae60, World_Club_Cup 0x92baa8): each such route lets one
-                  entrant of its confederation come by no route (slice 9a)
+                  entrant of its confederation come by no route (slice 9a), of its nation for a national
+                  competition (the J.League Cup place of the Suruga Bank, open item 77)
     save-part      a fixtures part whose size does not fit its count (not read)
 
 World health (--health), Tier B: <label>.health.tsv holds the save size and part count, the players, under-21 and
@@ -653,6 +654,11 @@ def entrants(game, rules, access, changes=()):
             if t >= 0:
                 held[t].append((year, name, place))
     hosts = {(cid, year): h for cid, year, a, b, c, h in game.rows if h >= 0}
+    route_nation = {}                                         # key of a national competition: its nation's name
+    for comp in game.comps.values():
+        key = rules.key(comp["name"])
+        if key and comp.get("nation", -1) >= 0 and comp["nation"] in game.nations:
+            route_nation[key] = game.nations[comp["nation"]][0]
     moved, due_to = collections.defaultdict(list), collections.defaultdict(set)
     renamed = {ch["nation"]: (ch["season"], ch["to"]) for ch in changes if ch["kind"] == "rename" and due(game, ch)}
     for ch in changes:
@@ -727,13 +733,14 @@ def entrants(game, rules, access, changes=()):
                             not any(year < m for m in moved.get(nation, ())):
                         foreign[(shown, "|".join(sorted(cs)))].append(f"{tname} ({conf})")
                 if won and done and year > game.start and not by_route and all(by_key.get(r) for r in won):
-                    no_route.append((conf, f"{tname} ({nation}) won none of {', '.join(won)} in {year} or the edition "
+                    no_route.append((nation, conf, f"{tname} ({nation}) won none of {', '.join(won)} in {year} or the edition "
                                            f"before"))
             # each route that did not play leaves one place to a drawn club of its confederation
-            free = [set(c.split("|")) if (c := rules.rows.get(r, {}).get("confed")) else None
+            free = [(route_nation.get(r), set(c.split("|")) if (c := rules.rows.get(r, {}).get("confed")) else None)
                     for r in won if not played(r, year)]
-            for conf, text in no_route:
-                take = next((i for i, cs in enumerate(free) if cs is None or conf in cs), None)
+            for nat, conf, text in no_route:
+                take = next((i for i, (rn, cs) in enumerate(free)
+                             if (nat == rn if rn else cs is None or conf in cs)), None)
                 if take is None:
                     faults.append(("entrant-route", name, year, text))
                 else:
