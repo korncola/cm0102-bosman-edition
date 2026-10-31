@@ -479,14 +479,6 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
             if (rd32(g_mem, row + ROW_COMP) != key || year <= 0 || k < 0 || have[c][k]) continue;
             memcpy(taken[c][k], g_mem + row, ROW_SIZE);
             have[c][k] = 1;
-            /* A 2001 game holds the table's host in the original's ACN 2002 row from its new game
-             * (first_season_hosts); the copy takes the original's host, Egypt (key 0x9cf2d8, 0x5f9f19). */
-            if (from_season == SEASON_FIRST_YEAR + 1 && !strcmp(host_comps[c].file, "african_nations") && year == 2002) {
-                int egypt = key_nation(0x9cf2d8u);
-                for (int j = 0; j < 4; j++) {
-                    taken[c][k][ROW_PAIRS + j] = (uint8_t)((uint32_t)egypt >> (8 * j));
-                    taken[c][k][ROW_PAIRS + 4 + j] = 0xff;
-                }
             }
         }
     }
@@ -651,6 +643,10 @@ static void hosts_after_table_at_load(void)
 /* Open item 40 in a save made before 0.6.2: a fixed row with no host keeps its news day; it gets none. */
 static void hosts_no_news(void)
 {
+    /* A 2001 game holds rows of the table only from its first season change (Q152: its start is the base game). */
+    if (!season_intl_on() || (season_start_year() == SEASON_FIRST_YEAR &&
+                              (int16_t)rd16(g_mem, GAME_DATE + 2) < SEASON_FIRST_YEAR + 1))
+        return;
     uint32_t obj = rd32(g_mem, HOSTS), rows = readable(obj) ? rd32(g_mem, obj) : 0;
     int count = readable(obj) ? (int16_t)rd16(g_mem, obj + 4) : 0;
     for (int i = 0; readable(rows) && i < count && i < 1000; i++) {
@@ -664,26 +660,6 @@ static void hosts_no_news(void)
 
 void o_005f9970(void);
 
-/* 0.6.2 open item 46: the original's row of the 2002 ACN names Egypt (0x5f9f19, fixed at 0x5f9f2f), and the rows
- * of the table come only at the first season change (hosts_apply from 2002/03), after the entrants of late 2001
- * (0x4022c0). In a 2001 game that row takes the table hosts in place (Mali), with its day and its move kept and no
- * new row. The other rows of 2001/02 (the 2002 World Cup) already name the table hosts. */
-static void first_season_hosts(uint32_t self)
-{
-    uint32_t rows = rd32(g_mem, self), key = rd32(g_mem, 0x9cf7acu);      /* african_nations, host_comps */
-    int count = (int16_t)rd16(g_mem, self + 4);
-    if (!readable(rows) || count <= 0 || count > 1000 || key == 0xffffffffu) return;
-    for (int i = 0; i < season_intl_edition_count; i++) {
-        const SeasonIntlEdition *e = &season_intl_editions[i];
-        uint32_t row = !strcmp(e->file, "african_nations") && e->season == SEASON_FIRST_YEAR
-                           ? row_find(rows, count, key, e->year) : 0;
-        if (!row || rd8(g_mem, row + ROW_CHOICE) != CHOICE_FIXED) continue;
-        uint8_t cycle = rd8(g_mem, row + ROW_CYCLE);
-        row_write(row, key, e);
-        wr8(g_mem, row + ROW_CYCLE, cycle);
-    }
-}
-
 /* HostCountry::init_default_table, thiscall (): the rows of a new game. The constructor sorts them after the
  * return (0x5f994a..0x5f995a), with the count of +4. The original's 57 random draws (0x5fa640..0x5fa70b) stay
  * as they are. */
@@ -695,10 +671,7 @@ RT_WRAP(005f9970, host_init)
     /* A game that starts in 2001/02 (changing rules on) keeps the original's host table at the new game, and
      * makes no game allocation there (Q152): the rows of the table come at the first season change
      * (intl_season). */
-    if (season_start_year() == SEASON_FIRST_YEAR) {
-        first_season_hosts(self);
-        return;
-    }
+    if (season_start_year() == SEASON_FIRST_YEAR) return;
     hosts_apply(self, season_start_year(), 0);
 }
 
