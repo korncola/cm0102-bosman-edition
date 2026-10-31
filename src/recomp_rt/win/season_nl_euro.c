@@ -95,8 +95,8 @@ static const SeasonNlQualifying *moved(uint32_t self)
         if (!last || season_nl_qualifying[i].euro > last->euro) last = &season_nl_qualifying[i];
     }
     if (!last || campaign + 2 <= last->euro || (campaign + 2 - last->euro) % 4 ||
-        !season_intl_edition("euro_champ", campaign + 2))
-        return NULL;
+        !season_intl_edition("euro_champ", campaign + 2) || season_intl_old_shape(self))
+        return NULL;                            /* old shape: a campaign of a save of 0.6.1 or older (slice 4b) */
     static SeasonNlQualifying after;
     after = *last;
     after.euro = campaign + 2;

@@ -12,8 +12,10 @@
 #include "season_rules.h"
 #include "season_change.h"
 #include "caps_wide.h"
+#include "season_intl.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* The game side that the part functions never call. */
@@ -177,9 +179,10 @@ static void caps_test(void)
         put32(in + at, 0xdeadbeefu);
         check(season_change_part_read(in, at + 4, 3) == 0, "bytes after the caps in version 3: damaged");
         put32(in + at, 0);                    /* version 4 and later: an empty goals field after the caps */
-        put32(in + at + 4, 0xdeadbeefu);
-        check(season_change_part_read(in, at + 8, 5) == 1 && caps_wide_full(77, 255) == 301,
-              "  but a later version keeps its own fields after the caps and goals");
+        put32(in + at + 4, 0);                /* version 5: an empty marks field (0.6.2 slice 4b) */
+        put32(in + at + 8, 0xdeadbeefu);
+        check(season_change_part_read(in, at + 12, 6) == 1 && caps_wide_full(77, 255) == 301,
+              "  but a later version keeps its own fields after the caps, goals and marks");
     }
     caps_wide_reset();
 }
@@ -238,6 +241,59 @@ static void goals_test(void)
     caps_wide_reset();
 }
 
+/* Version 5 (0.6.2 slice 4b): the marks of qualifying campaigns in the original's shape, after the caps and goals
+ * fields. A mark holds the record id (the slot of the table [0xadadfc]) and the campaign year +0x40 of the object. */
+static void marks_test(void)
+{
+    static uint8_t in[ROOM], out[ROOM];
+    char text[200];
+    const uint32_t table = 0x100000u, objects = 0x200000u;
+    g_mem = calloc(0xb00000u, 1);
+    if (!g_mem) {
+        check(0, "version 5: memory");
+        return;
+    }
+    wr32(g_mem, 0xadadfcu, table);
+    wr32(g_mem, 0xadadf8u, 8);
+    for (uint32_t id = 0; id < 8; id++) {
+        wr32(g_mem, table + 4u * id, objects + 0x100u * id);
+        wr16(g_mem, objects + 0x100u * id + 0x40u, (uint16_t)(2090 + id));
+    }
+    uint32_t at = make_part(in, 2);
+    at += put32(in + at, 0);                  /* the row A18 list */
+    at += put32(in + at, 0);                  /* no caps above 255 */
+    at += put32(in + at, 0);                  /* no goals above 255 */
+    at += put32(in + at, 2);                  /* two marks: record 3 in 2093 and record 5 in 2095 */
+    at += put32(in + at, 3);
+    at += put32(in + at, 2093);
+    at += put32(in + at, 5);
+    at += put32(in + at, 2095);
+    int read = season_change_part_read(in, at, 5);
+    check(read == 1 && season_intl_old_shape(objects + 0x300u) && season_intl_old_shape(objects + 0x500u) &&
+              !season_intl_old_shape(objects + 0x400u), "version 5: read, records 3 and 5 keep the original's shape");
+    uint32_t size = season_change_part_size();
+    memset(out, MARK, sizeof out);
+    if (read && size <= ROOM) season_change_part_write(out);
+    snprintf(text, sizeof text, "version 5: version %d, size %u of %u, same bytes back", season_change_part_form(),
+             size, at);
+    check(season_change_part_form() == 5 && size == at && !memcmp(in, out, at), text);
+    wr16(g_mem, objects + 0x500u + 0x40u, 2099);  /* record 5 starts its next campaign: its mark goes */
+    check(!season_intl_old_shape(objects + 0x500u) && season_change_part_size() == at - 8,
+          "version 5: a mark whose object moved to another year is not kept");
+    wr16(g_mem, objects + 0x300u + 0x40u, 2097);
+    check(season_change_part_form() < 5, "version 5: with no live mark the part keeps its old version");
+    season_intl_mark_old(objects + 0x600u);
+    check(season_intl_old_shape(objects + 0x600u) && season_change_part_form() == 5,
+          "version 5: the load repair marks record 6 in its year 2096");
+    read = season_change_part_read(in, at - 20, 4);   /* the same part without the marks field, as version 4 */
+    check(read == 1 && !season_intl_old_shape(objects + 0x600u), "version 4 part: no marks");
+    put32(in + at - 20, 17);
+    check(season_change_part_read(in, at, 5) == 0, "version 5: a mark count of 17: damaged");
+    free(g_mem);
+    g_mem = NULL;
+    season_change_reset();
+}
+
 int main(void)
 {
     char text[200];
@@ -285,6 +341,7 @@ int main(void)
     }
     caps_test();
     goals_test();
+    marks_test();
     season_change_reset();
     caps_wide_reset();
     check(season_change_part_size() == 0, "after a reset: no part");

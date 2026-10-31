@@ -1391,6 +1391,14 @@ static void repair_idle(void)
             int today = (int16_t)rd16(g_mem, GAME_DATE);
             if (campaign && (campaign + 2 > today_year || (campaign + 2 == today_year && today < FINALS_DAY)))
                 target = repair_target(k, campaign + 2) == campaign + 2 ? campaign + 2 : 0;
+            /* The running campaign was made by the old build: for an edition after the table it has the
+             * original's shape (open item 58). The Euro qualifying's rules bytes, which the load's constructor
+             * set for the new shape (0x57d03b), go back to the original's. */
+            if (target && !season_intl_table_edition(file, target))
+                for (int q = 0; q < n_quals; q++) {
+                    season_intl_mark_old(quals[q]);
+                    if (cls == INTL_EURO) rt_euroq_rules(quals[q]);
+                }
             if (!target) target = repair_target(k, today_year + 2);
         } else {
             target = cls == INTL_CONFED ? NEVER_YEAR : repair_target(k, today_year);
