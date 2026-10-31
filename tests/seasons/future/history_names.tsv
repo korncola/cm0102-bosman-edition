@@ -12,7 +12,7 @@ Africa(n)? Cup of Nations	african_nations
 (OFC )?(Men's )?(Oceania )?Nations Cup( final)?|Oceania Nations Cup	oceania_nations
 Football at the Summer Olympics|Olympic Games|Olympics	olympics
 (CONCACAF )?Gold Cup	gold_cup
-Finalissima	finalissima
+(\d{4} )?Finalissima	finalissima
 FIFA World Cup qualification \(UEFA\)	wc_qual_uefa
 FIFA World Cup qualification \(CAF\)	wc_qual_caf
 FIFA World Cup qualification \(AFC\)	wc_qual_afc

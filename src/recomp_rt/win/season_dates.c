@@ -522,12 +522,17 @@ static void shift_for(int N)
     season_history_undo();          /* slice 11c: its rows first, then the shift that they follow */
     restore();
     applied_year = 0;
+    if (!season_code_on()) return;
     Plan p;
-    if (N == SEASON_FIRST_YEAR || !season_code_on() || !plan_for(N, &p)) return;
-    apply(&p);
-    applied_year = N;
-    log_stats();
-    season_history_fill(p.name, N); /* slice 11c: the history between 2001 and the start */
+    int plan = N != SEASON_FIRST_YEAR && plan_for(N, &p);
+    if (plan) {
+        apply(&p);
+        applied_year = N;
+        log_stats();
+    }
+    /* slice 11c: the history between 2001 and the start; open item 67: with or without a plan (a 2001 game with
+     * changing rules on), the past editions of the records that the season code adds */
+    season_history_fill(plan ? p.name : NULL, N);
 }
 
 void season_dates_forget(void)
