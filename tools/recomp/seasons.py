@@ -331,8 +331,8 @@ INSNS = {
     # before its finals (random(3) at 0x5faaa0): a pair that names a nation that no longer exists is drawn again
     # (Q6, Q32). Cup::record_season_honours 0x519a90 writes no host for the classes whose slot +0x88 gives 0: at
     # 0x519c2f a season game takes the edition's first host (open item 18).
-    0x5FAAAE: ("mov byte ptr [edx + 0x1e], al", "W8(edx + 0x1eu, rt_intl_host_pick(edx, eax & 0xffu));"),
-    0x519C2F: ("mov ecx, dword ptr [esp + 0x10]", "ebx = rt_intl_history_host(esi, ebx); ecx = R32(esp + 0x10u);"),
+    0x5FAAAE: ("mov byte ptr [edx + 0x1e], al", "SYNC(); W8(edx + 0x1eu, rt_intl_host_pick(edx, eax & 0xffu));"),
+    0x519C2F: ("mov ecx, dword ptr [esp + 0x10]", "SYNC(); ebx = rt_intl_history_host(esi, ebx); ecx = R32(esp + 0x10u);"),
     0x57BE3D: ("jle 0x57becc", "if (cc_le(F)) { if (rt_intl_euro_no_host()) goto L_57bf2f; goto L_57becc; }"),
     # EuroChampQual::get_group_team_count 0x57d9d0 gives the size of each qualifying group by the hosts that the
     # pool leaves out (+0xf6): 1 (0x57d9de) or 2 (0x57d9e5), else the box "euro_champ_qual.cpp 581" (0x57da3d).
