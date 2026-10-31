@@ -57,6 +57,9 @@ static int rename_row(const char *old)
     return -1;
 }
 
+static int no_colombia(const char *name) { return strcmp(name, "Colombia"); }
+static int none_alive(const char *name) { (void)name; return 0; }
+
 int main(void)
 {
     /* The base game and the season code off: the original's values. */
@@ -138,7 +141,35 @@ int main(void)
     CHECK(rt_intl_next_year(INTL_WORLD_CUP, 2200, 4) == 2202, "an object at 2200: World Cup 2202");
     const SeasonIntlEdition *a = season_intl_edition("world_cup", 2034);
     CHECK(a && a->teams == 48 && a->season == 2033 && a->start_year == 2034 && a->month == 6 && a->day == 8 &&
-              !a->golden && !*a->hosts, "World Cup 2034: 48 teams, season 2033/34, 8 June, no host yet");
+              !a->golden && !strcmp(a->hosts, "Saudi Arabia"), "World Cup 2034: 48 teams, season 2033/34, 8 June, "
+                                                               "Saudi Arabia (Q5)");
+    /* 0.6.2 slice 5: the hosts after the table. */
+    CHECK(!strcmp(season_intl_edition("euro_champ", 2032)->hosts, "Italy;Turkey/T\xfcrkiye"), "Euro 2032: Italy, Turkey");
+    CHECK(!strcmp(season_intl_edition("olympics", 2028)->hosts, "United States/USA"), "Olympics 2028: United States");
+    CHECK(!strcmp(season_intl_edition("olympics", 2032)->hosts, "Australia"), "Olympics 2032: Australia");
+    CHECK(!*season_intl_edition("world_cup", 2038)->hosts, "World Cup 2038: the host row gives the host (Q4)");
+    CHECK(season_intl_host_slot("world_cup", 2038) == 2 && season_intl_host_slot("world_cup", 2006) == 2,
+          "World Cup 2038 takes the original's 2006 row (moved on 32 years)");
+    CHECK(season_intl_host_slot("african_nations", 2029) == 6 && season_intl_host_slot("african_nations", 2045) == 6,
+          "ACN 2029 and 2045 take the row of 2012");
+    CHECK(season_intl_host_slot("goldcup", 2028) == -1, "the Copa America rotates (Q32)");
+    CHECK(!strcmp(season_intl_edition("goldcup", 2028)->hosts, "Colombia") &&
+              !strcmp(season_intl_edition("goldcup", 2032)->hosts, "Peru"),
+          "Copa America 2028 and 2032: the table's hosts in order (Q32)");
+    CHECK(!strcmp(season_intl_edition("oceania_nations", 2028)->hosts, "New Zealand"), "OFC 2028: New Zealand");
+    CHECK(!strcmp(season_intl_rotation_host("asia_nations", 1, NULL), "Indonesia"), "Asian Cup rotation: each co-host");
+    CHECK(!strcmp(season_intl_rotation_host("goldcup", 0, no_colombia), "Peru"), "a host that no longer exists is left out");
+    CHECK(!season_intl_rotation_host("goldcup", 0, none_alive), "no live host: none");
+    CHECK(season_intl_rotation_step("goldcup", 2028) == 0 && season_intl_rotation_step("goldcup", 2036) == 2,
+          "rotation steps count the editions after the table");
+    {
+        int all[3] = {1, 1, 1}, two[3] = {0, 1, 1}, one[3] = {0, 0, 1}, none[3] = {0, 0, 0};
+        CHECK(season_intl_pick_pair(all, 1, 0) == 1, "Q6: a valid drawn pair stays");
+        CHECK(season_intl_pick_pair(two, 0, 0) == 1 && season_intl_pick_pair(two, 0, 1) == 2,
+              "Q6: a pair with a nation that no longer exists is drawn again from the others");
+        CHECK(season_intl_pick_pair(one, 0, 5) == 2, "Q6: the one valid pair");
+        CHECK(season_intl_pick_pair(none, 1, 0) == -1, "Q6: no valid pair, the host rotates (Q32)");
+    }
     CHECK(!season_intl_table_edition("world_cup", 2034), "World Cup 2034 is not a table row");
     CHECK(season_intl_table_edition("world_cup", 2030) == season_intl_edition("world_cup", 2030),
           "a table edition is the table row");
