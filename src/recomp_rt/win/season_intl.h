@@ -53,6 +53,13 @@ uint32_t rt_intl_round_flags(uint32_t cls, uint32_t year, uint32_t flags); /* go
 uint32_t rt_intl_wc_holder(uint32_t holder);       /* a qualifying section's holder: 0 in a season game */
 uint32_t rt_intl_wc_holder_slot(uint32_t year);    /* 1 when the World Cup of the year gives the holder a slot */
 
+/* The draw of a host row (daily_update 0x5faaae): the choice in a season game (Q6, Q32; 0.6.2 slice 5). */
+uint32_t rt_intl_host_pick(uint32_t row, uint32_t r);
+
+/* The host of a history row (Cup::record_season_honours 0x519c2f): club, or the national side of the edition's
+ * first host when club is 0 in a season game (0.6.2 open item 18). */
+uint32_t rt_intl_history_host(uint32_t cup, uint32_t club);
+
 /* A new game (season.c, before the original makes it): the start of Australia's move to Asia. */
 void season_intl_at_create(void);
 
