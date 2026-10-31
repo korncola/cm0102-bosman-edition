@@ -39,6 +39,11 @@
  *      the rounds below in its path (the group stage first from the Champions Path: the access lists give the
  *      free place to the best-ranked champion). The lowest round gives up its extra clubs, and fills a gap with
  *      the first club with no place of the best-ranked nations (as the UEFA Cup's fillers of 0x902cb0).
+ *   Open item 70: after step 3 and the European Performance Spots, a nation with more Champions League places
+ *      than the association limit of the season (season_uefa_cl_cap) loses the place of its last club in league
+ *      order that is not a title holder. That club takes a Europa League place in step 4. In step 6 the filler
+ *      of a Champions League gap skips a nation at its limit. The nation's entry +0xc loses the place, so the
+ *      league table marks one Champions League place less.
  *   Slice 24, part b (2021/22 on): after step 4 the Conference League places of each nation ("k" rows): the
  *      first the cup winner when the nation has no Europa League place, the last the league cup winner for the
  *      nations of the "M" rows, the others the first club with no place. The Conference League title holder
@@ -145,8 +150,11 @@ static int cl_clubs_of(uint32_t nation)
 /* Open item 70: the association limit of season s (season_uefa_cl_cap). A nation over it loses the Champions
  * League place of its last club in league order that is not a title holder, as Tottenham Hotspur's place went to
  * the title holder Chelsea in 2012/13. That club then takes the nation's first free Europa League place in step
- * 4, which gives the clubs with no place in league order. */
-static void keep_limit(int s)
+ * 4, which gives the clubs with no place in league order. The nation's entry +0xc (its Champions League places in
+ * the league table marks, get_nation_places 0x905c60) loses one place too. */
+static int rank_of_nation(uint32_t self, int entries, uint32_t nation);
+
+static void keep_limit(uint32_t self, int entries, int s)
 {
     int cap = season_uefa_cl_cap(s);
     for (int i = 0; i < n_placed; i++) {
@@ -163,6 +171,9 @@ static void keep_limit(int s)
                     "most %d clubs of one association)\n", s, (s + 1) % 100, win_str(placed[last].club + 4), cap);
             wr32(g_mem, placed[last].club + 0x1db, 0xffffffffu);
             placed[last].club = 0;
+            int rank = rank_of_nation(self, entries, nation);
+            if (rank <= entries && g_mem[self + 0x12u * (uint32_t)(rank - 1) + 0xc])
+                g_mem[self + 0x12u * (uint32_t)(rank - 1) + 0xc]--;
         }
     }
 }
@@ -488,7 +499,7 @@ static void assign_all(uint32_t self, uint32_t records, int count, const SeasonU
         }
     }
     /* Open item 70: the association limit, after the title holders and the European Performance Spots. */
-    if (!rt_unwinding) keep_limit(s);
+    if (!rt_unwinding) keep_limit(self, entries, s);
     /* 4. Europa League places: the cup winner, the league places, the league cup winner. 5. Fair play. */
     int fair[3] = {-1, -1, -1};
     if (season_uefa_access_rule(s, 'f') && entries > 3)

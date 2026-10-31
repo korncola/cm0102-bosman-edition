@@ -463,7 +463,7 @@ def main():
 
     # Open item 70: a group stage that ends on a December day with one match, then the knockout rounds in February
     # (group clubs only), the final in May, and the next season's first qualifying round in June (clubs that played
-    # last in July). One edition a season: the knockout rounds stay in the edition of their group stage.
+    # last in June a year before). One edition a season: the knockout rounds stay in the edition of their group stage.
     days = []
     for season in (2017, 2018):
         o = datetime.date(season, 6, 27).toordinal()
@@ -479,6 +479,15 @@ def main():
     if got != [(2018, 12), (2019, 12)]:
         bad.append(f"editions of a cup whose group stage ends on a day with one match: {got}, not "
                    f"[(2018, 12), (2019, 12)]")
+    # A cup with a first round in December, a group day of 4 matches in March, a final on its own, then 30 days
+    # later a new edition whose teams played last in the first round, 97 days before. Two editions: the teams of
+    # the new first day did not play in the 60 days before the final.
+    a = datetime.date(2030, 3, 1).toordinal()
+    days = [(a - 90, 8, 9), (a - 90, 10, 11), (a, 0, 1), (a, 2, 3), (a, 4, 5), (a, 6, 7), (a + 7, 0, 2),
+            (a + 37, 8, 9), (a + 37, 10, 11)]
+    got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
+    if got != [(2030, 12), (2030, 4)]:
+        bad.append(f"editions of a cup with a final after a group day: {got}, not [(2030, 12), (2030, 4)]")
 
     # Open item 70: the association limit of the Champions League by season.
     def lim(season, nations):
