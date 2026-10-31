@@ -231,6 +231,10 @@ def records(changing=1):
                ("fixtures_2038.tmp", fixture_part(FIXTURES_2038)), ("fixtures_2039.tmp", fixture_part(FIXTURES_2039)),
                ("fixtures_2040.tmp", fixture_part(FIXTURES_2040)), ("staff.dat", staff()),
                ("finance.dat", finance())]
+    # Two files in a merged part (0.6.2 slice 13, savfile.merge): the World Finals class waiting on 2200 and the
+    # fixtures of 2039 give planted faults only when the checker reads them from it.
+    merged = [m for m in members if m[0] in ("World Finals_10.tmp", "fixtures_2039.tmp")]
+    members = [m for m in members if m not in merged] + [("x#.tmp.parts", savfile.merge(merged))]
     return members, want
 
 
