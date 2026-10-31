@@ -109,8 +109,8 @@ def compare(a, b):
     for f, who in ((a, "normal"), (b, "Tier A")):
         if not f["rows"] and not f["fixtures"]:
             diffs.append(("unread", "", "", f"the {who} save gives no edition"))
-        for part in f["unread"]:
-            diffs.append(("unread", "", "", f"the {who} save: {part} is not read"))
+        for name in f["unread"]:
+            diffs.append(("unread", "", "", f"the {who} save: {name} is not read"))
     if a["date"] != b["date"]:
         notes.append(("save-date", "", "", f"{a['date']} / {b['date']}"))
     end = min(a["day"], b["day"])
