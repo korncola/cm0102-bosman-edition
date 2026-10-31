@@ -140,6 +140,11 @@ if(NOT WIN32)
         src/recomp_rt/win/season_intl_table.c)
     target_include_directories(season_intl_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_intl COMMAND season_intl_test)
+    # World Cup qualifying places with hosts (0.6.2 slice 5, open item 59): 48 teams for every host set.
+    add_executable(season_wcq26_places_test tests/seasons/test_season_wcq26_places.c
+        src/recomp_rt/win/season_wcq26_places.c)
+    target_include_directories(season_wcq26_places_test PRIVATE src/recomp_rt/win)
+    add_test(NAME season_wcq26_places COMMAND season_wcq26_places_test)
     # Nations Leagues (0.6.0 slice 28): the C table of the editions and leagues matches the tables, and the
     # ranking, promotion and relegation and play-off path rules.
     add_test(NAME season_nl_table COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_nl.py" --check)
