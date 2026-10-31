@@ -22,6 +22,8 @@ A same-save check plays the same clicks twice, once with the option on and once 
 
 The script is `tests/smoke/smoke_run.py --same-save`, with `--match` for the match check. `tests/smoke/same_save_views.py` checks the screens.
 
+The file speed-ups have their own runs. The path lookup keeps each folder's names until the folder changes (`RECOMP_FOLDER_CACHE=0` turns it off). The season change keeps the player stats history file open (`RECOMP_KEEP_FILES=0` turns it off). Both switches are read once and are on by default. The run `files-off` turns both off. The same-save runs end before a season change, so a run across a season change with both switches on and off compares the saves too.
+
 The checks run before each merge of game code and again on the merged build. The pass rule is equal saves. Five files can differ only when the option opens a screen that the off run does not open, because that moves memory. We record each such case and tell Max. Any other difference stops the merge until we find the cause.
 
 ## Start-season soaks

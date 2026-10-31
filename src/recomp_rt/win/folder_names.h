@@ -7,6 +7,12 @@
  * empty when there is none or the folder cannot be read (folder_names.c). */
 void folder_lookup(const char *path, const char *part, char *found, size_t room);
 
+/* The number of folder reads into the kept names (tests). */
+unsigned long folder_names_reads(void);
+
+/* The window in seconds in which a changed folder is read at each lookup: 2, or what a test sets. */
+void folder_names_recent(int seconds);
+
 /* Forgets every kept folder (tests). */
 void folder_names_reset(void);
 

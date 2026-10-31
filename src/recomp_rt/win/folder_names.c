@@ -10,25 +10,28 @@
 
 /* The spelling of a name in a folder, ignoring case, for the path lookup of files.c (ci_lookup).
  *
- * Each file the game opens looks up every part of its path, and a read of the whole folder took 19 % of a
- * Tier A year (the profile of 0.6.2 slice 3: the user folder holds hundreds of part files). So the names of
- * a folder are kept with the folder's modification time, and a lookup reads the folder again when that time
- * changes. Creating, deleting or renaming an entry changes it, by the game or by the player outside the
- * game. A folder whose time lies within RECENT seconds of now is read again at each lookup, so a change in
- * the same tick of a coarse clock (1 s on some file systems) is not missed. The result is the result of
- * the read. RECOMP_FOLDER_CACHE=0 reads the folder at each lookup, as before. */
+ * Each file that the game opens looks up every part of its path. A read of the whole folder took 19 % of a
+ * Tier A year (the profile of 0.6.2 slice 3), because the user folder holds hundreds of part files. So the
+ * names of a folder are kept with its device, inode, modification time and change time. A lookup reads the
+ * folder again when one of them changes. Creating, deleting or renaming an entry changes the times, by the
+ * game or by the player outside the game. A tool can set the modification time, but not the change time.
+ * A folder that changed within RECENT seconds of now is read at each lookup, so a change in the same tick
+ * of a coarse clock (1 s on some file systems) is not missed. The result is the result of the read.
+ * RECOMP_FOLDER_CACHE=0 reads the folder at each lookup, as before. */
 #define CACHE_FOLDERS 64
 #define RECENT 2
+static int recent = RECENT;              /* seconds; tests set it (folder_names_recent) */
 
 typedef struct {
     char *dir;
     char **names;
     int count;
-    int64_t mtime, mtime_ns;
+    HostStat st;
     unsigned long used;
 } FolderNames;
 
 static FolderNames folders[CACHE_FOLDERS];
+static unsigned long reads;                 /* folder reads into the cache (tests) */
 static unsigned long folder_clock;
 
 static int cache_on(void)
@@ -69,8 +72,8 @@ static int folder_read(FolderNames *f, const char *dir, const HostStat *st)
         else f->count++;
     }
     host_closedir(d);
-    f->mtime = st->mtime;
-    f->mtime_ns = st->mtime_ns;
+    f->st = *st;
+    reads++;
     return ok && f->dir != NULL;            /* a list cut short is not kept: the caller frees it */
 }
 
@@ -90,7 +93,8 @@ void folder_lookup(const char *path, const char *part, char *found, size_t room)
 {
     found[0] = 0;
     HostStat st;
-    if (!cache_on() || host_stat(path, &st) || !st.is_dir || st.mtime >= (int64_t)time(NULL) - RECENT) {
+    int64_t now = (int64_t)time(NULL);
+    if (!cache_on() || host_stat(path, &st) || !st.is_dir || st.mtime >= now - recent || st.ctime >= now - recent) {
         ci_scan(path, part, found, room);
         return;
     }
@@ -99,7 +103,8 @@ void folder_lookup(const char *path, const char *part, char *found, size_t room)
         if (folders[i].dir && !strcmp(folders[i].dir, path)) { f = &folders[i]; break; }
         if (folders[i].used < oldest->used) oldest = &folders[i];
     }
-    if (!f || f->mtime != st.mtime || f->mtime_ns != st.mtime_ns) {
+    if (!f || f->st.mtime != st.mtime || f->st.mtime_ns != st.mtime_ns || f->st.ctime != st.ctime ||
+        f->st.ctime_ns != st.ctime_ns || f->st.dev != st.dev || f->st.ino != st.ino) {
         if (!f) f = oldest;
         if (!folder_read(f, path, &st)) {
             folder_free(f);
@@ -113,6 +118,10 @@ void folder_lookup(const char *path, const char *part, char *found, size_t room)
         if (!found[0] && !strcasecmp(f->names[i], part)) snprintf(found, room, "%s", f->names[i]);
     }
 }
+
+unsigned long folder_names_reads(void) { return reads; }
+
+void folder_names_recent(int seconds) { recent = seconds; }
 
 void folder_names_reset(void)
 {

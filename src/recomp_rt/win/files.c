@@ -529,15 +529,15 @@ static int mem_slot(uint32_t h)
 
 int win_is_file_handle(uint32_t h) { return fd_of(h) >= 0 || mem_slot(h) >= 0; }
 
-/* Kept files. At the season change PlayerStats::end_season_for_key_nation 0x7c1350 archives the season's
- * records of each player: archive_player_stats 0x7c5fe0 calls FILE_LLIST::add_node 0x58e340 for each record,
- * and add_node opens "player stats history.tmp" for read and write, appends, and closes it each time (the
- * open at 0x58e5c1). The opens and closes took about 5 % of a Tier A year (the profile of 0.6.2 slice 3).
- * While 0x7c1350 runs, a handle that was opened with OPEN_EXISTING for read and write is not closed on the
- * host: its file stays open, and the next CreateFileA of the same host path with the same flags takes it at
- * position 0, as a new open gives. It is one host file, read and written by the same calls, so the bytes are
- * the same. A delete or rename of that path and the end of 0x7c1350 close the kept files.
- * RECOMP_KEEP_FILES=0 closes each file at once, as before. */
+/* Kept files. At the season change PlayerStats::end_season_for_key_nation 0x7c1350 archives the records
+ * of each player. archive_player_stats 0x7c5fe0 calls FILE_LLIST::add_node 0x58e340 for each record. add_node
+ * opens "player stats history.tmp" for read and write (0x58e5c1), appends, and closes it. These opens and
+ * closes took about 5 % of a Tier A year (the profile of 0.6.2 slice 3). So while 0x7c1350 runs, a closed
+ * handle of that file, opened with OPEN_EXISTING for read and write, keeps its host file open. The next
+ * CreateFileA of the same host path with the same flags takes it at position 0, as a new open does. It is one
+ * host file, read and written by the same calls, so the bytes are the same. A delete or rename of the path,
+ * an unwind out of 0x7c1350 and its end close the kept file. RECOMP_KEEP_FILES=0 closes it at once. */
+#define KEEP_NAME "player stats history.tmp"
 #define KEEP_MAX 4
 static struct { char *path; int fd; int flags; } kept[KEEP_MAX];
 static int keep_depth;
@@ -553,11 +553,19 @@ static int keep_on(void)
     return on;
 }
 
+/* 1 for a host path whose name is KEEP_NAME. */
+static int kept_name(const char *path)
+{
+    const char *slash = strrchr(path, '/');
+    return !strcasecmp(slash ? slash + 1 : path, KEEP_NAME);
+}
+
 /* Closes the kept file of path, or every kept file when path is NULL. */
 static void keep_drop(const char *path)
 {
     for (int k = 0; k < KEEP_MAX; k++) {
-        if (!kept[k].path || (path && strcmp(kept[k].path, path))) continue;
+        if (!kept[k].path || (path && (HOST_FOLDS_CASE ? strcasecmp(kept[k].path, path) : strcmp(kept[k].path, path))))
+            continue;
         host_close(kept[k].fd);
         free(kept[k].path);
         kept[k].path = NULL;
@@ -586,7 +594,10 @@ RT_WRAP(007c1350, keep_files_archive)
 {
     keep_depth++;
     o_007c1350();
-    if (--keep_depth == 0) keep_drop(NULL);
+    if (--keep_depth == 0 || rt_unwinding) {
+        keep_depth = 0;
+        keep_drop(NULL);
+    }
 }
 
 int win_close_file(uint32_t h)
@@ -599,10 +610,10 @@ int win_close_file(uint32_t h)
     int fd = fd_of(h);
     if (fd < 0) return 0;
     uint32_t i = (h - FILE_BASE) / 4;
-    int k = 0;
-    if (keep_depth && keep_on() && fd_path[i] && fd_flags[i] == O_RDWR)
-        for (; k < KEEP_MAX && kept[k].path; k++) {}
-    if (keep_depth && keep_on() && fd_path[i] && fd_flags[i] == O_RDWR && k < KEEP_MAX) {
+    int k = KEEP_MAX;
+    if (keep_depth && keep_on() && fd_path[i] && fd_flags[i] == O_RDWR && kept_name(fd_path[i]))
+        for (k = 0; k < KEEP_MAX && kept[k].path; k++) {}
+    if (k < KEEP_MAX) {
         kept[k].path = fd_path[i];          /* the path moves to the kept file */
         kept[k].fd = fd;
         kept[k].flags = fd_flags[i];
@@ -904,8 +915,9 @@ RT_IMPORT(DeleteFileA)
     if (save_refused(name)) {
         errno = ENOSPC;
     } else if (win_paths(name, h, u, sizeof h)) {
+        keep_drop(u);
         if (temp_save_beside(u) && save_backup(h, u, 0)) ok = 1;   /* a new save follows: the old moved to backups/ */
-        else if (exists(u)) { keep_drop(u); ok = host_unlink(u) == 0; }
+        else if (exists(u)) ok = host_unlink(u) == 0;
         /* A save without the temp file (no option bit 0x20000000) deletes the old .sav before it writes (0x82e62d). */
         size_t nl = strlen(name);
         if (ok && in_save && has_sav_ending(name) && (nl < 18 || strcasecmp(name + nl - 18, "temp_save_file.sav")))

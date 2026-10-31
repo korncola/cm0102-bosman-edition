@@ -35,7 +35,14 @@ int host_close(int fd);
 /* fopen for a UTF-8 host path. */
 FILE *host_fopen(const char *utf8_path, const char *mode);
 
-typedef struct { int is_dir; uint64_t size; int64_t mtime; int64_t mtime_ns; } HostStat;   /* mtime_ns: 0 to 999999999 */
+/* mtime_ns and ctime_ns: 0 to 999999999. dev, ino and the ctime are 0 on Windows (the folder cache does not
+ * run there: HOST_FOLDS_CASE). */
+typedef struct {
+    int is_dir;
+    uint64_t size;
+    int64_t mtime, mtime_ns, ctime, ctime_ns;
+    uint64_t dev, ino;
+} HostStat;
 int host_stat(const char *path, HostStat *st);   /* 0 on success */
 int host_mkdir(const char *path);                /* 0 on success */
 int host_unlink(const char *path);               /* 0 on success */
