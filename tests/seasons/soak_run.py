@@ -112,10 +112,12 @@ LEG_ENV = {}        # --env NAME=VALUE: test variables for every leg
 def leg_env(program, game, user, home, shots, steps, last, report, extra):
     table = rrc.rules_table(program, game)
     extra = dict(LEG_ENV, **extra)
-    return dict(os.environ, HOME=home, SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy", RECOMP_NO_BOX="1",
+    env = dict(os.environ, HOME=home, SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy", RECOMP_NO_BOX="1",
                 RECOMP_USER_DIR=user, RECOMP_FIXED_CLOCK="1", RECOMP_SEASON_JUMP=str(last), RECOMP_SCREEN_LOG="1",
                 RECOMP_RULES_REPORT=report, RECOMP_RULES_TABLE=table, RECOMP_SEASON_INTL_LOG="1",
-                RECOMP_SCRIPT="; ".join(smoke_run.scaled_steps("classic", shots, steps)), **extra)
+                RECOMP_SCRIPT="; ".join(smoke_run.scaled_steps("classic", shots, steps)))
+    env.update(extra)
+    return env
 
 
 def folders(work):
@@ -190,7 +192,7 @@ def main(argv):
          "extra": [e for e in arg(argv, "--extra", "").split(",") if e],
          "checkpoints": int(arg(argv, "--checkpoints", 0))}
     for i, a in enumerate(argv):
-        if a == "--env" and i + 1 < len(argv):
+        if a == "--env" and i + 1 < len(argv) and "=" in argv[i + 1]:
             name, value = argv[i + 1].split("=", 1)
             LEG_ENV[name] = value
     if o["last"] < o["start"]:

@@ -30,8 +30,8 @@
  *   The injuries of the database and of game creation stay, and heal by date when read (0x62c680 from 0x62c400
  *   and 0x62ed70), with no daily code.
  * - AI manager moves: MANAGER_MANAGER::consider_sacking_manager 0x69aba0 (ret 8 at 0x69acb8, callers 0x696525,
- *   0x696539, 0x6a59b4, 0x6aa0c1, none reads eax), so no sacking, ultimatum or move between clubs. The vacancy pass
- *   0x68f9c0 stays: retirements (0x7aaeb0 calls add_job_vacancy 0x69ba50) and the season change
+ *   0x696539, 0x6a59b4, 0x6aa0c1, none reads eax), so no sacking or ultimatum. An appointed manager can still
+ *   leave his club for a vacancy. The vacancy pass 0x68f9c0 stays: retirements (0x7aaeb0 calls add_job_vacancy 0x69ba50) and the season change
  *   (league_promote_and_relegate 0x689c80) open vacancies, and only it fills them. Without it more clubs and
  *   national teams would have no manager each year, as Q31 found for players.
  *
@@ -143,7 +143,8 @@ RT_WRAP(006b66a0, tier_a_can_quick_simulate)
     if (tier_a_in_play()) cpu.eax = 1;
 }
 
-/* The random numbers of the instant result: splitmix64, the same sequence in each program. */
+/* The random numbers of the instant result: splitmix64, the same sequence in each program. The state is not in the
+ * save, so each leg of a soak starts the sequence again after its load. */
 static uint64_t rng_state = 0x7469657241ull;
 
 static double rng_unit(void)
@@ -213,7 +214,8 @@ RT_WRAP(006beeb0, tier_a_quick_simulate_match)
         if (flags & 0x82) {                         /* extra time */
             minute = 120;
             int eh = poisson(mh / 3), ea = poisson(ma / 3);
-            if ((flags & 0x80) && eh + ea > 1) {    /* golden goal: the first goal ends the game */
+            if ((flags & 0x80) && eh + ea > 1) {    /* golden goal (0x6bfeb9 sets the flag of it): the first goal
+                                                       ends the game */
                 int home_first = rng_unit() * (eh + ea) < eh;
                 eh = home_first;
                 ea = !home_first;

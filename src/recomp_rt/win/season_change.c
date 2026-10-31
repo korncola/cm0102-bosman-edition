@@ -103,7 +103,6 @@ static const SeasonRuleKind *const season_rule_kinds[] = {
 #define NEWS_SET_SLOT 0x00785790u       /* NewsItem::set_slot, thiscall (slot, value) */
 #define NEWS_SEND_ALL 0x00786780u       /* News::send_to_all_managers, thiscall (item) */
 #define TEXT_CLEAR 0x004afa40u          /* Text::clear, thiscall () */
-#define TEXT_WIDTH 0x005e5ad0u          /* cdecl (font, text): the width in screen pixels */
 #define TEXT_APPEND 0x004ae770u         /* Text::append_string, thiscall (text) */
 #define GAME_NEW 0x00944cf1u            /* operator new, cdecl (size); 0x5d5d74 */
 #define GAME_DELETE 0x00944c94u         /* operator delete, cdecl (block); 0x5d5d6a */
@@ -519,26 +518,17 @@ int season_change_part_read(const uint8_t *in, uint32_t n)
  * over 0xae0ff6..0xae11ea: the ConmebolSeeding pointer at 0xae1000, so the Libertadores seeding of the next
  * January marked 1 club and the game stopped at conmebol_liber.cpp 663 (open item 69: the 2020/21 news of a 2013
  * start, 27 September 2020). So the news of a season goes in parts, one item each, of at most PART_LINES lines with
- * the heading. The lines of a sentence come from its width at the classic box width (the widest box is the
- * screen's in widescreen, so fewer lines there), with room for the word that wraps. */
+ * the heading. The lines of a sentence come from its length, at LINE_CHARS characters a line. That is about half
+ * of what a line of the 651-pixel box (0x302 - 0x78 + 1) holds in font 3, so the room covers the word that wraps
+ * to the next line and a larger Fonts setting (inference: the widths were not measured per character). The
+ * count calls no game code, so the send at the season change uses no game memory (Q152), and write_text splits
+ * the text in the same way at any later load. */
 #define PART_LINES 40                   /* of the 50 that the line array holds */
 #define HEAD_LINES 2                    /* "These changes come in with ...:" and the empty line after it */
-#define WRAP_WIDTH 560                  /* the box, 0x302 - 0x78 + 1 = 651 pixels, less the longest word */
-#define NEWS_FONT 3
+#define LINE_CHARS 40
 #define MAX_PARTS 32
 
-static int sentence_lines(const char *p, uint32_t n)
-{
-    static uint32_t buf;
-    if (!buf) buf = win_static_alloc(TEXT_ROOM + 1);
-    char line[TEXT_ROOM + 1];
-    memcpy(line, p, n);
-    line[n] = 0;
-    win_put_str(buf, line, TEXT_ROOM + 1);
-    uint32_t a[2] = {NEWS_FONT, buf};
-    int32_t w = (int32_t)call_cdecl(TEXT_WIDTH, 2, a);
-    return rt_unwinding || w < 0 ? 1 : 1 + w / WRAP_WIDTH;
-}
+static int sentence_lines(uint32_t n) { return 1 + (int)(n / LINE_CHARS); }
 
 /* The parts of a season's text: the offset of the first sentence of each part. Returns the count, 1 or more. */
 static int news_parts(const SeasonNews *s, uint32_t *start)
@@ -546,10 +536,10 @@ static int news_parts(const SeasonNews *s, uint32_t *start)
     int parts = 1, lines = HEAD_LINES;
     start[0] = 0;
     if (!s || !s->len) return 1;
-    for (uint32_t at = 0; at < s->len && !rt_unwinding;) {
+    for (uint32_t at = 0; at < s->len;) {
         const char *nl = memchr(s->text + at, '\n', s->len - at);
         uint32_t n = nl ? (uint32_t)(nl - (s->text + at)) : s->len - at;
-        int k = sentence_lines(s->text + at, n);
+        int k = sentence_lines(n);
         if (lines + k > PART_LINES && lines > HEAD_LINES && parts < MAX_PARTS) {
             start[parts++] = at;
             lines = HEAD_LINES;
@@ -560,8 +550,9 @@ static int news_parts(const SeasonNews *s, uint32_t *start)
     return parts;
 }
 
-/* One news item for each part of the season's news to every human manager (slot 2, at +13: set_slot 0x785790 stores slot k at +5 + 4k, 0x7857ac). The text stays in
- * the list: write_text reads it. */
+/* One news item for each part of the season's news to every human manager. The part goes in slot 2 of the item,
+ * at +13: set_slot 0x785790 stores slot k at +5 + 4k (0x7857ac). The text stays in the list: write_text reads it
+ * and splits it again in the same way. */
 static void news_send_part(int season, int part);
 
 static void news_send(int season)
@@ -591,8 +582,8 @@ static void news_send_part(int season, int part)
     uint32_t b[1] = {item};
     call_this(NEWS_SEND_ALL, store, 1, b);
     if (logging() && !rt_unwinding)
-        fprintf(stderr, "recomp: season change: news item for %d/%02d sent on day %d of %d\n", season,
-                (season + 1) % 100, game_day(), game_year());
+        fprintf(stderr, "recomp: season change: news item for %d/%02d part %d sent on day %d of %d\n", season,
+                (season + 1) % 100, part + 1, game_day(), game_year());
 }
 
 static int our_item(uint32_t item)
@@ -627,8 +618,7 @@ RT_WRAP(0077bc80, news_write_text)
     const SeasonNews *s = news_of(season);
     uint32_t start[MAX_PARTS];
     int parts = news_parts(s, start), part = (int)rd32(g_mem, item + 13);
-    if (rt_unwinding) return;
-    if (part < 0 || part >= parts) part = 0;   /* an item of an older version: slot 2 was not set */
+    if (part < 0 || part >= parts) part = 0;   /* an item of an older version: slot 2 is 0 (0x77bbe0 clears it) */
     char body[TEXT_ROOM + 1] = "The rules of the new season are in force.";
     if (s && s->len) {
         uint32_t end = part + 1 < parts ? start[part + 1] - 1 : s->len;

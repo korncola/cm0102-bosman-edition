@@ -9,23 +9,25 @@ Usage:
 The two runs save on days a little apart, and each save keeps the old fixtures of a competition for a while. So
 the fixtures are compared in a window that both saves hold: per competition, from the later of the two first
 fixture days to the earlier save day. The checks, from the history checker (history_check.py) of each save:
-    editions    the history rows (competition, year) from the start year on, the editions in the window
-                (history_check.editions_of), and the edition that each finals class waits for
+    editions    the history rows (competition, year) from the start year on, and the edition that each finals
+                class waits for
     dates       the match days of both saves in the window split into parts at each gap of more than PART_GAP
-                days (a season, or a half before a long winter break). Each part has matches in both saves,
-                its first day in the two saves is within FIRST_DAYS days, and its last day within LAST_DAYS (when
-                the part ends more than LAST_DAYS days before the window ends)
+                days (a season, or a half before a long winter break). Each part has matches in both saves.
+                Its first day in the two saves is within FIRST_DAYS days, except for the part that starts the
+                window. Its last day is within LAST_DAYS days, except for a part that runs to the window end.
     hosts       the host of each history row from the start year on
     entrants    the entrant faults of the checker (entrant-confed, -count, -host, -route, -holder, -dead: the
                 year's access rule)
 Each difference is one line "DIFF <check> <competition> <year>: normal ... / Tier A ...". The exit code is 1 when
-any check differs, or when a save gives no edition or the two saves have other start years.
+any check differs, when a save gives no edition or a part of it is not read, or when the two saves have other
+start years.
 
 Results move some days, some edition years and some entrants, as they move the winners. These are NOTE lines
 and do not fail:
     - a part with one match in one save only, and match days in one save only: replays of drawn ties, matches moved for a cup or European tie, the
       Saturday or Sunday of a match
-    - an edition whose year is one year off in the other save, when its last match moves across 31 December
+    - an edition whose year is one year off in the other save, when its last match moves across 31 December,
+      and the host of such an edition
     - the number of teams in the window (which champions start in an earlier qualifying round follows the club
       coefficients), and the count of entrants per nation (a title holder's nation follows the winner)
     - friendlies, reserve and under-21 matches, which clubs and nations arrange in play
@@ -61,6 +63,7 @@ def facts(path):
         mix[(n, yr)][nation] += 1
     f["nations"] = mix
     f["entrant faults"] = {(c, n, yr) for c, n, yr, detail in faults}
+    f["unread"] = list(game.unread) + ([] if y else ["news.dat (no save date)"])
     return f
 
 
@@ -106,6 +109,8 @@ def compare(a, b):
     for f, who in ((a, "normal"), (b, "Tier A")):
         if not f["rows"] and not f["fixtures"]:
             diffs.append(("unread", "", "", f"the {who} save gives no edition"))
+        for part in f["unread"]:
+            diffs.append(("unread", "", "", f"the {who} save: {part} is not read"))
     if a["date"] != b["date"]:
         notes.append(("save-date", "", "", f"{a['date']} / {b['date']}"))
     end = min(a["day"], b["day"])
@@ -152,8 +157,14 @@ def compare(a, b):
         if a["waits"].get(comp) != b["waits"].get(comp):
             diffs.append(("editions", comp, "", f"the class waits for {a['waits'].get(comp)} / {b['waits'].get(comp)}"))
     for key in sorted(set(a["hosts"]) | set(b["hosts"]), key=str):
-        if a["hosts"].get(key) != b["hosts"].get(key):
-            diffs.append(("hosts", key[0], key[1], f"{a['hosts'].get(key)} / {b['hosts'].get(key)}"))
+        ha, hb = a["hosts"].get(key), b["hosts"].get(key)
+        if ha == hb:
+            continue
+        line = ("hosts", key[0], key[1], f"{ha} / {hb}")
+        other = b["hosts"] if ha else a["hosts"]          # an edition one year off: its host in the other save
+        moved = (ha is None or hb is None) and (ha or hb) in (other.get((key[0], key[1] - 1)),
+                                                             other.get((key[0], key[1] + 1)))
+        (notes if moved else diffs).append(line)
     for key in sorted(set(a["nations"]) & set(b["nations"]), key=str):
         if a["nations"][key] != b["nations"][key]:
             ma, mb = a["nations"][key], b["nations"][key]
