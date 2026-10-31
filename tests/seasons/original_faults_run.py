@@ -20,7 +20,8 @@ both saves (nat_club.dat: the first nation-count rows; the manager at club +0xcf
       first check counts only the nations with a continent
     - a national manager left in the run and his team got a new manager (a retirement or a move to a club)
     - no message box, and the program ends with code 0
---keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep (the original's rule). The checks must then fail: this is the
+--keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:managers (the original's rule for this group only; money and
+age keep theirs: keep:money, keep:age). The checks must then fail: this is the
 proof that they find the fault (the same holds for money). The suggested save: the 2011 leg of the 0.6.0 soak seed 6
 (run-logs/release-test-0.6.0/long-games/soak-seed6/leg09/user/samesave.sav), where 161 of 213 teams have no manager.
 
@@ -85,7 +86,7 @@ def managers(argv):
     save, keep = os.path.abspath(soak_run.arg(argv, "--save")), os.path.abspath(soak_run.arg(argv, "--keep"))
     days = int(soak_run.arg(argv, "--days", 400))
     if "--keep-faults" in argv:
-        os.environ["RECOMP_ORIGINAL_FAULTS"] = "keep"
+        os.environ["RECOMP_ORIGINAL_FAULTS"] = "keep:managers"
     o = {"program": program, "game": game, "rules": "on", "database": None, "last": 2099, "seed": 1,
          "timeout": 7200}
     work = os.path.join(keep, "managers")
@@ -143,7 +144,7 @@ def money(argv):
     days = int(soak_run.arg(argv, "--days", 45))
     os.environ["RECOMP_MONEY_LOG"] = "1"
     if "--keep-faults" in argv:
-        os.environ["RECOMP_ORIGINAL_FAULTS"] = "keep"
+        os.environ["RECOMP_ORIGINAL_FAULTS"] = "keep:money"
     edit = os.path.join(HERE, "..", "..", "tools", "save", "edit_money.py")
     fails = []
     for balance in balances:
@@ -213,7 +214,7 @@ def age(argv):
     keep = os.path.abspath(soak_run.arg(argv, "--keep"))
     born = int(soak_run.arg(argv, "--born", 1870))
     if "--keep-faults" in argv:
-        os.environ["RECOMP_ORIGINAL_FAULTS"] = "keep"
+        os.environ["RECOMP_ORIGINAL_FAULTS"] = "keep:age"
     work = os.path.join(keep, f"age-{born}")
     os.makedirs(work, exist_ok=True)
     sav = savfile.Sav(os.path.join(FIXTURES, "start.sav"))
