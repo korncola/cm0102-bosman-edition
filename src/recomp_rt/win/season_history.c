@@ -13,7 +13,10 @@
  *             name (51 bytes), +0x53 the nation (a pointer after the id pass, 0x5315de); nation +0x04 its name.
  *   comps     +0x04 the name (51 bytes). */
 #include "win.h"
+#include "season.h"
 #include "season_history.h"
+#include "season_change.h"
+#include "season_comps.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +34,7 @@
 #define CLUB_COMPS_PTR 0xae23d0u   /* the club competition records */
 #define CLUB_COMP_COUNT 0xae2378u
 #define CLUB_COMP_SIZE 0x6bu
+#define FRIENDLY_RECORDS 0x7fu     /* the last records belong to the friendly object (new-comp-records doc 1.6) */
 
 #define GROW_HISTORY 0x00527f60u   /* database_grow_comp_history_table (count): blank rows at the end, 1 on success */
 
@@ -261,14 +265,20 @@ static const SeasonHistRow new_comp_rows[] = {
 };
 #define NEW_COMP_ROWS ((uint32_t)(sizeof new_comp_rows / sizeof new_comp_rows[0]))
 
-/* The record of this long name in the whole array (club, nation and friendly records), or 0. */
+/* The record that the season code added (season_comps.h: the last records of the nation block, before the 0x7f
+ * friendly records) with this name in the data, or 0. Never in the base game: it adds none, and a Custom
+ * database's own record of that name is left alone there (Q152). */
 static uint32_t find_record(const char *want)
 {
+    /* the base game test of the module's own record pass (wanted, season_comps.c): at the load the rules flag
+     * of the game is not set yet, so season_comps_on() would say no for a 2001 game with changing rules on */
+    if (!season_code_on() || (season_start_year() == SEASON_FIRST_YEAR && !season_next_rules())) return 0;
     uint32_t base = rd32(g_mem, CLUB_COMPS_PTR), n = rd32(g_mem, CLUB_COMP_COUNT);
-    char name[NAME_LEN + 1];
-    for (uint32_t i = 0; base && i < n && i < 100000u; i++) {
-        text_at(base + i * CLUB_COMP_SIZE + 4, name, sizeof name);
-        if (!strcmp(name, want)) return base + i * CLUB_COMP_SIZE;
+    uint32_t k = (uint32_t)season_comps_added_records();
+    if (!base || n < FRIENDLY_RECORDS + k || n > 100000u) return 0;
+    for (uint32_t i = n - FRIENDLY_RECORDS - k; i < n - FRIENDLY_RECORDS; i++) {
+        const char *name = season_change_data_name(base + i * CLUB_COMP_SIZE);
+        if (name && !strcmp(name, want)) return base + i * CLUB_COMP_SIZE;
     }
     return 0;
 }
@@ -382,7 +392,8 @@ void season_history_fill(const char *name, int N)
     }
     n_added = n_new;
     fprintf(stderr, "recomp: season history: %s in %d: %u rows written, %u database rows cleared, %u names not "
-                    "found, %u rows in the table (at %08x, before the grow %08x)\n", e ? e->db : "no database plan", N, n_added, n_cleared,
+                    "found, %u rows in the table (at %08x, before the grow %08x)\n", e ? e->db : name ? name : "no plan",
+            N, n_added, n_cleared,
             n_unmatched, rd32(g_mem, HISTORY_COUNT), hist, base_before);
     free(freed);
     free(nw);

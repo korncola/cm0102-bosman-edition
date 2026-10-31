@@ -96,13 +96,13 @@ RUNS = {
     "fin-2025": (2025, "December 2025", "on", 2025, None, []),
     "fin-2020": (2020, "November 2020", "on", 2022, None, []),
 }
-# The Finalissima runs (open item 67): start, database (None: 3.9.68), last season, days to the save, the rows
-# that must be there (label year, winner, runner-up; None: any teams) and the label years of every row.
-FIN = {"fin-2001": (2001, None, 2001, 14, [(1985, "France", "Uruguay"), (1993, "Argentina", "Denmark")], [1985, 1993]),
-       "fin-2025": (2025, "December 2025", 2025, 14, [(1985, "France", "Uruguay"), (1993, "Argentina", "Denmark"),
-                                                      (2022, "Argentina", "Italy")], [1985, 1993, 2022]),
-       "fin-2020": (2020, "November 2020", 2022, 700, [(1985, "France", "Uruguay"), (1993, "Argentina", "Denmark"),
-                                                       (2022, None, None)], [1985, 1993, 2022])}
+# The Finalissima runs (open item 67; start, database (None: 3.9.68), rules and last season in RUNS): days to the
+# save, the rows that must be there (label year, winner, runner-up; None: any teams) and the label years of every row.
+FIN = {"fin-2001": (14, [(1985, "France", "Uruguay"), (1993, "Argentina", "Denmark")], [1985, 1993]),
+       "fin-2025": (14, [(1985, "France", "Uruguay"), (1993, "Argentina", "Denmark"), (2022, "Argentina", "Italy")],
+                    [1985, 1993, 2022]),
+       "fin-2020": (700, [(1985, "France", "Uruguay"), (1993, "Argentina", "Denmark"), (2022, None, None)],
+                    [1985, 1993, 2022])}
 # The late runs: game days to the save, and the year of the history rows that must follow.
 LATE = {"late": (400, 2099), "late-off": (400, 2099), "late-2027": (760, 2029)}
 REPAIR_SAVE = os.environ.get("RECOMP_NL_REPAIR_SAVE") or "/Users/max/Projects/cm0102/test-fixtures/nl-asia-record-0.6.1.sav"
@@ -434,22 +434,25 @@ def late_run(program, game, name, keep, reuse):
 
 def fin_run(program, game, name, keep, reuse):
     """Runs fin-* (see the top): the Finalissima history rows of the editions before the start."""
-    start, database, last, days, want, years = FIN[name]
+    start, database, rules, last, _, _ = RUNS[name]
+    days, want, years = FIN[name]
     work = os.path.join(keep, name) if keep else tempfile.mkdtemp(prefix=f"cm0102-season-nl-{name}-")
     save = os.path.join(work, "user", smoke_run.SAVE_NAME)
     if not reuse:
         if os.path.isdir(work):                          # rrc.run makes the folders of a new game
             shutil.rmtree(work)
         code, _ = rrc.run(program, game, last, start, database_folder(database) if database else None, ["England"],
-                          [], work, 7200, {"changing_rules": "on"}, dict(BASE_ENV, RECOMP_SAVE_AFTER_DAYS=str(days)))
+                          [], work, 7200, {"changing_rules": rules}, dict(BASE_ENV, RECOMP_SAVE_AFTER_DAYS=str(days)))
         if code != 0:
             return [f"{name}: the run ended with code {code} ({work})"]
     log = open(os.path.join(work, "stderr.txt"), encoding="latin-1").read().split("\n")
     fails = [f"{name}: {x.strip()}" for x in log if "recomp: message box from" in x]
     if not os.path.exists(save):
         return fails + [f"{name}: the game did not save ({work})"]
-    if record_faults(save, work, name) is None:
+    found = record_faults(save, work, name)
+    if found is None:
         return fails + [f"{name}: the history checker did not read the save ({work}/check)"]
+    fails += [f"{name}: the history checker: {x}" for x in found]
     rows = [x.split("\t") for x in open(os.path.join(work, "check", name + ".history.tsv"), encoding="latin-1")
             .read().split("\n")[1:] if x]
     # the module renames the record "2022 Finalissima" (the rules table's name) when it makes the object
