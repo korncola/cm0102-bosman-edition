@@ -108,9 +108,45 @@ void season_intl_shift_date(int shift, int *day, int *month0, int *year);
 /* Fills the empty Euro team slots in a season game (season_intl.c): at the seeding and at the draw. */
 void season_intl_euro_fill(uint32_t self);
 
-/* The hosts of the fixed host row of a competition (its key id, the value of its key global) and an edition
- * year: up to six nation ids in the order of the table. Gives the count (slice 29: three hosts in 2026). */
+/* The hosts of the host row of a competition (its key id, the value of its key global) and an edition year: up
+ * to six nation ids in the order of the table for a fixed row (slice 29: three hosts in 2026), the chosen pair of
+ * a drawn row (choice 0 to 2, as find_hosts 0x5fa788 reads it). Gives the count; 0 for no row or a row not yet
+ * drawn (0.6.2 slice 5: the rows after the table are drawn 5 years before the finals). */
 int season_intl_host_ids(uint32_t key, int year, int ids[6]);
+
+/* ---- Hosts after the table (0.6.2 slice 5, decisions Q4, Q5, Q6, Q32; season_intl_rules.c) ---- */
+
+/* The hosts announced for an edition after the table (Q5), or NULL: the World Cup of 2034, the Euro of 2032, the
+ * Olympics of 2028 and 2032. The format of these editions is the continued one (decision A). */
+const char *season_intl_announced_hosts(const char *file, int year);
+
+/* The host of an edition with no host of its own in the history row only (the Euros of 2020 and 2028: hosts with
+ * no automatic places), or NULL. */
+const char *season_intl_history_host(const char *file, int year);
+
+/* The original's host rows of a class after the table (Q4): `rows` rows from `base` every `step` years, each
+ * moving on by rows * step years (HostCountry::init_default_table 0x5f9970, daily_update 0x5faafa). Gives 0 for a
+ * class whose hosts rotate (Q32). */
+int season_intl_host_slots(const char *file, int *base, int *step, int *rows);
+
+/* The slot (0 to rows - 1) of the original's row that an edition year takes: the rows in order, one an edition. */
+int season_intl_host_slot(const char *file, int year);
+
+/* Q32: the nations that hosted a class in the table, each once in the order of their first edition, those that
+ * still exist; `alive` says it of a host name ("a/b" names one nation). Gives the host of rotation step k (from 0),
+ * or NULL for none. The name lives in a buffer that the next call writes again, in the same order. */
+const char *season_intl_rotation_host(const char *file, int k, int (*alive)(const char *name));
+
+/* The rotation step of an edition after the table: its count of editions after the last table edition, from 0. */
+int season_intl_rotation_step(const char *file, int year);
+
+/* Q6: the pair a draw takes, from the original's draw r (0 to 2) and the pairs that name only nations that exist
+ * (valid[k] 1): the drawn pair when valid, else a valid pair chosen by redraw (0 to the count of valid pairs - 1)
+ * among the other pairs. -1 when no pair is valid (then the host rotates, Q32). */
+int season_intl_pick_pair(const int valid[3], int r, int redraw);
+
+/* The game's test of a host name, for the rotation of season_intl_edition (season_intl.c sets it; NULL: all live). */
+void season_intl_set_alive(int (*alive)(const char *name));
 
 /* The inter-confederation ties of the World Cup of a year that this run built (season_intl_qual.c): up to max
  * pairs into teams (two teams each). Gives the pair count. */

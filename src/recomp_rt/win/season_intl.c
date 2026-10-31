@@ -251,8 +251,10 @@ int season_intl_host_ids(uint32_t key, int year, int ids[6])
     for (int k = 0; k < 6; k++) ids[k] = -1;
     if (!readable(rows) || count <= 0 || count > 1000) return 0;
     uint32_t row = row_find(rows, count, key, year);
-    if (!row || rd8(g_mem, row + ROW_CHOICE) != CHOICE_FIXED) return 0;
-    for (int k = 0; k < 6; k++) {
+    int choice = row ? rd8(g_mem, row + ROW_CHOICE) : -1;
+    if (choice != CHOICE_FIXED && (choice < 0 || choice > 2)) return 0;
+    int from = choice == CHOICE_FIXED ? 0 : 2 * choice, to = choice == CHOICE_FIXED ? 6 : from + 2;
+    for (int k = from; k < to; k++) {
         int id = (int)rd32(g_mem, row + ROW_PAIRS + 4u * (uint32_t)k);
         if (nation_valid(id)) ids[n++] = id;
     }

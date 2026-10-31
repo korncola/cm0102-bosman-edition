@@ -76,8 +76,107 @@ static const SeasonIntlEdition *table_last(const char *file, int *cycle)
 /* The year field of a class is a 16-bit signed word (+0x40): no edition after this year. */
 #define LAST_EDITION_YEAR 32767
 
+/* ---- Hosts after the table (0.6.2 slice 5) ---- */
+
+/* Q5: the hosts announced for editions after the table, each checked against its source
+ * (docs/research/2026-10-31-hosts-after-table.md): FIFA Congress of 11 December 2024, UEFA Executive Committee of
+ * 10 October 2023, the IOC elections of 2017 and 2021. */
+static const struct { const char *file; int year; const char *hosts; } announced[] = {
+    {"world_cup", 2034, "Saudi Arabia"},
+    {"euro_champ", 2032, "Italy;Turkey/T\xfcrkiye"},
+    {"olympics", 2028, "United States/USA"},
+    {"olympics", 2032, "Australia"},
+};
+
+const char *season_intl_announced_hosts(const char *file, int year)
+{
+    for (size_t i = 0; i < sizeof announced / sizeof announced[0]; i++)
+        if (announced[i].year == year && !strcmp(announced[i].file, file)) return announced[i].hosts;
+    return NULL;
+}
+
+/* The Euros of 2020 (eleven host nations) and 2028 (five) have no host in the table, so that no host takes an
+ * automatic place (UEFA gave none in 2020). The history row names the nation of the final: Wembley, England, in
+ * both (UEFA, 2021 and 10 October 2023). */
+const char *season_intl_history_host(const char *file, int year)
+{
+    if (!strcmp(file, "euro_champ") && (year == 2020 || year == 2028)) return "England";
+    return NULL;
+}
+
+/* Q4: the original's rows (host-rule.md, read in HostCountry::init_default_table 0x5f9970): the World Cup 1998 to
+ * 2026 (0x5f99bb), the Euro (0x5f9c09) and the Olympics (0x5f9ff2) 2000 to 2028, every 4 years, moving on 32; the
+ * Africa Cup of Nations 2000 to 2014 every 2 years, moving on 16 (0x5f9eb7). The Copa America and Asian Cup rows
+ * move on by a step that does not fit their cycle, and the Gold Cup and OFC Nations Cup have none: they rotate
+ * (Q32). */
+static const struct { const char *file; int base, step, rows; } slots[] = {
+    {"world_cup", 1998, 4, 8}, {"euro_champ", 2000, 4, 8}, {"olympics", 2000, 4, 8}, {"african_nations", 2000, 2, 8},
+};
+
+int season_intl_host_slots(const char *file, int *base, int *step, int *rows)
+{
+    for (size_t i = 0; i < sizeof slots / sizeof slots[0]; i++)
+        if (!strcmp(slots[i].file, file)) {
+            *base = slots[i].base;
+            *step = slots[i].step;
+            *rows = slots[i].rows;
+            return 1;
+        }
+    return 0;
+}
+
+int season_intl_host_slot(const char *file, int year)
+{
+    int base, step, rows;
+    if (!season_intl_host_slots(file, &base, &step, &rows)) return -1;
+    int k = (year - base) / step;                       /* the editions of odd years after 2027 take the rows in order */
+    return ((k % rows) + rows) % rows;
+}
+
+static int (*host_alive)(const char *name);
+
+void season_intl_set_alive(int (*alive)(const char *name)) { host_alive = alive; }
+
+const char *season_intl_rotation_host(const char *file, int k, int (*alive)(const char *name))
+{
+    static char names[64][64];
+    int n = 0;
+    for (int i = 0; i < season_intl_edition_count && n < 64; i++) {
+        const SeasonIntlEdition *e = &season_intl_editions[i];
+        if (strcmp(e->file, file)) continue;
+        for (const char *p = e->hosts; *p && n < 64;) {
+            size_t len = strcspn(p, ";");
+            char one[64];
+            snprintf(one, sizeof one, "%.*s", (int)len, p);
+            int seen = 0;
+            for (int j = 0; j < n && !seen; j++) seen = !strcmp(names[j], one);
+            if (!seen && (!alive || alive(one))) snprintf(names[n++], sizeof names[0], "%s", one);
+            p += len;
+            if (*p == ';') p++;
+        }
+    }
+    return n && k >= 0 ? names[k % n] : NULL;
+}
+
+int season_intl_rotation_step(const char *file, int year)
+{
+    int cycle;
+    const SeasonIntlEdition *last = table_last(file, &cycle);
+    return last && cycle > 0 && year > last->year ? (year - last->year) / cycle - 1 : -1;
+}
+
+int season_intl_pick_pair(const int valid[3], int r, int redraw)
+{
+    if (r >= 0 && r < 3 && valid[r]) return r;
+    int others[3], n = 0;
+    for (int k = 0; k < 3; k++)
+        if (valid[k] && k != r) others[n++] = k;
+    return n ? others[((redraw % n) + n) % n] : -1;
+}
+
 /* The edition of a year after the table: a copy of the last table edition (teams, first day of the year, no
- * golden goal) on the class's cycle, with no host (the hosts after the table are slice 5). The copies live in a
+ * golden goal) on the class's cycle. Its hosts: the announced ones (Q5), the rotation host of a class whose hosts
+ * rotate (Q32), else none here: the host row of the year gives them (Q4, season_intl.c). The copies live in a
  * ring, so a pointer stays good for the next 31 calls; every caller reads it at once. */
 static const SeasonIntlEdition *continued(const char *file, int year)
 {
@@ -94,7 +193,13 @@ static const SeasonIntlEdition *continued(const char *file, int year)
     e->season = year - (last->year - last->season);
     e->start_year = year + (last->start_year - last->year);
     e->golden = 0;
-    e->hosts = "";
+    e->hosts = season_intl_announced_hosts(file, year);
+    if (!e->hosts) {
+        int base, step, rows;
+        e->hosts = season_intl_host_slots(file, &base, &step, &rows) ? NULL
+                   : season_intl_rotation_host(file, season_intl_rotation_step(file, year), host_alive);
+    }
+    if (!e->hosts) e->hosts = "";
     e->row = "after-table";
     return e;
 }
