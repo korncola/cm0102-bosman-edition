@@ -438,9 +438,14 @@ static void plan_write(uint32_t row, const PlannedRow *p, int from)
         for (int k = 0; k < 6; k++) wr32(g_mem, row + ROW_PAIRS + 4u * (uint32_t)k, (uint32_t)p->pairs[k]);
         wr8(g_mem, row + ROW_CHOICE, (uint8_t)p->choice);
         wr16(g_mem, row + ROW_DAY, (uint16_t)p->day);
-        /* A fixed row of the original (the Africa Cup of Nations, the Olympics up to 2028) whose host no longer
-         * exists takes the rotation host (Q6, Q32). */
-        if (p->choice == CHOICE_FIXED && !pair_valid(row, 0)) row_rotate(row);
+        /* A fixed row of the original (the Africa Cup of Nations, the Olympics up to 2028): find_hosts reads its
+         * pair 1 only (0x5fa730), while season_intl_host_ids reads all six fields of a fixed row (more hosts of the
+         * table, slice 29), so the original's other pairs go (they gave Afghanistan as a third ACN host). A host
+         * that no longer exists takes the rotation host (Q6, Q32). */
+        if (p->choice == CHOICE_FIXED) {
+            for (int k = 2; k < 6; k++) wr32(g_mem, row + ROW_PAIRS + 4u * (uint32_t)k, 0xffffffffu);
+            if (!pair_valid(row, 0)) row_rotate(row);
+        }
         /* A row whose draw day lies before the start (a date jump) is drawn now, as daily_update would have. */
         if (p->choice == CHOICE_OPEN && p->year - 5 <= from) {
             uint32_t a[1] = {3};
