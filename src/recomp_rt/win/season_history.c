@@ -15,6 +15,8 @@
 #include "win.h"
 #include "season.h"
 #include "season_history.h"
+#include "season_change.h"
+#include "season_comps.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +34,7 @@
 #define CLUB_COMPS_PTR 0xae23d0u   /* the club competition records */
 #define CLUB_COMP_COUNT 0xae2378u
 #define CLUB_COMP_SIZE 0x6bu
+#define FRIENDLY_RECORDS 0x7fu     /* the last records belong to the friendly object (new-comp-records doc 1.6) */
 
 #define GROW_HISTORY 0x00527f60u   /* database_grow_comp_history_table (count): blank rows at the end, 1 on success */
 #define GAME_DAY 0xae2c90u          /* s16, the day of the year of the game date (from 0) */
@@ -260,15 +263,64 @@ static void drop_duplicates(void)
     }
 }
 
+/* Open item 74 (0.6.2, the forum): the past editions of a competition whose record the season code adds
+ * (season_comps.h, `like`), so no database holds its history. A row goes in when its label year is not after
+ * the start year N (a game from 2021/22 plays the 2022 Finalissima itself). Source: Wikipedia, "Finalissima",
+ * Results (31 October 2026): 1985 France 2-0 Uruguay, Parc des Princes, Paris; 1993 Argentina 1-1 Denmark,
+ * Argentina on penalties, Mar del Plata; 2022 Argentina 3-0 Italy, Wembley Stadium, London. No host, as the
+ * game's own edition writes none (the class's history row, season_gold_cup.c; competitions.tsv has_host 0). */
+static const SeasonHistRow new_comp_rows[] = {
+    {"Finalissima", 1985, {"France", "Uruguay", "", ""}, {"France", "Uruguay", "", ""}},
+    {"Finalissima", 1993, {"Argentina", "Denmark", "", ""}, {"Argentina", "Denmark", "", ""}},
+    {"Finalissima", 2022, {"Argentina", "Italy", "", ""}, {"Argentina", "Italy", "", ""}},
+};
+#define NEW_COMP_ROWS ((uint32_t)(sizeof new_comp_rows / sizeof new_comp_rows[0]))
+
+/* The record that the season code added (season_comps.h: the last records of the nation block, before the 0x7f
+ * friendly records) with this name in the data, or 0. Never in the base game: it adds none, and a Custom
+ * database's own record of that name is left alone there (Q152). */
+static uint32_t find_record(const char *want)
+{
+    /* the base game test of the module's own record pass (wanted, season_comps.c): at the load the rules flag
+     * of the game is not set yet, so season_comps_on() would say no for a 2001 game with changing rules on */
+    if (!season_code_on() || (season_start_year() == SEASON_FIRST_YEAR && !season_next_rules())) return 0;
+    uint32_t base = rd32(g_mem, CLUB_COMPS_PTR), n = rd32(g_mem, CLUB_COMP_COUNT);
+    uint32_t k = (uint32_t)season_comps_added_records();
+    if (!base || n < FRIENDLY_RECORDS + k || n > 100000u) return 0;
+    for (uint32_t i = n - FRIENDLY_RECORDS - k; i < n - FRIENDLY_RECORDS; i++) {
+        const char *name = season_change_data_name(base + i * CLUB_COMP_SIZE);
+        if (name && !strcmp(name, want)) return base + i * CLUB_COMP_SIZE;
+    }
+    return 0;
+}
+
+/* 1 when the table holds a row of this competition and label year. */
+static int has_row(uint32_t hist, uint32_t count, uint32_t comp, uint16_t label)
+{
+    for (uint32_t i = 0; i < count; i++)
+        if (rd32(g_mem, hist + i * HISTORY_SIZE + 4) == comp && rd16(g_mem, hist + i * HISTORY_SIZE + 8) == label)
+            return 1;
+    return 0;
+}
+
 void season_history_fill(const char *name, int N)
 {
     season_history_undo();
     saved_n = 0;
     n_added = n_cleared = n_unmatched = n_duplicates = 0;
-    drop_duplicates();
-    const SeasonHistDb *e = entry_for(name, N);
-    if (!e) return;
     uint32_t hist = rd32(g_mem, HISTORY_PTR), count = rd32(g_mem, HISTORY_COUNT);
+    /* The rows of the added records that this game takes (none in the base game: it adds no record). */
+    const SeasonHistRow *extra[NEW_COMP_ROWS];
+    uint32_t n_extra = 0;
+    for (uint32_t k = 0; hist && k < NEW_COMP_ROWS; k++) {
+        uint32_t c = new_comp_rows[k].label <= N ? find_record(new_comp_rows[k].comp) : 0;
+        if (c && !has_row(hist, count, c, new_comp_rows[k].label)) extra[n_extra++] = &new_comp_rows[k];
+    }
+    if (name) drop_duplicates();
+    const SeasonHistDb *e = name ? entry_for(name, N) : NULL;
+    if (!e && !n_extra) return;
+    hist = rd32(g_mem, HISTORY_PTR);
+    count = rd32(g_mem, HISTORY_COUNT);
     uint32_t clubs = rd32(g_mem, CLUBS_PTR), n_clubs = rd32(g_mem, CLUB_COUNT);
     if (!hist || !clubs) return;
     index_comps(hist, count);
@@ -278,13 +330,14 @@ void season_history_fill(const char *name, int N)
      * year (dropped). */
     index_clubs(clubs, n_clubs);
     typedef struct { uint32_t comp, place[4]; uint16_t label; } New;
-    New *nw = malloc((e->n_rows + 1) * sizeof *nw);
+    uint32_t n_rows = (e ? e->n_rows : 0) + n_extra;
+    New *nw = malloc((n_rows + 1) * sizeof *nw);
     uint32_t n_new = 0, n_dropped = 0;
     typedef struct { uint32_t comp; uint16_t label; } Key;
-    Key *dropped = malloc((e->n_rows + 1) * sizeof *dropped);
+    Key *dropped = malloc((n_rows + 1) * sizeof *dropped);
     if (!nw || !dropped) rt_fatal("season history: no memory");
-    for (uint32_t k = 0; k < e->n_rows; k++) {
-        const SeasonHistRow *row = &e->rows[k];
+    for (uint32_t k = 0; k < n_rows; k++) {
+        const SeasonHistRow *row = e && k < e->n_rows ? &e->rows[k] : extra[k - (e ? e->n_rows : 0)];
         uint32_t c = find_comp(row->comp);
         if (!c) continue;
         int missing[4] = {0, 0, 0, 0};
@@ -318,7 +371,7 @@ void season_history_fill(const char *name, int N)
         int keep = 0;
         for (uint32_t k = 0; k < n_dropped && !keep; k++) keep = dropped[k].comp == c && dropped[k].label == y;
         if (keep) continue;
-        for (uint32_t k = 0; k < e->n_clears; k++)
+        for (uint32_t k = 0; e && k < e->n_clears; k++)
             if (e->clears[k].label == y && find_comp(e->clears[k].comp) == c) { freed[n_freed++] = i; break; }
     }
     free(dropped);
@@ -350,7 +403,8 @@ void season_history_fill(const char *name, int N)
     }
     n_added = n_new;
     fprintf(stderr, "recomp: season history: %s in %d: %u rows written, %u database rows cleared, %u names not "
-                    "found, %u rows in the table (at %08x, before the grow %08x)\n", e->db, N, n_added, n_cleared,
+                    "found, %u rows in the table (at %08x, before the grow %08x)\n", e ? e->db : name ? name : "no plan",
+            N, n_added, n_cleared,
             n_unmatched, rd32(g_mem, HISTORY_COUNT), hist, base_before);
     free(freed);
     free(nw);

@@ -15,8 +15,14 @@
  * docs/research/2026-10-17-competition-history-fill.md).
  *
  * It runs from season_dates.c, right after the shift, and it is undone with the shift when the shift is made
- * again for another year. It does nothing in the base game (start 2001), for a start year that is not the
- * season of the database, for a Custom database, and with RECOMP_SEASON_CODE=off.
+ * again for another year. The researched rows come only for a start year that is the season of the database,
+ * not for a Custom database. Nothing runs with RECOMP_SEASON_CODE=off.
+ *
+ * The records that the season code adds (open item 74, 0.6.2). No database holds the history of a competition
+ * whose record the season code adds (season_comps.h, `like`), such as the Finalissima. In every season game,
+ * with a shift plan or without one (a 2001 game with changing rules on), the fill writes the past editions of
+ * such a record whose label year is not after the start year (season_history.c, new_comp_rows). The base game
+ * adds no record, so nothing changes there.
  *
  * Duplicate rows. Many season databases hold the same history row twice: the same competition, label year and
  * four places (September 2010 ODB: 175 rows, among them the English Premier Division 2001 Chelsea / Manchester
@@ -70,8 +76,8 @@ extern const SeasonHistDb season_history_dbs[];          /* season_history_table
 extern const int season_history_dbs_count;
 
 /* After the shift of a database load or a new shift (season_dates.c): the rows of database `name` for start
- * year N: first the duplicate rows go (above), then the researched rows. Nothing more when the table has no
- * entry for that database and year. */
+ * year N: first the duplicate rows go (above), then the researched rows and the rows of the added records.
+ * name NULL (no shift plan): only the rows of the added records. */
 void season_history_fill(const char *name, int N);
 
 /* At the creation of a new game, after the shift and the fill: clears every row with a label after S (above), and
