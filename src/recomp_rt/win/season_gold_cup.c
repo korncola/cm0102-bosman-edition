@@ -219,9 +219,12 @@ static const char *gold_rotation(int k, int (*alive)(const char *), int *n)
     return m && k >= 0 ? names[k % m] : NULL;
 }
 
+static int host_alive(const char *name);
+
 /* The Gold Cup of a year in this game. With changing rules on, the table's edition; after the table's last
- * edition the last one again every two years (Q248), its host the next of the rotation (Q32). With changing rules off, the first edition from the start
- * season on, again every two years (Q232). NULL for a year with no edition. */
+ * edition the last one again every two years (Q248), its host the next of the rotation (Q32). With changing rules
+ * off, the first edition from the start season on, again every two years (Q232). NULL for a year with no
+ * edition. */
 static const SeasonNlGoldCup *gold_edition(int year)
 {
     const SeasonNlGoldCup *base = NULL;
@@ -241,7 +244,7 @@ static const SeasonNlGoldCup *gold_edition(int year)
     repeat = *base;
     repeat.year = year;
     int n;
-    const char *host = season_changing_rules() ? gold_rotation((year - base->year) / 2 - 1, NULL, &n) : NULL;
+    const char *host = season_changing_rules() ? gold_rotation((year - base->year) / 2 - 1, host_alive, &n) : NULL;
     if (host) repeat.hosts = host;
     return &repeat;
 }
@@ -362,8 +365,8 @@ static int nation_by_name(const char *name)
  * fixed, no move, as slice 27 writes the rows of the Copa America (season_intl.c row_write). The rows are in the
  * save with the rest of the host table. After the table (0.6.2 slice 5, open item 12; up to 0.6.1 the rows stopped
  * at 2031): one row for each host of the rotation (Q32), each moving on by all of them, as the original's
- * daily_update moves a row on 1 January once past (0x5faafa); with changing rules off, four rows of the start
- * edition's hosts, moving on 8 years. So a row holds for every later edition. */
+ * daily_update moves a row on 1 January once past (0x5faafa), so a row holds for every later edition. A load
+ * adds the rows that a save of 0.6.1 or before lacks. Changing rules off keeps the rows of 0.6.1 (to 2031). */
 static int host_alive(const char *name)
 {
     int id = nation_by_name(name);
@@ -391,9 +394,9 @@ static void gold_host_rows(uint32_t rec, int from)
             plan[n].hosts = plan[n].rot;
             plan[n].year = y, plan[n++].cycle = 2 * rn <= 127 ? 2 * rn : 0;
         }
-    } else {
-        for (int y = from; y <= from + 40 && n < 4; y++)
-            if (gold_edition(y)) plan[n].year = y, plan[n].cycle = 8, plan[n++].hosts = gold_edition(y)->hosts;
+    } else {                                    /* as up to 0.6.1: changing rules off keeps the start's rules */
+        for (int y = from; y <= 2031 && n < 40; y++)
+            if (gold_edition(y)) plan[n].year = y, plan[n].cycle = 0, plan[n++].hosts = gold_edition(y)->hosts;
     }
     int years[40], m0 = 0;
     for (int k = 0; k < n; k++) {
@@ -474,7 +477,7 @@ static uint32_t gold_make(const SeasonCompDef *d, uint32_t rec, int year, int lo
     making_rec = 0;
     if (rt_unwinding || !readable(obj)) return 0;
     wr32(g_mem, obj, v);
-    if (!loading) gold_host_rows(rec, y);
+    gold_host_rows(rec, y);                     /* a load adds only the rows that the save lacks */
     if (rt_unwinding) return 0;
     if (logging()) {
         const SeasonNlGoldCup *g = gold_edition(year_of(obj));

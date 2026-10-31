@@ -140,9 +140,13 @@ int season_intl_host_slots(const char *file, int *base, int *step, int *rows);
 int season_intl_host_slot(const char *file, int year);
 
 /* Q32: the nations that hosted a class in the table, each once in the order of their first edition, those that
- * still exist; `alive` says it of a host name ("a/b" names one nation). Gives the host of rotation step k (from 0),
+ * still exist and are still in the class's confederation; `alive` says it of a host name ("a/b" names one
+ * nation) for a class. Gives the host of rotation step k (from 0),
  * or NULL for none. The name lives in a buffer that the next call writes again, in the same order. */
-const char *season_intl_rotation_host(const char *file, int k, int (*alive)(const char *name));
+const char *season_intl_rotation_host(const char *file, int k, int (*alive)(const char *file, const char *name));
+
+/* The count of the hosts of the rotation of a class (Q32). */
+int season_intl_rotation_count(const char *file, int (*alive)(const char *file, const char *name));
 
 /* The rotation step of an edition after the table: its count of editions after the last table edition, from 0. */
 int season_intl_rotation_step(const char *file, int year);
@@ -153,7 +157,7 @@ int season_intl_rotation_step(const char *file, int year);
 int season_intl_pick_pair(const int valid[3], int r, int redraw);
 
 /* The game's test of a host name, for the rotation of season_intl_edition (season_intl.c sets it; NULL: all live). */
-void season_intl_set_alive(int (*alive)(const char *name));
+void season_intl_set_alive(int (*alive)(const char *file, const char *name));
 
 /* The inter-confederation ties of the World Cup of a year that this run built (season_intl_qual.c): up to max
  * pairs into teams (two teams each). Gives the pair count. */

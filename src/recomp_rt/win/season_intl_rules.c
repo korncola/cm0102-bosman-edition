@@ -133,11 +133,11 @@ int season_intl_host_slot(const char *file, int year)
     return ((k % rows) + rows) % rows;
 }
 
-static int (*host_alive)(const char *name);
+static int (*host_alive)(const char *file, const char *name);
 
-void season_intl_set_alive(int (*alive)(const char *name)) { host_alive = alive; }
+void season_intl_set_alive(int (*alive)(const char *file, const char *name)) { host_alive = alive; }
 
-const char *season_intl_rotation_host(const char *file, int k, int (*alive)(const char *name))
+const char *season_intl_rotation_host(const char *file, int k, int (*alive)(const char *file, const char *name))
 {
     static char names[64][64];
     int n = 0;
@@ -150,12 +150,25 @@ const char *season_intl_rotation_host(const char *file, int k, int (*alive)(cons
             snprintf(one, sizeof one, "%.*s", (int)len, p);
             int seen = 0;
             for (int j = 0; j < n && !seen; j++) seen = !strcmp(names[j], one);
-            if (!seen && (!alive || alive(one))) snprintf(names[n++], sizeof names[0], "%s", one);
+            if (!seen && (!alive || alive(file, one))) snprintf(names[n++], sizeof names[0], "%s", one);
             p += len;
             if (*p == ';') p++;
         }
     }
     return n && k >= 0 ? names[k % n] : NULL;
+}
+
+int season_intl_rotation_count(const char *file, int (*alive)(const char *file, const char *name))
+{
+    int n = 0;
+    while (n < 64 && season_intl_rotation_host(file, n, alive)) {
+        char first[64], now[64];
+        snprintf(now, sizeof now, "%s", season_intl_rotation_host(file, n, alive));
+        snprintf(first, sizeof first, "%s", season_intl_rotation_host(file, 0, alive));
+        if (n && !strcmp(now, first)) break;
+        n++;
+    }
+    return n;
 }
 
 int season_intl_rotation_step(const char *file, int year)
@@ -181,12 +194,14 @@ int season_intl_pick_pair(const int valid[3], int r, int redraw)
 static const SeasonIntlEdition *continued(const char *file, int year)
 {
     static SeasonIntlEdition ring[32];
+    static char ring_hosts[32][128];
     static int next;
     int cycle;
     const SeasonIntlEdition *last = table_last(file, &cycle);
     if (!last || cycle <= 0 || year <= last->year || year > LAST_EDITION_YEAR || (year - last->year) % cycle)
         return NULL;
     SeasonIntlEdition *e = &ring[next];
+    char *hosts = ring_hosts[next];
     next = (next + 1) % (int)(sizeof ring / sizeof ring[0]);
     *e = *last;
     e->year = year;
@@ -199,7 +214,8 @@ static const SeasonIntlEdition *continued(const char *file, int year)
         e->hosts = season_intl_host_slots(file, &base, &step, &rows) ? NULL
                    : season_intl_rotation_host(file, season_intl_rotation_step(file, year), host_alive);
     }
-    if (!e->hosts) e->hosts = "";
+    snprintf(hosts, sizeof ring_hosts[0], "%s", e->hosts ? e->hosts : "");
+    e->hosts = hosts;                       /* the rotation's buffer changes with the next call */
     e->row = "after-table";
     return e;
 }
