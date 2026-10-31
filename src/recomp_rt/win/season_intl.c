@@ -1294,6 +1294,8 @@ static void intl_sides(int start_year)
 #define COMP_TABLE 0xadadfcu
 #define DRAW_DAY 0xb6u                  /* the draw day word and its s16 year offset from +0x40 (fix_offsets) */
 #define DRAW_OFFSET 0xb8u
+#define FINALS_DAY 120                  /* a World Cup or Euro after the table starts in June: before day 120 of its
+                                           year its qualifying's finals are still to come */
 static const struct { uint32_t cls, new_season; int step; } repair_classes[] = {
     {INTL_WORLD_CUP, 0x0092d330u, 4}, {INTL_EURO, 0x0057b750u, 4}, {INTL_CONFED, 0x0058bff0u, 2},
     {INTL_COPA, 0x005e1530u, 2}, {INTL_ACN, 0x00401d20u, 2}, {INTL_ASIAN, 0x0040f720u, 4},
@@ -1367,16 +1369,38 @@ static void repair_idle(void)
         const char *file = season_intl_class_file(cls);
         int step = repair_classes[k].step;
         /* The World Cup and the Euro restart their qualifying in start_new_season (the six sections at 0x92d34f
-         * to 0x92d3ae, the Euro qualifying 0x9cf784 at 0x57b76f), and a qualifying object steps its campaign by 4
-         * until it reaches the game's year (0x919499..0x9194c2, 0x57eba3..0x57ebb9): the finals two years after
-         * that campaign. The other classes take the first edition from the save's year whose draw is still to
+         * to 0x92d3ae, the Euro qualifying 0x9cf784 at 0x57b76f). A qualifying object is a competition of its own:
+         * it starts its next campaign when it is complete, and steps its campaign by 4 until it reaches the
+         * game's year (0x919499..0x9194c2, 0x57eba3..0x57ebb9). In a save of 0.6.1 it can be in the middle of a
+         * campaign: a restart now would leave that campaign's matches, which then reach a stage that is gone
+         * (EuroChampQual::add_result 0x57ffd0, box "league..cpp 3214" in March 2099 of the 0.6.1 fixture). So
+         * the qualifying objects are held while the finals restart, and the finals take the edition of the
+         * running campaign (two years after it) while its finals are still to come, else the edition after the
+         * next campaign. The other classes take the first edition from the save's year whose draw is still to
          * come. */
-        int with_qual = cls == INTL_WORLD_CUP || cls == INTL_EURO;
-        int target = cls == INTL_CONFED ? NEVER_YEAR : repair_target(k, with_qual ? today_year + 2 : today_year);
+        int with_qual = cls == INTL_WORLD_CUP || cls == INTL_EURO, target = 0, n_quals = 0;
+        uint32_t quals[6];
+        if (with_qual) {
+            static const uint32_t wc_keys[6] = {0x9cf770u, 0x9cf76cu, 0x9cf774u, 0x9cf778u, 0x9cf77cu, 0x9cf780u};
+            for (int q = 0; q < (cls == INTL_WORLD_CUP ? 6 : 1); q++) {
+                uint32_t key = cls == INTL_WORLD_CUP ? wc_keys[q] : 0x9cf784u, id = rd32(g_mem, key);
+                uint32_t qo = id < (uint32_t)slots ? rd32(g_mem, table + 4u * id) : 0;
+                if (readable(qo)) quals[n_quals++] = qo;
+            }
+            int campaign = n_quals ? (int16_t)rd16(g_mem, quals[n_quals - 1] + 0x40u) : 0;
+            int today = (int16_t)rd16(g_mem, GAME_DATE);
+            if (campaign && (campaign + 2 > today_year || (campaign + 2 == today_year && today < FINALS_DAY)))
+                target = repair_target(k, campaign + 2) == campaign + 2 ? campaign + 2 : 0;
+            if (!target) target = repair_target(k, today_year + 2);
+        } else {
+            target = cls == INTL_CONFED ? NEVER_YEAR : repair_target(k, today_year);
+        }
         if (!target) continue;
         int before = season_changing_rules() && cls != INTL_CONFED ? target - 1 : target - step;
         wr16(g_mem, obj + 0x40u, (uint16_t)before);
+        for (int q = 0; q < n_quals; q++) season_change_hold(quals[q], 1);
         new_season(obj, repair_classes[k].new_season);
+        for (int q = 0; q < n_quals; q++) season_change_hold(quals[q], 0);
         for (int more = 0; more < 3 && !rt_unwinding && !with_qual && cls != INTL_CONFED && draw_passed(obj); more++)
             new_season(obj, repair_classes[k].new_season);
         if (rt_unwinding) return;
