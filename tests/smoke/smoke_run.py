@@ -224,7 +224,7 @@ SAME_SAVE_RUNS = [
     # normal, a 2001/02 game with changing rules off. From slice 13 the base game of 0.6.0 is the reference.
     ("season-code-off", {"faster_days": "off", "_env": {"RECOMP_SEASON_CODE": "off"}}),
     # Q48 (0.6.2 slice 7): the reference built from the decision, the game with the history fix off
-    # (RECOMP_HISTORY_AFTER_START=off, season_history.c). See Q48_RUNS.
+    # (RECOMP_HISTORY_AFTER_START=off, season_history.c). See q48_runs.
     ("history-q48-off", {"faster_days": "off", "_env": {"RECOMP_HISTORY_AFTER_START": "off"}}),
     # The season change (0.6.0 slice 16) calls no rule kind in the base game (2001, changing rules off): with the
     # test kind that writes the game in every hook (RECOMP_SEASON_CHANGE_TEST=write) the save is that of normal.
