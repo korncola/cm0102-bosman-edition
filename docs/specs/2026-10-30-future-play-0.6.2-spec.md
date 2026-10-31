@@ -161,10 +161,10 @@ Merge danger: two-way door, tests only. Blast radius: false passes or false faul
 Blocked by: 1, 2
 Delivers: a test switch that skips the work in the decisions above and gives instant results from reputation. It measures the time per year.
 Merge danger: two-way door. Off by default. Blast radius: none for players if the same-save set passes.
-- [ ] 10 years from a 2013 start and 10 years from a 2098 date jump, each in Tier A and in the normal game, agree on editions, dates, hosts and entrant rules.
+- [x] 10 years from a 2013 start and 10 years from a 2098 date jump, each in Tier A and in the normal game, agree on editions, dates, hosts and entrant rules.
 - [ ] Each nation keeps eligible under-21 and under-23 players in 2050 and 2100 of a Tier A run.
-- [ ] Same-save set PASS with the switch off.
-- [ ] The time per year is measured and reported.
+- [x] Same-save set PASS with the switch off.
+- [x] The time per year is measured and reported.
 
 ### 4a. International finals continue
 Blocked by: 1, 2, 3
