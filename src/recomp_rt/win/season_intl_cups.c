@@ -82,12 +82,13 @@ static const struct {
     int id_base;                        /* id of a group template: index + base (0x40131c, 0x40eb40) */
     int third_place;                    /* 24 teams: 1 when the knockout has a third-place match */
     int top4[4];                        /* predicted positions 1 to 4 (0x4028d2.., 0x4104a2..) */
-    Round qf, sf, third, final;         /* the original's knockout template */
+    Round qf, sf, final, third;         /* the original's knockout template, rounds 0 to 3 */
     const char *bracket[16];            /* round of 16 in pair order: "1A" winner, "2A" runner-up, "3A" the
                                            third that meets the winner of A */
 } cups[CUPS] = {
     /* ACN template 0x4012e0, knockout from 0x401616: quarter-final 0x4016b8..0x401781, semi-final
-     * 0x401784..0x401849, third place 0x40184f..0x4018ed, final 0x4018f3..0x401994 (month 1 = February). */
+     * 0x401784..0x401849, final 0x40184f..0x4018ed (round 2, value 0x96 at 0x40187e), third place
+     * 0x4018f3..0x401994 (round 3, value 0x8c at 0x401925) (month 1 = February). */
     {"african_nations", INTL_ACN, 0x967270u, 4, 3, 0x3e9, 1, {1, 2, 3, 4},
      {{18, 1, 2}, {21, 1, 5}, 1, 1, 4, {{4, 2, 0x80}, {5, 1, 4}, {5, 2, 0x40}, {6, 1, 0x40}}, 0x78, 0x303},
      {{23, 1, 0}, {25, 1, 2}, 1, 1, 2, {{2, 1, 4}, {2, 2, 0x80}}, 0x82, 0x303},
@@ -96,7 +97,12 @@ static const struct {
      /* 2019: QF 38-41, 42-39, 43-40, 37-44, SF QF1-QF4, QF2-QF3, so this order pairs the semi-finals */
      {"2A", "2C", "1D", "3D", "1B", "3B", "1F", "2E", "2B", "2F", "1A", "3A", "1E", "2D", "1C", "3C"}},
     /* Asian Cup template 0x40eb00, knockout from 0x40edb1: quarter-final 0x40ee4a..0x40ef07, semi-final
-     * 0x40ef13..0x40efbe, third place 0x40efd6..0x40f05b, final 0x40f073..0x40f113 (month 9 = October). */
+     * 0x40ef13..0x40efbe, final 0x40efd6..0x40f05b (round 2, value 0x96 at 0x40f002), third place
+     * 0x40f073..0x40f113 (round 3, value 0x8c at 0x40f0bf) (month 9 = October). The final is the round of value
+     * 0x96 as in the Euro (season_intl_euro.c, 0x57b114) and the third-place match follows it. Up to 0.6.1 this
+     * table named the two the other way round, so the Asian Cup of 24, which has no third-place match, ended with
+     * the third-place round, had no final and never ended (0.6.2 open item 54: the Asian Cup 2099 of a 2098
+     * date jump, run-logs/0.6.2-s4a/j2098g). */
     {"asia_nations", INTL_ASIAN, 0x967614u, 3, 2, 0x420, 0, {1, 2, 3, 3},
      {{21, 9, 5}, {23, 9, 0}, 1, 1, 4, {{0, 2, 0x40}, {0, 1, 4}, {1, 2, 0x40}, {1, 1, 4}}, 0x78, 0x303},
      {{25, 9, 2}, {26, 9, 3}, 2, 1, 2, {{3, 2, 0x40}, {3, 1, 4}}, 0x82, 3},
@@ -332,7 +338,8 @@ static void put_round(uint32_t rec, int round, const Round *o, int shift, int te
  * add_fixture 0x5aa680 moved the match (Jordan v Uzbekistan, Asian Cup 2099 of a 2098 date jump, day 28 to day 34,
  * run-logs/0.6.2-s4a/j2099e.out). 12 days keeps the weekdays of 5 a week later. Inference: in 2019 both finals played
  * the round of 16 from 3 to 6 days after the groups. The table's first day moves all dates (the date shift of the
- * caller). The Asian Cup of 24 has no third-place match: R16, QF, SF, F (4 rounds), the ACN 5 rounds.
+ * caller). The Asian Cup of 24 has no third-place match: R16, QF, SF, F (4 rounds); the ACN R16, QF, SF, F, third
+ * place (5), the original's order.
  * All rounds move by whole weeks when the groups end too late for the round of 16 (rest_delay below). */
 #define LATER_ROUNDS 12                 /* days by which the quarter-finals and later rounds move */
 #define REST_DAYS 3                     /* the round of 16 starts no sooner after the day it is made */
@@ -398,8 +405,8 @@ static uint32_t knockout_template(int c, uint32_t self, uint32_t out_rounds, uin
     put_round(rec, 1, qf, delay + LATER_ROUNDS, 8, y);
     put_round(rec, 2, &cups[c].sf, delay + LATER_ROUNDS, 4, y);
     int r = 3;
-    if (cups[c].third_place) put_round(rec, r++, &cups[c].third, delay + LATER_ROUNDS, 2, y);
-    put_round(rec, r, &cups[c].final, delay + LATER_ROUNDS, 2, y);
+    put_round(rec, r++, &cups[c].final, delay + LATER_ROUNDS, 2, y);
+    if (cups[c].third_place) put_round(rec, r, &cups[c].third, delay + LATER_ROUNDS, 2, y);
     if (rt_unwinding) return 0;
     for (int k = 0; k < rounds; k++) wr16(g_mem, rec + (uint32_t)k * ROUND_SIZE + 9u, (uint32_t)k);
     return rec;
