@@ -40,7 +40,8 @@ COMPS = [(0, "Aland League", 2, 0, "club"), (1, "Euro Super Cup", 2, -1, "club")
          (10, "World Finals", -1, -1, "nation"), (11, "Euro Finals", 2, -1, "nation"),
          (12, "Asia Finals", 1, -1, "nation"), (13, "Americas Finals", 3, -1, "nation"),
          (14, "Hatay Cup", 5, -1, "nation"), (15, "Nations Shield", 1, -1, "nation"),
-         (16, "Champions Match", 2, -1, "club"), (17, "Qual Zone", 1, -1, "nation")]
+         (16, "Champions Match", 2, -1, "club"), (17, "Qual Zone", 1, -1, "nation"),
+         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club")]
 
 
 def side(n):
@@ -81,6 +82,8 @@ def history():
         rows.append((15, y, side(1), side(2), -1, -1))                # an Asian record with the short name
     rows.append((15, 2032, side(2), side(0), -1, -1))                 # of an Asian cup
     want.add(("confederation", "Nations Shield", 2032))               # plain run: its continent is Asia
+    for y in range(2015, 2031):                                       # Durania Cup: not played after 2030
+        rows.append((18, y, 4, -1, -1, -1))
     return rows, want
 
 
@@ -112,19 +115,25 @@ FIXTURES_2038 = [(10, side(0), side(1), 160), (10, side(4), side(0), 164), (10, 
 # not play. Qual Zone (a World Cup qualifying, AFC): 2039 has a European side among 4 teams (a play-off, passes)
 # and the dead Old Genovia; Bonairia (no continent, never renamed) passes. Nations Shield 2039: two European sides
 # under the Asian short name.
+# Pacific Bowl (the Suruga Bank shape, open item 77): the winners of the Durania Cup, a national cup that the game
+# does not play after 2030, and of the Aland League. Its place goes to a drawn club of Durania: Elbonia Rovers (AFC,
+# not of Durania) in 2039 is a fault, Durania Stars in 2040 is not.
 FIXTURES_2039 = [(16, 0, 3, 220), (16, 4, 0, 222), (1, 0, 1, 100), (13, side(6), side(8), 150),
                  (17, side(3), side(4), 120), (17, side(0), side(11), 124), (17, side(12), side(3), 127),
-                 (15, side(0), side(1), 130)]
-FIXTURES_2040 = [(16, 0, 5, 150), (16, 3, 0, 250), (1, 0, 3, 100)]   # the match of day 250 is after the save date
+                 (15, side(0), side(1), 130), (19, 5, 0, 140)]
+FIXTURES_2040 = [(16, 0, 5, 150), (16, 3, 0, 250), (1, 0, 3, 100),   # the match of day 250 is after the save date
+                 (19, 4, 0, 140)]
 ENTRANT_FAULTS = {("entrant-count", "World Finals", 2038), ("entrant-host", "World Finals", 2038),
                   ("entrant-route", "Champions Match", 2039), ("entrant-route", "Champions Match", 2040),
                   ("entrant-confed", "Champions Match", 2040), ("entrant-holder", "Euro Super Cup", 2040),
                   ("entrant-host", "Americas Finals", 2039), ("entrant-dead", "Qual Zone", 2039),
-                  ("entrant-confed", "Asia Shield", 2039), ("entrant-count", "Champions Match", 2039)}
+                  ("entrant-confed", "Asia Shield", 2039), ("entrant-count", "Champions Match", 2039),
+                  ("entrant-route", "Pacific Bowl", 2039)}
 ENTRANT_FAULTS_PLAIN = {("entrant-dead", "Qual Zone", 2039),       # found with no rules file too; Ruritania
                         ("entrant-dead", "Americas Finals", 2039)}  # plays under the name its rename replaced
 TABLE = '{"world", 2037, 2038, 4, 0, 2038, 6, 1, "Carpania/Karpania", "row-1"},\n'
 ACCESS = ("comp\tfrom\tto\tteams\troutes\tsource\nchamp\t2030\tnone\t2\twinner:aland;winner:esc\tmade up\n"
+          "pacific\t2030\tnone\t2\twinner:durania_cup;winner:aland\tmade up\n"
           "esc\t2030\tnone\t\tholder\tmade up\n")
 
 
@@ -365,12 +374,15 @@ def main():
                 "asia_shield\tAsia Shield\tintl_qual\tAFC\t0\t4\t2028\tnone\n"
                 "champ\tChampions Match\tsuper_cup\tUEFA\t0\t1\t2041\tnone\n"
                 "aland\tAland League\tleague\tnation\t0\t1\t2041\tnone\n"
-                "wc_qual_zone\tQual Zone\tintl_qual\tAFC\t0\t4\t2041\tnone\n")
+                "wc_qual_zone\tQual Zone\tintl_qual\tAFC\t0\t4\t2041\tnone\n"
+                "durania_cup\tDurania Cup\tdomestic_cup\tDurania\t0\t1\t2031\t2030\n"
+                "pacific\tPacific Bowl\tsuper_cup\tAFC|UEFA\t0\t1\t2041\tnone\n")
     names = os.path.join(work, "names.tsv")
     with open(names, "w", encoding="utf-8") as f:
         f.write("# a note line\npattern\tcomp\nAmericas Finals\tamericas\n(The )?World Finals\tworld\n"
                 "Euro Super Cup\tesc\nNations Shield\tshield\nAsia Shield\tasia_shield\n"
-                "Champions Match\tchamp\nAland League\taland\nQual Zone\twc_qual_zone\n")
+                "Champions Match\tchamp\nAland League\taland\nQual Zone\twc_qual_zone\n"
+                "Durania Cup\tdurania_cup\nPacific Bowl\tpacific\n")
     known = os.path.join(work, "known.tsv")
     with open(known, "w", encoding="utf-8") as f:
         f.write("check\tcompetition\tyear\tnote\nduplicate\tEuro Finals\t*\tplanted\n")
