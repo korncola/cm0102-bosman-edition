@@ -124,6 +124,11 @@ const char *season_uefa_access_rule(int season, char comp)
     return NULL;
 }
 
+int season_uefa_cl_cap(int season)
+{
+    return season >= 2024 ? 7 : season >= 2015 ? 5 : 4;
+}
+
 static int league_cup_row(int season, char comp, const char *name)
 {
     int s = access_season(season);

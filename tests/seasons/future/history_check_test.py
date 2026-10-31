@@ -461,6 +461,36 @@ def main():
     if got != [(2039, 4), (2040, 4)]:
         bad.append(f"editions of a July to May cup: {got}, not [(2039, 4), (2040, 4)]")
 
+    # Open item 70: a group stage that ends on a December day with one match, then the knockout rounds in February
+    # (group clubs only), the final in May, and the next season's first qualifying round in June (clubs that played
+    # last in July). One edition a season: the knockout rounds stay in the edition of their group stage.
+    days = []
+    for season in (2017, 2018):
+        o = datetime.date(season, 6, 27).toordinal()
+        days += [(o, 10, 11), (o, 12, 13)]
+        d = datetime.date(season, 9, 12).toordinal()
+        while d < datetime.date(season, 12, 6).toordinal():
+            days += [(d, 0, 1), (d, 2, 3), (d, 4, 5), (d, 6, 7)]
+            d += 14
+        days.append((datetime.date(season, 12, 13).toordinal(), 4, 5))
+        k = datetime.date(season + 1, 2, 13).toordinal()
+        days += [(k, 0, 1), (k, 2, 3), (k + 63, 0, 2)]
+    got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
+    if got != [(2018, 12), (2019, 12)]:
+        bad.append(f"editions of a cup whose group stage ends on a day with one match: {got}, not "
+                   f"[(2018, 12), (2019, 12)]")
+
+    # Open item 70: the association limit of the Champions League by season.
+    def lim(season, nations):
+        return [f[3] for f in history_check.limit_faults("CL", season + 1, datetime.date(season, 7, 1).toordinal(),
+                                                         nations)]
+    for season, nations, want_ in ((2012, ["England"] * 4, []), (2012, ["England"] * 5, ["England has 5 entrants, "
+                                   "the limit of 2012/13 is 4"]), (2017, ["England"] * 5 + ["Spain"] * 4, []),
+                                   (2017, ["England"] * 6, ["England has 6 entrants, the limit of 2017/18 is 5"]),
+                                   (2024, ["England"] * 7, []), (2008, ["England"] * 6, [])):
+        if lim(season, nations) != want_:
+            bad.append(f"association limit {season}, {len(nations)} clubs: {lim(season, nations)}, not {want_}")
+
     # nations.tsv holds the renames of the season code.
     bad += renames_match()
     bad += uefa_moves_match()
