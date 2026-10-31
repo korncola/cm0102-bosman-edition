@@ -57,8 +57,8 @@ static int rename_row(const char *old)
     return -1;
 }
 
-static int no_colombia(const char *name) { return strcmp(name, "Colombia"); }
-static int none_alive(const char *name) { (void)name; return 0; }
+static int no_colombia(const char *file, const char *name) { (void)file; return strcmp(name, "Colombia"); }
+static int none_alive(const char *file, const char *name) { (void)file; (void)name; return 0; }
 
 int main(void)
 {
