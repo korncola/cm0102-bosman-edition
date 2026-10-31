@@ -6,7 +6,7 @@ Usage:
         [--database 3.9.60|3.9.65|3.9.68] [--record] [--tolerance n]
     python3 tests/smoke/smoke_run.py <cm0102_recomp> <game folder> --same-save [--mode classic|widescreen] [--days n] [--ref-build <program>]
         [--ref-050 <0.5.0 program>] [--ref-setup <name>] [--jobs n] [--runs a,b] [--custom-db <folder>]
-        [--save start.sav|prematch.sav]
+        [--save start.sav|prematch.sav|yeovil.sav]
     python3 tests/smoke/smoke_run.py <cm0102_recomp> <game folder> --match [--days n] [--speed very-fast|fastest] [--ref-build <program>] [--sleep-danger]
 
 --tolerance n: a colour channel that differs by n or less counts as equal. The Linux build differs from the
@@ -599,7 +599,8 @@ LOAD_END = {"yeovil.sav": "wait continue"}
 # The fixes of faults of the original that act in the 14 days of a saved test game, by decision (0.6.2 slice 11): its
 # run original-faults-keep keeps only the other groups (RECOMP_ORIGINAL_FAULTS=keep:<groups>, original_faults.c).
 # yeovil.sav (20.8.02) passes 1 September 2002: the month check opens a vacancy for each national team with no
-# manager (Q43), so the save of normal differs from the original's in most parts.
+# manager (Q43), so the save of normal differs from the original's in most parts. This holds for the 14 days of the
+# set: a run of other --days may pass another month change (start.sav from 18 days on).
 FAULTS_ACT = {"yeovil.sav": "keep:money,age"}
 
 

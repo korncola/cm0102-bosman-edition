@@ -19,6 +19,17 @@ static int fixes_on_group(int group)
     if (on[0] < 0) {
         static const char *const names[GROUPS] = {"managers", "money", "age"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
+        if (v && strcmp(v, "keep") && strncmp(v, "keep:", 5))
+            fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS=%s is not keep or keep:<groups>: every fix acts\n", v);
+        const char *list = v && !strncmp(v, "keep:", 5) ? v + 5 : "";
+        for (const char *p = list; *p; p += strcspn(p, ",") + (p[strcspn(p, ",")] == ',')) {
+            size_t n = strcspn(p, ",");
+            int known = 0;
+            for (int g = 0; g < GROUPS; g++) known |= n == strlen(names[g]) && !strncmp(p, names[g], n);
+            if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
+                fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age)\n",
+                        (int)n, p);
+        }
         for (int g = 0; g < GROUPS; g++) {
             on[g] = 1;
             if (v && !strcmp(v, "keep")) on[g] = 0;
