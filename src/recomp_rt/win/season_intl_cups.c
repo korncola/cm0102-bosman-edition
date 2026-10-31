@@ -325,10 +325,15 @@ static void put_round(uint32_t rec, int round, const Round *o, int shift, int te
 
 /* The knockout of 24 teams. The round of 16 takes the original's quarter-final dates and the 8 kick-off slots
  * of the World Cup round of 16 (0x92c8c0..0x92c958), and value 0x14 at +7 as there (0x92c95d). The later rounds
- * keep the original's slots, flags and values, 5 days later (inference: in 2019 both finals played the round
- * of 16 from 3 to 6 days after the groups). The table's first day moves all dates (the date shift of the
+ * keep the original's slots, flags and values, 12 days later: the round of 16 plays on four weekdays (Saturday
+ * to Tuesday) where the original's quarter-finals play on two, so up to 0.6.2 the quarter-finals 5 days later met
+ * a team 2 days after its round of 16 match, find_fixture_clashes 0x5ad780 gave severity 22 (0x5adf66) and
+ * add_fixture 0x5aa680 moved the match (Jordan v Uzbekistan, Asian Cup 2099 of a 2098 date jump, day 28 to day 34,
+ * run-logs/0.6.2-s4a/j2099e). 12 days keeps the weekdays of 5 a week later. Inference: in 2019 both finals played
+ * the round of 16 from 3 to 6 days after the groups. The table's first day moves all dates (the date shift of the
  * caller). The Asian Cup of 24 has no third-place match: R16, QF, SF, F (4 rounds), the ACN 5 rounds.
  * All rounds move by whole weeks when the groups end too late for the round of 16 (rest_delay below). */
+#define LATER_ROUNDS 12                 /* days by which the quarter-finals and later rounds move */
 #define REST_DAYS 3                     /* the round of 16 starts no sooner after the day it is made */
 #define GAME_DATE 0xae2c90u             /* s16 day of the year from 0, s16 year */
 
@@ -386,11 +391,11 @@ static uint32_t knockout_template(int c, uint32_t self, uint32_t out_rounds, uin
     slot(rec, 0, 6, 1, 2, 3, 0x1000);
     slot(rec, 0, 7, 1, 1, 3, 0x2000);
     round_fields(rec, 0, 0x14, 16, 1, qf->flags);
-    put_round(rec, 1, qf, delay + 5, 8, y);
-    put_round(rec, 2, &cups[c].sf, delay + 5, 4, y);
+    put_round(rec, 1, qf, delay + LATER_ROUNDS, 8, y);
+    put_round(rec, 2, &cups[c].sf, delay + LATER_ROUNDS, 4, y);
     int r = 3;
-    if (cups[c].third_place) put_round(rec, r++, &cups[c].third, delay + 5, 2, y);
-    put_round(rec, r, &cups[c].final, delay + 5, 2, y);
+    if (cups[c].third_place) put_round(rec, r++, &cups[c].third, delay + LATER_ROUNDS, 2, y);
+    put_round(rec, r, &cups[c].final, delay + LATER_ROUNDS, 2, y);
     if (rt_unwinding) return 0;
     for (int k = 0; k < rounds; k++) wr16(g_mem, rec + (uint32_t)k * ROUND_SIZE + 9u, (uint32_t)k);
     return rec;
