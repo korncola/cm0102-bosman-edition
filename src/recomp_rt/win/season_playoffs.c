@@ -47,6 +47,7 @@
 #include "season_names.h"
 #include "season_rules.h"
 #include "season_playoffs.h"
+#include "season_cup_third_place.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -363,7 +364,10 @@ RT_WRAP(0051a150, playoff_level_test)
                 leg == 1 ? "" : (flags & 3u) == 3u ? ", extra time 0-0 and penalties 5-4 given"
                                                     : ", no extra time or penalties asked for");
     }
+    ThirdPlaceTies third;                       /* open item 73: season_cup_third_place.h */
+    season_cup_third_place_before(cpu.ecx, &third);
     o_0051a150();
+    if (!rt_unwinding) season_cup_third_place_after(&third);
 }
 
 /* RECOMP_TEST_PLAYOFF_FIXTURES=1 (tests only), called from the add_fixture wrap (season_kind_cup_breaks.c): the first
