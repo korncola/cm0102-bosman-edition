@@ -244,7 +244,8 @@ SAME_SAVE_RUNS = [
     # The fixes of faults of the original (0.6.2 slice 11, original_faults.c) act in every game, but only when a
     # small nation's national team loses or misses its manager (at the latest at the first month change in play),
     # for money above 2,147,483,647 (the top wage from about 1.65 billion) and at an age above 127: in these runs
-    # none of that happens, so with their test switch off the save is that of normal.
+    # none of that happens, so with their test switch off the save is that of normal. A saved game whose days pass
+    # a month change keeps only the other groups (FAULTS_ACT).
     ("original-faults-keep", {"faster_days": "off", "_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
     # The merged parts of a save (0.6.2 slice 13, save_parts.c) change only how the temporary files go into the
     # save: with their test switch off the save holds the same files as normal.
@@ -595,6 +596,20 @@ NEW_GAME_LAYOUT_PARTS = ("club records.dat",)
 # yeovil.sav (a copy of Max's save, 20.8.02) opens on the squad screen: the load ends when Continue Game shows.
 LOAD_END = {"yeovil.sav": "wait continue"}
 
+# The fixes of faults of the original that act in the 14 days of a saved test game, by decision (0.6.2 slice 11): its
+# run original-faults-keep keeps only the other groups (RECOMP_ORIGINAL_FAULTS=keep:<groups>, original_faults.c).
+# yeovil.sav (20.8.02) passes 1 September 2002: the month check opens a vacancy for each national team with no
+# manager (Q43), so the save of normal differs from the original's in most parts.
+FAULTS_ACT = {"yeovil.sav": "keep:money,age"}
+
+
+def keep_runs(runs, save_name):
+    """The runs with the switch of original-faults-keep for the saved game save_name (FAULTS_ACT)."""
+    if save_name not in FAULTS_ACT:
+        return runs
+    return [(name, dict(o, _env=dict(o["_env"], RECOMP_ORIGINAL_FAULTS=FAULTS_ACT[save_name])))
+            if name == "original-faults-keep" else (name, o) for name, o in runs]
+
 
 def new_game_runs(runs):
     """The runs of a new game: changing_rules = off unless a run sets it, so that the new game is the base
@@ -631,7 +646,7 @@ def same_save(program, game, mode, days, save_name=None, search=False, options=F
     if save_name in LOAD_END:
         load[load.index("wait first-news")] = LOAD_END[save_name]
     steps = without_intro_click(load) + holiday + ["400000 quit"]
-    return compare_runs(program, game, mode, SAME_SAVE_RUNS, steps, days, save, text_050=True)
+    return compare_runs(program, game, mode, keep_runs(SAME_SAVE_RUNS, save_name), steps, days, save, text_050=True)
 
 
 # --speed fastest: the Fastest item (#31, commentary.c), one row above Very Fast.

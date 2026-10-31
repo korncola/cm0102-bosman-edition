@@ -1,5 +1,6 @@
 /* Faults of the original that long games reach (0.6.2 slice 11, tools/recomp/original_faults.py). The fixes act in
- * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS=keep turns them off. */
+ * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS turns them off: "keep" all
+ * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money and age. */
 #include "win.h"
 #include "../rt.h"
 
@@ -10,14 +11,31 @@
 #define CLUB_COUNT 0xae235cu     /* clubs, national teams and under-21 teams */
 #define NATION_COUNT 0xae2350u
 
-static int fixes_on(void)
+enum { MANAGERS, MONEY, AGE, GROUPS };
+
+static int fixes_on_group(int group)
 {
-    static int on = -1;
-    if (on < 0) {
+    static int on[GROUPS] = {-1};
+    if (on[0] < 0) {
+        static const char *const names[GROUPS] = {"managers", "money", "age"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
-        on = !(v && !strcmp(v, "keep"));
+        for (int g = 0; g < GROUPS; g++) {
+            on[g] = 1;
+            if (v && !strcmp(v, "keep")) on[g] = 0;
+            if (v && !strncmp(v, "keep:", 5)) {
+                size_t n = strlen(names[g]);
+                for (const char *p = v + 5; *p; p += strcspn(p, ",") + (p[strcspn(p, ",")] == ',')) {
+                    if (strcspn(p, ",") == n && !strncmp(p, names[g], n)) on[g] = 0;
+                }
+            }
+        }
     }
-    return on;
+    return on[group];
+}
+
+static int money_fixes_on(void)    /* the fixes of money above 2,147,483,647 (faults 27 and 28) */
+{
+    return fixes_on_group(MONEY);
 }
 
 /* A name of the game for a log line, with each byte above 0x7e as '?': the test scripts read the log as UTF-8, and
@@ -58,7 +76,7 @@ uint32_t rt_national_vacancy(uint32_t club, uint32_t site)
 {
     static const char *const why[] = {"the vacancy", "a retirement", "a move to another national team", "the month check",
                                        "a departure"};
-    if (!fixes_on() || creating || !club) return 0;
+    if (!fixes_on_group(MANAGERS) || creating || !club) return 0;
     uint32_t nation = rd32(g_mem, club + 0x53u);
     if (!nation || !rd32(g_mem, nation + 0x71u)) return 0;
     int32_t id = (int32_t)rd32(g_mem, club), clubs = (int32_t)rd32(g_mem, CLUB_COUNT);
@@ -78,7 +96,7 @@ RT_WRAP(0053ab90, staff_age)
 {
     uint32_t staff = rt_arg(0);
     o_0053ab90();
-    if (rt_unwinding || !fixes_on() || !staff) return;
+    if (rt_unwinding || !fixes_on_group(AGE) || !staff) return;
     if ((int16_t)(cpu.eax & 0xffffu) > 127) cpu.eax = (cpu.eax & 0xffff0000u) | 127u;
 }
 
@@ -86,7 +104,7 @@ RT_WRAP(0053ab90, staff_age)
  * The first two (0x598f4f, 0x598f8b, 0x598f92) re-extend the low word with cdq: here the high word is used. */
 uint32_t rt_budget_hi(uint32_t lo, uint32_t hi)
 {
-    return fixes_on() ? hi : (uint32_t)((int32_t)lo >> 31);
+    return money_fixes_on() ? hi : (uint32_t)((int32_t)lo >> 31);
 }
 
 /* The third is the floor R = balance - 10m (or 15m) (0x599135, 0x599185), a 32-bit value in [esp+0x5c] that the
@@ -98,7 +116,7 @@ static int floor_on, floor_used;
 uint32_t rt_budget_floor(uint32_t finance, uint32_t less)
 {
     int64_t r = (int64_t)rd64(g_mem, finance) - (int64_t)less;
-    floor_on = fixes_on() && r > INT32_MAX;
+    floor_on = money_fixes_on() && r > INT32_MAX;
     if (!floor_on) return rd32(g_mem, finance);
     floor_wide = r;
     return (uint32_t)INT32_MAX + less;      /* the sub that follows leaves 2,147,483,647 */
@@ -150,7 +168,7 @@ RT_WRAP(00598800, get_transfer_budget)
     int wide = 0;
     for (size_t i = 0; i < sizeof budget_wide_callers / sizeof budget_wide_callers[0]; i++)
         wide |= from == budget_wide_callers[i];
-    if (fixes_on() && !wide) {
+    if (money_fixes_on() && !wide) {
         if (v > INT32_MAX) {
             cpu.eax = (uint32_t)INT32_MAX, cpu.edx = 0;
             news_club = rd32(g_mem, finance + 8u);    /* rt_news_wide: a news item may carry this budget */
@@ -179,7 +197,7 @@ static int64_t wide_amount;
 /* The Cash at cash holds stored; its next reads give amount. */
 static void cash_wide(uint32_t cash, uint32_t stored, int64_t amount, uint32_t reads)
 {
-    wide_reads = fixes_on() && amount != (int64_t)(int32_t)stored ? reads : 0u;
+    wide_reads = money_fixes_on() && amount != (int64_t)(int32_t)stored ? reads : 0u;
     wide_at = cash;
     wide_stored = stored;
     wide_amount = amount;
@@ -195,7 +213,7 @@ void rt_cash_wide(uint32_t cash, uint32_t lo, uint32_t hi, uint32_t reads)
 uint32_t rt_cash_wide_clamped(uint32_t cash, uint32_t lo, uint32_t hi, uint32_t reads)
 {
     int64_t v = (int64_t)(((uint64_t)hi << 32) | lo);
-    uint32_t stored = !fixes_on() ? lo : v > INT32_MAX ? (uint32_t)INT32_MAX : v < INT32_MIN ? 0x80000000u : lo;
+    uint32_t stored = !money_fixes_on() ? lo : v > INT32_MAX ? (uint32_t)INT32_MAX : v < INT32_MIN ? 0x80000000u : lo;
     cash_wide(cash, stored, v, reads);
     return stored;
 }
@@ -234,7 +252,7 @@ uint32_t rt_max_wage_sum(uint32_t term, uint32_t lo)
 {
     int had = wage_set && lo == wage_low;
     wage_set = 0;
-    if (!fixes_on() || !had) return term + lo;
+    if (!money_fixes_on() || !had) return term + lo;
     int64_t sum = (int64_t)(int32_t)term + (int64_t)(((uint64_t)wage_high << 32) | lo);
     return sum > INT32_MAX ? (uint32_t)INT32_MAX : term + lo;
 }
@@ -248,7 +266,7 @@ uint32_t rt_max_wage_sum(uint32_t term, uint32_t lo)
 
 void rt_news_wide(uint32_t item, uint32_t club, uint32_t value)
 {
-    if (!fixes_on() || value != (uint32_t)INT32_MAX || club != news_club || news_full <= INT32_MAX) return;
+    if (!money_fixes_on() || value != (uint32_t)INT32_MAX || club != news_club || news_full <= INT32_MAX) return;
     wr32(g_mem, NEWS_SLOT(item, 8u), (uint32_t)news_full);
     wr32(g_mem, NEWS_SLOT(item, 9u), (uint32_t)((uint64_t)news_full >> 32));
 }
@@ -259,7 +277,7 @@ static int64_t news_pending;
 void rt_news_read(uint32_t item, uint32_t value)
 {
     uint64_t full = ((uint64_t)rd32(g_mem, NEWS_SLOT(item, 9u)) << 32) | rd32(g_mem, NEWS_SLOT(item, 8u));
-    news_pending = fixes_on() && value == (uint32_t)INT32_MAX && (int64_t)full > INT32_MAX ? (int64_t)full : 0;
+    news_pending = money_fixes_on() && value == (uint32_t)INT32_MAX && (int64_t)full > INT32_MAX ? (int64_t)full : 0;
 }
 
 void rt_cash_news(uint32_t cash, uint32_t value)
