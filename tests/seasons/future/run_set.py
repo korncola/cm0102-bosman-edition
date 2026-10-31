@@ -25,7 +25,8 @@ the history checker on the save (history_check.py with its rules, names, nations
 Tier B). Every fault fails the game, a fault of the known list too: 0.6.2 ships only when the checker finds no fault in
 the run set (Q12); faults.tsv marks the known ones. The game plays on, so one run lists the faults of every decade. A
 leg that is not ok fails the game and ends it. At the end, every division and domestic cup must move on from each
-season to the next over the reports of all legs (league-stall: rules_report_check.league_stalls, as soak_run.py).
+season to the next over the reports of all legs (league-stall: rules_report_check.league_stalls, as soak_run.py),
+and with changing rules on the Greek Super League 2 plays one group from 2026/27 (greek-second, open item 68).
 
 The Tier B limits, over the legs of a Tier B game:
     no-manager  a national side with no manager in two saves in a row (more than one season)
