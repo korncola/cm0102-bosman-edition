@@ -1418,7 +1418,11 @@ static void repair_idle(void)
             int today = (int16_t)rd16(g_mem, GAME_DATE);
             if (campaign && (campaign + 2 > today_year || (campaign + 2 == today_year && today < FINALS_DAY)))
                 target = repair_target(k, campaign + 2) == campaign + 2 ? campaign + 2 : 0;
-            running = target != 0;
+            /* Only a campaign that has played can have qualified a team: add_qualified_team has no year test
+             * (EuroChamp 0x57c120 adds while the count +0x36 is below the room +0x38), so a waiting object can
+             * hold teams of an earlier campaign (the World Cup of the 0.6.1 fixture held 3 in January 2099, before
+             * its campaign of 2100 played). */
+            running = target != 0 && today_year > campaign;
             /* The running campaign was made by the old build: for an edition after the table it has the
              * original's shape (open item 58). The Euro qualifying's rules bytes, which the load's constructor
              * set for the new shape (0x57d03b), go back to the original's. */
