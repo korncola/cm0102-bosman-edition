@@ -285,6 +285,71 @@ int season_intl_date_shift(uint32_t cls, int year)
     return (int)(to - from);
 }
 
+/* ---- The days of the finals (0.6.2 slice 6) ----
+ *
+ * The qualifiers keep the original's calendar moved to each cycle, while the finals take the table's years and
+ * days. In long game seed 6 (a 2001 game, changing rules on, 0.6.0) the CAF World Cup qualifiers of 26 January 2013
+ * met the African Cup of Nations of 19 January 2013. The finalists' group matches of that week moved to later days
+ * (add_fixture 0x5aa680 moves a clashing fixture at 0x5aa96e and adds it again at 0x5aa978), the last group ended
+ * on 5 February, the knockout rounds came a week apart, and no final was set. The class still held that edition
+ * in the save of 2022 (run-logs/release-test-0.6.0/long-games/soak-seed6). The Copa America of 2004 in the same
+ * game met CONMEBOL qualifiers on 17 and 24 July (the fixtures of its save of July 2004) and stopped the same way.
+ * season_friendly_dates.c keeps a qualifier off these days. */
+
+/* The step of each class's start_new_season (tools/recomp/seasons.py, the sites 0x92d409 to 0x7a04b0). */
+static const int class_step[INTL_CLASSES] = {4, 4, 2, 2, 2, 4, 2, 4};
+
+/* The confederations whose nations play each class (bits 1 << SEASON_CONF_...). */
+#define ALL_CONFS ((1 << SEASON_CONFS) - 1)
+static const int class_confs[INTL_CLASSES] = {
+    ALL_CONFS, 1 << SEASON_CONF_EUROPE, 0, (1 << SEASON_CONF_SOUTH_AMERICA) | (1 << SEASON_CONF_NORTH_AMERICA),
+    1 << SEASON_CONF_AFRICA, 1 << SEASON_CONF_ASIA, 1 << SEASON_CONF_OCEANIA, 0,
+};
+
+/* The days from the first group day to the final for a team count: the real spans (2013 ACN of 16 teams 22 days,
+ * Copa America Centenario of 16 23, Euro 2016 of 24 30, 2014 World Cup of 32 31, 2026 World Cup of 48 38;
+ * int-continental and int-world rows) and some days more. Inference: the game's own finals fit in these spans
+ * (the 2012 ACN of seed 6 played 21 January to 11 February, 21 days). */
+static int finals_span(int teams)
+{
+    return teams <= 16 ? 30 : teams <= 24 ? 37 : teams <= 32 ? 38 : 45;
+}
+
+/* The first and last day (days from 1 January 1970) of the finals of class cls in edition year `year`, when the
+ * class plays one in this game: with changing rules on, an edition of the table from the start season; with it
+ * off, the first edition from the start season and every step after it (rt_intl_next_year). */
+static int finals_days(uint32_t cls, int year, long *from, long *to)
+{
+    const char *file = class_files[cls];
+    const SeasonIntlEdition *rule = season_intl_rule_edition(file, year);
+    if (!rule) return 0;
+    if (season_changing_rules()) {
+        if (rule->season < season_start_year()) return 0;
+    } else if (year < rule->year || (year - rule->year) % class_step[cls]) {
+        return 0;
+    }
+    int day = class_first[cls].day, month0 = class_first[cls].month0;
+    if (cls == INTL_OFC && year % 4 != 2) {
+        day = 19;
+        month0 = 5;
+    }
+    *from = days_from_civil(year, month0 + 1, day) + season_intl_date_shift(cls, year);
+    *to = *from + finals_span(rule->teams);
+    return 1;
+}
+
+int season_intl_finals_busy(int conf, int y, int doy)
+{
+    if (!season_intl_on() || conf < 0 || conf >= SEASON_CONFS) return 0;
+    long day = days_from_civil(y, 1, 1) + doy, from, to;
+    for (uint32_t cls = 0; cls < INTL_CLASSES; cls++) {
+        if (!(class_confs[cls] & (1 << conf))) continue;
+        for (int year = y - 1; year <= y + 1; year++)
+            if (finals_days(cls, year, &from, &to) && day >= from - 2 && day <= to) return 1;
+    }
+    return 0;
+}
+
 void season_intl_shift_date(int shift, int *day, int *month0, int *year)
 {
     if (!shift) return;

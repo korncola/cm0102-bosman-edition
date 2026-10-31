@@ -42,6 +42,14 @@ static int held_in(const char *name, void *ctx)
     return 0;
 }
 
+/* Day of the year (0 is 1 January) of day d of month m (1 to 12). */
+static int doy_of(int y, int m, int d)
+{
+    static const int before[12] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+    int leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    return before[m - 1] + (m > 2 && leap) + d - 1;
+}
+
 static int rename_row(const char *old)
 {
     for (int i = 0; i < season_intl_rename_count; i++)
@@ -268,6 +276,39 @@ int main(void)
     CHECK(season_intl_uefa_from("Kosovo") == 2016, "Kosovo joins UEFA in 2016");
     CHECK(!season_intl_uefa_from("Gibraltar") && !season_intl_uefa_from("Serbia") && !season_intl_uefa_from(NULL),
           "no other nation");
+
+    /* The days of the finals that a qualifier of a confederation does not take (0.6.2 slice 6, faults 2 and 19:
+     * the CAF qualifiers of 26 January 2013 met the ACN of 19 January to 10 February 2013 in long game seed 6). */
+    game(1, 2001, 0);
+    CHECK(!season_intl_finals_busy(SEASON_CONF_AFRICA, 2013, doy_of(2013, 1, 26)), "base game: no finals days");
+    game(1, 2001, 1);
+    CHECK(season_intl_finals_busy(SEASON_CONF_AFRICA, 2013, doy_of(2013, 1, 26)), "2001 on: ACN 2013 on 26 January");
+    CHECK(season_intl_finals_busy(SEASON_CONF_AFRICA, 2013, doy_of(2013, 2, 6)), "2001 on: ACN 2013 on 6 February");
+    CHECK(season_intl_finals_busy(SEASON_CONF_AFRICA, 2013, doy_of(2013, 1, 17)), "2001 on: two days before the ACN");
+    CHECK(!season_intl_finals_busy(SEASON_CONF_AFRICA, 2013, doy_of(2013, 1, 16)), "2001 on: three days before");
+    CHECK(!season_intl_finals_busy(SEASON_CONF_AFRICA, 2013, doy_of(2013, 3, 22)), "2001 on: March 2013 is free");
+    CHECK(!season_intl_finals_busy(SEASON_CONF_ASIA, 2013, doy_of(2013, 1, 26)), "2001 on: the ACN is not the AFC's");
+    CHECK(season_intl_finals_busy(SEASON_CONF_AFRICA, 2002, doy_of(2002, 2, 20)), "2001 on: ACN 2002 on the original's days");
+    CHECK(season_intl_finals_busy(SEASON_CONF_AFRICA, 2019, doy_of(2019, 7, 15)), "2001 on: ACN 2019 of 24 in July");
+    CHECK(season_intl_finals_busy(SEASON_CONF_AFRICA, 2025, doy_of(2025, 12, 28)), "2001 on: ACN 2025/26 in December");
+    CHECK(season_intl_finals_busy(SEASON_CONF_AFRICA, 2026, doy_of(2026, 1, 10)), "2001 on: ACN 2025/26 in January");
+    CHECK(season_intl_finals_busy(SEASON_CONF_ASIA, 2019, doy_of(2019, 1, 30)), "2001 on: Asian Cup 2019");
+    CHECK(season_intl_finals_busy(SEASON_CONF_SOUTH_AMERICA, 2004, doy_of(2004, 7, 17)), "2001 on: Copa America 2004");
+    CHECK(season_intl_finals_busy(SEASON_CONF_SOUTH_AMERICA, 2016, doy_of(2016, 6, 20)), "2001 on: Copa Centenario");
+    CHECK(season_intl_finals_busy(SEASON_CONF_NORTH_AMERICA, 2016, doy_of(2016, 6, 20)), "2001 on: its CONCACAF guests");
+    CHECK(!season_intl_finals_busy(SEASON_CONF_SOUTH_AMERICA, 2016, doy_of(2016, 9, 6)), "2001 on: September 2016 free");
+    CHECK(season_intl_finals_busy(SEASON_CONF_EUROPE, 2016, doy_of(2016, 7, 8)), "2001 on: Euro 2016");
+    CHECK(season_intl_finals_busy(SEASON_CONF_AFRICA, 2014, doy_of(2014, 7, 1)), "2001 on: the World Cup for all");
+    CHECK(season_intl_finals_busy(SEASON_CONF_OCEANIA, 2022, doy_of(2022, 12, 10)), "2001 on: the World Cup 2022");
+    CHECK(!season_intl_finals_busy(SEASON_CONF_EUROPE, 2009, doy_of(2009, 6, 20)), "2001 on: no Confederations Cup");
+    CHECK(!season_intl_finals_busy(SEASON_CONF_EUROPE, 2008, doy_of(2008, 8, 20)), "2001 on: no Olympics");
+    CHECK(!season_intl_finals_busy(-1, 2013, doy_of(2013, 1, 26)) && !season_intl_finals_busy(SEASON_CONFS, 2013, 25),
+          "no confederation");
+    /* Changing rules off from 2013: the ACN of 2015 (the first from 2013/14) every two years on its days. */
+    game(1, 2013, 0);
+    CHECK(season_intl_finals_busy(SEASON_CONF_AFRICA, 2017, doy_of(2017, 1, 20)), "2013 off: ACN 2017 on 2015's days");
+    CHECK(!season_intl_finals_busy(SEASON_CONF_AFRICA, 2016, doy_of(2016, 1, 20)), "2013 off: no ACN in 2016");
+    CHECK(!season_intl_finals_busy(SEASON_CONF_AFRICA, 2013, doy_of(2013, 1, 26)), "2013 off: ACN 2013 lies before");
 
     if (failures) {
         fprintf(stderr, "season_intl_test: %d failures\n", failures);

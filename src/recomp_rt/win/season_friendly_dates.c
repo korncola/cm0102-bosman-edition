@@ -48,6 +48,7 @@
 #include "season.h"
 #include "season_uefa_days.h"
 #include "season_names.h"
+#include "season_intl.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,6 +74,8 @@
 #define NATION_COUNT 0xae2350u
 #define CLUB_SIZE 0x245u
 #define NO_CONTINENT 0xfffffffeu        /* -2: no continent has it (-1 is every continent at 0x5cc060) */
+#define NATION_CONTINENT 0x71u          /* nation record: its continent record, whose +0 is the continent id */
+#define KEY_CONTINENTS 0x9cfa08u        /* the key continent ids, Africa to South America (season_intl.h) */
 
 
 static int readable(uint32_t p) { return p >= 0x10000u && p < 0xfff00000u; }
@@ -270,14 +273,33 @@ static int side_busy(uint32_t a, uint32_t b, int y, int doy)
  * rows A8 to A11 acted (gate (a) run 8 on 8e58c44a, 2003 and 2007 starts; gate (b) 2002 and 2006 starts). */
 static int end_year, end_day;
 
+/* 1 when day doy of year y lies in the days of a final of the confederation of club a or club b (0.6.2 slice 6,
+ * season_intl_finals_busy). The qualifiers are made long before the finals' fixtures, so side_busy cannot see
+ * them: the CAF qualifiers of 26 January 2013 (the original's day; the nearest FIFA day, 6 February, too) lie in
+ * the ACN of 2013, whose finalists then lost their group days and the final. */
+static int finals_busy(uint32_t a, uint32_t b, int y, int doy)
+{
+    uint32_t sides[2] = {a, b};
+    for (int s = 0; s < 2; s++) {
+        uint32_t nation = readable(sides[s]) ? rd32(g_mem, sides[s] + 0x53) : 0;
+        uint32_t cont = readable(nation) ? rd32(g_mem, nation + NATION_CONTINENT) : 0;
+        if (!readable(cont)) continue;
+        for (int c = 0; c < SEASON_CONFS; c++)
+            if (rd32(g_mem, cont) == rd32(g_mem, KEY_CONTINENTS + 4u * (uint32_t)c) &&
+                season_intl_finals_busy(c, y, doy))
+                return 1;
+    }
+    return 0;
+}
+
 /* The FIFA day a qualifier of club home v club away on day d of year y moves to: the nearest free one of the same
- * year, 2 or more days after today and not after day ey/ed (its stage's last match day; ey 0: none); d when it is on
- * one already; -1 when none is free. */
+ * year, 2 or more days after today, not after day ey/ed (its stage's last match day; ey 0: none) and not in the
+ * days of a final of either side's confederation; d when it is on such a day already; -1 when none is free. */
 static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, int ed)
 {
     int doys[FIFA_DOYS_MAX], n = fifa_doys(y, doys, FIFA_DOYS_MAX);
     for (int k = 0; k < n; k++)
-        if (doys[k] == d) return d;                             /* on a FIFA day already */
+        if (doys[k] == d && !finals_busy(home, away, y, d)) return d;     /* on a free FIFA day already */
     int today_year = (int16_t)rd16(g_mem, GAME_DATE + 2), today = (int16_t)rd16(g_mem, GAME_DATE);
     for (int dist = 1; dist <= SNAP_DAYS && !rt_unwinding; dist++)
         for (int sign = -1; sign <= 1; sign += 2) {
@@ -285,7 +307,7 @@ static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, in
             if (c < 0 || c >= days_in(y) || (y == today_year && c < today + 2) || y < today_year) continue;
             if (ey && (y > ey || (y == ey && c > ed)) && c > d) continue;      /* past its stage's last day */
             for (int k = 0; k < n; k++) ok |= doys[k] == c;
-            if (!ok || side_busy(home, away, y, c)) continue;
+            if (!ok || finals_busy(home, away, y, c) || side_busy(home, away, y, c)) continue;
             return rt_unwinding ? -1 : c;
         }
     return -1;

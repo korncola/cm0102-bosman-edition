@@ -35,6 +35,7 @@ int season_code_on(void) { return 1; }
 int season_day_of_year(int y, int m, int d) { (void)y, (void)m; return d; }
 void season_from_day_of_year(int y, int doy, int *m, int *d) { (void)y; *m = 1, *d = doy; }
 int season_fifa_day(int y, int m, int want) { (void)y, (void)m; return want; }
+int season_intl_finals_busy(int conf, int y, int doy) { (void)conf, (void)y, (void)doy; return 0; }
 const SeasonCompClass season_comp_classes[1];
 const int season_comp_class_count = 0;
 const SeasonCompClass *season_comps_class(uint32_t vtable) { (void)vtable; return NULL; }
