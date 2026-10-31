@@ -323,11 +323,20 @@ static void put_round(uint32_t rec, int round, const Round *o, int shift, int te
     round_fields(rec, round, o->value, teams, 0, o->flags);
 }
 
-/* The knockout of 24 teams. The round of 16 takes the original's quarter-final dates and the 8 kick-off slots
- * of the World Cup round of 16 (0x92c8c0..0x92c958), and value 0x14 at +7 as there (0x92c95d). The later rounds
- * keep the original's slots, flags and values, 5 days later (inference: in 2019 both finals played the round
- * of 16 from 3 to 6 days after the groups). The table's first day moves all dates (the date shift of the
- * caller). The Asian Cup of 24 has no third-place match: R16, QF, SF, F (4 rounds), the ACN 5 rounds. */
+/* The knockout of 24 teams. The round of 16 takes the 8 kick-off slots of the World Cup round of 16
+ * (0x92c8c0..0x92c958) on Friday to Monday (weekday flags 5, 6, 0, 1), value 0x14 at +7 as there (0x92c95d), and
+ * the World Cup's window for them: 5 days, the first with weekday flag 4, the last with 1, x and y 1 (26 to 30 June
+ * at 0x92c8a1 and 0x92c8b8). It starts 2 days after the original's quarter-finals start (ACN 20 to 24 February,
+ * Asian Cup 23 to 27 October), and the later rounds keep the original's slots, flags and values 7 days later.
+ * Up to 0.6.2 the round of 16 took the original's quarter-final window (ACN 18 to 21 February, Asian Cup 21 to 23
+ * October), where the slots of some weekdays had no day: those matches clashed, add_fixture 0x5aa680 moved them 4
+ * days (0x5aa96e) into the days of the quarter-finals, and the finals stalled with no final (0.6.2 open item 54,
+ * cause 2: the Asian Cup 2099 of a 2098 date jump moved two matches from day 16 to day 20,
+ * run-logs/0.6.2-s4a/j2099). Inference: in 2019 both finals played the round of 16 from 3 to 6 days after the
+ * groups. The table's first day moves all dates (the date shift of the caller). The Asian Cup of 24 has no
+ * third-place match: R16, QF, SF, F (4 rounds), the ACN 5 rounds. */
+#define R16_AFTER 2                     /* days from the original's quarter-final start to the round of 16 */
+#define LATER_ROUNDS 7                  /* days by which the quarter-finals and later rounds move */
 static uint32_t knockout_template(int c, uint32_t self, uint32_t out_rounds, uint32_t out_id, uint32_t out_flag)
 {
     int rounds = cups[c].third_place ? 5 : 4;
@@ -338,8 +347,11 @@ static uint32_t knockout_template(int c, uint32_t self, uint32_t out_rounds, uin
     if (rt_unwinding || !rec) return 0;
     int y = year_of(self);
     const Round *qf = &cups[c].qf;
-    first_date(rec, 0, qf->first, y);
-    last_date(rec, 0, qf->last, qf->x, y, qf->y);
+    Day first = later(qf->first, R16_AFTER, y), last = later(qf->first, R16_AFTER + 4, y);
+    first.weekday = 4;
+    last.weekday = 1;
+    first_date(rec, 0, first, y);
+    last_date(rec, 0, last, 1, y, 1);
     slot(rec, 0, 0, 5, 1, 3, 0x40);
     slot(rec, 0, 1, 5, 2, 3, 0x80);
     slot(rec, 0, 2, 6, 2, 3, 0x200);
@@ -349,11 +361,11 @@ static uint32_t knockout_template(int c, uint32_t self, uint32_t out_rounds, uin
     slot(rec, 0, 6, 1, 2, 3, 0x1000);
     slot(rec, 0, 7, 1, 1, 3, 0x2000);
     round_fields(rec, 0, 0x14, 16, 1, qf->flags);
-    put_round(rec, 1, qf, 5, 8, y);
-    put_round(rec, 2, &cups[c].sf, 5, 4, y);
+    put_round(rec, 1, qf, LATER_ROUNDS, 8, y);
+    put_round(rec, 2, &cups[c].sf, LATER_ROUNDS, 4, y);
     int r = 3;
-    if (cups[c].third_place) put_round(rec, r++, &cups[c].third, 5, 2, y);
-    put_round(rec, r, &cups[c].final, 5, 2, y);
+    if (cups[c].third_place) put_round(rec, r++, &cups[c].third, LATER_ROUNDS, 2, y);
+    put_round(rec, r, &cups[c].final, LATER_ROUNDS, 2, y);
     if (rt_unwinding) return 0;
     for (int k = 0; k < rounds; k++) wr16(g_mem, rec + (uint32_t)k * ROUND_SIZE + 9u, (uint32_t)k);
     return rec;
