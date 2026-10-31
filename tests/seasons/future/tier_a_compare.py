@@ -13,7 +13,8 @@ fixture days to the earlier save day. The checks, from the history checker (hist
                 (history_check.editions_of), and the edition that each finals class waits for
     dates       the match days of both saves in the window split into parts at each gap of more than PART_GAP
                 days (a season, or a half before a long winter break). Each part has matches in both saves,
-                its first day in the two saves is within FIRST_DAYS days, and its last day within LAST_DAYS
+                its first day in the two saves is within FIRST_DAYS days, and its last day within LAST_DAYS (when
+                the part ends more than LAST_DAYS days before the window ends)
     hosts       the host of each history row from the start year on
     entrants    the entrant faults of the checker (entrant-confed, -count, -host, -route, -holder, -dead: the
                 year's access rule)
@@ -128,7 +129,9 @@ def compare(a, b):
                 (notes if soft or sum(z[3].values()) == 1 else diffs).append(
                     ("dates", comp, year, f"{span([z])}: {sum(z[3].values())} matches, {who}"))
                 continue
-            if (abs(x[0] - y[0]) > FIRST_DAYS and min(x[0], y[0]) > first) or abs(x[1] - y[1]) > LAST_DAYS:
+            running = max(x[1], y[1]) > end - LAST_DAYS      # the part goes on after the window: no last day
+            if (abs(x[0] - y[0]) > FIRST_DAYS and min(x[0], y[0]) > first) or \
+                    (abs(x[1] - y[1]) > LAST_DAYS and not running):
                 (notes if soft else diffs).append(("dates", comp, year, f"{span([x])} / {span([y])}"))
             elif x[:2] != y[:2]:
                 notes.append(("dates", comp, year, f"{span([x])} / {span([y])}"))
