@@ -529,12 +529,68 @@ static int mem_slot(uint32_t h)
 
 int win_is_file_handle(uint32_t h) { return fd_of(h) >= 0 || mem_slot(h) >= 0; }
 
+/* Kept files. At the season change PlayerStats::end_season_for_key_nation 0x7c1350 archives the season's
+ * records of each player: archive_player_stats 0x7c5fe0 calls FILE_LLIST::add_node 0x58e340 for each record,
+ * and add_node opens "player stats history.tmp" for read and write, appends, and closes it each time (the
+ * open at 0x58e5c1). The opens and closes took about 5 % of a Tier A year (the profile of 0.6.2 slice 3).
+ * While 0x7c1350 runs, a handle that was opened with OPEN_EXISTING for read and write is not closed on the
+ * host: its file stays open, and the next CreateFileA of the same host path with the same flags takes it at
+ * position 0, as a new open gives. It is one host file, read and written by the same calls, so the bytes are
+ * the same. A delete or rename of that path and the end of 0x7c1350 close the kept files.
+ * RECOMP_KEEP_FILES=0 closes each file at once, as before. */
+#define KEEP_MAX 4
+static struct { char *path; int fd; int flags; } kept[KEEP_MAX];
+static int keep_depth;
+static int fd_flags[MAX_FILES];     /* the host open flags of a handle */
+
+static int keep_on(void)
+{
+    static int on = -1;
+    if (on < 0) {
+        const char *v = getenv("RECOMP_KEEP_FILES");
+        on = !(v && !strcmp(v, "0"));
+    }
+    return on;
+}
+
+/* Closes the kept file of path, or every kept file when path is NULL. */
+static void keep_drop(const char *path)
+{
+    for (int k = 0; k < KEEP_MAX; k++) {
+        if (!kept[k].path || (path && strcmp(kept[k].path, path))) continue;
+        host_close(kept[k].fd);
+        free(kept[k].path);
+        kept[k].path = NULL;
+    }
+}
+
+/* A kept host file for path and flags, at position 0, or -1. */
+static int keep_take(const char *path, int flags)
+{
+    for (int k = 0; k < KEEP_MAX; k++) {
+        if (!kept[k].path || kept[k].flags != flags || strcmp(kept[k].path, path)) continue;
+        int fd = kept[k].fd;
+        free(kept[k].path);
+        kept[k].path = NULL;
+        if (host_seek(fd, 0, SEEK_SET) == 0) return fd;
+        host_close(fd);
+        return -1;
+    }
+    return -1;
+}
+
+void o_007c1350(void);
+
+/* PlayerStats::end_season_for_key_nation 0x7c1350, thiscall (key nation), ret 4. */
+RT_WRAP(007c1350, keep_files_archive)
+{
+    keep_depth++;
+    o_007c1350();
+    if (--keep_depth == 0) keep_drop(NULL);
+}
+
 int win_close_file(uint32_t h)
 {
-    if (fd_of(h) >= 0) {
-        free(fd_path[(h - FILE_BASE) / 4]);
-        fd_path[(h - FILE_BASE) / 4] = NULL;
-    }
     int m = mem_slot(h);
     if (m >= 0) {
         fd_used[m] = 0;
@@ -542,8 +598,20 @@ int win_close_file(uint32_t h)
     }
     int fd = fd_of(h);
     if (fd < 0) return 0;
-    host_close(fd);
-    fd_used[(h - FILE_BASE) / 4] = 0;
+    uint32_t i = (h - FILE_BASE) / 4;
+    int k = 0;
+    if (keep_depth && keep_on() && fd_path[i] && fd_flags[i] == O_RDWR)
+        for (; k < KEEP_MAX && kept[k].path; k++) {}
+    if (keep_depth && keep_on() && fd_path[i] && fd_flags[i] == O_RDWR && k < KEEP_MAX) {
+        kept[k].path = fd_path[i];          /* the path moves to the kept file */
+        kept[k].fd = fd;
+        kept[k].flags = fd_flags[i];
+        fd_path[i] = NULL;
+    } else
+        host_close(fd);
+    free(fd_path[i]);
+    fd_path[i] = NULL;
+    fd_used[i] = 0;
     return 1;
 }
 
@@ -617,7 +685,8 @@ RT_IMPORT(CreateFileA)
         }
         rt_fatal("too many open files");
     }
-    int fd = host_open(target, flags, 0644);
+    int fd = keep_depth && !(flags & (O_CREAT | O_TRUNC | O_EXCL)) ? keep_take(target, flags) : -1;
+    if (fd < 0) fd = host_open(target, flags, 0644);
     WIN_TRACE("CreateFileA(%s -> %s, %#x, %u) = %d\n", name, target, access, disposition, fd);
     if (fd < 0) {
         win_error_from_errno();
@@ -628,6 +697,7 @@ RT_IMPORT(CreateFileA)
         if (!fd_used[i]) {
             fd_used[i] = 1;
             fds[i] = fd;
+            fd_flags[i] = flags;
             fd_path[i] = write_intent ? strdup(target) : NULL;
             win_last_error = existed && (disposition == 2 || disposition == 4) ? ERROR_ALREADY_EXISTS : 0;
             rt_ret_stdcall(FILE_BASE + 4 * i, 7);
@@ -835,7 +905,7 @@ RT_IMPORT(DeleteFileA)
         errno = ENOSPC;
     } else if (win_paths(name, h, u, sizeof h)) {
         if (temp_save_beside(u) && save_backup(h, u, 0)) ok = 1;   /* a new save follows: the old moved to backups/ */
-        else if (exists(u)) ok = host_unlink(u) == 0;
+        else if (exists(u)) { keep_drop(u); ok = host_unlink(u) == 0; }
         /* A save without the temp file (no option bit 0x20000000) deletes the old .sav before it writes (0x82e62d). */
         size_t nl = strlen(name);
         if (ok && in_save && has_sav_ending(name) && (nl < 18 || strcasecmp(name + nl - 18, "temp_save_file.sav")))
@@ -857,6 +927,7 @@ RT_IMPORT(MoveFileA)
         ok = 0;
     } else if (ok && (exists(tu) || exists(th))) { win_last_error = ERROR_ALREADY_EXISTS; ok = 0; }
     else if (ok && exists(fu)) {
+        keep_drop(fu);
         make_parents(tu);
         if (host_rename(fu, tu)) { win_error_from_errno(); ok = 0; }
     } else if (ok && exists(fh) && !is_dir(fh)) {
