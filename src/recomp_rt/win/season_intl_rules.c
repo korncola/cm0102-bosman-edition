@@ -430,9 +430,13 @@ static const int class_confs[INTL_CLASSES] = {
 /* The days from the first group day to the final for a team count: the real spans (2013 ACN of 16 teams 22 days,
  * Copa America Centenario of 16 23, Euro 2016 of 24 30, 2014 World Cup of 32 31, 2026 World Cup of 48 38;
  * int-continental and int-world rows) and some days more. Inference: the game's own finals fit in these spans
- * (the 2012 ACN of seed 6 played 21 January to 11 February, 21 days). */
-static int finals_span(int teams)
+ * (the 2012 ACN of seed 6 played 21 January to 11 February, 21 days). The ACN and Asian Cup of 24
+ * play their knockout 12 days after the original's and up to 14 days more (season_intl_cups.c LATER_ROUNDS and
+ * MAX_DELAY), and Date::Date moves a date up to 3 days to its weekday: the ACN final can come 31 + 12 + 3 days after
+ * the first group day, and 14 more. */
+static int finals_span(uint32_t cls, int teams)
 {
+    if (teams > 16 && teams <= 24 && (cls == INTL_ACN || cls == INTL_ASIAN)) return 60;
     return teams <= 16 ? 30 : teams <= 24 ? 37 : teams <= 32 ? 38 : 45;
 }
 
@@ -455,7 +459,7 @@ static int finals_days(uint32_t cls, int year, long *from, long *to)
         month0 = 5;
     }
     *from = days_from_civil(year, month0 + 1, day) + season_intl_date_shift(cls, year);
-    *to = *from + finals_span(rule->teams);
+    *to = *from + finals_span(cls, rule->teams);
     return 1;
 }
 
@@ -503,7 +507,7 @@ int season_intl_gold_busy(int y, int doy)
         const SeasonNlGoldCup *g = year > season_start_year() ? season_intl_gold_edition(year) : NULL;
         if (!g || g->start.month < 1) continue;
         long from = days_from_civil(year + g->start.year, g->start.month, g->start.day > 0 ? g->start.day : 1);
-        if (day >= from - 2 && day <= from + finals_span(g->teams)) return 1;
+        if (day >= from - 2 && day <= from + finals_span(INTL_COPA, g->teams)) return 1;
     }
     return 0;
 }

@@ -179,7 +179,7 @@ Blocked by: 1, 2, 3
 Delivers: every international final and its qualifiers continue on the last cycle. The 48-team qualifiers fill 48 places. The Confederations Cup stays ended. A start after 2200 has no final in the past. Faults 1, 13, 15, 32 and 34.
 Merge danger: two-way door. Blast radius: every international competition.
 - [ ] A Tier A run to 2100 gives every final on its cycle, and the checker finds no gap.
-- [ ] Unit tests: no class returns the idle year.
+- [x] Unit tests: no class returns the idle year.
 
 ### 4b. Repair of saves stuck at the idle year
 Blocked by: 4a
