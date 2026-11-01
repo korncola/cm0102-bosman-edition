@@ -337,6 +337,20 @@ def uefa_missing_rule():
     return bad
 
 
+def titles_rule():
+    """duplicate: three Argentine titles in 2025 (the AFA's Campeon de Liga beside the Apertura and Clausura) are no
+    fault, three in 2026 are."""
+    sys.path.insert(0, HERE)
+    import history_check
+    bad = []
+    for name, year, most, want in (("Argentine Premier Division", 2025, 2, 3), ("Argentine Premier Division", 2026, 2, 2),
+                                   ("Argentine Premier Division", 2025, 1, 3), ("Mexican First Division", 2025, 2, 2)):
+        got = history_check.titles_allowed(name, year, most, (1, 0))
+        if got != want:
+            bad.append(f"titles_allowed {name} {year}: {got}, not {want}")
+    return bad
+
+
 def main():
     work = tempfile.mkdtemp(prefix="history-check-")
     members, want = records()
@@ -520,6 +534,7 @@ def main():
     bad += renames_match()
     bad += uefa_moves_match()
     bad += uefa_missing_rule()
+    bad += titles_rule()
 
     for b in bad:
         print("FAIL  " + b)
