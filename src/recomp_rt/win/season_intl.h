@@ -118,6 +118,11 @@ const char *season_intl_class_file(uint32_t cls);
 /* Inside a template function of a class (its stage builder): every date that the template makes moves days more,
  * until the same call with -days (season_intl_cups.c: the quarter-finals of the Asian Cup of 16). */
 void season_intl_shift_more(int days);
+int season_intl_shift_now(void);               /* the shift that the template's dates take now */
+
+/* Inside the template of a knockout (season_intl_cups.c): the whole weeks by which the knockout must move so that
+ * its first date (day, month from 0, weekday flag of Date::Date) comes 3 or more days after today. */
+int season_intl_rest_delay(const char *file, int year, int day, int month0, int weekday);
 
 /* Moves a date (day 1 to 31, month from 0, year) by shift days. */
 void season_intl_shift_date(int shift, int *day, int *month0, int *year);

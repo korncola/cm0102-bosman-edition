@@ -202,7 +202,14 @@ uint32_t season_intl_copa_template(void (*original)(void))
     int mapped = idx == KO ? 2 : (idx + 1) % 3 - 1;
     uint32_t out_id = rd32(g_mem, sp + 0xcu);
     wr8(g_mem, sp + 4u, (uint32_t)mapped);
+    /* Group D plays in the kick-off slots of group A, so the game moves some group matches a week (find_fixture_
+     * clashes 0x5ad780, severity 10: the Copa America 2100 of a 2098 date jump, run-logs/0.6.2-s4a/c2100u) and
+     * the groups end late: the knockout then moves by whole weeks, as that of the Asian Cup of 16
+     * (season_intl_rest_delay; the original's quarter-finals from 15 July, weekday flag 5, at 0x5e0c74). */
+    int delay = idx == KO ? season_intl_rest_delay("goldcup", year_of(self), 15, 6, 5) : 0;
+    season_intl_shift_more(delay);
     original();
+    season_intl_shift_more(-delay);
     if (rt_unwinding) return cpu.eax;
     if (idx < KO && mapped != idx && readable(out_id)) wr16(g_mem, out_id, (uint32_t)(idx + 0x420));
     return cpu.eax;

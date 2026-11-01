@@ -357,27 +357,33 @@ static void put_round(uint32_t rec, int round, const Round *o, int shift, int te
  * later than the original's groups: a team that played the day before got a round of 16 match on its next day,
  * find_fixture_clashes 0x5ad780 gave severity 22 (0x5adf66) and add_fixture moved the match 4 days into the
  * quarter-finals (0.6.2 open item 54, cause 2). */
-static int rest_delay(int c, uint32_t self, Day first, int y)
+int season_intl_rest_delay(const char *file, int y, int day, int month0, int weekday)
 {
     int today = (int16_t)rd16(g_mem, GAME_DATE), today_year = (int16_t)rd16(g_mem, GAME_DATE + 2u);
-    int shift = season_intl_date_shift(cups[c].cls, y), fy, fm, fd, wy, wm0, wd;
-    /* The first date as Date::Date 0x549f70 makes it: moved by the class's shift, then to its weekday (0x54a2d0). */
-    season_from_abs_day(season_abs_day(y, first.month0 + 1, first.day) + shift, &fy, &fm, &fd);
+    int shift = season_intl_shift_now(), fy, fm, fd, wy, wm0, wd;
+    /* The first date as Date::Date 0x549f70 makes it: moved by the builder's shift, then to its weekday (0x54a2d0). */
+    season_from_abs_day(season_abs_day(y, month0 + 1, day) + shift, &fy, &fm, &fd);
     wy = fy, wm0 = fm - 1, wd = fd;
-    if (first.weekday >= 0 && first.weekday <= 6) season_weekday_date(fy, fm - 1, fd, first.weekday, &wy, &wm0, &wd);
+    if (weekday >= 0 && weekday <= 6) season_weekday_date(fy, fm - 1, fd, weekday, &wy, &wm0, &wd);
     long from = season_abs_day(wy, wm0 + 1, wd);
     long now = season_abs_day(today_year, 1, 1) + today;
     long delay = now + REST_DAYS - from;
     delay = delay > 0 ? (delay + 6) / 7 * 7 : 0;
     if (delay > MAX_DELAY) {
-        fprintf(stderr, "recomp: season intl: %s %d knockout made on day %d of %d, %ld days late: %d kept\n",
-                cups[c].file, year_of(self), today, today_year, delay, MAX_DELAY);
+        fprintf(stderr, "recomp: season intl: %s %d knockout made on day %d of %d, %ld days late: %d kept\n", file, y,
+                today, today_year, delay, MAX_DELAY);
         delay = MAX_DELAY;
     }
     if (logging())
         fprintf(stderr, "recomp: season intl: %s %d knockout made on day %d of %d, first day %d of %d, delay %ld\n",
-                cups[c].file, year_of(self), today, today_year, season_day_of_year(wy, wm0 + 1, wd), wy, delay);
+                file, y, today, today_year, season_day_of_year(wy, wm0 + 1, wd), wy, delay);
     return (int)delay;
+}
+
+static int rest_delay(int c, uint32_t self, Day first, int y)
+{
+    (void)self;
+    return season_intl_rest_delay(cups[c].file, y, first.day, first.month0, first.weekday);
 }
 
 static uint32_t knockout_template(int c, uint32_t self, uint32_t out_rounds, uint32_t out_id, uint32_t out_flag)
