@@ -65,7 +65,7 @@ The run set is the fixed list of games that a release must pass (from 0.6.2): Ti
 
 ## Tier A runs
 
-A Tier A run reaches a far year quickly. It plays only the competitions: the calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players, contracts, and save and load. It skips the AI transfer market, background matches, new injuries and AI manager moves (sackings). Each match gets an instant result from the two sides' reputation, so the stronger side wins more often. The test switch is `RECOMP_TIER_A=1`. The program reads it once at the start, and it is off by default. The same-save set proves that the switch changes nothing when it is off.
+A Tier A run reaches a far year quickly. It plays only the competitions: the calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players, contracts, and save and load. It skips the AI transfer market, background matches, new injuries and AI manager moves (sackings). Tier A has no AI sales. So a Tier A step, which is not original code, acts when an AI club fills all 50 squad slots. The club lets its weakest players over 21 go until 37 remain. Each match gets an instant result from the two sides' reputation, so the stronger side wins more often. The test switch is `RECOMP_TIER_A=1`. The program reads it once at the start, and it is off by default. The same-save set proves that the switch changes nothing when it is off.
 
 A Tier A year takes 4 to 6 minutes with all nations on the M5 Max at load 6 to 12, about 7 times faster than the normal game at the same load. The time does not grow from 2013 to 2066. The save grows by about 9 MB a year.
 

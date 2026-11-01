@@ -154,7 +154,31 @@ def fixture_part(fixtures):
 # player has a wrong age field; Carpania FC's balance has wrapped.
 # Aland's players are in its senior squad; Borduria's in no squad, so its senior and under-21 squads are empty.
 HEALTH_FAULTS = {("no-youth", "Aland", 2040), ("empty-squad", "Borduria", 2040),
-                 ("empty-squad", "Borduria under-21", 2040), ("overflow", "age", 2040), ("overflow", "balance", 2040)}
+                 ("empty-squad", "Borduria under-21", 2040), ("overflow", "age", 2040), ("overflow", "balance", 2040),
+                 ("full-squad", "Carpania FC", 2040), ("full-squad", "Elbonia Rovers", 2040)}
+# Full squads (open item 78). Ages by the age field: Aland's 30 players (staff 0 to 29) are 30; of Borduria's 30
+# (staff 30 to 59), 21 are 21 or under (YOUNG, staff 59 by its wrong age field 7). Abilities (player.dat): Aland 50,
+# Borduria 60 for the older, 100 + id for YOUNG, so YOUNG are the best. Each full club lists YOUNG last, so the
+# slot order alone would keep them out of the 14 best.
+# - Carpania FC: Aland's players only, no one 21 or under: a fault.
+# - Elbonia Rovers: YOUNG and 29 of Aland's. The 14 best are young, 7 young remain: a fault.
+# - Borduria Sport: YOUNG with staff 59 twice and 28 of Aland's: 8 young remain, no fault.
+# - Durania Stars: 49 of Aland's in 49 slots, not full: no fault.
+YOUNG = [30 + k for k in range(30) if 24 - k % 10 <= 21]
+FULL_SQUADS = {"Carpania FC": list(range(30)) + list(range(20)),
+               "Elbonia Rovers": list(range(29)) + YOUNG,
+               "Borduria Sport": list(range(28)) + YOUNG + [59],
+               "Durania Stars": list(range(30)) + list(range(19))}
+
+
+def players():
+    out = bytearray()
+    for i in range(60):
+        r = bytearray(0x46)
+        struct.pack_into("<ih", r, 0, i, 0)
+        struct.pack_into("<h", r, 5, 50 if i < 30 else 100 + i if i in YOUNG else 60)
+        out += r
+    return bytes(out)
 
 
 def staff():
@@ -197,15 +221,17 @@ def records(changing=1):
         struct.pack_into("<i", r, 0x71, c)
         nat += r
 
-    def club(cid, name, nation, manager=-1):
+    def club(cid, name, nation, manager=-1, squad=()):
         r = bytearray(0x245)
         struct.pack_into("<i", r, 0, cid)
+        for j in range(50):                                          # squad slots, -1 when empty
+            struct.pack_into("<i", r, 0xD7 + 4 * j, squad[j] if j < len(squad) else -1)
         r[4:4 + len(name)] = name.encode()
         struct.pack_into("<i", r, 0x53, nation)
         struct.pack_into("<i", r, 0xCF, manager)
         return bytes(r)
 
-    clubs = b"".join(club(i, n, nat_) for i, (n, nat_) in enumerate(CLUBS))
+    clubs = b"".join(club(i, n, nat_, squad=FULL_SQUADS.get(n, ())) for i, (n, nat_) in enumerate(CLUBS))
     sides = b"".join(club(side(i), SIDE_NAMES.get(n, n), i, 0 if i < 2 else -1) for i, (n, _) in enumerate(NATIONS))
     sides += b"".join(club(side(len(NATIONS) + i), n + " U21", i, -1) for i, (n, _) in enumerate(NATIONS))
     comp = {"club": bytearray(), "nation": bytearray()}
@@ -241,7 +267,7 @@ def records(changing=1):
                ("Euro Super Cup_1.tmp", b"\0" * 64), ("Hatay Cup_14.tmp", part(2999)),
                ("fixtures_2038.tmp", fixture_part(FIXTURES_2038)), ("fixtures_2039.tmp", fixture_part(FIXTURES_2039)),
                ("fixtures_2040.tmp", fixture_part(FIXTURES_2040)), ("staff.dat", staff()),
-               ("finance.dat", finance())]
+               ("player.dat", players()), ("finance.dat", finance())]
     # Two files in a merged part (0.6.2 slice 13, savfile.merge): the World Finals class waiting on 2200 and the
     # fixtures of 2039 give planted faults only when the checker reads them from it.
     merged = [m for m in members if m[0] in ("World Finals_10.tmp", "fixtures_2039.tmp")]
@@ -467,7 +493,7 @@ def main():
 
     # World health: the report and its faults.
     run([sav, "--out", work, "--label", "health", "--known", empty, "--nations", nations, "--health"])
-    got = {k for k in faults(work, "health") if k[0] in ("empty-squad", "no-youth", "overflow")}
+    got = {k for k in faults(work, "health") if k[0] in ("empty-squad", "no-youth", "overflow", "full-squad")}
     if got != HEALTH_FAULTS:
         bad.append(f"health run: faults {sorted(got)}, not {sorted(HEALTH_FAULTS)}")
     # no-youth alone fails the run (Q35): every other fault of the save is known.

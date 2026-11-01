@@ -18,6 +18,8 @@
  *   keep the story log short. The original's flag 0x9cd1f8 would skip them too, so it is not used.
  * - Background matches: SimulatedStats::play_daily_matches 0x84be20 (ret at 0x84c4fb, called at 0x5cdac9). It
  *   writes no fixture, table or history row, only player stats of clubs with no loaded league.
+ * - Not original code, for the AI sales that Tier A lacks: a full AI club lets its weakest players over 21 go
+ *   (release_surplus, open item 78).
  * Contracts stay. A skip of the contract pass 0x4c7ac0 (contract ends, called at 0x5cd406) and of the daily staff
  * pass 0x5ce2d0 (the AI contract offers, 0x4cda70 at 0x5d19d7 and five more) left each player at his club after his
  * contract ended, and such a player cannot play (an England game from 2025: Aston Villa had 50 players and 4 who
@@ -100,6 +102,96 @@ static int skip(int nargs, uint32_t from)
     if (!tier_a_in_play() || (from && rd32(g_mem, cpu.esp) != from)) return 0;
     rt_ret_stdcall(0, nargs);
     return 1;
+}
+
+#define TRANSFERS 0xde1f54u          /* TRANSFER_MANAGER, the this of 0x8c16b0 and 0x8c1870 (0x83db1c, 0x83db60) */
+#define SLOTS 50                     /* club squad slots +0xd7 (VIRTUAL_STAFF 0x90d8f0 counts 0x32) */
+#define RELEASE_TO 37                /* a club that reaches 50 slots and goes down to N spends about 5 / (50 - N)
+                                        of its time at 45 or more. Down to 45, 405 clubs had 45 or more in July
+                                        2108, the normal game 153: 5 / 13 = 0.38 = 153 / 405, so N = 37 */
+#define CONTRACTS 0xae1050u          /* CONTRACT_MANAGER, the this of 0x4cf6d0 and 0x4cf5f0 (0x83d8cd, 0x83d901) */
+#define CLUB_TABLE 0xae23b4u         /* the club rows (0x245 bytes each), national sides in the last 2 x nations */
+#define CLUB_COUNT 0xae235cu
+#define NATION_COUNT 0xae2350u
+#define CLUB_SIZE 0x245u
+
+static uint32_t call_this(uint32_t fn, uint32_t self, int n, uint32_t *args)
+{
+    cpu.ecx = self;
+    return rt_callback(fn, n, args);
+}
+
+/* Not original code: a Tier A step (0.6.2 open item 78). Tier A has no AI sales, so squads only grew: new players
+ * and youth joined, and nobody left before his contract ended. In July 2108 335 of 8,107 clubs had all 50 squad
+ * slots (+0xd7) filled against 29 in the normal game (which sells about 18 % of a big squad a year: clubs at 45
+ * slots or more, 2020/21). The top-up 0x90dae0 then has no slot for a virtual player, and a reserve side under the
+ * rule "3 over 21" (0x8cf7e0 type 3, the age byte +0x18 compared at 0x8cf9a8) fielded 10 or fewer: Albion Rovers in
+ * January 2045 of a 2013 start (match_eng.cpp 652), Motherwell in September 2041 of a 2001 start (612). So an AI
+ * club with all its squad slots filled lets its weakest players over 21 go (current ability, player row +0x05, as
+ * the national fill reads it) until RELEASE_TO remain. The release is the original's, with the checks that
+ * Shortlist_Manager::assess_club_squad 0x83cb40 makes before its own release (cited in the loop):
+ * queue_free_transfer 0x8c16b0 (staff, 0, -1, as at 0x83db6b) unless already queued (0x8c1870), and
+ * TRANSFER_MANAGER::daily_update 0x8c5880 releases the queue the same day (process_free_transfer_queue 0x8c18c0 at
+ * 0x8c599c: the payoff, news, history, the squad slots and the contract end, 0x8c1af0). It runs for every club
+ * before each daily update (the wrap below), only in play. */
+static void release_surplus(uint32_t club)
+{
+    uint32_t sp[SLOTS];
+    int n = 0;
+    for (uint32_t j = 0; j < SLOTS; j++) {
+        uint32_t s = rd32(g_mem, club + 0xd7 + 4 * j);
+        if (s) sp[n++] = s;
+    }
+    if (n < SLOTS || !rd32(g_mem, club + 0x53)) return;               /* as 0x83cbd4: a club with a nation */
+    uint32_t a1c[1] = {club}, a5[5] = {club, 0, 1, 0, 0};
+    if (rt_callback(0x53b900u, 1, a1c) || rt_unwinding) return;      /* a national side (as 0x83cbc8) */
+    if (rt_callback(0x600a50u, 5, a5) || rt_unwinding) return;      /* a human club (as 0x83cbdf) */
+    uint32_t tm = rd32(g_mem, TRANSFERS), contracts = rd32(g_mem, CONTRACTS);
+    int left = n, queued = 0;
+    while (left > RELEASE_TO && n > 0 && !rt_unwinding) {
+        int best = -1, best_ca = 0x7fffffff;
+        for (int k = 0; k < n; k++) {
+            uint32_t pr = rd32(g_mem, sp[k] + 0x61);
+            if (!pr || (int8_t)g_mem[sp[k] + 0x18] <= 21) continue;    /* the age byte, as 0x8cf9a8 reads it */
+            int ca = (int16_t)rd16(g_mem, pr + 5);
+            if (ca < best_ca) best = k, best_ca = ca;
+        }
+        if (best < 0) break;
+        uint32_t s = sp[best], a1[1] = {s};
+        sp[best] = sp[--n];
+        /* The checks of assess_club_squad before its release: no loan contract (0x4cf6d0 at 0x83d8d4), at this club
+         * (+0x39, 0x83d8f9) with a contract there (0x4cf5f0 at 0x83d909), no offer for him (0x8c5cf0 at 0x83dafa,
+         * 0x8c5e40 at 0x83db0f). queue_free_transfer shows an error box for a loanee (0x8c16c8, 0x8c1722). */
+        if (call_this(0x4cf6d0u, contracts, 1, a1) || rt_unwinding || rd32(g_mem, s + 0x39) != club) continue;
+        uint32_t a2[2] = {s, club}, a3o[3] = {s, 0, 0}, a2o[2] = {s, 0};
+        if (!call_this(0x4cf5f0u, contracts, 2, a2) || rt_unwinding) continue;
+        if (call_this(0x8c5cf0u, tm, 3, a3o) || rt_unwinding || call_this(0x8c5e40u, tm, 2, a2o) || rt_unwinding)
+            continue;
+        left--;                                                        /* he leaves, queued now or before */
+        if (call_this(0x8c1870u, tm, 1, a1) || rt_unwinding) continue;
+        uint32_t a3[3] = {s, 0, 0xffffffffu};
+        call_this(0x8c16b0u, tm, 3, a3);
+        queued++;
+    }
+    if (queued && !rt_unwinding)
+        fprintf(stderr, "recomp: Tier A: %.50s has %d squad slots filled, lets %d players over 21 go\n",
+                (char *)(g_mem + club + 4), SLOTS, queued);
+}
+
+/* TRANSFER_MANAGER::daily_update 0x8c5880, thiscall (date, slice), ret 8, called at 0x5cd3ee in the day loop. */
+void o_008c5880(void);
+
+RT_WRAP(008c5880, tier_a_transfer_daily_update)
+{
+    if (tier_a_in_play()) {
+        Cpu saved = cpu;
+        uint32_t base = rd32(g_mem, CLUB_TABLE);
+        int clubs = (int)rd32(g_mem, CLUB_COUNT) - 2 * (int)rd32(g_mem, NATION_COUNT);  /* national sides last */
+        for (int i = 0; i < clubs && !rt_unwinding; i++) release_surplus(base + (uint32_t)i * CLUB_SIZE);
+        if (rt_unwinding) return;
+        cpu = saved;
+    }
+    o_008c5880();
 }
 
 RT_WRAP(0083a730, tier_a_update_club_shortlist)

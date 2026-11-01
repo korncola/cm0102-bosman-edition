@@ -112,6 +112,11 @@ per live nation. Time per game day is not in a save. Checks:
                   Olympic squads then empty). A fault that fails a Tier B run (Q35, open item 52)
     overflow      an age field that is not the age from the birth date (more than 1 year apart), or a balance
                   of 2^62 or more
+    full-squad    a club with all 50 squad slots (club +0xd7) filled and fewer than 8 players aged 21 or under
+                  outside its 14 best by current ability: the top-up 0x90dae0 has no slot for a virtual player,
+                  the reserve pick 0x6dbc50 first keeps 14 first-team players out, and the rule "3 over 21"
+                  (0x8cf7e0 type 3, the age field +0x18 against the limit at 0x8cf9a8) leaves fewer than 11
+                  (open item 78). It reports, it does not fail a run
 
 --rules (default: competitions.tsv next to this file, when it is there; lines with # are notes): per key (column comp) the columns
 kind, confed (FIFA or nation: no check, else codes joined by |), has_host (0: no host check, 1: every row from
@@ -135,6 +140,9 @@ sys.path.insert(0, os.path.join(ROOT, "tools", "save"))
 import savfile  # noqa: E402
 
 CLUB, NATION, COMP, CONT, HIST = 0x245, 0x122, 0x6B, 0xC6, 0x1A
+SLOTS = 50                  # club squad slots, +0xd7 (VIRTUAL_STAFF 0x90d8f0 counts 0x32)
+FIRST_TEAM = 14             # players the reserve pick 0x6dbc50 keeps for the first team
+PLAYER = 0x46               # player.dat row
 IDLE_YEARS = (2199, 2200)
 ENDED_YEAR = 2999
 EDITION = re.compile(rb"\xff\xff\xff\xff\x07\x03..\x00{7}.\x00\x00\x00(..)", re.S)
@@ -857,7 +865,7 @@ def health(game):
     year, day = game.date
     players, u21, u23 = collections.Counter(), collections.Counter(), collections.Counter()
     squad = collections.Counter()
-    age_bad = []
+    age_bad, ages = [], {}
     for o in range(0, len(staff) - STAFF + 1, STAFF):
         if s32(staff, o + 0x24) >= 0 and staff[o + 0x28] == 11:    # in the squad of a national side (job Player)
             squad[s32(staff, o + 0x24)] += 1
@@ -871,6 +879,7 @@ def health(game):
         if year and abs(age - real) > 1:
             age_bad.append((s32(staff, o), age, real))
         n = s32(staff, o + 0x1a)
+        ages[s32(staff, o)] = (age, s32(staff, o + 0x61))
         players[n] += 1
         u21[n] += real < 21
         u23[n] += real < 23
@@ -907,6 +916,23 @@ def health(game):
         sid, age, real = age_bad[0]
         faults.append(("overflow", "age", year, f"{len(age_bad)} players with an age field that is not the age "
                                                 f"from the birth date (staff {sid}: {age}, not {real})"))
+    player_rows = sav.read("player.dat") if "player.dat" in sav.members else b""
+
+    def ability(sid):                                         # current ability, player row +0x05
+        row = ages.get(sid, (99, -1))[1]
+        if not 0 <= row < len(player_rows) // PLAYER:
+            return -1
+        return struct.unpack_from("<h", player_rows, row * PLAYER + 5)[0]
+
+    for o in range(0, club_count * CLUB, CLUB):
+        ids = [s32(clubs, o + 0xD7 + 4 * j) for j in range(SLOTS)]
+        if all(x >= 0 for x in ids):
+            rest = sorted(ids, key=ability, reverse=True)[FIRST_TEAM:]
+            young = sum(1 for x in rest if ages.get(x, (99, -1))[0] <= 21)
+            if young < 8:
+                name = text(clubs, o + 4)
+                faults.append(("full-squad", name, year, f"{name}: all {SLOTS} squad slots filled, {young} players "
+                                                         f"aged 21 or under outside its {FIRST_TEAM} best"))
     wrapped = [b for b in balances if abs(b) >= MONEY_WRAP]
     if wrapped:
         faults.append(("overflow", "balance", year, f"{len(wrapped)} clubs with a balance of 2^62 or more, "
