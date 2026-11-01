@@ -91,6 +91,7 @@ Original game faults, fixed in every game, base game included (Q23, Q24, Q27):
 - Every money text that can pass £2,147,483,647 is traced and shows the full amount, news items included (Q46).
 - History rows of editions after the start date are cleared, so each edition has one row; the game's own row replaces the data row of the same edition (Q48, 30 October 2026). A new base game then differs from the original in its history rows and in the first-season holders that the game reads from them (the 2001 Charity Shield: Manchester United, not Arsenal, against Liverpool).
 - The same-save set under Q48 (slice 7, 31 October 2026): a loaded 2001 save differs only in nation_comp_history.dat and index.dat, the 3.9.68 row Copa América 2001 Colombia / Mexico, which goes when the game writes its own 2001 final (29 July). The new game differs in its history rows and all that follows the changed holders. The run rules-on differs from normal through one row only (a bisect of the 128 rows of 2002): the Asian Cup Winners' Cup 2002 Al Hilal. Without it the newest holder is Al Shabab (2001), and with changing rules on the season code makes the Asian Super Cup edition (season_kind_club_world.c), whose Cup Winners' Cup entrant is that holder. Accepted by the lead for Max (31 October 2026).
+- Every final writes its host into its history row in a season game (slice 5, open item 18), also the finals whose class asks for no host (the Africa Cup of Nations, Asian Cup, Copa América, Gold Cup, Confederations Cup and OFC Nations Cup). An expected season-game difference: a new 2001 game with changing rules on plays the Copa América 2001 final (29 July) in its first days, so its row names Colombia; a row diff of the two new-game saves with and without slice 5 shows this one host field and nothing else (1 November 2026). The same-save set accepts host fields that were empty (smoke_run.py HOST_ROWS: rules-on against history-q48-off, rules-on-q48 against a reference build before slice 5).
 
 The same game (Q152): every game code change keeps the same saves in the same-save set, unless the change acts only after a table end year, after 2099 or above £2.1 billion, which the set does not reach. The speed fixes give the same results as the code they replace (Q18).
 
@@ -100,7 +101,8 @@ Year limits:
 
 Test switches (Q9, Q30):
 - The Tier A switch and the date jump switch are in the normal build. The program reads them once at start, and both are off by default. The same-save set proves that they change nothing when off.
-- A Tier A run keeps the calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players, and save and load. It skips the AI transfer market, background matches, contracts, injuries and AI manager moves (Q16, changed by Q31: without retirements and new players, ages wrap and the under-21 and Olympic squads empty). Each match gets an instant result from the two sides' reputation, so the stronger side wins more often (Q16).
+- A Tier A run keeps the calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players, contracts, the filling of manager vacancies, and save and load. It skips the AI transfer market, background matches, new injuries and the sacking of managers (Q16, changed by Q31: without retirements and new players, ages wrap and the under-21 and Olympic squads empty). Each match gets an instant result from the two sides' reputation, so the stronger side wins more often (Q16).
+- Contracts stay (slice 3 build, approved 31 October 2026). With them skipped, a player stayed at his club after his contract ended and could not play, and the game stopped when a club could not field 11 (Aston Villa, August 2028, in an England game from 2025). The vacancy pass stays because retirements and season changes open vacancies, and only it fills them. Without it, more clubs and national teams would have no manager each year.
 - Tier A counts as the same as the normal game over 10 years when they agree on editions, dates, hosts and entrant rules. Winners can differ (Q10). Two windows: one from a 2013 start, inside the tables, and one from a 2098 date jump, after the tables.
 - Checks that depend on real results, such as the same finalists in a row, count only in Tier B.
 
@@ -167,10 +169,10 @@ Merge danger: two-way door, tests only. Blast radius: false passes or false faul
 Blocked by: 1, 2
 Delivers: a test switch that skips the work in the decisions above and gives instant results from reputation. It measures the time per year.
 Merge danger: two-way door. Off by default. Blast radius: none for players if the same-save set passes.
-- [ ] 10 years from a 2013 start and 10 years from a 2098 date jump, each in Tier A and in the normal game, agree on editions, dates, hosts and entrant rules.
+- [x] 10 years from a 2013 start and 10 years from a 2098 date jump, each in Tier A and in the normal game, agree on editions, dates, hosts and entrant rules.
 - [ ] Each nation keeps eligible under-21 and under-23 players in 2050 and 2100 of a Tier A run.
-- [ ] Same-save set PASS with the switch off.
-- [ ] The time per year is measured and reported.
+- [x] Same-save set PASS with the switch off.
+- [x] The time per year is measured and reported.
 
 ### 4a. International finals continue
 Blocked by: 1, 2, 3
@@ -190,8 +192,8 @@ Blocked by: 4a
 Delivers: hosts from the announced editions, then from the original host rule, with the rotation of Q32 where the original rule does not fit. Every final writes its host into its history row. Euro 2020 and 2028 and the Gold Cup after 2031 have hosts. Faults 3 (hosts), 12, 14 and 18.
 Merge danger: two-way door. Blast radius: hosts and automatic host places.
 - [ ] The checker finds no final without a host to 2300.
-- [ ] A host drawn as a nation that no longer exists is drawn again (unit test), including the case where all pairs name such nations.
-- [ ] The host of each announced edition matches its source.
+- [x] A host drawn as a nation that no longer exists is drawn again (unit test), including the case where all pairs name such nations.
+- [x] The host of each announced edition matches its source.
 
 ### 6. Finals that stop before their table ends
 Blocked by: 2

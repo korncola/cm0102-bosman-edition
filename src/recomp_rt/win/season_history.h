@@ -97,6 +97,10 @@ void season_history_forget(void);
 /* The number of rows that the last fill added and cleared (a test reads them). */
 void season_history_counts(uint32_t *added, uint32_t *cleared, uint32_t *unmatched);
 
+/* At the creation of a new game, after the drop (season_dates.c): the test log of RECOMP_HISTORY_LOG, before the
+ * game keeps only the rows of the selected nations. */
+void season_history_log_create(void);
+
 /* At each human turn (testrun.c): the test log of RECOMP_HISTORY_LOG=<competition>;... (season_history.c). */
 void season_history_log_turn(void);
 

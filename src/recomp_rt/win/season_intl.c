@@ -68,6 +68,12 @@
 #define GAME_QSORT 0x00945333u          /* qsort, cdecl (base, count, size, compare): 0x5f995a */
 #define ROW_COMPARE 0x005fb3f0u
 #define NATIONAL_TEAM 0x0053b3d0u       /* the national team club of a nation record, cdecl (nation) */
+#define GAME_RANDOM 0x0090cfc0u         /* utils_random, cdecl (n): 0 to n - 1 (the draw of 0x5faaa0) */
+#define DAY_NEVER 0x7fffu               /* a decision day that daily_update never meets (it compares the word
+                                         * +0x1f with the day of the year, 0x5faa1f, 0x5faa75) */
+#define KEY_OFC 0x9cf8a0u               /* the key of the OFC Nations Cup (no host row: it calls no find_hosts) */
+#define KEY_EURO 0x9cf7a4u
+#define CHOICE_OPEN 0xfeu               /* not decided: drawn 5 years before (0x5faa9b..0x5faaae) */
 
 /* The key global of each class with host rows (the comp column of init, read by find_hosts). The Oceania
  * Nations Cup has no host row (it calls no find_hosts). */
@@ -226,6 +232,10 @@ static void row_write(uint32_t row, uint32_t key, const SeasonIntlEdition *e)
     for (int k = 0; k < 6; k++) wr32(g_mem, row + ROW_PAIRS + 4u * (uint32_t)k, (uint32_t)ids[k]);
     wr8(g_mem, row + ROW_CHOICE, CHOICE_FIXED);
     wr8(g_mem, row + ROW_CYCLE, 0);
+    /* Open item 40: daily_update puts every row of the year 5 years ahead on its decision day on the news list,
+     * fixed rows too (0x5faa7f), and the news of a row with no host has no text (NewsItem::write_text 0x77bc80
+     * skips the body for host -1, 0x77cb91). A row with no host (the Euros of 2020 and 2028) gets no such day. */
+    if (!n) wr16(g_mem, row + ROW_DAY, DAY_NEVER);
     if (logging()) {
         fprintf(stderr, "recomp: season intl: host %s %d: ", e->file, e->year);
         for (int k = 0; k < n; k++) fprintf(stderr, "%s%s", k ? ";" : "", win_str(nation_at(ids[k]) + NATION_NAME));
@@ -251,20 +261,228 @@ int season_intl_host_ids(uint32_t key, int year, int ids[6])
     for (int k = 0; k < 6; k++) ids[k] = -1;
     if (!readable(rows) || count <= 0 || count > 1000) return 0;
     uint32_t row = row_find(rows, count, key, year);
-    if (!row || rd8(g_mem, row + ROW_CHOICE) != CHOICE_FIXED) return 0;
-    for (int k = 0; k < 6; k++) {
+    int choice = row ? rd8(g_mem, row + ROW_CHOICE) : -1;
+    if (choice != CHOICE_FIXED && (choice < 0 || choice > 2)) return 0;
+    int from = choice == CHOICE_FIXED ? 0 : 2 * choice, to = choice == CHOICE_FIXED ? 6 : from + 2;
+    for (int k = from; k < to; k++) {
         int id = (int)rd32(g_mem, row + ROW_PAIRS + 4u * (uint32_t)k);
         if (nation_valid(id)) ids[n++] = id;
     }
     return n;
 }
 
-/* The rows of the editions from the start year. The table grows by the editions that have no row. */
+/* ---- The host rows after the table (0.6.2 slice 5, decisions Q4, Q5, Q6, Q32) ---- */
+
+/* A nation that no longer exists has no continent (the data load links an id of -1 as null; the old record of a
+ * renamed nation, dead_records): original_faults.c rt_national_vacancy. */
+static int nation_alive(int id) { return nation_valid(id) && readable(rd32(g_mem, nation_at(id) + NATION_CONTINENT)); }
+
+/* Q32: a host of the rotation must still exist, and the OFC Nations Cup leaves out the nations that left Oceania
+ * (Australia, its 2004 host, in the AFC from 2006). */
+static int host_alive(const char *file, const char *names)
+{
+    int id = nation_by_names(names);
+    if (!nation_alive(id)) return 0;
+    return strcmp(file, "oceania_nations") || continent_id(id) == rd32(g_mem, CONTINENT_OCEANIA);
+}
+
+static const char *file_of_key(uint32_t key)
+{
+    for (int c = 0; c < HOST_COMPS; c++)
+        if (rd32(g_mem, host_comps[c].key) == key) return host_comps[c].file;
+    return NULL;
+}
+
+/* The last table edition year of a class, or 0. */
+static int table_last_year(const char *file)
+{
+    int last = 0;
+    for (int i = 0; i < season_intl_edition_count; i++)
+        if (!strcmp(season_intl_editions[i].file, file) && season_intl_editions[i].year > last)
+            last = season_intl_editions[i].year;
+    return last;
+}
+
+/* Q6: a pair is valid when it names a nation and every nation it names still exists. */
+static int pair_valid(uint32_t row, int k)
+{
+    int a = (int)rd32(g_mem, row + ROW_PAIRS + 8u * (uint32_t)k), b = (int)rd32(g_mem, row + ROW_PAIRS + 8u * (uint32_t)k + 4u);
+    if (a == -1 && b == -1) return 0;
+    return (a == -1 || nation_alive(a)) && (b == -1 || nation_alive(b));
+}
+
+/* Q32 for one row: the rotation host of its class and year as a fixed row (all three pairs name nations that no
+ * longer exist). 0 when the class has no live host in its table. */
+static int row_rotate(uint32_t row)
+{
+    const char *file = file_of_key(rd32(g_mem, row + ROW_COMP));
+    int year = (int16_t)rd16(g_mem, row + ROW_YEAR);
+    const char *host = file ? season_intl_rotation_host(file, season_intl_rotation_step(file, year), host_alive) : NULL;
+    int id = host ? nation_by_names(host) : -1;
+    if (id < 0) return 0;
+    for (int k = 0; k < 6; k++) wr32(g_mem, row + ROW_PAIRS + 4u * (uint32_t)k, 0xffffffffu);
+    wr32(g_mem, row + ROW_PAIRS, (uint32_t)id);
+    if (logging()) fprintf(stderr, "recomp: season intl: host %s %d: no pair of live nations, %s (Q32)\n", file, year, host);
+    return 1;
+}
+
+/* The pair of a drawn row: the original's draw r, else (Q6) a pair drawn again from the valid others, else (Q32)
+ * the rotation host, fixed. Gives the choice byte. */
+static uint32_t row_pick(uint32_t row, uint32_t r)
+{
+    int valid[3];
+    for (int k = 0; k < 3; k++) valid[k] = pair_valid(row, k);
+    int n = 0;
+    for (int k = 0; k < 3; k++) n += valid[k] && k != (int)r;
+    int redraw = 0;
+    if (!(r < 3 && valid[r]) && n > 1) {
+        uint32_t a[1] = {(uint32_t)n};
+        redraw = (int)call_cdecl(GAME_RANDOM, 1, a);
+        if (rt_unwinding) return r;
+    }
+    int k = season_intl_pick_pair(valid, (int)r, redraw);
+    if (k >= 0) {
+        if (logging() && k != (int)r)
+            fprintf(stderr, "recomp: season intl: host %s %d: pair %u names a nation that no longer exists, pair %d (Q6)\n",
+                    file_of_key(rd32(g_mem, row + ROW_COMP)), (int16_t)rd16(g_mem, row + ROW_YEAR), r + 1, k + 1);
+        return (uint32_t)k;
+    }
+    return row_rotate(row) ? CHOICE_FIXED : r;
+}
+
+/* HostCountry::daily_update 0x5fa850, at 0x5faaae: the draw of a row 5 years before its finals stores random(3)
+ * (0x5faaa0) as the choice. In a season game a pair that names a nation that no longer exists is drawn again
+ * (Q6, Q32). The news of the draw (post_host_news 0x5faec0) reads the choice afterwards. */
+uint32_t rt_intl_host_pick(uint32_t row, uint32_t r)
+{
+    if (!season_intl_on() || !readable(row)) return r;
+    return row_pick(row, r);
+}
+
+typedef struct {
+    uint32_t key;
+    int year, cycle, choice, day;
+    int pairs[6];
+    const char *hosts;          /* a fixed row of these hosts (announced, rotation), else the pairs */
+    const char *file;
+} PlannedRow;
+
+#define MAX_PLANNED 96
+
+/* The rows after the table of each class from the season `from` (Q4, Q5, Q32): the announced editions, fixed;
+ * for the World Cup, Euro, Olympics and Africa Cup of Nations a copy of each of the original's rows (`taken`, by
+ * slot) on the first edition after the table that takes its slot, moving on as the original's row does; for the
+ * Copa America (the file goldcup, key 0x9cf7a8) and the Asian Cup one fixed row for each live host of the table,
+ * in order, moving on by all of them.
+ * The original's daily_update moves each row on 1 January once past (0x5faafa), and draws the host of a row that
+ * is not fixed 5 years before (0x5faaa0), so the rows hold for every later year. */
+static int plan_rows(int from, const uint8_t taken[HOST_COMPS][8][ROW_SIZE], const int have[HOST_COMPS][8],
+                     PlannedRow *plan)
+{
+    int n = 0;
+    for (int c = 0; c < HOST_COMPS; c++) {
+        const char *file = host_comps[c].file;
+        uint32_t key = rd32(g_mem, host_comps[c].key);
+        int last = table_last_year(file);
+        const SeasonIntlEdition *e = last ? season_intl_next(file, last) : NULL;
+        if (key == 0xffffffffu || !e || key == rd32(g_mem, KEY_CONFED)) continue;
+        int cycle = e->year - last, start = last + cycle;
+        while (start < from) start += cycle;
+        /* Q5: the announced editions. */
+        for (int y = last + cycle; y <= last + 8 * cycle && n < MAX_PLANNED; y += cycle) {
+            const char *a = season_intl_announced_hosts(file, y);
+            if (a && y >= from) plan[n++] = (PlannedRow){key, y, 0, CHOICE_FIXED, DEFAULT_DAY, {-1, -1, -1, -1, -1, -1}, a, file};
+        }
+        int base, step, rows;
+        if (season_intl_host_slots(file, &base, &step, &rows)) {
+            int roll = rows * step;
+            for (int k = 0; k < rows && n < MAX_PLANNED; k++) {
+                if (!have[c][k]) continue;
+                int y = start, tries = 0;
+                while ((season_intl_host_slot(file, y) != k || season_intl_announced_hosts(file, y)) && tries++ < 4 * rows)
+                    y += cycle;
+                if (tries >= 4 * rows) continue;            /* the cycle never reaches this slot */
+                const uint8_t *t = taken[c][k];
+                PlannedRow r = {key, y, roll, t[ROW_CHOICE] == CHOICE_FIXED ? CHOICE_FIXED : CHOICE_OPEN,
+                                (int)(t[ROW_DAY] | t[ROW_DAY + 1] << 8), {0}, NULL, file};
+                for (int j = 0; j < 6; j++)
+                    r.pairs[j] = (int)(t[ROW_PAIRS + 4 * j] | t[ROW_PAIRS + 4 * j + 1] << 8 |
+                                       t[ROW_PAIRS + 4 * j + 2] << 16 | (uint32_t)t[ROW_PAIRS + 4 * j + 3] << 24);
+                plan[n++] = r;
+            }
+        } else {
+            int hosts = season_intl_rotation_count(file, host_alive);
+            for (int k = 0; k < hosts && n < MAX_PLANNED; k++) {
+                int y = last + cycle * (k + 1);
+                while (y < from) y += cycle * hosts;
+                static char keep[MAX_PLANNED][64];
+                snprintf(keep[n], sizeof keep[0], "%s", season_intl_rotation_host(file, k, host_alive));
+                plan[n] = (PlannedRow){key, y, cycle * hosts <= 127 ? cycle * hosts : 0, CHOICE_FIXED, DEFAULT_DAY,
+                                       {-1, -1, -1, -1, -1, -1}, keep[n], file};
+                n++;
+            }
+        }
+    }
+    return n;
+}
+
+static void plan_write(uint32_t row, const PlannedRow *p, int from)
+{
+    if (p->hosts) {
+        SeasonIntlEdition e = {p->file, 0, p->year, 0, 0, 0, 0, 0, p->hosts, "after-table"};
+        row_write(row, p->key, &e);
+        if ((int)rd32(g_mem, row + ROW_PAIRS) != -1) wr16(g_mem, row + ROW_DAY, (uint16_t)p->day);   /* item 40 */
+    } else {
+        wr32(g_mem, row + ROW_COMP, p->key);
+        wr16(g_mem, row + ROW_YEAR, (uint16_t)p->year);
+        for (int k = 0; k < 6; k++) wr32(g_mem, row + ROW_PAIRS + 4u * (uint32_t)k, (uint32_t)p->pairs[k]);
+        wr8(g_mem, row + ROW_CHOICE, (uint8_t)p->choice);
+        wr16(g_mem, row + ROW_DAY, (uint16_t)p->day);
+        /* A fixed row of the original (the Africa Cup of Nations, the Olympics up to 2028): find_hosts reads its
+         * pair 1 only (0x5fa730), while season_intl_host_ids reads all six fields of a fixed row (more hosts of the
+         * table, slice 29), so the original's other pairs go (they gave Afghanistan as a third ACN host). A host
+         * that no longer exists takes the rotation host (Q6, Q32). */
+        if (p->choice == CHOICE_FIXED) {
+            for (int k = 2; k < 6; k++) wr32(g_mem, row + ROW_PAIRS + 4u * (uint32_t)k, 0xffffffffu);
+            if (!pair_valid(row, 0)) row_rotate(row);
+        }
+        /* A row whose draw day lies before the start (a date jump) is drawn now, as daily_update would have. */
+        if (p->choice == CHOICE_OPEN && p->year - 5 <= from) {
+            uint32_t a[1] = {3};
+            uint32_t r = call_cdecl(GAME_RANDOM, 1, a);
+            if (rt_unwinding) return;
+            wr8(g_mem, row + ROW_CHOICE, (uint8_t)row_pick(row, r));
+        }
+        if (logging()) fprintf(stderr, "recomp: season intl: host row %s %d: the original's row, %s\n", p->file, p->year,
+                               rd8(g_mem, row + ROW_CHOICE) == CHOICE_OPEN ? "drawn 5 years before" : "drawn");
+    }
+    wr8(g_mem, row + ROW_CYCLE, (uint8_t)p->cycle);
+}
+
+/* The rows of the editions from the start year. The table grows by the editions that have no row, and by the rows
+ * after the table (slice 5). */
 static void hosts_apply(uint32_t self, int from_season, int sort)
 {
     uint32_t rows = rd32(g_mem, self);
     int count = (int16_t)rd16(g_mem, self + 4);
     if (!readable(rows) || count <= 0 || count > 1000) return;
+    season_intl_set_alive(host_alive);
+    /* The original's rows of the classes with slots (Q4), by slot, before the rows of the table take their years. */
+    static uint8_t taken[HOST_COMPS][8][ROW_SIZE];
+    int have[HOST_COMPS][8];
+    memset(have, 0, sizeof have);
+    for (int c = 0; c < HOST_COMPS; c++) {
+        uint32_t key = rd32(g_mem, host_comps[c].key);
+        for (int i = 0; key != 0xffffffffu && i < count; i++) {
+            uint32_t row = rows + (uint32_t)i * ROW_SIZE;
+            int year = (int16_t)rd16(g_mem, row + ROW_YEAR), k = season_intl_host_slot(host_comps[c].file, year);
+            if (rd32(g_mem, row + ROW_COMP) != key || year <= 0 || k < 0 || have[c][k]) continue;
+            memcpy(taken[c][k], g_mem + row, ROW_SIZE);
+            have[c][k] = 1;
+        }
+    }
+    PlannedRow plan[MAX_PLANNED];
+    int planned = plan_rows(from_season, (const uint8_t (*)[8][ROW_SIZE])taken, (const int (*)[8])have, plan);
     /* The Confederations Cup row of every year (year 0, host redrawn by 0x5fab70) would come first in find_hosts,
      * before the rows of the table: it leaves for a year that no game reaches (CONFED_ANY_YEAR). In its place each
      * year from the start that has no edition in the table gets its own copy, so find_hosts still finds a host
@@ -288,6 +506,8 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
                 extra++;
         }
     }
+    for (int p = 0; p < planned; p++)
+        if (!row_find(rows, count, plan[p].key, plan[p].year)) extra++;
     if (extra) {
         uint32_t size = (uint32_t)(count + extra) * ROW_SIZE;
         uint32_t args[1] = {size};
@@ -326,6 +546,19 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
             row_write(row, key, e);
         }
     }
+    /* The original's rows of the classes that continue no longer move: the rows after the table take their
+     * place (a moved row would hold a second row of an edition after the table). */
+    for (int i = 0; i < used; i++) {
+        uint32_t row = rows + (uint32_t)i * ROW_SIZE;
+        const char *file = file_of_key(rd32(g_mem, row + ROW_COMP));
+        if (file && strcmp(file, "fifa_confed")) wr8(g_mem, row + ROW_CYCLE, 0);
+    }
+    for (int p = 0; p < planned; p++) {
+        uint32_t row = row_find(rows, used, plan[p].key, plan[p].year);
+        if (!row) row = rows + (uint32_t)used++ * ROW_SIZE;
+        plan_write(row, &plan[p], from_season);
+        if (rt_unwinding) return;
+    }
     /* A row of the original that lies in the past moves on by its cycle on 1 January (0x5faafa) and takes a
      * random host. A row whose move would land on an edition of the table (the 1999 Copa America row on 2011,
      * the 2010 African Cup of Nations row on 2026) stops where it is, so the row of the table stays the only
@@ -347,6 +580,80 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
     if (sort) {                                 /* as the constructor after init (0x5f994a..0x5f995a) */
         uint32_t qa[4] = {rows, (uint32_t)used, ROW_SIZE, ROW_COMPARE};
         call_cdecl(GAME_QSORT, 4, qa);
+    }
+}
+
+/* Cup::record_season_honours 0x519a90 asks for hosts only when slot +0x88 of the competition gives 1 (0x519b84):
+ * the World Cup, Euro and Olympics (0x404480). The Africa Cup of Nations, Asian Cup, Copa America, Gold Cup,
+ * Confederations Cup and OFC Nations Cup give 0 (0x5dce00), so the original writes no host into their history rows
+ * (+0x16, 0x519c3b; open item 18). At 0x519c2f, with no host found (ebx 0 from 0x519a98), a season game takes the
+ * first host of the edition's host row (season_intl_host_ids), else of the edition (the OFC Nations Cup, which has
+ * no row), else the history host of a Euro with no host place (2020, 2028). The Club World Cup keeps none: its row
+ * of every year holds a random nation (0x5fab70). */
+uint32_t rt_intl_history_host(uint32_t cup, uint32_t club)
+{
+    if (club || !season_intl_on() || !readable(cup) || !readable(rd32(g_mem, cup + 4u))) return club;
+    uint32_t key = rd32(g_mem, rd32(g_mem, cup + 4u));
+    int year = (int16_t)rd16(g_mem, cup + 0x40u), ids[6], id = -1;
+    int n = season_intl_host_ids(key, year, ids);
+    if (n > 0) id = ids[0];
+    /* Two hosts: the one of the higher reputation (+0x8e), the first on a tie, as the original (0x519bdc..0x519beb). */
+    if (n > 1 && (int16_t)rd16(g_mem, nation_at(ids[1]) + 0x8eu) > (int16_t)rd16(g_mem, nation_at(ids[0]) + 0x8eu))
+        id = ids[1];
+    const char *names = NULL;
+    if (id < 0 && key == rd32(g_mem, KEY_OFC)) {
+        const SeasonIntlEdition *e = season_intl_edition("oceania_nations", year);
+        names = e ? e->hosts : NULL;
+    }
+    if (id < 0 && key == rd32(g_mem, KEY_EURO)) names = season_intl_history_host("euro_champ", year);
+    if (id < 0 && names && *names) {
+        char one[64];
+        snprintf(one, sizeof one, "%.*s", (int)strcspn(names, ";"), names);
+        id = nation_by_names(one);
+    }
+    if (id < 0) return club;
+    uint32_t a[1] = {nation_at(id)};
+    uint32_t side = call_cdecl(NATIONAL_TEAM, 1, a);
+    if (logging() && !rt_unwinding)
+        fprintf(stderr, "recomp: season intl: history host of %s %d: %s\n", win_str(rd32(g_mem, cup + 4u) + NATION_NAME),
+                year, win_str(nation_at(id) + NATION_NAME));
+    return rt_unwinding ? club : side;
+}
+
+/* A save made before 0.6.2 holds no rows after the table (a 0.6.0 or 0.6.1 game, or a game past 2030 whose
+ * editions slice 4b starts again): at a load, a season game whose World Cup has no row after its table gets the
+ * rows from the game's season on. A 2001 game before its first season change gets them there (intl_season). */
+static void hosts_after_table_at_load(void)
+{
+    uint32_t obj = rd32(g_mem, HOSTS), rows = readable(obj) ? rd32(g_mem, obj) : 0;
+    int count = readable(obj) ? (int16_t)rd16(g_mem, obj + 4) : 0, year = (int16_t)rd16(g_mem, GAME_DATE + 2);
+    uint32_t key = rd32(g_mem, host_comps[0].key);
+    if (!season_intl_on() || !readable(rows) || count <= 0 || count > 1000 || key == 0xffffffffu) return;
+    if (season_start_year() == SEASON_FIRST_YEAR && year < SEASON_FIRST_YEAR + 1) return;
+    int last = table_last_year("world_cup");
+    for (int i = 0; i < count; i++)
+        if (rd32(g_mem, rows + (uint32_t)i * ROW_SIZE + ROW_COMP) == key &&
+            (int16_t)rd16(g_mem, rows + (uint32_t)i * ROW_SIZE + ROW_YEAR) > last)
+            return;
+    if (logging()) fprintf(stderr, "recomp: season intl: a save with no host rows after the table: rows from %d\n", year);
+    hosts_apply(obj, year, 1);
+}
+
+/* Open item 40 in a save made before 0.6.2: a fixed row with no host keeps its news day; it gets none. */
+static void hosts_no_news(void)
+{
+    /* A 2001 game holds rows of the table only from its first season change (Q152: its start is the base game). */
+    if (!season_intl_on() || (season_start_year() == SEASON_FIRST_YEAR &&
+                              (int16_t)rd16(g_mem, GAME_DATE + 2) < SEASON_FIRST_YEAR + 1))
+        return;
+    uint32_t obj = rd32(g_mem, HOSTS), rows = readable(obj) ? rd32(g_mem, obj) : 0;
+    int count = readable(obj) ? (int16_t)rd16(g_mem, obj + 4) : 0;
+    for (int i = 0; readable(rows) && i < count && i < 1000; i++) {
+        uint32_t row = rows + (uint32_t)i * ROW_SIZE;
+        int none = rd8(g_mem, row + ROW_CHOICE) == CHOICE_FIXED && (int16_t)rd16(g_mem, row + ROW_YEAR) > 0 &&
+                   file_of_key(rd32(g_mem, row + ROW_COMP));
+        for (int k = 0; none && k < 6; k++) none = (int)rd32(g_mem, row + ROW_PAIRS + 4u * (uint32_t)k) == -1;
+        if (none) wr16(g_mem, row + ROW_DAY, DAY_NEVER);
     }
 }
 
@@ -410,15 +717,27 @@ RT_WRAP(005fab70, host_redraw)
 
 void o_00799e30(void);
 
+static uint32_t team_nation(uint32_t club);
+static void ofc_australia(uint32_t self);
+static void ofc_hosts(uint32_t self);
+
 /* OceaniaNations::pick_entrants, thiscall (): six teams at +0xee: Australia and New Zealand by key id
  * (0x799f9c, 0x799fc1), then the two best Melanesian and the two best Polynesian nations (0x79a03c,
  * 0x79a04d). With Australia in Asia its place goes to the Oceania nation with the highest reputation (nation
- * +0x8e, inference from docs/research/2026-10-17-season-date-shifts.md) that is not in the six. */
+ * +0x8e, inference from docs/research/2026-10-17-season-date-shifts.md) that is not in the six (ofc_australia).
+ * Then the hosts come in (ofc_hosts). */
 RT_WRAP(00799e30, ofc_entrants)
 {
     uint32_t self = cpu.ecx;
     o_00799e30();
-    if (rt_unwinding || !cpu.eax || !australia_in_asia()) return;
+    if (rt_unwinding || !cpu.eax) return;
+    ofc_australia(self);
+    if (!rt_unwinding) ofc_hosts(self);
+}
+
+static void ofc_australia(uint32_t self)
+{
+    if (!australia_in_asia()) return;
     uint32_t pool = rd32(g_mem, self + 0xee);
     int aus = key_nation(KEY_AUSTRALIA);
     if (!readable(pool) || aus < 0) return;
@@ -449,6 +768,53 @@ RT_WRAP(00799e30, ofc_entrants)
         }
     }
     if (best) wr32(g_mem, pool + 4u * (uint32_t)slot, best);
+}
+
+/* 0.6.2 open item 45: the original never calls find_hosts for this cup, so a host plays only when it is one of
+ * the six (Papua New Guinea 2016, Vanuatu 2024 did not). In a season game each host of the edition at +0x40
+ * (the table hosts, after the table the rotation host) that is not in the six takes the place of the team with
+ * the lowest reputation (club +0x80, the field of the sort compare 0x4b07d0 at 0x4b07f0) that is not a host. The
+ * count stays 6 (+0xf2, 0x799e42). */
+static void ofc_hosts(uint32_t self)
+{
+    if (!season_intl_on()) return;
+    const SeasonIntlEdition *e = season_intl_edition("oceania_nations", (int16_t)rd16(g_mem, self + 0x40u));
+    uint32_t pool = rd32(g_mem, self + 0xee);
+    int count = (int16_t)rd16(g_mem, self + 0xf2);
+    if (!e || !e->hosts || !readable(pool) || count <= 0 || count > 16) return;
+    uint32_t hosts[6];
+    int n = 0;
+    char one[128];
+    for (const char *p = e->hosts; *p && n < 6;) {
+        size_t len = strcspn(p, ";");
+        snprintf(one, sizeof one, "%.*s", (int)len, p);
+        p += len;
+        if (*p == ';') p++;
+        uint32_t t = season_intl_team_named(one);
+        if (rt_unwinding) return;
+        if (t) hosts[n++] = t;
+    }
+    for (int h = 0; h < n; h++) {
+        uint32_t nation = team_nation(hosts[h]);
+        int in = 0, low = -1, low_rep = 0;
+        for (int k = 0; k < count; k++) {
+            uint32_t t = rd32(g_mem, pool + 4u * (uint32_t)k);
+            in |= readable(t) && team_nation(t) == nation;
+        }
+        if (in) continue;
+        for (int k = 0; k < count; k++) {
+            uint32_t t = rd32(g_mem, pool + 4u * (uint32_t)k);
+            int host = 0;
+            for (int j = 0; j < n; j++) host |= readable(t) && team_nation(t) == team_nation(hosts[j]);
+            int rep = readable(t) ? (int16_t)rd16(g_mem, t + 0x80u) : -0x8000;
+            if (!host && (low < 0 || rep <= low_rep)) low = k, low_rep = rep;
+        }
+        if (low < 0) continue;
+        wr32(g_mem, pool + 4u * (uint32_t)low, hosts[h]);
+        if (logging())
+            fprintf(stderr, "recomp: season intl: oceania_nations %d host %s plays\n", e->year,
+                    win_str(nation + NATION_NAME));
+    }
 }
 
 /* ---- Finals that start before their qualifying can end ---- */
@@ -1279,7 +1645,10 @@ static void intl_entry(const SeasonChange *c)
 static void intl_sides(int start_year)
 {
     (void)start_year;
+    season_intl_set_alive(host_alive);
     sides_rename();
+    hosts_no_news();
+    hosts_after_table_at_load();
 }
 
 const SeasonRuleKind season_kind_intl = {"international", intl_sides, intl_sides, intl_season, intl_entry, NULL,

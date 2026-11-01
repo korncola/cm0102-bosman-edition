@@ -258,6 +258,96 @@ void rt_intl_cup_stages(uint32_t self)
     if (logging()) fprintf(stderr, "recomp: season intl: %s %d has %u stages\n", cups[c].file, year_of(self), want);
 }
 
+/* ---- The hosts after the second (0.6.2 open items 44 and 46) ---- */
+
+#define NATIONS 0xae23a8u               /* nation records, 0x122 bytes (0x402364..0x402369) */
+#define NATION_SIZE 0x122u
+#define NATIONAL_TEAM 0x0053b3d0u       /* the national team club of a nation record, cdecl (nation) */
+#define TEAM_NATION 0x53u               /* the nation record of a national team (0x4023cf, 0x40ff41) */
+#define KEY_ACN 0x9cf7acu               /* the ACN key id that find_hosts gets (0x40232f) */
+#define ACN_ROOM 50                     /* the ACN entrant array: malloc(0xc8) at 0x4022cc, cap 0x32 at 0x4023b3 */
+
+/* The nation records of the hosts after the second of the edition at +0x40 (2027 ACN: Uganda; 2007 Asian Cup:
+ * Thailand and Vietnam). find_hosts 0x5fa730 gives the original's code the first two only; the others are in the
+ * host row (season_intl_host_ids). Gives the count, 0 outside a season game. */
+static int more_hosts(uint32_t self, uint32_t key, uint32_t nations[4])
+{
+    if (!season_intl_on()) return 0;
+    int ids[6], n = season_intl_host_ids(key, year_of(self), ids), m = 0;
+    for (int k = 2; k < n && m < 4; k++) nations[m++] = rd32(g_mem, NATIONS) + (uint32_t)ids[k] * NATION_SIZE;
+    return m;
+}
+
+/* The place of the team of a nation in teams[from..to), or -1. */
+static int team_place(uint32_t teams, int from, int to, uint32_t nation)
+{
+    for (int i = from; i < to; i++) {
+        uint32_t t = rd32(g_mem, teams + 4u * (uint32_t)i);
+        if (readable(t) && rd32(g_mem, t + TEAM_NATION) == nation) return i;
+    }
+    return -1;
+}
+
+static uint32_t national_team(uint32_t nation)
+{
+    uint32_t a[1] = {nation};
+    uint32_t t = call_cdecl(NATIONAL_TEAM, 1, a);
+    return !rt_unwinding && readable(t) && rd32(g_mem, t + TEAM_NATION) == nation ? t : 0;
+}
+
+/* ACN entrants 0x4022c0 at 0x40242f: +0xee holds the hosts of find_hosts (dl of them, 0x402343) and then the
+ * other African nations in nation order (count edi). The sort (0x402446) and the draw (0x4024c6) take the hosts
+ * first and the best of the others. Each host after the second moves to the end of the hosts (added when it is
+ * not in, as the last of the array when the array is full). Gives the count << 8 | the hosts added. */
+uint32_t rt_intl_cup_acn_hosts(uint32_t self, uint32_t count, uint32_t hosts)
+{
+    uint32_t nations[4], teams = rd32(g_mem, self + TEAMS_OF);
+    int n = more_hosts(self, rd32(g_mem, KEY_ACN), nations), c = (int)count, h = (int8_t)hosts, added = 0;
+    for (int k = 0; k < n && readable(teams) && h >= 0 && h < c; k++) {
+        if (team_place(teams, 0, h, nations[k]) >= 0) continue;
+        int at = team_place(teams, h, c, nations[k]);
+        uint32_t team = at >= 0 ? rd32(g_mem, teams + 4u * (uint32_t)at) : national_team(nations[k]);
+        if (rt_unwinding) break;
+        if (!team) continue;
+        if (at < 0) at = c < ACN_ROOM ? c++ : c - 1;
+        for (int i = at; i > h; i--)
+            wr32(g_mem, teams + 4u * (uint32_t)i, rd32(g_mem, teams + 4u * (uint32_t)(i - 1)));
+        wr32(g_mem, teams + 4u * (uint32_t)h++, team);
+        added++;
+        if (logging()) fprintf(stderr, "recomp: season intl: african_nations %d host %s plays\n", year_of(self),
+                               win_str(nations[k] + 4u));
+    }
+    return (uint32_t)c << 8 | (uint32_t)added;
+}
+
+/* Asian Cup entrants 0x40fdf0 at 0x40ffb2: +0xee holds the hosts of find_hosts (ebx of them, 0x40fee7), the other
+ * Asian nations are in a list on the stack (count ebp, 0x40ff71), of which 0x4afbd0 picks the others (0x40ffc8).
+ * Each host after the second leaves the list and goes to +0xee after the hosts. Gives the list count << 8 | the
+ * hosts added. */
+uint32_t rt_intl_cup_asian_hosts(uint32_t self, uint32_t list, uint32_t count, uint32_t placed)
+{
+    uint32_t nations[4], teams = rd32(g_mem, self + TEAMS_OF);
+    int n = more_hosts(self, rd32(g_mem, rd32(g_mem, self + 4u)), nations), c = (int)count, p = (int)placed;
+    int room = (int16_t)rd16(g_mem, self + TEAM_COUNT), added = 0;
+    for (int k = 0; k < n && readable(teams) && p < room; k++) {
+        if (team_place(teams, 0, p, nations[k]) >= 0) continue;
+        int at = team_place(list, 0, c, nations[k]);
+        uint32_t team = at >= 0 ? rd32(g_mem, list + 4u * (uint32_t)at) : national_team(nations[k]);
+        if (rt_unwinding) break;
+        if (!team) continue;
+        if (at >= 0) {
+            for (int i = at; i + 1 < c; i++)
+                wr32(g_mem, list + 4u * (uint32_t)i, rd32(g_mem, list + 4u * (uint32_t)(i + 1)));
+            c--;
+        }
+        wr32(g_mem, teams + 4u * (uint32_t)p++, team);
+        added++;
+        if (logging()) fprintf(stderr, "recomp: season intl: asia_nations %d host %s plays\n", year_of(self),
+                               win_str(nations[k] + 4u));
+    }
+    return (uint32_t)c << 8 | (uint32_t)added;
+}
+
 /* ---- The template function (ACN 0x4012e0, Asian Cup 0x40eb00) ---- */
 
 static int leap(int year) { return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0; }
