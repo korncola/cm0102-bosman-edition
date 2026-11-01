@@ -135,6 +135,15 @@ const char *season_uefa_access_places(int season, char comp, int rank);
 /* The places of a rule row ('h', 'H', 'X', 'f') in season S, or NULL. */
 const char *season_uefa_access_rule(int season, char comp);
 
+/* Open item 70: the most Champions League clubs of one association in season S (Art. 3 of the regulations).
+ * - 4 to 2014/15. A title holder from outside the league places took the place of the fourth club (Tottenham
+ *   Hotspur in 2012/13).
+ * - 5 from 2015/16. The same swap applies when both title holders are from one association and outside its
+ *   league places.
+ * - 7 from 2024/25: four league places, the European Performance Spot and the two title holders. This is an
+ *   inference from the format of 2024/25, not read in the regulations text. */
+int season_uefa_cl_cap(int season);
+
 /* 1 when the last Europa League place of the nation named name ("England") goes to its league cup winner in S. */
 int season_uefa_access_league_cup(int season, const char *name);
 
@@ -164,6 +173,11 @@ int season_uefa_ecl_level(const SeasonUefa *r, const char *name);
 
 /* 1 when the clubs of the nation named name have no UEFA places in row r (a suspension). */
 int season_uefa_suspended(const SeasonUefa *r, const char *name);
+
+/* The UEFA Super Cup venue of year Y for the game that runs: 1 with *stadium and *city set, 0 for the base game.
+ * To the last table row, the row's venue. After it, with changing rules on, a venue drawn each year from the
+ * venues of the table, never the one of the year before (Q28). */
+int season_uefa_super_cup_venue(int year, const char **stadium, const char **city);
 
 /* 1 when the Champions League of row r has one group stage and a knockout round of 16 (2003/04 on). */
 int season_uefa_cl_round_of_16(const SeasonUefa *r);

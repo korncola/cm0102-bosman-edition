@@ -10,8 +10,9 @@ count in the base game, the count of the season in a season game.
 CLASSES: one row per class: (class, source file, set_up_rules address, [create_table store addresses]).
 The stores come from the translated code of each create_table (one store, or one per path where the class has
 a year branch: FraFirst 0x5bc2bd, PolSecond 0x7cbdfd, ScoPrm 0x7f2820, NorFirst 0x7909a0). A class with no
-store takes the count of the data (IreFirst 0x63591f, IrePrm 0x63a74f, PolFirst 0x7c9469 store a register), so
-it has only its set_up_rules row. set_up_rules (vtable +0x8c) writes the promotion and relegation places
+store takes the count of the data (IreFirst 0x63591f, IrePrm 0x63a74f store a register), so it has only its
+set_up_rules row. PolFirst 0x7c9469 also stores a register, but it holds 8 (0x7c945a): two groups of 8, so the
+class takes 16 in every season (CLASS_SIZE of season_clubs.c). set_up_rules (vtable +0x8c) writes the promotion and relegation places
 +0xbe..+0xc1; the runtime wraps it (season_size_wraps.c, made by tools/seasons/make_size_wraps.py) and sets the
 places of the season after it. Evidence: docs/research/2026-10-18-league-sizes.md.
 
@@ -166,14 +167,81 @@ CUP_INSNS = {
     # EngFaCup::collect_entrants 0x56fab0: the National League places that its clubs cannot fill go to the clubs
     # below it, and no copy takes more than its stack array holds (O294, season_sizes.c rt_fa_cup_takes).
     0x56FFE4: ("movsx di, byte ptr [esp + 0x1b]", "edi = (edi & 0xffff0000u) | (rt_fa_cup_takes(esp) & 0xffffu);"),
-    # The list stores of IreLeinsterCup::select_clubs 0x636a80, IreMunsterCup::collect_entrants 0x638e30 and
-    # PolCup::collect_entrants 0x7c8550: the new list (0x944e46) is not cleared, so a place that the class does not
-    # write keeps stale bytes. In a season game the list starts cleared, so the cup places fill sees each empty
-    # place (season_cup_places.c rt_cup_places_list).
-    0x636AA2: ("mov dword ptr [esi + 0xa7], eax", "W32(esi + 0xa7u, rt_cup_places_list(eax, 0x60u));"),
-    0x638E55: ("mov dword ptr [ebp + 0xa7], eax", "W32(ebp + 0xa7u, rt_cup_places_list(eax, 0x78u));"),
-    0x7C8579: ("mov dword ptr [esi + 0xa7], eax", "W32(esi + 0xa7u, rt_cup_places_list(eax, 0x138u));"),
 }
+
+# The cup lists of the original (0.6.2 item 64; O151 before it for three cups). Each class takes a new list (6 bytes
+# a place) from the allocator 0x944e46, which does not clear the block, and stores it to +0xa7. Rows: the address of
+# that store: (object register, block size). A size of None is 6 bytes for each place of the count at +0x3e, which the
+# class sets before the call (PolLgeCup 0x7cad47..0x7cad5e, ScoLgeCup 0x7f0417..0x7f0435, WcAfricanCup 0x910133..
+# 0x910156, WcConcacafCup 0x915d59..0x915d65) or reads there (IntertotoCup 0x633798, to the size at 0x633810).
+# tests/seasons/cup_list_clear_check.py finds every such store in the original and checks each size.
+LIST_STORES = {
+    0x40B63E: ("esi", 0x60),    # AsiaClubChamp::build_team_table
+    0x40D4EE: ("esi", 0x60),    # AsiaCupWinner::create_team_entries
+    0x410A6E: ("esi", 0xc),     # AsiaSuperCup::select_teams
+    0x41D8F1: ("esi", 0x2a0),   # BelFaCup::collect_entrants
+    0x42130E: ("esi", 0xc),     # BelSuper::select_teams
+    0x427C3C: ("esi", 0x1aa),   # BraCup::build_team_table
+    0x517BD5: ("edi", 0x120),   # CroCup::collect_entrants
+    0x551264: ("esi", 0x228),   # DenCup::collect_entrants
+    0x56B3E1: ("esi", 0xa8),    # EngAutoCup::collect_entrants
+    0x56CCEA: ("esi", 0x228),   # EngCcCup::collect_entrants
+    0x56D79E: ("esi", 0xc),     # EngCharity::select_teams
+    0x56FBCF: ("esi", 0x390),   # EngFaCup::collect_entrants
+    0x5712CF: ("esi", 0xc0),    # EngFaTrophy::select_teams
+    0x57A51E: ("esi", 0xc),     # EurSuperCup::select_teams
+    0x5849B1: ("esi", 0x14a),   # EuropeanCup::build_qualifying_entry_table
+    0x592A44: ("esi", 0x1c8),   # FinCup::collect_entrants
+    0x5BAA74: ("esi", 0x534),   # FraCup::collect_entrants
+    0x5BD184: ("esi", 0x144),   # FraLgeCup::collect_entrants
+    0x5BF78E: ("esi", 0xc),     # FraSuper::select_teams
+    0x5D9395: ("esi", 0x180),   # GerCup::collect_entrants
+    0x5EC44A: ("esi", 0xc),     # GreSuper::select_teams
+    0x5F8C2E: ("esi", 0xc),     # HolSuper::select_teams
+    0x6324A4: ("edi", 0xc),     # InterAmerCup::select_teams
+    0x63381E: ("esi", None),    # IntertotoCup::collect_entrants
+    0x6347F5: ("esi", 0xfc),    # IreChalCup::collect_entrants
+    0x636AA2: ("esi", 0x60),    # IreLeinsterCup::select_clubs
+    0x638E55: ("ebp", 0x78),    # IreMunsterCup::collect_entrants
+    0x63C9EE: ("esi", 0xc),     # ItaC1Super::init_team_list
+    0x65FA7E: ("esi", 0xc),     # ItaSuper::init_team_list
+    0x662522: ("esi", 0x1e0),   # JapEmpCup::collect_entrants
+    0x665A24: ("esi", 0xa8),    # JapJCup::collect_entrants
+    0x66617E: ("esi", 0xc),     # JapSuper::select_teams
+    0x66AB18: ("esi", 0xc0),    # KorFaCup::collect_entrants
+    0x66DC2A: ("esi", 0xc),     # KorSuperCup::create_table
+    0x7662AE: ("esi", 0x18),    # MiniCup::set_up_clubs
+    0x78A1FE: ("esi", 0xc),     # NirCharity::select_teams
+    0x78ACB5: ("esi", 0xc0),    # NirCup::collect_entrants
+    0x78F8B8: ("esi", 0x300),   # NorCup::collect_entrants
+    0x7C8579: ("esi", 0x138),   # PolCup::collect_entrants
+    0x7CAD69: ("esi", None),    # PolLgeCup::collect_entrants
+    0x7CCD2A: ("esi", 0xc),     # PolSuper::select_teams
+    0x7CE244: ("esi", 0x3d8),   # PorCup::collect_entrants
+    0x7D327E: ("esi", 0xc),     # PorSuper::select_teams
+    0x7E9A7A: ("esi", 0x120),   # RusCup::select_entrants
+    0x7ED034: ("esi", 0xb4),    # ScoChalCup::collect_entrants
+    0x7EDB18: ("esi", 0x12c),   # ScoFaCup::collect_entrants
+    0x7F0440: ("esi", None),    # ScoLgeCup::collect_entrants
+    0x858ABE: ("esi", 0xc),     # SpaSuper::select_teams
+    0x88D5C1: ("esi", 0xb4),    # SweCup::collect_entrants
+    0x8FCBBC: ("esi", 0x180),   # TurCup::collect_entrants
+    0x90A55E: ("esi", 0xc),     # UsaMlsAllStars::set_up_teams
+    0x91015F: ("esi", None),    # WcAfricanCup::build_first_round_entries
+    0x915D72: ("esi", None),    # WcConcacafCup::build_team_table
+    0x924AD4: ("esi", 0xc0),    # WelCup::collect_entrants
+    0x92B8D4: ("edi", 0xc),     # WorldClubCup::pick_qualifiers
+}
+# Left: Cup_Stage::Cup_Stage 0x5230e0 sizes its list from its argument (0x52310a); a stage takes only the clubs that
+# qualified for it, and the cup entrants fill leaves it (season_cup_entrants.c, O258). Cup::load_from_disk 0x51fc00
+# reads every place of the list from the save (fread at 0x5209dd).
+LIST_STORES_LEFT = {0x523131: "Cup_Stage::Cup_Stage", 0x52095F: "Cup::load_from_disk"}
+
+# Each cup list starts cleared in a season game (season_cup_places.c rt_cup_places_list): a place that the class
+# does not write then reads as empty, and the cup places fills see it (Database.cpp 13471, item 64).
+for _at, (_reg, _bytes) in LIST_STORES.items():
+    _size = f"{_bytes:#x}u" if _bytes is not None else f"(uint32_t)(int16_t)R16({_reg} + 0x3eu) * 6u"
+    CUP_INSNS[_at] = (f"mov dword ptr [{_reg} + 0xa7], eax", f"W32({_reg} + 0xa7u, rt_cup_places_list(eax, {_size}));")
 
 # address: (the instruction in the original, C code). The store keeps its width (W16) and its object register.
 INSNS = {}

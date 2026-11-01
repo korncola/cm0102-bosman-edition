@@ -30,7 +30,9 @@ classes after their table 2200, the ended cups 2999). An edition in progress wri
 pattern is absent; then the check reads nothing.
 
 Checks (one row of <label>.faults.tsv each, check names in the first column):
-    duplicate     a competition holds the same label year twice
+    duplicate     a competition holds the same label year twice (three times for a split season: two rows a year in
+                  most of the 10 years before the start, or an Argentine or Mexican competition with two rows in any
+                  year before it: the game plays two titles a year there; the formats of SEVERAL_TITLES)
     no-host       a row with no host in a competition whose rows have hosts (more than half of its rows)
     confederation a winner or runner-up from another confederation, in a row from the start year on. The
                   confederation is the rules file's, else the competition's continent, else the continent of
@@ -76,14 +78,28 @@ save date (a confederation check for every edition):
                   season (the dead record beside the live one,
                   or a record the rename missed); a nation with no continent in the data (Bonaire, Guadeloupe)
                   is no fault
+    entrant-missing a live UEFA nation with a national side is not an entrant of a European World Cup qualifying
+                  edition of at least 30 teams that began in the game: every member enters, less the European
+                  hosts of its World Cup, less Russia from 2026 and less a nation that joins UEFA later (open item
+                  57). Only where the season code builds the whole pool (uefa_all): not the 2002 campaign, not a
+                  2001 game with changing rules off, from 2026 only with changing rules on or a 2025 start
     entrant-holder the title holder is not an entrant (access.tsv "holder": the Champions League from 2006, the
                   Libertadores), when the edition before is at most one cycle and one year before; not for an
                   edition of the start year or before (it began before the game, the holder may be out)
+    entrant-limit  a nation has more Champions League entrants than the association limit of the season (open item
+                  70; season_uefa_cl_cap: 4 to 2014/15, 5 from 2015/16, 7 from 2024/25), in an edition of the
+                  season code's access list (from 2009/10) that began after the start year, of 500 days or less;
+                  not in a base game (changing rules off), which plays the original's format
     entrant-route  an entrant of a fixed-route competition (access.tsv: UEFA Super Cup, Recopa, Suruga Bank,
                   Intercontinental Cup, Finalissima, FIFA Intercontinental Cup) won none of its route competitions
                   in the year of the match or the edition before, when that edition is at most one cycle and one
                   year before (checked when every route competition has history rows, for an edition after the
-                  start year: an edition of the start year may come from the data)
+                  start year: an edition of the start year may come from the data); a route competition with no
+                  row written in the game (a year after the start) in the year or one cycle before did not play
+                  (its nations are not selected), and its place goes to a drawn club, as the original draws one
+                  (WorldClubChamp::pick_entrant 0x92ae60, World_Club_Cup 0x92baa8): each such route lets one
+                  entrant of its confederation come by no route (slice 9a), of its nation for a national
+                  competition (the J.League Cup place of the Suruga Bank, open item 77)
     save-part      a fixtures part whose size does not fit its count (not read)
 
 World health (--health), Tier B: <label>.health.tsv holds the save size and part count, the players, under-21 and
@@ -137,6 +153,7 @@ FIXTURE = 0x4F
 GAP = 150                                     # days between two editions, at the least (the Champions League has
                                               # a winter break of 69 days, 105 in the World Cup year 2022)
 FINAL_GAP = 25                                # days with no match after a final, at the least
+RECENT = 60                                   # a team of the round after a break played this many days before it
 # continent ids of the data (Africa, Asia, Europe, North America, Oceania, South America in every database)
 CONF_IDS = ["CAF", "AFC", "UEFA", "CONCACAF", "OFC", "CONMEBOL"]
 
@@ -162,11 +179,25 @@ class LazySav:
         for i, (off, size, name) in enumerate(order):
             nxt = order[i + 1][0] if i + 1 < len(order) else end
             self.members[name] = (off, size, nxt - off)
+        # The files of merged parts (0.6.2 slice 13, tools/save/savfile.py): read once, kept in memory.
+        self.files = {}
+        for name in [n for n in self.members if n.lower().endswith(savfile.MERGED)]:
+            self.files.update(savfile.split_merged(self.read(name)))
 
     def names(self):
-        return list(self.members)
+        return list(self.members) + list(self.files)
+
+    def has(self, name):
+        """1 when the save holds the file, as a member or in a merged part."""
+        return name in self.members or name in self.files
+
+    def size(self, name):
+        """The size of a file, as a member or in a merged part."""
+        return len(self.files[name]) if name in self.files else self.members[name][1]
 
     def read(self, name):
+        if name in self.files:
+            return self.files[name]
         off, size, raw = self.members[name]
         self.f.seek(off)
         data = self.f.read(raw)
@@ -223,7 +254,7 @@ class Game:
         dates = [(y, d) for d, y in dates if 0 <= d < 366 and 1900 < y < 3000]
         self.date = max(dates) if dates else (0, 0)
         self.start, self.changing = 2001, 0
-        if "bosman_season.dat" in sav.members:
+        if sav.has("bosman_season.dat"):
             part = sav.read("bosman_season.dat")
             if len(part) >= 16:
                 self.start, self.changing = struct.unpack_from("<ii", part, 8)
@@ -235,7 +266,7 @@ class Game:
             if not m or int(m.group(2)) not in self.comps:
                 continue
             self.parts.add(int(m.group(2)))
-            if sav.members[n][1] > 1 << 20:
+            if sav.size(n) > 1 << 20:
                 continue
             found = EDITION.search(sav.read(n))
             if found:
@@ -319,6 +350,11 @@ def cycle_of(years, start):
     return max(s for s, n in best if n == best[0][1]) if len(steps) > 1 else steps[0]
 
 
+# Competitions with several rows of one label by their format (docs/research/2026-10-17-competition-history-fill.md,
+# "Two rows per label year"): (name pattern, first label year, rows a year).
+SEVERAL_TITLES = ((re.compile(r"(UEFA )?Inter-?Toto Cup", re.I), 0, 3),               # one row per joint winner
+                  (re.compile(r"Danish (2nd|Second) Divisions?", re.I), 2006, 2))       # East and West from 2006
+
 FRIENDLY = re.compile(r"^(Friendly|Reserve|'B' International|Under 21 International)")
 
 
@@ -349,9 +385,17 @@ def check(game, rules=None, changes=()):
         international = comp["nation"] < 0
         years = [r[3] for r in rs]
         game_rows = [r for r in rs if r[3] >= start]
-        # the same year twice (from the year before the start: older duplicates are rows of the database)
-        for y, n in sorted(collections.Counter(years).items()):
-            if n > 1 and y >= start - 1:
+        # the same year twice (from the year before the start: older duplicates are rows of the database); a split
+        # season (Apertura and Clausura) holds two rows a year
+        per_year = collections.Counter(years)
+        before = [per_year[y] for y in range(start - 10, start) if per_year[y]]
+        split_nation = game.nations.get(comp["nation"], ("", ""))[0] in ("Argentina", "Mexico")
+        most = 2 if before and (sum(1 for k in before if k == 2) * 2 > len(before) or
+                                (split_nation and any(per_year[y] == 2 for y in per_year if y < start))) else 1
+        several = next((k, f) for pat, f, k in SEVERAL_TITLES if pat.fullmatch(name)) \
+            if any(pat.fullmatch(name) for pat, f, k in SEVERAL_TITLES) else (1, 0)
+        for y, n in sorted(per_year.items()):
+            if n > max(most, several[0] if y >= several[1] else 1) and y >= start - 1:
                 pairs = "; ".join(f"{r[4][0]} / {r[5][0]}" for r in rs if r[3] == y)
                 faults.append(("duplicate", name, y, f"{n} rows: {pairs}"))
         # a missing host where the competition has hosts
@@ -512,20 +556,43 @@ def fixtures(game):
     return out
 
 
+CL_LIMITS = [(2024, 7), (2015, 5), (2009, 4)]   # season_uefa_cl_cap: the first season of each association limit
+
+
+def limit_faults(name, year, first, nations):
+    """[(check, competition, year, detail)]: the nations of a Champions League edition (its first match day, an
+    ordinal, gives the season) with more entrants than the association limit of the season (open item 70)."""
+    season = datetime.date.fromordinal(first).year
+    cap = next((c for f, c in CL_LIMITS if season >= f), None)
+    over = sorted((n, k) for n, k in collections.Counter(nations).items() if cap and k > cap)
+    return [("entrant-limit", name, year, f"{n} has {k} entrants, the limit of {season}/{(season + 1) % 100:02d} "
+                                          f"is {cap}") for n, k in over]
+
+
 def editions_of(fx):
     """[(year, first day, last day, teams)]: the fixtures of a competition split after a final (a day with one match
     and then FINAL_GAP days or more with none) and at a gap of more than GAP days, each an edition with the year of
     its last match. A winter break comes after a day of many matches, so a club cup from July to May stays one
-    edition."""
+    edition. A day with one match that ends a group stage is no final (open item 70: the knockout rounds of
+    February after a group stage whose last day in December had one match). It counts as the end of a group stage
+    when the match day before it had more than two matches (a semi-final day has one or two) and every team of the
+    next day played in the RECENT days before the break."""
     per_day = collections.defaultdict(list)
     for day, home, away in fx:
         per_day[day].append((home, away))
-    out = []
+    out, seen, before = [], {}, None
     for day in sorted(per_day):
-        if not out or day - out[-1][2] > GAP or (day - out[-1][2] >= FINAL_GAP and len(per_day[out[-1][2]]) == 1):
+        teams = {t for pair in per_day[day] for t in pair if t >= 0}
+        last = out[-1][2] if out else None
+        group_end = before is not None and len(per_day[before]) > 2 and teams and \
+            all(last - seen.get(t, last - RECENT - 1) <= RECENT for t in teams)
+        if not out or day - last > GAP or (day - last >= FINAL_GAP and len(per_day[last]) == 1 and not group_end):
             out.append([0, day, day, set()])
+            seen, last = {}, None
         out[-1][2] = day
-        out[-1][3].update(t for pair in per_day[day] for t in pair if t >= 0)
+        out[-1][3].update(teams)
+        seen.update((t, day) for t in teams)
+        before = last
     return [(datetime.date.fromordinal(e[2]).year, e[1], e[2], e[3]) for e in out]
 
 
@@ -596,6 +663,11 @@ def entrants(game, rules, access, changes=()):
             if t >= 0:
                 held[t].append((year, name, place))
     hosts = {(cid, year): h for cid, year, a, b, c, h in game.rows if h >= 0}
+    route_nation = {}                                         # key of a national competition: its nation's name
+    for comp in game.comps.values():
+        key = rules.key(comp["name"])
+        if key and comp.get("nation", -1) >= 0 and comp["nation"] in game.nations:
+            route_nation[key] = game.nations[comp["nation"]][0]
     moved, due_to = collections.defaultdict(list), collections.defaultdict(set)
     renamed = {ch["nation"]: (ch["season"], ch["to"]) for ch in changes if ch["kind"] == "rename" and due(game, ch)}
     for ch in changes:
@@ -613,6 +685,13 @@ def entrants(game, rules, access, changes=()):
         before = max([y for y, w in by_key.get(key, ()) if y < year], default=0)
         years = {year} | ({before} if year - before <= cycle + 1 else set())
         return {w for y, w in by_key.get(key, ()) if y in years}
+
+    def played(key, year):
+        """1 when the game wrote a row of route competition key (a year after the start) in the window of winners():
+        else its nations are not selected and a club of its confederation comes by the original's draw (slice 9a).
+        A route that stopped by a fault of the game also counts as not played; the check `missing` reports it."""
+        cycle = number(rules.rows.get(key, {}).get("cycle")) or 1
+        return any(game.start < y <= year and year - y <= cycle + 1 for y, w in by_key.get(key, ()))
 
     save_day = datetime.date(game.date[0], 1, 1).toordinal() + game.date[1] if game.date[0] > 1900 else 0
     live = {n for n, conf in game.nations.values() if conf}
@@ -639,7 +718,7 @@ def entrants(game, rules, access, changes=()):
             # teams (the play-off tournament of 2026, in the record of the OFC qualifying: 2 of CONCACAF and 1 each of
             # AFC, CAF, CONMEBOL and OFC)
             playoff = (key or "").startswith("wc_qual_")
-            foreign, dead = collections.defaultdict(list), []
+            foreign, dead, no_route = collections.defaultdict(list), [], []
             prev = [w for y, w in sorted(by_key.get(key, ())) if y < year][-1:] if key else []
             host = hosts.get((cid, year), -1)
             host_nations = [game.clubs.get(host, ("", -1))[1]] if host >= 0 else []
@@ -663,8 +742,18 @@ def entrants(game, rules, access, changes=()):
                             not any(year < m for m in moved.get(nation, ())):
                         foreign[(shown, "|".join(sorted(cs)))].append(f"{tname} ({conf})")
                 if won and done and year > game.start and not by_route and all(by_key.get(r) for r in won):
-                    faults.append(("entrant-route", name, year, f"{tname} ({nation}) won none of {', '.join(won)} in "
-                                                                f"{year} or the edition before"))
+                    no_route.append((nation, conf, f"{tname} ({nation}) won none of {', '.join(won)} in {year} or the edition "
+                                           f"before"))
+            # each route that did not play leaves one place to a drawn club of its confederation
+            free = [(route_nation.get(r), set(c.split("|")) if (c := rules.rows.get(r, {}).get("confed")) else None)
+                    for r in won if not played(r, year)]
+            for nat, conf, text in no_route:
+                take = next((i for i, (rn, cs) in enumerate(free)
+                             if (nat == rn if rn else cs is None or conf in cs)), None)
+                if take is None:
+                    faults.append(("entrant-route", name, year, text))
+                else:
+                    free.pop(take)
             if dead:
                 faults.append(("entrant-dead", name, year, f"{len(dead)} entrants of a nation under an old name: "
                                                            f"{', '.join(dead[:6])}"))
@@ -678,6 +767,12 @@ def entrants(game, rules, access, changes=()):
                 faults.append(("entrant-confed", shown, year, f"{len(teams_)} entrants from another confederation "
                                                               f"than {cs}: {', '.join(teams_[:6])}"
                                                               f"{' ...' if len(teams_) > 6 else ''}"))
+            # an edition of more than 500 days holds two seasons (2019/20 ended in August 2020, 425 days after its
+            # start, and 2020/21 began before that): its counts are not those of one season
+            # with changing rules off the base game plays the original's format: no limit of the season rules
+            if key == "uefa_cl" and game.changing and done and datetime.date.fromordinal(first).year > game.start and \
+                    last - first <= 500:
+                faults += limit_faults(name, year, first, [game.club(t)[1] for t in teams])
             if want and done and len(teams) != want:
                 faults.append(("entrant-count", name, year, f"{len(teams)} entrants, the access rule has {want}"))
             if done and not host_names and host >= 0 and rule.get("kind") == "intl_finals" and \
@@ -690,7 +785,48 @@ def entrants(game, rules, access, changes=()):
                     alias = set(h.split("/"))
                     if not names & alias and alias & live:
                         faults.append(("entrant-host", name, year, f"the host {h} is not an entrant"))
+            if key == "wc_qual_uefa" and done and len(teams) >= MISSING_MIN and \
+                    first >= datetime.date(game.start, 7, 1).toordinal() and uefa_all(game, year):
+                missing = uefa_missing(game, access, changes, year, datetime.date.fromordinal(first).year,
+                                       {game.club(t)[1] for t in teams})
+                if missing:
+                    faults.append(("entrant-missing", name, year, f"{len(missing)} live UEFA nations do not play: "
+                                                                  f"{', '.join(missing[:6])}"
+                                                                  f"{' ...' if len(missing) > 6 else ''}"))
     return listing, faults
+
+
+MISSING_MIN = 30                              # the group stage of a European qualifying (a play-off edition is less)
+
+
+def uefa_all(game, year):
+    """1 when the season code puts every UEFA member in the European World Cup qualifying edition of this year: a
+    season game (not 2001 with changing rules off, season_intl_on), for the World Cups of 2006 to 2022
+    (season_wcq26.c europe_wide) and from 2026 with changing rules on or a start from 2025 (season_wcq26, Q232).
+    The 2002 campaign keeps the original's holder and cap."""
+    wc = year + (2 - year % 4) % 4
+    if game.start == 2001 and not game.changing:
+        return 0
+    return 2006 <= wc <= 2022 or (wc >= 2026 and (game.changing or game.start >= 2025))
+
+
+def uefa_missing(game, access, changes, year, first_year, entered):
+    """The live UEFA nations with a national side that are not entrants of a European World Cup qualifying edition
+    (open item 57 of 0.6.2): every UEFA member enters, less the European hosts of its World Cup (the first World
+    Cup year from the edition's year), less Russia from the 2026 cycle (Q29) and less a nation that joins UEFA
+    after the edition's first year (nations.tsv: Kosovo from 2016)."""
+    wc = year + (2 - year % 4) % 4
+    hosts = {x for h in access.rule("world_cup", wc)[1] for x in h.split("/")}
+    later = {c["nation"] for c in changes if c["kind"] == "confed" and c["to"] == "UEFA" and c["season"] > first_year}
+    sides = {nid for _, nid in game.side_names}
+    out = []
+    for nid, (nation, conf) in sorted(game.nations.items()):
+        if conf != "UEFA" or nid not in sides or nation in entered or nation in hosts or nation in later:
+            continue
+        if nation == "Russia" and wc >= 2026:
+            continue
+        out.append(nation)
+    return sorted(out)
 
 
 # ---- World health (Tier B) ----
@@ -714,7 +850,7 @@ def health(game):
     senior side of nation n is row n of nat_club.dat. Balance: finance.dat, 0x167 bytes a team, clubs first,
     +0x00 s64 (the finance record, 0x596587; run-logs/future-audit/audit.md)."""
     sav = game.sav
-    staff = sav.read("staff.dat") if "staff.dat" in sav.members else b""
+    staff = sav.read("staff.dat") if sav.has("staff.dat") else b""
     year, day = game.date
     players, u21, u23 = collections.Counter(), collections.Counter(), collections.Counter()
     squad = collections.Counter()
@@ -745,7 +881,7 @@ def health(game):
         n = s32(sides, o + 0x53)
         side_manager.setdefault(n, s32(sides, o + 0xCF) >= 0)    # the first row of a nation is its senior side
         side_ids[n].append(s32(sides, o))                        # then its under-21 side
-    finance = sav.read("finance.dat") if "finance.dat" in sav.members else b""
+    finance = sav.read("finance.dat") if sav.has("finance.dat") else b""
     balances = [struct.unpack_from("<q", finance, k * FINANCE)[0]
                 for k in range(min(club_count, len(finance) // FINANCE))]
     live = {nid: (name, conf) for nid, (name, conf) in game.nations.items() if conf}

@@ -12,7 +12,7 @@ Africa(n)? Cup of Nations	african_nations
 (OFC )?(Men's )?(Oceania )?Nations Cup( final)?|Oceania Nations Cup	oceania_nations
 Football at the Summer Olympics|Olympic Games|Olympics	olympics
 (CONCACAF )?Gold Cup	gold_cup
-Finalissima	finalissima
+(\d{4} )?Finalissima	finalissima
 FIFA World Cup qualification \(UEFA\)	wc_qual_uefa
 FIFA World Cup qualification \(CAF\)	wc_qual_caf
 FIFA World Cup qualification \(AFC\)	wc_qual_afc
@@ -49,11 +49,12 @@ Coupe de la Ligue	fra_lge_cup
 FAW Premier Cup|Welsh Premier Cup	wel_prm_cup
 League of Ireland Cup	ire_lge_cup
 FAI Super Cup	ire_super_cup
-Korean League Cup|K League Cup	kor_league_cup
+Korean League Cup|K League Cup|Rush & Cash Cup	kor_league_cup
 Polish League Cup|Puchar Ekstraklasy	pol_lge_cup
 Copa dos Campe[õo]es	bra_champ_cup
 Turkish Super Cup	tur_super
 Russian Super Cup	rus_super
-Conference League Cup( \(Setanta Shield\))?	conf_cup
+(Conference|National) League Cup( \(Setanta Shield\))?	conf_cup
 J\.? ?League (YBC Levain |Yamazaki Nabisco )?Cup	j_league_cup
 (African|CAF) Champions League	caf_champions
+K League Super Cup|Korean Super Cup	kor_super

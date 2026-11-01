@@ -34,6 +34,7 @@
 #include "season_rules.h"
 #include "season_intl.h"
 #include "season_uefa_league.h"
+#include "caps_wide.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -424,16 +425,37 @@ void season_change_reset(void)
     season_uefa_league_reset();         /* load sweep: the league phase list of a stage being made */
     season_friendly_dates_reset();      /* row A18: the Friendly object of the last game */
     season_point = 0;
+    season_intl_marks_reset();                  /* 0.6.2 slice 4b: no qualifying campaign in the original's shape */
     creating = 0;                               /* also when a longjmp left create_game */
 }
 
+/* Version 3 (0.6.2 slice 12) when the game has caps above 255, version 4 (item 66) when it has goals above 255
+ * (caps_wide.c): the row A18 list then always has its count, so the readers of 0.6.0 and 0.6.1 take the list and
+ * leave the caps and goals after it (season_friendly_part_read of
+ * those versions reads the entries that the count gives and ignores the bytes after them). Else version 2 or 1, as
+ * before. */
+/* Version 5 (0.6.2 slice 4b) when qualifying campaigns keep the original's shape (season_intl_old_shape): the row
+ * A18 list with its count, the caps and the goals fields (counts 0 when empty), then the marks field
+ * (season_intl.h). */
+#define PART_FORM_MARKS 5
+static int part_marks(void) { return season_intl_marks_size() != 0; }
+static int part_caps(void) { return caps_wide_form() != 0 || part_marks(); }
+static uint32_t caps_size(void) { return part_marks() ? caps_wide_part_size_all() : caps_wide_part_size(); }
+
 uint32_t season_change_part_size(void)
 {
-    uint32_t pending = season_friendly_part_size();
-    if (!news_count && !rename_count && season_point <= season_start_year() && !pending) return 0;
-    uint32_t n = 4 + 4 + (uint32_t)rename_count * (4 + NAME_ROOM) + 4 + pending;
+    uint32_t pending = season_friendly_part_size(), caps = caps_size() + season_intl_marks_size();
+    if (!news_count && !rename_count && season_point <= season_start_year() && !pending && !caps) return 0;
+    if (caps && !pending) pending = 4;          /* the count 0 of an empty list */
+    uint32_t n = 4 + 4 + (uint32_t)rename_count * (4 + NAME_ROOM) + 4 + pending + caps;
     for (int i = 0; i < news_count; i++) n += 12 + news[i].len;
     return n;
+}
+
+int season_change_part_form(void)
+{
+    if (part_marks()) return PART_FORM_MARKS;
+    return part_caps() ? caps_wide_form() : season_change_part_size() ? 2 : 1;
 }
 
 static void put32(uint8_t *p, uint32_t v) { memcpy(p, &v, 4); }
@@ -458,12 +480,26 @@ void season_change_part_write(uint8_t *out)
         at += 4 + NAME_ROOM;
     }
     put32(out + at, (uint32_t)season_point);
-    season_friendly_part_write(out + at + 4);   /* row A18: the qualifiers that wait for the first running season */
+    at += 4;
+    uint32_t pending = season_friendly_part_size();
+    season_friendly_part_write(out + at);       /* row A18: the qualifiers that wait for the first running season */
+    if (!part_caps()) return;
+    if (!pending) {
+        put32(out + at, 0);
+        pending = 4;
+    }
+    if (!part_marks()) {
+        caps_wide_part_write(out + at + pending);   /* version 3 or 4 */
+        return;
+    }
+    caps_wide_part_write_all(out + at + pending);
+    season_intl_marks_write(out + at + pending + caps_wide_part_size_all());
 }
 
-int season_change_part_read(const uint8_t *in, uint32_t n)
+int season_change_part_read(const uint8_t *in, uint32_t n, uint32_t form)
 {
     season_change_reset();
+    caps_wide_reset();
     if (n < 4) return 0;
     uint32_t count = get32(in), at = 4;
     if (count > (n - 4) / 12) return 0;            /* 12 bytes a season at least: no limit of seasons (0.6.2 fault 31) */
@@ -507,7 +543,34 @@ int season_change_part_read(const uint8_t *in, uint32_t n)
     if (point && (point > SEASON_YEAR_MAX || !season_year_ok((int)point))) return 0;
     season_point = (int)point;
     at += 4;
-    return season_friendly_part_read(in + at, n - at);   /* row A18; nothing more in a save before it */
+    if (form < 3) return season_friendly_part_read(in + at, n - at);   /* row A18; nothing more in a save before it */
+    /* Version 3 and later: the row A18 list with its count and whole entries, then the caps (and goals) above 255. */
+    if (n - at < 4) return 0;
+    uint32_t pending = get32(in + at);
+    if (pending > (n - at - 4) / SEASON_FRIENDLY_ENTRY) return 0;
+    uint32_t list = 4 + pending * SEASON_FRIENDLY_ENTRY;
+    if (!season_friendly_part_read(in + at, list)) return 0;
+    if (!caps_wide_part_read(in + at + list, n - at - list, form)) {   /* the caps, and from version 4 the goals */
+        season_change_reset();
+        return 0;
+    }
+    if (form < PART_FORM_MARKS) return 1;
+    /* Version 5: the marks after the caps and goals fields (u32 count, then 8 bytes an entry each). */
+    uint32_t c = at + list, left = n - c;
+    for (int f = 0; f < 2; f++) {
+        if (left < 4 || get32(in + c) > (left - 4) / 8) {
+            season_change_reset();
+            return 0;
+        }
+        uint32_t size = 4 + 8 * get32(in + c);
+        c += size;
+        left -= size;
+    }
+    if (!season_intl_marks_read(in + c, left)) {
+        season_change_reset();
+        return 0;
+    }
+    return 1;
 }
 
 /* ---- The news item ---- */
@@ -729,8 +792,21 @@ static int entry_for(uint32_t comp)
     return -1;
 }
 
+static uint32_t held[8];
+
+void season_change_hold(uint32_t comp, int on)
+{
+    for (int i = 0; i < 8; i++)
+        if (on ? !held[i] : held[i] == comp) {
+            held[i] = on ? comp : 0;
+            return;
+        }
+}
+
 int season_change_start(uint32_t comp, int after)
 {
+    for (int i = 0; comp && i < 8; i++)
+        if (held[i] == comp) return !after;
     if (!in_pass) return 0;
     if (!after) {
         int e = depth > 0 ? stack[depth - 1] : entry_for(comp);

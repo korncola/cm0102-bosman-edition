@@ -51,6 +51,8 @@
 #define NAME_AT 4u
 #define COMP_RECORD 4u
 #define COMP_CLUBS 0x3eu
+#define COMP_MEETINGS 0x3cu        /* s16: meetings of each pair (League::check_complete 0x689b31) */
+#define COMP_MATCHES 0xa7u         /* s16: matches per club, -1 until check_complete 0x689ad0 counts them */
 #define COMP_YEAR 0x40u
 #define COMP_TABLE 0xb1u
 #define ROW_SIZE 0x3bu
@@ -305,15 +307,15 @@ static int state_clubs(const State *st, uint32_t self, uint32_t *out, int max)
 /* The club count of the object's row: the start season at a new game and with changing rules off (Q232), else the
  * row of the edition +0x40. The state objects hold the game year there (2001 in a 2001/02 game, whose state
  * championships play in the first months of 2002: the row 2001/02, real season 2002). The nearest earlier known
- * count (Q248). 0 when none is known. */
+ * count (Q248), with no end year (the after-table rule). 0 when none is known. */
 static int row_count(uint32_t obj)
 {
     const char *file = season_change_file(obj);
     int s = (int16_t)rd16(g_mem, obj + COMP_YEAR);
     if (!season_changing_rules() || season_change_is_creating()) s = season_start_year();
-    for (int k = s; k >= SEASON_FIRST_YEAR && k > s - 30; k--) {
+    for (int k = season_rules_last_season(s, file); k; k = season_rules_last_season(k - 1, file)) {
         const SeasonRule *r = season_rules_find(k, file, 0);
-        if (r && r->clubs > 0) return r->clubs;
+        if (r->clubs > 0) return r->clubs;
     }
     return 0;
 }
@@ -394,6 +396,15 @@ static int pick(uint32_t obj, const StateClass *k)
         rt_ret_cdecl(0);
         return 1;
     }
+    /* Matches per club (+0xa7) back to -1 when check_complete counted them for another count, as season_sizes.c
+     * does for a league of the size table (O278). League::check_complete 0x689ad0 sets +0xa7 to (+0x3e - 1) x the
+     * meetings +0x3c only while it is -1 (0x689b1d..0x689b36), and the league is complete when every row has played
+     * that many (0x689b51..0x689b58). A state whose count changed kept the old season's value, its league phase was
+     * never complete, and it wrote no history row: the Paraense of 13 clubs to 2014 and 10 in 2015 had no edition
+     * from 2015 (0.6.2 open item 81). Only a value that check_complete made for another count k ((k - 1) x meetings)
+     * goes back; a value that a class sets itself (ScoPrm's 38) would stay, as in season_sizes.c. */
+    int m = (int16_t)rd16(g_mem, obj + COMP_MATCHES), meet = (int16_t)rd16(g_mem, obj + COMP_MEETINGS);
+    if (meet > 0 && m > 0 && m % meet == 0 && m / meet + 1 != n) wr16(g_mem, obj + COMP_MATCHES, 0xffffu);
     wr16(g_mem, obj + COMP_CLUBS, (uint16_t)n);
     wr32(g_mem, obj + COMP_TABLE, table);
     for (int i = 0; i < n && !rt_unwinding; i++) {

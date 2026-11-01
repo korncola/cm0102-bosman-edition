@@ -182,6 +182,11 @@ int season_change_add_comp(int entry, uint32_t obj);
  * its state after a load takes the season of the game from it (the larger of this and the start year). */
 int season_change_point(void);
 
+/* Keeps a competition's start_new_season from running while held (outside a season pass too): the wrap of
+ * season_starts.c returns at once, as for season_change_skip. 0.6.2 slice 4b holds a running qualifying campaign
+ * while the repair of an old save restarts its finals (season_intl.c repair_idle). At most 8 at once. */
+void season_change_hold(uint32_t comp, int on);
+
 /* season_starts.c calls it around each start_new_season (this, 0 before and 1 after). */
 int season_change_start(uint32_t comp, int after);   /* 1 before: a kind skips this season */
 
@@ -198,8 +203,14 @@ void season_change_reset(void);                               /* before a new ga
  *   u32 the last season point.
  * season_change_part_size gives 0 when the game has none of these (the part stays version 1). A reader takes
  * these fields of a later version too and leaves what follows them. */
+/* Version 3 (0.6.2 slice 12) keeps these fields, then the row A18 list always with its u32 count and whole entries of
+ * SEASON_FRIENDLY_ENTRY bytes, then the caps above 255 (caps_wide.h). Version 4 (item 66) adds the goals above 255
+ * after the caps field, whose count may then be 0. A game with no caps or goals above 255 writes version 2 (or 1),
+ * byte for byte as before. A later version keeps these fields and adds its own after them. */
+#define SEASON_FRIENDLY_ENTRY 20u    /* the bytes of one entry of the row A18 list (season_friendly_dates.c) */
 uint32_t season_change_part_size(void);
+int season_change_part_form(void);                            /* the part version: 1 to 4 */
 void season_change_part_write(uint8_t *out);                  /* season_change_part_size bytes */
-int season_change_part_read(const uint8_t *in, uint32_t n);   /* 0 for damaged bytes */
+int season_change_part_read(const uint8_t *in, uint32_t n, uint32_t form);   /* 0 for damaged bytes */
 
 #endif

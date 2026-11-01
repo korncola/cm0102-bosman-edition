@@ -140,12 +140,12 @@ static uint32_t object_of(uint32_t key)
     return readable(o) ? o : 0;
 }
 
-/* The rows of a file in a season; after the last season of the file the last rows stay (Q248). */
+/* The rows of a file in a season; after the last season of the file the last rows stay, with no end year (the
+ * after-table rule, Q248). */
 static const SeasonRule *row_in(const char *file, int season, int n)
 {
-    for (int s = season; s >= SEASON_FIRST_YEAR && s > season - 10; s--)
-        if (season_rules_find(s, file, 0)) return season_rules_find(s, file, n);
-    return NULL;
+    int s = season_rules_last_season(season, file);
+    return s ? season_rules_find(s, file, n) : NULL;
 }
 
 /* 1 when the rules of a row give play-off places (a text, not a code such as none or n/a). */

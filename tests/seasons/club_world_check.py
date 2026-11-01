@@ -247,9 +247,10 @@ def check_dates(name, s, row, text, last):
     return fails
 
 
-def load_and_play(program, game, save, out, days, timeout=1200):
+def load_and_play(program, game, save, out, days, timeout=1200, table=None):
     """Loads save, lets the game go on with its holiday (a loaded game keeps it) and saves `days` game days after
     the load (RECOMP_SAVE_AFTER_DAYS ends the program). timeout: seconds (the quit step comes 300 s before it).
+    table: the rules table of the load, else the build's (rules_report_check.rules_table).
     Returns the result and the path of the new save, or None."""
     sys.path.insert(0, os.path.join(HERE, "..", "fixtures"))
     import fixtures
@@ -259,7 +260,7 @@ def load_and_play(program, game, save, out, days, timeout=1200):
     os.replace(save, os.path.join(user, os.path.basename(save)))
     fixtures.write_settings(user, "classic", [])
     steps = fixtures.LOAD_STEPS[:-1] + [f"{(timeout - 300) * 1000} quit"]
-    table = rrc.rules_table(program, game)
+    table = table or rrc.rules_table(program, game)
     r, _ = fixtures.run(program, game, "classic", user, smoke_run.scaled_steps("classic", out, steps),
                         {"RECOMP_SAVE_AFTER_DAYS": str(days), "RECOMP_RULES_TABLE": table}, timeout)
     with open(os.path.join(out, "stderr.txt"), "w") as f:

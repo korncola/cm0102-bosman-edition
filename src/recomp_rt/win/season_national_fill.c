@@ -1,8 +1,8 @@
 /* The fill of a short national side before its match (season games only).
  *
  * VIRTUAL_STAFF::fill_fixture_squads 0x90d2f0 tops up both sides of a fixture (0x90dae0 at 0x90d3bd and 0x90d3f4).
- * The top-up gives no virtual players to the side of a nation with a reputation above 500 (0x90dd5d..0x90dd73),
- * so a national side with few players stays short. The original then shows virtual_staff.cpp 195 (0x90d4bc) and
+ * The top-up gives no virtual players to the under-21 side of a nation with a reputation above 500
+ * (0x90dd5d..0x90dd73), so such a side with few players stays short. The original then shows virtual_staff.cpp 195 (0x90d4bc) and
  * plays on with no check (0x90d4dc); in a season game the wrap in season_records.c skips the box. With fewer than
  * 11 the team pick stops the match at match_eng.cpp 612 or 652 (init_match 0x6b7f20, 0x6b89be): Holland U21 had 10
  * players in an Under 21 International in August 2024 (2023 start, October 2023 database, after a load).
@@ -139,6 +139,65 @@ static void fill_side(uint32_t club)
                     "in the data %d, in another national squad %d, nation +0x88 %d)\n", name, u21 ? " (under-21)" : "",
             before, n, slots, data, elsewhere, (int)rd32(g_mem, nation + 0x88));
     free(busy);
+}
+
+/* The top-up's reputation rule (0.6.2 fault 65). The under-21 path of the top-up 0x90dae0 (0x5409b0 at 0x90dcab)
+ * zeroes the side's virtual player targets when the nation has a reputation above 500 (0x90dd5d..0x90dd73): the
+ * original takes a strong nation to have young players of its own. A database can lack them: in a 2020 start
+ * (November 2020 database) United States U21 had no player in its squad and none in the data born in 1999 or later
+ * on 4 September 2020, and its match stopped at match_eng.cpp 652 (init_match 0x6b7f20, the box at 0x6b8aca).
+ *
+ * In a season game (u21_rule_on) an under-21 side is short when its squad slots and the players fill_side would
+ * take, none of them in another national squad, are fewer than FILL_TO. Before the top-up such a side takes the
+ * players of its nation (season_national_prefill, fill_side), so they keep their places, and then the top-up keeps
+ * its virtual player targets (rt_u21_keeps_virtual at 0x90dd67) as for a nation of 500 or less. u21_short reads
+ * memory only, because rt_u21_keeps_virtual runs inside the recompiled top-up; it does not ask for injuries, which
+ * fill_side does after the top-up. */
+static int in_squad(uint32_t club, uint32_t sp);
+static int u21_rule_on(void);
+
+static int u21_short(uint32_t club, int *have)
+{
+    if (!readable(club)) return 0;
+    int id = (int)rd32(g_mem, club), clubs = (int)rd32(g_mem, CLUB_COUNT), nations = (int)rd32(g_mem, NATION_COUNT);
+    uint32_t nation = rd32(g_mem, club + CLUB_NATION);
+    if (id < clubs - nations || id >= clubs || !readable(nation)) return 0;
+    uint32_t *busy = NULL;
+    int nbusy = called_up(club, &busy), n = 0, born_from = (int)rd16(g_mem, GAME_YEAR) - 21;
+    for (uint32_t j = 0; j < SQUAD; j++) {
+        uint32_t sp = rd32(g_mem, club + CLUB_SQUAD + 4 * j);
+        n += sp && !bsearch(&sp, busy, (size_t)nbusy, sizeof *busy, by_address);
+    }
+    uint32_t staff = rd32(g_mem, STAFF), count = rd32(g_mem, STAFF_COUNT);
+    for (uint32_t i = 0; n < FILL_TO && readable(staff) && i < count; i++) {
+        uint32_t sp = staff + i * STAFF_SIZE;
+        if (!readable(rd32(g_mem, sp + 0x61)) || (rd32(g_mem, sp + 0x1a) != nation && rd32(g_mem, sp + 0x1e) != nation)) continue;
+        if ((int16_t)rd16(g_mem, sp + 0x12) < born_from || in_squad(club, sp)) continue;
+        n += !bsearch(&sp, busy, (size_t)nbusy, sizeof *busy, by_address);
+    }
+    free(busy);
+    *have = n;
+    return n < FILL_TO;
+}
+
+uint32_t rt_u21_keeps_virtual(uint32_t club)
+{
+    int n;
+    if (!u21_rule_on() || !u21_short(club, &n)) return 0;
+    fprintf(stderr, "recomp: national fill: %.50s (under-21) has %d players it can field with those of its nation, "
+                    "keeps its virtual players (nation +0x88 %d)\n", (char *)(g_mem + club + 4), n,
+            (int)rd32(g_mem, rd32(g_mem, club + CLUB_NATION) + 0x88));
+    return 1;
+}
+
+void season_national_prefill(uint32_t fixture)
+{
+    if (!readable(fixture) || !u21_rule_on()) return;
+    for (uint32_t k = 0; k < 2 && !rt_unwinding; k++) {
+        uint32_t club = rd32(g_mem, fixture + 0x1c + 4 * k);
+        int n;
+        if (u21_short(club, &n)) fill_side(club);
+    }
 }
 
 /* Before the top-up: a national side whose nation has no squad sizes in NationalTeams (the byte pairs at

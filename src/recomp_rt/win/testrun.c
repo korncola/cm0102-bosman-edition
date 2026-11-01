@@ -66,6 +66,7 @@ RT_WRAP(005cde40, human_turn)
     progress_log_end();            /* RECOMP_PROGRESS_LOG (display.c): the time of the last progress text */
     date_log_turn();
     holiday_next_turn();
+    net_session_turn();
     season_log_turn();
     season_dates_log_turn();
     season_history_log_turn();

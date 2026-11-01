@@ -293,6 +293,32 @@ static void test_uefa(void)
             }
         }
     }
+    /* The UEFA Super Cup venue (Q28): the row's venue to the last table row, then each year a venue of an earlier
+     * row, never the venue of the year before. */
+    for (int rules = 0; rules <= 1; rules++) {
+        game(2013, rules);
+        const char *prev = NULL;
+        int last_season = season_uefa_rows[season_uefa_row_count - 1].season;
+        for (int y = 2013; y <= END_YEAR; y++) {
+            const char *stadium = NULL, *city = NULL;
+            const SeasonUefa *r = season_uefa_row(y);
+            if (!season_uefa_super_cup_venue(y, &stadium, &city) || !stadium || !city) {
+                fault("uefa.super_cup_venue", "rules %d: no venue in %d", rules, y);
+                continue;
+            }
+            if ((!rules || y <= last_season) && (strcmp(stadium, r->sc_stadium) || strcmp(city, r->sc_city)))
+                fault("uefa.super_cup_venue", "rules %d: %d at %s, the row gives %s", rules, y, stadium, r->sc_stadium);
+            if (rules && y > last_season) {
+                int known = 0;
+                for (int i = 0; i < season_uefa_row_count && !known; i++)
+                    known = !strcmp(season_uefa_rows[i].sc_stadium, stadium) && !strcmp(season_uefa_rows[i].sc_city, city);
+                if (!known) fault("uefa.super_cup_venue", "%d at %s, %s: no past final there", y, stadium, city);
+                if (prev && !strcmp(prev, stadium))
+                    fault("uefa.super_cup_venue_repeat", "%d at %s, as the year before", y, stadium);
+            }
+            prev = stadium;
+        }
+    }
     static const char comps[] = {'c', 'u', 'k'};
     for (size_t c = 0; c < sizeof comps; c++) {
         for (int s = 2028; s <= END_YEAR; s++) {

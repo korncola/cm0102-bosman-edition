@@ -2,6 +2,28 @@
 
 CM 01/02 Bosman Edition uses semantic versioning. A patch release (0.1.1) fixes bugs. A minor release (0.2.0) adds features. A major release (1.0.0 and later) can break saved games or settings. Releases below 1.0.0 are test releases.
 
+## 0.7.0 (pre-release)
+
+Play network games with friends online, on a Mac, Windows or Linux, with no patch, no VPN and no router setting. New lines in `settings.txt`: `online_play` and `game_password`.
+
+- Network Play works again. Bosman Edition answered every network call with "no network" before. The original's own screens run: Network Play, Start Network Game, Join Network Game and Select Network Game.
+- The game list (Select Network Game) shows the games online and the games on your own network in one list, up to 50 games with the original's scrollbar. Each online row shows the season, the game date and the managers online. The original showed at most 9 games.
+- A host's game goes into the online lobby when it starts. Friends on another network click the game in the list and join. A relay passes the traffic, so nobody opens a port on their router. Mac, Windows and Linux players play in one game.
+- Invite links: a host can give friends the address of the game's page, `https://online.cm0102bosman.co.uk/join/` and the game code. The page shows the game, an "Open in Bosman Edition" button, the game code and a download link for a friend who does not have the game. A click on an invite link opens the game and joins that game. A game with a password still asks for it.
+- On Windows and Linux, the game registers the `cm0102://` link for your user account only, while Online play is on. With Online play off, the game removes it at the next start. On a Mac the app itself holds the link.
+- Game password (`game_password`): a host sets it on the Network tab of Bosman Edition Options. A friend who joins types it in a small box. A wrong password shows the box again.
+- Kick: while you host, the Network tab lists the human managers online with their club and ping, and a Kick button for each. Their club goes on holiday.
+- Drop in and drop out: when a human manager leaves or loses the connection, they show as Away, and their club goes on holiday as in the original. They join again and take their club back with their manager password.
+- When the host quits, the host's game saves, and each human manager sees "The host left the game." and goes back to the start screen.
+- Always-on games: a host can leave a game open for a long time. It moves forward only when a human manager clicks Continue.
+- Clear errors: each failure says what went wrong and what to do next, in place of "The network game could not be created" or a wait at "Contacting Server". A player on another version sees the host's version.
+- Connection test: a Test button on the Network tab checks the lobby and the relay, and says that online play works or what is wrong.
+- Ping: the game list shows the ping of each online game, and the Network tab shows each human manager's ping.
+- Online play (`online_play`, on by default): a switch on the Network tab of Bosman Edition Options. With it off, the game list shows games on your own network only, and the game never contacts the online service.
+- The online service is free and has a daily limit. When it is used up, the game list says "Online games are full today, try again later" until 00:00 UTC. Games on your own network or over a VPN still work.
+- Privacy: the lobby keeps internet addresses in memory only while a game is open, and writes them to no log. It has no accounts.
+- The secure connection to the lobby and the relay uses mbedTLS. Its licence is in each download.
+
 ## 0.6.1 (pre-release)
 
 Fixes for 0.6.0: crashes at save and start, wrong names, and faster new games.

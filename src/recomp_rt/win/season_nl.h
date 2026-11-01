@@ -165,6 +165,9 @@ void season_nl_path_round(uint32_t rec, int round, SeasonNlDate d, int campaign,
 int season_gold_cup_of(uint32_t self);           /* 1 for the Gold Cup object (by its record) in a season game */
 int season_gold_cup_teams(uint32_t self);        /* its teams in the edition it holds (12 or 16), else 0 */
 int season_gold_cup_date_shift(uint32_t self, int *shift);   /* 1 for the Gold Cup: *shift in days */
+/* 1 when the game has a Gold Cup object (or makes it now) and day doy of year y lies in its days
+ * (season_intl_gold_busy). */
+int season_gold_cup_busy(int y, int doy);
 uint32_t season_gold_cup_entrants(uint32_t self);            /* the entrants into +0xee; 1, or 0 */
 int season_gold_cup_record(uint32_t rec);
 int season_finalissima_object(uint32_t obj);     /* 1 for the Finalissima object in a season game */

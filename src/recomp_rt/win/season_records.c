@@ -1298,6 +1298,7 @@ void o_0090d2f0(void);
  * with no modal box that stops the game. The base game keeps the original's check (Q152). */
 void season_national_sizes(uint32_t fixture);   /* season_national_fill.c */
 void season_national_fill(uint32_t fixture);
+void season_national_prefill(uint32_t fixture);
 
 RT_WRAP(0090d2f0, virtual_staff_fill_check)
 {
@@ -1305,6 +1306,8 @@ RT_WRAP(0090d2f0, virtual_staff_fill_check)
     int season = season_code_on() && (season_start_year() != SEASON_FIRST_YEAR || season_changing_rules());
     if (season) g_mem[cpu.esp + 0xc] = 1;   /* no_check; the wrap of 0x90dae0 above names a short club (RECOMP_CLUB_LOG) */
     if (season) season_national_sizes(fixture);   /* a national side whose nation has no squad sizes */
+    if (season) season_national_prefill(fixture);   /* a short under-21 side (0.6.2 fault 65) */
+    if (rt_unwinding) return;
     o_0090d2f0();
     if (season && !rt_unwinding) season_national_fill(fixture);   /* a national side that stays short */
 }

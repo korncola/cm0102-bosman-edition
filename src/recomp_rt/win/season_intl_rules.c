@@ -17,11 +17,19 @@ static const char *const class_files[INTL_CLASSES] = {
     "olympics",
 };
 
-/* The year that a class holds when the table has no later edition: the object waits and plays no more
- * finals (the Confederations Cup after 2017). No game reaches it.
- * TODO (slice 16 interface): idle the object with season_change_skip() in a before hook instead, once a game
- * run has tested that interface with an international class. */
-#define IDLE_YEAR 2200u
+/* The year that an ended class holds (the Confederations Cup after 2017): the object waits and plays no more
+ * finals. The same year as SEASON_CUPS_NEVER of the ended cups (season_cups.h), which the history checker reads
+ * as ended (tests/seasons/future/history_check.py, ENDED_YEAR). It is also an edition year of the classes that
+ * continue (the Africa Cup of Nations holds every odd year from 2027), so a game near 2999 would show such an
+ * edition as ended there; the date jump limit is 2300 (season.h). Up to 0.6.1 every class waited for 2200 after
+ * its table, which a game to 2300 reaches (0.6.2 open items 1, 13 and 34). */
+#define NEVER_YEAR 2999u
+
+/* The cycle of each class after the last edition of its table, in years (0.6.2 decision A: each final continues
+ * on its last cycle, with no end year; the OFC Nations Cup every 4 years from 2028, Max on 30 October 2026; the
+ * Africa Cup of Nations every 2 years, the original's step, where the table's last two editions are one year
+ * apart). 0: the class has ended (the Confederations Cup). Order of the enum of season_intl.h. */
+static const int class_cycles[INTL_CLASSES] = {4, 4, 0, 4, 2, 4, 4, 4};
 
 /* The last season with a golden goal (int-world: the 2003 Confederations Cup used it, "golden goal ceased in
  * 2004"; Q367: the silver goal of Euro 2004, season 2003/04, becomes full extra time and penalties). */
@@ -43,12 +51,179 @@ int season_intl_on(void)
     return season_code_on() && (season_start_year() != SEASON_FIRST_YEAR || season_changing_rules());
 }
 
-const SeasonIntlEdition *season_intl_edition(const char *file, int year)
+const SeasonIntlEdition *season_intl_table_edition(const char *file, int year)
 {
     for (int i = 0; i < season_intl_edition_count; i++)
         if (season_intl_editions[i].year == year && !strcmp(season_intl_editions[i].file, file))
             return &season_intl_editions[i];
     return NULL;
+}
+
+/* ---- The editions after the table (0.6.2 decision A) ---- */
+
+/* The last table edition of a class, and its cycle after the table (0 for an ended class or another file). */
+static const SeasonIntlEdition *table_last(const char *file, int *cycle)
+{
+    const SeasonIntlEdition *last = NULL;
+    for (int i = 0; i < season_intl_edition_count; i++)
+        if (!strcmp(season_intl_editions[i].file, file)) last = &season_intl_editions[i];
+    *cycle = 0;
+    for (int c = 0; last && c < INTL_CLASSES; c++)
+        if (!strcmp(class_files[c], file)) *cycle = class_cycles[c];
+    return last;
+}
+
+/* The year field of a class is a 16-bit signed word (+0x40): no edition after this year. */
+#define LAST_EDITION_YEAR 32767
+
+/* ---- Hosts after the table (0.6.2 slice 5) ---- */
+
+/* Q5: the hosts announced for editions after the table, each checked against its source
+ * (docs/research/2026-10-31-hosts-after-table.md): FIFA Congress of 11 December 2024, UEFA Executive Committee of
+ * 10 October 2023, the IOC elections of 2017 and 2021. */
+static const struct { const char *file; int year; const char *hosts; } announced[] = {
+    {"world_cup", 2034, "Saudi Arabia"},
+    {"euro_champ", 2032, "Italy;Turkey/T\xfcrkiye"},
+    {"olympics", 2028, "United States/USA"},
+    {"olympics", 2032, "Australia"},
+};
+
+const char *season_intl_announced_hosts(const char *file, int year)
+{
+    for (size_t i = 0; i < sizeof announced / sizeof announced[0]; i++)
+        if (announced[i].year == year && !strcmp(announced[i].file, file)) return announced[i].hosts;
+    return NULL;
+}
+
+/* The Euros of 2020 (eleven host nations) and 2028 (five) have no host in the table, so that no host takes an
+ * automatic place (UEFA gave none in 2020). The history row names the nation of the final: Wembley, England, in
+ * both (UEFA, 2021 and 10 October 2023). */
+const char *season_intl_history_host(const char *file, int year)
+{
+    if (!strcmp(file, "euro_champ") && (year == 2020 || year == 2028)) return "England";
+    return NULL;
+}
+
+/* Q4: the original's rows (host-rule.md, read in HostCountry::init_default_table 0x5f9970): the World Cup 1998 to
+ * 2026 (0x5f99bb), the Euro (0x5f9c09) and the Olympics (0x5f9ff2) 2000 to 2028, every 4 years, moving on 32; the
+ * Africa Cup of Nations 2000 to 2014 every 2 years, moving on 16 (0x5f9eb7). The Copa America and Asian Cup rows
+ * move on by a step that does not fit their cycle, and the Gold Cup and OFC Nations Cup have none: they rotate
+ * (Q32). */
+static const struct { const char *file; int base, step, rows; } slots[] = {
+    {"world_cup", 1998, 4, 8}, {"euro_champ", 2000, 4, 8}, {"olympics", 2000, 4, 8}, {"african_nations", 2000, 2, 8},
+};
+
+int season_intl_host_slots(const char *file, int *base, int *step, int *rows)
+{
+    for (size_t i = 0; i < sizeof slots / sizeof slots[0]; i++)
+        if (!strcmp(slots[i].file, file)) {
+            *base = slots[i].base;
+            *step = slots[i].step;
+            *rows = slots[i].rows;
+            return 1;
+        }
+    return 0;
+}
+
+int season_intl_host_slot(const char *file, int year)
+{
+    int base, step, rows;
+    if (!season_intl_host_slots(file, &base, &step, &rows)) return -1;
+    int k = (year - base) / step;                       /* the editions of odd years after 2027 take the rows in order */
+    return ((k % rows) + rows) % rows;
+}
+
+static int (*host_alive)(const char *file, const char *name);
+
+void season_intl_set_alive(int (*alive)(const char *file, const char *name)) { host_alive = alive; }
+
+const char *season_intl_rotation_host(const char *file, int k, int (*alive)(const char *file, const char *name))
+{
+    static char names[64][64];
+    int n = 0;
+    for (int i = 0; i < season_intl_edition_count && n < 64; i++) {
+        const SeasonIntlEdition *e = &season_intl_editions[i];
+        if (strcmp(e->file, file)) continue;
+        for (const char *p = e->hosts; *p && n < 64;) {
+            size_t len = strcspn(p, ";");
+            char one[64];
+            snprintf(one, sizeof one, "%.*s", (int)len, p);
+            int seen = 0;
+            for (int j = 0; j < n && !seen; j++) seen = !strcmp(names[j], one);
+            if (!seen && (!alive || alive(file, one))) snprintf(names[n++], sizeof names[0], "%s", one);
+            p += len;
+            if (*p == ';') p++;
+        }
+    }
+    return n && k >= 0 ? names[k % n] : NULL;
+}
+
+int season_intl_rotation_count(const char *file, int (*alive)(const char *file, const char *name))
+{
+    int n = 0;
+    while (n < 64 && season_intl_rotation_host(file, n, alive)) {
+        char first[64], now[64];
+        snprintf(now, sizeof now, "%s", season_intl_rotation_host(file, n, alive));
+        snprintf(first, sizeof first, "%s", season_intl_rotation_host(file, 0, alive));
+        if (n && !strcmp(now, first)) break;
+        n++;
+    }
+    return n;
+}
+
+int season_intl_rotation_step(const char *file, int year)
+{
+    int cycle;
+    const SeasonIntlEdition *last = table_last(file, &cycle);
+    return last && cycle > 0 && year > last->year ? (year - last->year) / cycle - 1 : -1;
+}
+
+int season_intl_pick_pair(const int valid[3], int r, int redraw)
+{
+    if (r >= 0 && r < 3 && valid[r]) return r;
+    int others[3], n = 0;
+    for (int k = 0; k < 3; k++)
+        if (valid[k] && k != r) others[n++] = k;
+    return n ? others[((redraw % n) + n) % n] : -1;
+}
+
+/* The edition of a year after the table: a copy of the last table edition (teams, first day of the year, no
+ * golden goal) on the class's cycle. Its hosts: the announced ones (Q5), the rotation host of a class whose hosts
+ * rotate (Q32), else none here: the host row of the year gives them (Q4, season_intl.c). The copies live in a
+ * ring, so a pointer stays good for the next 31 calls; every caller reads it at once. */
+static const SeasonIntlEdition *continued(const char *file, int year)
+{
+    static SeasonIntlEdition ring[32];
+    static char ring_hosts[32][128];
+    static int next;
+    int cycle;
+    const SeasonIntlEdition *last = table_last(file, &cycle);
+    if (!last || cycle <= 0 || year <= last->year || year > LAST_EDITION_YEAR || (year - last->year) % cycle)
+        return NULL;
+    SeasonIntlEdition *e = &ring[next];
+    char *hosts = ring_hosts[next];
+    next = (next + 1) % (int)(sizeof ring / sizeof ring[0]);
+    *e = *last;
+    e->year = year;
+    e->season = year - (last->year - last->season);
+    e->start_year = year + (last->start_year - last->year);
+    e->golden = 0;
+    e->hosts = season_intl_announced_hosts(file, year);
+    if (!e->hosts) {
+        int base, step, rows;
+        e->hosts = season_intl_host_slots(file, &base, &step, &rows) ? NULL
+                   : season_intl_rotation_host(file, season_intl_rotation_step(file, year), host_alive);
+    }
+    snprintf(hosts, sizeof ring_hosts[0], "%s", e->hosts ? e->hosts : "");
+    e->hosts = hosts;                       /* the rotation's buffer changes with the next call */
+    e->row = "after-table";
+    return e;
+}
+
+const SeasonIntlEdition *season_intl_edition(const char *file, int year)
+{
+    const SeasonIntlEdition *e = season_intl_table_edition(file, year);
+    return e ? e : continued(file, year);
 }
 
 /* The table is sorted by file, then year (make_intl.py). */
@@ -57,7 +232,13 @@ const SeasonIntlEdition *season_intl_first(const char *file, int start_season)
     for (int i = 0; i < season_intl_edition_count; i++)
         if (!strcmp(season_intl_editions[i].file, file) && season_intl_editions[i].season >= start_season)
             return &season_intl_editions[i];
-    return NULL;
+    int cycle;
+    const SeasonIntlEdition *last = table_last(file, &cycle);
+    if (!last || cycle <= 0) return NULL;
+    int k = (start_season - last->season + cycle - 1) / cycle;      /* start_season > last->season here */
+    if (k < 1) k = 1;
+    long year = (long)last->year + (long)k * cycle;
+    return year <= LAST_EDITION_YEAR ? continued(file, (int)year) : NULL;
 }
 
 const SeasonIntlEdition *season_intl_next(const char *file, int year)
@@ -65,7 +246,12 @@ const SeasonIntlEdition *season_intl_next(const char *file, int year)
     for (int i = 0; i < season_intl_edition_count; i++)
         if (!strcmp(season_intl_editions[i].file, file) && season_intl_editions[i].year > year)
             return &season_intl_editions[i];
-    return NULL;
+    int cycle;
+    const SeasonIntlEdition *last = table_last(file, &cycle);
+    if (!last || cycle <= 0) return NULL;
+    long k = year < last->year ? 1 : ((long)year - last->year) / cycle + 1;
+    long next = (long)last->year + k * cycle;
+    return next <= LAST_EDITION_YEAR ? continued(file, (int)next) : NULL;
 }
 
 static const char *class_file(uint32_t cls)
@@ -82,7 +268,7 @@ uint32_t rt_intl_first_year(uint32_t cls, uint32_t year)
 {
     if (!season_intl_on() || season_start_year() == SEASON_FIRST_YEAR) return year;
     const SeasonIntlEdition *e = season_intl_first(class_file(cls), season_start_year());
-    uint32_t now = e ? (uint32_t)e->year : IDLE_YEAR;
+    uint32_t now = e ? (uint32_t)e->year : NEVER_YEAR;
     if (logging())
         fprintf(stderr, "recomp: season intl: %s first edition %u (the original %u)\n", class_file(cls), now,
                 year & 0xffffu);
@@ -90,15 +276,15 @@ uint32_t rt_intl_first_year(uint32_t cls, uint32_t year)
 }
 
 /* start_new_season of a class: the original adds its step. With changing rules on, the next edition of the
- * table. With changing rules off, the rules of the start season stay: the original's step from the first
- * edition. After the last edition of the table, the object waits (Q248: the rules stay; a competition that
- * ended does not come back). */
+ * table, and after the table the next edition on the class's last cycle (0.6.2 decision A). With changing rules
+ * off, the rules of the start season stay: the original's step from the first edition. An ended class waits for
+ * NEVER_YEAR (Q248: a competition that ended does not come back). */
 uint32_t rt_intl_next_year(uint32_t cls, uint32_t year, uint32_t step)
 {
     uint32_t old = year & 0xffffu;
     if (!season_intl_on() || !season_changing_rules()) return old + step;
     const SeasonIntlEdition *e = season_intl_next(class_file(cls), (int)(int16_t)old);
-    uint32_t now = e ? (uint32_t)e->year : (old >= IDLE_YEAR ? old : IDLE_YEAR);
+    uint32_t now = e ? (uint32_t)e->year : (old >= NEVER_YEAR ? old : NEVER_YEAR);
     if (logging())
         fprintf(stderr, "recomp: season intl: %s next edition %u after %u (the original %u)\n", class_file(cls),
                 now, old, old + step);
@@ -220,6 +406,112 @@ int season_intl_date_shift(uint32_t cls, int year)
     return (int)(to - from);
 }
 
+/* ---- The days of the finals (0.6.2 slice 6) ----
+ *
+ * The qualifiers keep the original's calendar moved to each cycle, while the finals take the table's years and
+ * days. In long game seed 6 (a 2001 game, changing rules on, 0.6.0) the CAF World Cup qualifiers of 26 January 2013
+ * met the African Cup of Nations of 19 January 2013. The finalists' group matches of that week moved to later days
+ * (add_fixture 0x5aa680 moves a clashing fixture at 0x5aa96e and adds it again at 0x5aa978), the last group ended
+ * on 5 February, the knockout rounds came a week apart, and no final was set. The class still held that edition
+ * in the save of 2022 (run-logs/release-test-0.6.0/long-games/soak-seed6). The Copa America of 2004 in the same
+ * game met CONMEBOL qualifiers on 17 and 24 July (the fixtures of its save of July 2004) and stopped the same way.
+ * season_friendly_dates.c keeps a qualifier off these days. */
+
+/* The step of each class's start_new_season (tools/recomp/seasons.py, the sites 0x92d409 to 0x7a04b0). */
+static const int class_step[INTL_CLASSES] = {4, 4, 2, 2, 2, 4, 2, 4};
+
+/* The confederations whose nations play each class (bits 1 << SEASON_CONF_...). */
+#define ALL_CONFS ((1 << SEASON_CONFS) - 1)
+static const int class_confs[INTL_CLASSES] = {
+    ALL_CONFS, 1 << SEASON_CONF_EUROPE, 0, (1 << SEASON_CONF_SOUTH_AMERICA) | (1 << SEASON_CONF_NORTH_AMERICA),
+    1 << SEASON_CONF_AFRICA, 1 << SEASON_CONF_ASIA, 1 << SEASON_CONF_OCEANIA, 0,
+};
+
+/* The days from the first group day to the final for a team count: the real spans (2013 ACN of 16 teams 22 days,
+ * Copa America Centenario of 16 23, Euro 2016 of 24 30, 2014 World Cup of 32 31, 2026 World Cup of 48 38;
+ * int-continental and int-world rows) and some days more. Inference: the game's own finals fit in these spans
+ * (the 2012 ACN of seed 6 played 21 January to 11 February, 21 days). The ACN and Asian Cup of 24
+ * play their knockout 12 days after the original's and up to 14 days more (season_intl_cups.c LATER_ROUNDS and
+ * MAX_DELAY), and Date::Date moves a date up to 3 days to its weekday: the ACN final can come 31 + 12 + 3 days after
+ * the first group day, and 14 more. */
+static int finals_span(uint32_t cls, int teams)
+{
+    if (teams > 16 && teams <= 24 && (cls == INTL_ACN || cls == INTL_ASIAN)) return 60;
+    return teams <= 16 ? 30 : teams <= 24 ? 37 : teams <= 32 ? 38 : 45;
+}
+
+/* The first and last day (days from 1 January 1970) of the finals of class cls in edition year `year`, when the
+ * class plays one in this game: with changing rules on, an edition of the table from the start season; with it
+ * off, the first edition from the start season and every step after it (rt_intl_next_year). */
+static int finals_days(uint32_t cls, int year, long *from, long *to)
+{
+    const char *file = class_files[cls];
+    const SeasonIntlEdition *rule = season_intl_rule_edition(file, year);
+    if (!rule) return 0;
+    if (season_changing_rules()) {
+        if (rule->season < season_start_year()) return 0;
+    } else if (year < rule->year || (year - rule->year) % class_step[cls]) {
+        return 0;
+    }
+    int day = class_first[cls].day, month0 = class_first[cls].month0;
+    if (cls == INTL_OFC && year % 4 != 2) {
+        day = 19;
+        month0 = 5;
+    }
+    *from = days_from_civil(year, month0 + 1, day) + season_intl_date_shift(cls, year);
+    *to = *from + finals_span(cls, rule->teams);
+    return 1;
+}
+
+int season_intl_finals_busy(int conf, int y, int doy)
+{
+    if (!season_intl_on() || conf < 0 || conf >= SEASON_CONFS) return 0;
+    long day = days_from_civil(y, 1, 1) + doy, from, to;
+    for (uint32_t cls = 0; cls < INTL_CLASSES; cls++) {
+        if (!(class_confs[cls] & (1 << conf))) continue;
+        for (int year = y - 1; year <= y + 1; year++)
+            if (finals_days(cls, year, &from, &to) && day >= from - 2 && day <= to) return 1;
+    }
+    return 0;
+}
+
+const SeasonNlGoldCup *season_intl_gold_edition(int year)
+{
+    static SeasonNlGoldCup repeat;
+    const SeasonNlGoldCup *base = NULL;
+    if (season_changing_rules()) {
+        for (int i = 0; i < season_nl_gold_cup_count; i++) {
+            if (season_nl_gold_cups[i].year == year) return &season_nl_gold_cups[i];
+            if (season_nl_gold_cups[i].year < year) base = &season_nl_gold_cups[i];
+        }
+    } else {
+        for (int i = 0; i < season_nl_gold_cup_count && !base; i++)
+            if (season_nl_gold_cups[i].year > season_start_year()) base = &season_nl_gold_cups[i];
+        if (!base && season_nl_gold_cup_count) base = &season_nl_gold_cups[season_nl_gold_cup_count - 1];
+        if (base && base->year == year) return base;
+        if (base && base->year > year) base = NULL;
+    }
+    if (!base || (year - base->year) % 2) return NULL;
+    repeat = *base;
+    repeat.year = year;
+    return &repeat;
+}
+
+/* The Gold Cup's first day is the edition's (season_gold_cup_date_shift moves the class's first group day, 6 July,
+ * to it). Only an edition after the start year is played (gold_first_after in season_gold_cup.c). */
+int season_intl_gold_busy(int y, int doy)
+{
+    if (!season_intl_on()) return 0;
+    long day = days_from_civil(y, 1, 1) + doy;
+    for (int year = y - 1; year <= y + 1; year++) {
+        const SeasonNlGoldCup *g = year > season_start_year() ? season_intl_gold_edition(year) : NULL;
+        if (!g || g->start.month < 1) continue;
+        long from = days_from_civil(year + g->start.year, g->start.month, g->start.day > 0 ? g->start.day : 1);
+        if (day >= from - 2 && day <= from + finals_span(INTL_COPA, g->teams)) return 1;
+    }
+    return 0;
+}
+
 void season_intl_shift_date(int shift, int *day, int *month0, int *year)
 {
     if (!shift) return;
@@ -266,7 +558,13 @@ int season_intl_uefa_from(const char *name)
 {
     /* UEFA Congress of 3 May 2016 (docs/research/rules-0.6.0/uefa-access.tsv, the 2016/17 rows: "Kosovo (55):
      * admitted May 2016"); the 2018-19 Nations League has Kosovo in League D (nations-league-tiers.tsv). */
-    return name && !strcasecmp(name, "Kosovo") ? 2016 : 0;
+    if (!name) return 0;
+    if (!strcasecmp(name, "Kosovo")) return 2016;
+    /* UEFA Congress of 25 April 2002 in Stockholm: Kazakhstan moves from the AFC (tests/seasons/future/nations.tsv;
+     * https://en.wikipedia.org/wiki/Kazakhstan_national_football_team, read 2026-10-30). The 2002/03 season is
+     * the first after it. */
+    if (!strcasecmp(name, "Kazakhstan")) return 2002;
+    return 0;
 }
 
 /* ---- The real draws of finals whose qualifying began before the game (O259 rows A9 and A16) ---- */

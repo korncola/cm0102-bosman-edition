@@ -18,9 +18,11 @@
 #include "season_names.h"
 #include "season_clubs.h"
 #include "season_records.h"
+#include "invite.h"
 
 #include <SDL.h>
 #include <stdlib.h>
+#include <strings.h>
 
 char win_game_dir[1024];
 char win_exe_path[1024];
@@ -117,6 +119,14 @@ int main(int argc, char **argv)
             return 2;
         }
     }
+    /* One copy takes the cm0102:// links of this user folder (Q41): a copy that starts with a link gives it to the
+     * copy that runs and ends here, before it reads the settings or opens a window. Else this copy listens, when
+     * no other copy does (host/link_pass.c). */
+    if (first < argc && !strncasecmp(argv[first], "cm0102:", 7) && host_link_pass(win_user_dir, argv[first])) {
+        fprintf(stderr, "recomp: link: the copy of the program that runs took the link\n");
+        return 0;
+    }
+    host_link_listen(win_user_dir);
     win_trace = getenv("RECOMP_TRACE") && *getenv("RECOMP_TRACE");
     win_read_settings();
     season_init();                       /* RECOMP_START_SEASON (season.c) */
@@ -125,6 +135,14 @@ int main(int argc, char **argv)
     season_clubs_init(win_game_dir);     /* Seasons/clubs.tsv (season_clubs.c) */
     season_records_init(win_game_dir);   /* Seasons/club_records.tsv (season_records.c) */
     season_report_init();                /* RECOMP_SEASON_JUMP, RECOMP_RULES_REPORT (season_report.c) */
+
+    /* An invite link (0.7.0 slice 8): the computer starts the program with "cm0102://join/<code>" as its only
+     * argument (invite.h). It goes to the runtime, and no argument reaches the game's command line. */
+    invite_register();
+    if (first < argc && !strncasecmp(argv[first], "cm0102:", 7)) {
+        invite_open(argv[first]);
+        first = argc;
+    }
 
     /* The command line as Windows gives it: the quoted program path, then the options. */
     char exe_win[1100];

@@ -265,7 +265,7 @@ a { color: inherit; }
     <a class="mark" href="#top">CM 01/02<span class="long"> Bosman Edition</span></a>
     <ul>
       <li><a href="#release">Release</a></li>
-      <li><a href="#seasons">New</a></li>
+      <li><a href="#online">New</a></li>
       <li><a href="#history">History</a></li>
       <li><a href="#next">Roadmap</a></li>
       <li><a href="#install">Install</a></li>
@@ -305,9 +305,7 @@ a { color: inherit; }
           <li>One Mac app for Apple silicon and Intel, macOS 11 or later.</li>
           <li>An installer for 64-bit Windows 10 and 11.</li>
           <li>One AppImage for 64-bit Linux, which also runs on the Steam Deck in desktop mode.</li>
-        </ul>
-        <ul class="later">
-          <li>Not in this version yet: network play.</li>
+          <li>Network games with friends, online or on your own network. Mac, Windows and Linux players play in one game.</li>
         </ul>
       </div>
       <figure class="shot" data-in style="margin:0">
@@ -317,10 +315,46 @@ a { color: inherit; }
   </div>
 </section>
 
+<section class="screen" id="online" aria-labelledby="online-title">
+  <div class="inner">
+    <h2 class="bar" id="online-title">New in <em>0.7.0</em></h2>
+    <p class="lead" data-in>Play network games with friends online. There is no patch to install, no VPN and no router setting. Version 0.7.0 came out on 30 October 2026.</p>
+    <div class="preview">
+      <figure class="mock real" data-in>
+        <img src="assets/post-0.7.0-game-list.png" width="1280" height="800" alt="The Select Network Game screen with online games in the list. Each row shows the game name, the season, the game date and the managers online." loading="lazy">
+        <figcaption>Join Network Game lists the games online and on your own network together.</figcaption>
+      </figure>
+      <div class="release">
+        <div class="panel" data-in>
+          <h3 class="sub">What it adds</h3>
+          <ul class="adds">
+            <li>Network Play works. Click Start Network Game to host, or Join Network Game to see the games of other players.</li>
+            <li>The game list shows the games online and the games on your own network, up to 50, with the season, the game date, the managers online and the ping.</li>
+            <li>A host's game goes into the online list when it starts. A relay carries the games, so nobody changes a setting on their router.</li>
+            <li>Mac, Windows and Linux players play in one game.</li>
+            <li>An invite link for each online game opens a page with an Open in Bosman Edition button, the game code and a download link. A click on the button opens the game and joins that game.</li>
+            <li>A game password and a Kick button for the host, on the Network tab of Bosman Edition Options.</li>
+            <li>A human manager who leaves shows as Away, and their club goes on holiday. They come back with their manager password.</li>
+            <li>When the host quits, the host's game saves, and every human manager goes back to the start screen.</li>
+            <li>Each failure says what went wrong and what to do next. A connection test on the Network tab checks the online service.</li>
+            <li>The online service is free. If its daily limit is used up, the game list says so, and games on your own network still work.</li>
+            <li>Online play is on by default. Switch it off on the Network tab, and the game never contacts the online service.</li>
+            <li>The lobby keeps internet addresses in memory only while a game is open, and writes them to no log. There are no accounts.</li>
+          </ul>
+        </div>
+      </div>
+      <figure class="mock real" data-in>
+        <img src="assets/post-0.7.0-network-tab.png" width="1280" height="800" alt="The Network tab of Bosman Edition Options with the Online play switch, the connection test and the game password." loading="lazy">
+        <figcaption>The Network tab of Bosman Edition Options.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
 <section class="screen" id="seasons" aria-labelledby="seasons-title">
   <div class="inner">
-    <h2 class="bar" id="seasons-title">New in <em>0.6.0</em></h2>
-    <p class="lead" data-in>Start a game in any season from 2001/02 to 2025/26, with that season's squads and rules. Version 0.6.0 came out on 29 October 2026.</p>
+    <h2 class="bar" id="seasons-title">Every <em>season</em></h2>
+    <p class="lead" data-in>Start a game in any season from 2001/02 to 2025/26, with that season's squads and rules. Seasons came in version 0.6.0.</p>
     <div class="preview">
       <figure class="mock real" data-in>
         <img src="assets/post-060-choose-season.png" width="800" height="600" alt="The Choose Season screen. Season tiles sit in three rows for the 2000s, 2010s and 2020s, from 2001/02 to 2025/26, each marked Included, with 2001/02 marked Official and a Custom database tile at the end. 2002/03 is picked: Summer 2002, Bosman Edition database, data from CM 02/03. Europe: Champions League with two group stages, UEFA Cup, Intertoto Cup. Starts July 2002. Changing rules is on." loading="lazy">
@@ -473,6 +507,7 @@ a { color: inherit; }
     <div class="release history">
     <div class="panel" data-in>
       <ul>
+        <li><b>0.7.0</b> (30 October 2026): network games with friends online and on your own network, for Mac, Windows and Linux together, with invite links, a game password, Kick, drop in and drop out, clear errors and a connection test.</li>
         <li><b>0.6.1</b> (30 October 2026): fixes for crashes at save and start, the Linux AppImage on current systems, season short names, goalkeeper groups in every language, an Open folder button for your saves and faster new games.</li>
         <li><b>0.6.0</b> (29 October 2026): any season from 2001/02 to 2025/26 with its own database, leagues, cups and rules, changing rules in a long game, Best XI with squad depth, a new Setup Game.</li>
         <li><b>0.5.1</b> (18 October 2026): a Mac fix for saving games with Brazil's state championships.</li>
@@ -612,7 +647,7 @@ a { color: inherit; }
         <p>On a Mac: <code>~/Library/Application Support/cm0102</code>. On Windows: <code>%APPDATA%\cm0102</code>. On Linux: <code>~/.local/share/cm0102</code>. A new release does not change this folder. Older copies of each save are in the <code>backups</code> folder inside it.</p></details>
       <details><summary>How do I get the 800 × 600 layout back?</summary>
         <p>Open Bosman Edition Options from Setup Game or from Game Options, and set Display mode to Classic. Then start the game again. You can also change the line in <code>settings.txt</code> in the save folder to <code>display = classic</code>.</p></details>
-      <details><summary>Which settings can I change in version 0.6.1?</summary>
+      <details><summary>Which settings can I change in version 0.7.0?</summary>
         <p>Open Bosman Edition Options from Setup Game or from Game Options in the side bar, or open <code>settings.txt</code> in the save folder. Each option has one line in the file, and a switch takes <code>on</code> or <code>off</code>. The defaults are:</p>
         <ul>
           <li><code>display = widescreen</code> draws the game at 1280 × 800, and <code>classic</code> at 800 × 600.</li>
@@ -635,6 +670,8 @@ a { color: inherit; }
           <li><code>attribute_groups = on</code> shows the player profile's attributes in Technical, Mental and Physical groups.</li>
           <li><code>foreign_colours = on</code> shows in light violet the players who count against the foreign player limit of the club's next league or cup match.</li>
           <li><code>full_player_search = off</code> keeps the original player search. <code>on</code> lists every player, also the ones your manager does not know.</li>
+          <li><code>online_play = on</code> shows online games in the game list and puts a network game that you host in the online list. <code>off</code> shows games on your own network only.</li>
+          <li><code>game_password =</code> is empty by default, so anyone can join a game that you host. Set it on the Network tab, and a friend types it to join.</li>
         </ul>
         <p>Prints go to the <code>Prints</code> folder as PDF files. To get the old text files, set Print To to File in the game's own options.</p></details>
       <details><summary>Is the database updated?</summary>

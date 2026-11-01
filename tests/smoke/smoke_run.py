@@ -6,7 +6,7 @@ Usage:
         [--database 3.9.60|3.9.65|3.9.68] [--record] [--tolerance n]
     python3 tests/smoke/smoke_run.py <cm0102_recomp> <game folder> --same-save [--mode classic|widescreen] [--days n] [--ref-build <program>]
         [--ref-050 <0.5.0 program>] [--ref-setup <name>] [--jobs n] [--runs a,b] [--custom-db <folder>]
-        [--save start.sav|prematch.sav]
+        [--save start.sav|prematch.sav|yeovil.sav]
     python3 tests/smoke/smoke_run.py <cm0102_recomp> <game folder> --match [--days n] [--speed very-fast|fastest] [--ref-build <program>] [--sleep-danger]
 
 --tolerance n: a colour channel that differs by n or less counts as equal. The Linux build differs from the
@@ -27,6 +27,8 @@ days (default 14) after the first news screen (RECOMP_SAVE_AFTER_DAYS) and stops
                changing_rules = off unless it sets it (new_game_runs), so the new game is the base game.
     host-loops-off  RECOMP_QSORT=original, RECOMP_HOT=original: the host copies of hot code of the
                original (qsort6.c, hot_loops.c) change no game decision
+    files-off  RECOMP_FOLDER_CACHE=0, RECOMP_KEEP_FILES=0: the kept folder names of the path lookup
+               (folder_names.c) and the kept history file of the season change (files.c) change nothing
     kinds-base  RECOMP_SEASON_CHANGE_TEST=write (0.6.0 slice 16): a rule kind that writes the game in every
                hook changes nothing in the base game, because the base game calls no kind
 Each run prints its count of idle sleeps (RECOMP_IDLE_COUNT=1). The check fails when the normal run
@@ -45,8 +47,9 @@ the save of search-off.
 Options box check (--same-save --save <name> --options): the runs open the Bosman Edition Options box from the
 side bar before the holiday (0.5.0 slice 6). options and options-again switch Faster holidays off and on and
 close the box. options-tabs clicks the tabs Game, Graphics and Game, options-rules switches the default of
-Changing rules off and on (0.6.0 slice 13: the open game keeps its own value), and options-backups switches
-Save backups off and on, so the box is built as often. Each save
+Changing rules off and on (0.6.0 slice 13: the open game keeps its own value), options-backups switches
+Save backups off and on, and options-network clicks the tabs Network, Game and Network (0.7.0 slice 6: the
+game password field and the list of human managers online), so the box is built as often. Each save
 must be the same as the save of options. The runs give the box the same save folder path end
 (OPTIONS_USER_SUB).
 
@@ -206,20 +209,29 @@ SAME_SAVE_RUNS = [
              "clickable_names": "off", "attribute_colours": "off", "faster_days": "off",
              "match_columns": "off", "condition_colours": "off", "save_backups": "off", "remember_window": "off",
              "squad_views": "off", "attribute_groups": "off", "foreign_colours": "off",
-             "full_player_search": "off", "changing_rules": "off"}),
+             "full_player_search": "off", "changing_rules": "off", "online_play": "off"}),
     ("foreign-on", {"faster_days": "off", "foreign_colours": "on"}),
     ("foreign-off", {"faster_days": "off", "foreign_colours": "off"}),
     ("search-on", {"faster_days": "off", "full_player_search": "on"}),
     ("search-off", {"faster_days": "off", "full_player_search": "off"}),
     # Changing rules (0.6.0 slice 11): a new game with it on gets the season part bosman_season.dat in its save
     # and must equal the game with it off in every other part (RULES_PART). A loaded old save has it off.
+    # From 0.6.2 (Q48) the history rows of editions after the start go in every game, which changes the first-season
+    # holders and so the play of a new game: rules-on plays with that fix off and is compared with history-q48-off
+    # (q48_runs below).
     ("rules-on", {"faster_days": "off", "changing_rules": "on"}),
     ("rules-off", {"faster_days": "off", "changing_rules": "off"}),
+    # Online play (0.7.0 slice 4): acts only in network games, so a single-player game must not change.
+    ("online-on", {"faster_days": "off", "online_play": "on"}),
+    ("online-off", {"faster_days": "off", "online_play": "off"}),
     # Idle CPU (#58) has no option: a test-only variable turns the sleep of an idle pass off.
     ("sleep-off", {"faster_days": "off", "_env": {"RECOMP_IDLE_SLEEP": "0"}}),
     # Q342: the season code off (slice 11 year sites, the season part, the Choose Season code) gives the save of
     # normal, a 2001/02 game with changing rules off. From slice 13 the base game of 0.6.0 is the reference.
     ("season-code-off", {"faster_days": "off", "_env": {"RECOMP_SEASON_CODE": "off"}}),
+    # Q48 (0.6.2 slice 7): the reference built from the decision, the game with the history fix off
+    # (RECOMP_HISTORY_AFTER_START=off, season_history.c). See q48_runs.
+    ("history-q48-off", {"faster_days": "off", "_env": {"RECOMP_HISTORY_AFTER_START": "off"}}),
     # The season change (0.6.0 slice 16) calls no rule kind in the base game (2001, changing rules off): with the
     # test kind that writes the game in every hook (RECOMP_SEASON_CHANGE_TEST=write) the save is that of normal.
     ("kinds-base", {"faster_days": "off", "_env": {"RECOMP_SEASON_CHANGE_TEST": "write"}}),
@@ -241,6 +253,16 @@ SAME_SAVE_RUNS = [
     # The date jump switch (0.6.2 slice 1, Q30) only raises the latest start year of a new game to 2300: with it on,
     # a game of the normal start years gives the save of normal.
     ("date-jump-on", {"faster_days": "off", "_env": {"RECOMP_DATE_JUMP": "1"}}),
+    ("files-off", {"faster_days": "off", "_env": {"RECOMP_FOLDER_CACHE": "0", "RECOMP_KEEP_FILES": "0"}}),
+    # The fixes of faults of the original (0.6.2 slice 11, original_faults.c) act in every game, but only when a
+    # small nation's national team loses or misses its manager (at the latest at the first month change in play),
+    # for money above 2,147,483,647 (the top wage from about 1.65 billion) and at an age above 127: in these runs
+    # none of that happens, so with their test switch off the save is that of normal. A saved game whose days pass
+    # a month change keeps only the other groups (FAULTS_ACT).
+    ("original-faults-keep", {"faster_days": "off", "_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
+    # The merged parts of a save (0.6.2 slice 13, save_parts.c) change only how the temporary files go into the
+    # save: with their test switch off the save holds the same files as normal.
+    ("save-parts-keep", {"faster_days": "off", "_env": {"RECOMP_SAVE_PARTS": "keep"}}),
 ]
 
 # --ref-050 <0.5.0 program> (Q342): the run ref-0.5.0 plays the 0.5.0 build, and the run text-0.5.0 plays this
@@ -312,10 +334,15 @@ MATCH_RUNS = [
     ("search-off", {"full_player_search": "off"}),
     ("rules-on", {"changing_rules": "on"}),
     ("rules-off", {"changing_rules": "off"}),
+    ("online-on", {"online_play": "on"}),
+    ("online-off", {"online_play": "off"}),
     ("sleep-off", {"_env": {"RECOMP_IDLE_SLEEP": "0"}}),
     ("season-code-off", {"_env": {"RECOMP_SEASON_CODE": "off"}}),
     ("box-fixes-off", {"_env": {"RECOMP_BOX_FIXES": "off"}}),
     ("host-loops-off", {"_env": {"RECOMP_QSORT": "original", "RECOMP_HOT": "original"}}),
+    ("original-faults-keep", {"_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
+    ("save-parts-keep", {"_env": {"RECOMP_SAVE_PARTS": "keep"}}),
+    ("files-off", {"_env": {"RECOMP_FOLDER_CACHE": "0", "RECOMP_KEEP_FILES": "0"}}),
 ]
 MATCH_DAYS = 5      # 16.7.01 to 21.7.01
 # --match --sleep-danger adds this run: the idle sleep without its time rules (RECOMP_IDLE_SLEEP=force), so
@@ -353,6 +380,17 @@ def save_parts(path):
     return parts
 
 
+def save_files(path):
+    """The files of a saved game as the game reads them: {name: (decoded bytes, size)}. A merged part (0.6.2 slice
+    13, tools/save/savfile.py) gives each file it holds, so a save with merged parts and one without compare by
+    their contents."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools", "save"))
+    import savfile
+    sav = savfile.Sav(path)
+    return {m.name: (sav.read_member(m.name), m.size) for m in sav.members
+            if not m.name.lower().endswith(savfile.MERGED)}
+
+
 def without_intro_click(steps):
     """The steps without the click that ends the intro, and the steps before the first wait 20 s later.
 
@@ -378,18 +416,21 @@ CUSTOM_DB = None
 
 
 def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600, allowed=(), required=None,
-                 text_050=False):
+                 text_050=False, rows=None):
     """Plays the runs at the same time, each with its option lines, and compares each saved game with
     the save of the first run. save: a saved game to copy into each user folder first. allowed: names of
     parts that may differ (an accepted difference, for example the parts that depend on the memory layout of
     the game, Q152); a difference in any other part fails. allowed may also be a dict {run name: parts}: then
     only those runs may differ, each in its own parts. required: {run name: part}: that run's save must hold
-    the part (0.6.0 slice 11: rules-on of a new game has the season part)."""
+    the part (0.6.0 slice 11: rules-on of a new game has the season part). rows: {run name: keys}: that run's
+    accepted difference must also be exactly those nation history rows (q48_rows_ok), or with keys HOST_ROWS only
+    the host fields of its nation history rows (host_rows_ok)."""
     if ONLY_RUNS:
         unknown = [n for n in ONLY_RUNS if n not in [r[0] for r in runs]]
         if unknown:
             raise SystemExit(f"--runs: no run named {', '.join(unknown)} in this check")
-        runs = [r for i, r in enumerate(runs) if i == 0 or r[0] in ONLY_RUNS]
+        keep = set(ONLY_RUNS) | {r[1].get("_against") for r in runs if r[0] in ONLY_RUNS}     # and their references
+        runs = [r for i, r in enumerate(runs) if i == 0 or r[0] in keep]
         if len(runs) + bool(REF_BUILD) + bool(REF_050 and text_050) < 2:
             raise SystemExit("--runs: fewer than two runs are left, so nothing is compared")
     if REF_BUILD:
@@ -462,6 +503,9 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
                 return 1
         failed = 0
         first = runs[0][0]
+        if all(against.get(name) == "" for name, _ in runs[1:]):
+            print("FAIL  no run is compared (each run left is a reference)")
+            return 1
         want = open(saves[first], "rb").read()
         for name, _ in runs[1:]:
             if required and name in required and required[name] not in save_parts(saves[name]):
@@ -475,8 +519,26 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
                 print(f"ok    {name}: the save is the same as {base}")
                 continue
             a, b = save_parts(saves[base]), save_parts(saves[name])
+            merged = any(k.lower().endswith(".parts") for k in list(a) + list(b))
+            if merged:      # a save of 0.6.2 or later with merged parts (slice 13): compare the files
+                a, b = save_files(saves[base]), save_files(saves[name])
             differ = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+            if merged and open(saves[base], "rb").read(8) != open(saves[name], "rb").read(8):
+                differ.append("the file header (version and flags)")
+            if merged and not differ:
+                print(f"ok    {name}: the save holds the same files as {base} (merged parts)")
+                continue
             ok_parts = allowed.get(name, ()) if isinstance(allowed, dict) else allowed
+            if differ and set(differ) <= set(ok_parts) and rows and name in rows and rows[name] == HOST_ROWS and \
+                    not host_rows_ok(saves[base], saves[name]):
+                failed += 1
+                print(f"FAIL  {name}: the save differs from {base} in more than the hosts of its history rows")
+                continue
+            if differ and set(differ) <= set(ok_parts) and rows and name in rows and rows[name] != HOST_ROWS and \
+                    not q48_rows_ok(saves[base], saves[name], rows[name]):
+                failed += 1
+                print(f"FAIL  {name}: the save differs from {base} in other history rows than {rows[name]}")
+                continue
             if differ and set(differ) <= set(ok_parts):
                 print(f"ok    {name}: the save differs from {base} only in accepted parts: {', '.join(differ)}")
                 continue
@@ -531,11 +593,13 @@ def options_runs(load, holiday):
         OPTIONS_CLOSE + holiday
     backups = load + OPTIONS_OPEN + ["1000 click 584 155", "2500 click 452 402", "4000 click 371 402"] + \
         OPTIONS_CLOSE + holiday
+    network = load + OPTIONS_OPEN + ["1000 click 680 155", "2500 click 584 155", "4000 click 680 155"] + \
+        OPTIONS_CLOSE + holiday
 
     def run(name, steps):
         return (name, {"faster_days": "on", "_steps": steps, "_user_sub": OPTIONS_USER_SUB})
     return ([run("options", switch), run("options-again", switch), run("options-tabs", tabs),
-             run("options-rules", rules), run("options-backups", backups)],)
+             run("options-rules", rules), run("options-backups", backups), run("options-network", network)],)
 
 
 # The season part of a save (0.6.0 slice 11, src/recomp_rt/win/season.c). A save of a new game with
@@ -562,9 +626,110 @@ RULES_ON_PARTS = ("fifa_rankings.dat", "general.dat", "national_teams.dat", "sta
 NEW_GAME_LAYOUT_PARTS = ("club records.dat",)
 
 
+# Q48 (0.6.2 slice 7, decided 30 and 31 October 2026): the history rows of editions after the start go in every game,
+# and the game's own row replaces the data row of the same edition. That is a change of the game by decision, so
+# some runs that equalled normal before compare with history-q48-off, the same game with the fix off, instead:
+# - season-code-off must equal history-q48-off in every part (the season code off includes the fix off).
+# - New game: rules-on plays with the fix off too and must equal history-q48-off up to the rules-on parts. With the
+#   fix on it differs from normal through the Asian Cup Winners' Cup holder (Q48 in the spec), so the shipped
+#   default (changing rules on, fix on) is the run rules-on-q48, which equals the same run of --ref-build
+#   (rules-on-q48-ref); without --ref-build it is no check. A loaded save has changing rules off: there rules-on
+#   keeps the fix and must equal normal, as before.
+# - history-q48-off itself: in start.sav and prematch.sav it differs from normal only in index.dat and
+#   nation_comp_history.dat, and there only in the rows of Q48_SAVE_ROWS: the 3.9.68 row Copa America 2001, which goes
+#   when the game writes its own 2001 final on 29 July. In any other saved game it must equal normal. In a new game it
+#   is the reference only: its difference from normal is the whole decision (first-season holders).
+Q48_REFERENCE = "history-q48-off"
+Q48_SAVE_PARTS = ("index.dat", "nation_comp_history.dat")
+Q48_COPA_2001 = (450, 2001)                 # (competition id, label year) of the row that goes
+Q48_SAVE_ROWS = {"start.sav": [Q48_COPA_2001], "prematch.sav": [Q48_COPA_2001]}
+
+
+def q48_runs(runs, new_game):
+    """The runs with the Q48 comparisons (above)."""
+    out = []
+    for name, o in runs:
+        if name == "season-code-off":
+            o = dict(o, _against=Q48_REFERENCE)
+        elif name == "rules-on" and new_game:
+            out.append(("rules-on-q48", dict(o, _against="rules-on-q48-ref" if REF_BUILD else "")))
+            if REF_BUILD:
+                out.append(("rules-on-q48-ref", dict(o, _program=REF_BUILD, _against="")))
+            o = dict(o, _env=dict(o.get("_env", {}), RECOMP_HISTORY_AFTER_START="off"), _against=Q48_REFERENCE)
+        elif name == Q48_REFERENCE and new_game:
+            o = dict(o, _against="")
+        out.append((name, o))
+    return out
+
+
+def history_rows(path):
+    """The nation competition history rows of a save: [(competition id, label year, row bytes)], free rows
+    (a negative competition id, as a cleared row is saved) left out."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools", "save"))
+    import savfile
+    b = savfile.Sav(path).read_member("nation_comp_history.dat")
+    return sorted((struct.unpack_from("<i", b, i * 26 + 4)[0], struct.unpack_from("<H", b, i * 26 + 8)[0],
+                   b[i * 26 + 4:i * 26 + 26]) for i in range(len(b) // 26)
+                  if struct.unpack_from("<i", b, i * 26 + 4)[0] >= 0)
+
+
+def q48_rows_ok(base, path, keys):
+    """1 when the save at path holds the nation history rows of base plus exactly one row of each key, and no other
+    difference (the rows of the decision, Q48_SAVE_ROWS)."""
+    a, b = history_rows(base), history_rows(path)
+    for r in a:
+        if r in b:
+            b.remove(r)
+        else:
+            return 0
+    return sorted((c, y) for c, y, _ in b) == sorted(keys)
+
+
+# 0.6.2 slice 5 (open item 18, spec Decisions): in a season game every final writes its host into its history row,
+# also the finals whose class asks for no host (Cup::record_season_honours 0x519c2f). A new 2001 game with changing
+# rules on plays the final of the Copa America 2001 (29 July) in its first days, so its row names Colombia, while
+# the game with changing rules off (the base game, and history-q48-off) keeps no host there. So rules-on may differ
+# from history-q48-off in index.dat and nation_comp_history.dat, and rules-on-q48 from rules-on-q48-ref (a reference
+# build before slice 5), only in the host fields of history rows that had no host.
+HOST_ROWS = "hosts"
+HOST_ROW_PARTS = ("index.dat", "nation_comp_history.dat")
+
+
+def host_rows_ok(base, path):
+    """1 when the nation history rows of path are those of base, but for host fields (+0x16) that base leaves empty."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools", "save"))
+    import savfile
+    a = savfile.Sav(base).read_member("nation_comp_history.dat")
+    b = savfile.Sav(path).read_member("nation_comp_history.dat")
+    if len(a) != len(b):
+        return 0
+    for i in range(0, len(a), 26):
+        x, y = a[i:i + 26], b[i:i + 26]
+        if x[:0x16] + x[0x1a:] != y[:0x16] + y[0x1a:]:
+            return 0
+        if x[0x16:0x1a] != y[0x16:0x1a] and struct.unpack_from("<i", x, 0x16)[0] != -1:
+            return 0
+    return 1
+
+
 # A saved test game that opens on another screen than the news ends its load at another wait (0.6.0 slice 11).
 # yeovil.sav (a copy of Max's save, 20.8.02) opens on the squad screen: the load ends when Continue Game shows.
 LOAD_END = {"yeovil.sav": "wait continue"}
+
+# The fixes of faults of the original that act in the 14 days of a saved test game, by decision (0.6.2 slice 11): its
+# run original-faults-keep keeps only the other groups (RECOMP_ORIGINAL_FAULTS=keep:<groups>, original_faults.c).
+# yeovil.sav (20.8.02) passes 1 September 2002: the month check opens a vacancy for each national team with no
+# manager (Q43), so the save of normal differs from the original's in most parts. This holds for the 14 days of the
+# set: a run of other --days may pass another month change (start.sav from 18 days on).
+FAULTS_ACT = {"yeovil.sav": "keep:money,age"}
+
+
+def keep_runs(runs, save_name):
+    """The runs with the switch of original-faults-keep for the saved game save_name (FAULTS_ACT)."""
+    if save_name not in FAULTS_ACT:
+        return runs
+    return [(name, dict(o, _env=dict(o["_env"], RECOMP_ORIGINAL_FAULTS=FAULTS_ACT[save_name])))
+            if name == "original-faults-keep" else (name, o) for name, o in runs]
 
 
 def new_game_runs(runs):
@@ -577,11 +742,13 @@ def same_save(program, game, mode, days, save_name=None, search=False, options=F
     # No click ends the intro (without_intro_click).
     if save_name is None:
         steps = [s for s in STEPS if "5-holiday" not in s and "quit" not in s]
-        return compare_runs(program, game, mode, new_game_runs(SAME_SAVE_RUNS),
+        return compare_runs(program, game, mode, q48_runs(new_game_runs(SAME_SAVE_RUNS), True),
                             without_intro_click(steps) + ["400000 quit"], days,
-                            allowed={"rules-on": (RULES_PART,) + RULES_ON_PARTS, "off": NEW_GAME_LAYOUT_PARTS,
+                            allowed={"rules-on": (RULES_PART,) + RULES_ON_PARTS + HOST_ROW_PARTS,
+                                     "rules-on-q48": HOST_ROW_PARTS, "off": NEW_GAME_LAYOUT_PARTS,
                                      "foreign-off": NEW_GAME_LAYOUT_PARTS},
-                            required={"rules-on": RULES_PART}, text_050=True)
+                            required={"rules-on": RULES_PART}, rows={"rules-on": HOST_ROWS, "rules-on-q48": HOST_ROWS},
+                            text_050=True)
     # --save: load the saved test game, then the same Go on Holiday steps as the new game.
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fixtures"))
     import fixtures  # noqa: E402  (fixtures.py imports this file)
@@ -602,7 +769,10 @@ def same_save(program, game, mode, days, save_name=None, search=False, options=F
     if save_name in LOAD_END:
         load[load.index("wait first-news")] = LOAD_END[save_name]
     steps = without_intro_click(load) + holiday + ["400000 quit"]
-    return compare_runs(program, game, mode, SAME_SAVE_RUNS, steps, days, save, text_050=True)
+    q48 = {Q48_REFERENCE: Q48_SAVE_PARTS} if save_name in Q48_SAVE_ROWS else {}
+    return compare_runs(program, game, mode, q48_runs(keep_runs(SAME_SAVE_RUNS, save_name), False), steps, days, save,
+                        allowed=q48, rows={Q48_REFERENCE: Q48_SAVE_ROWS[save_name]} if q48 else None,
+                        text_050=True)
 
 
 # --speed fastest: the Fastest item (#31, commentary.c), one row above Very Fast.

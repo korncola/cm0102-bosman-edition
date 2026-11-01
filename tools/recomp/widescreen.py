@@ -29,10 +29,10 @@ PATCHES = {
     0x55F58D: (599, H1), 0x55F592: (799, W1), 0x55F5EB: (599, H1), 0x55F5F0: (799, W1),
     # Widget drag 0x561210: clamped to the screen.
     0x5612A0: (799, W1), 0x5612A8: (799, W1), 0x5612C9: (599, H1), 0x5612D1: (599, H1),
-    # Display init calls 0x5e2620(800, 600, ...): start-up, the two settings changes, the network path.
+    # Display init calls 0x5e2620(800, 600, ...): start-up and the two settings changes. The network path's
+    # calls (0x8aeed3..0x8aef00) are in the address lookup 0x8aee20, which net.c replaces (0.7.0 slice 2).
     0x5D79ED: (600, H), 0x5D79F2: (800, W),
     0x5D8645: (600, H), 0x5D864A: (800, W), 0x5D8685: (600, H), 0x5D868A: (800, W),
-    0x8AEED3: (600, H), 0x8AEED8: (800, W), 0x8AEEFB: (600, H), 0x8AEF00: (800, W),
     # Outline draw 0x5e7840: the span list starts at x 800, and the lock covers the whole screen.
     0x5E78BA: (800, W), 0x5E78E2: (800, W), 0x5E78EA: (600, H),
     # Error box 0x5e8290: centred in a screen 800 wide. Its y values follow in BOX_Y.
@@ -113,6 +113,12 @@ from uefa import PATCHES as UEFA_PATCHES  # noqa: E402
 assert not set(UEFA_PATCHES) & set(PATCHES)
 PATCHES.update(UEFA_PATCHES)
 
+# The game list of 50 games (0.7.0 slice 4a) in the same way.
+from game_list import PATCHES as GAME_LIST_PATCHES  # noqa: E402
+
+assert not set(GAME_LIST_PATCHES) & set(PATCHES)
+PATCHES.update(GAME_LIST_PATCHES)
+
 # Not a screen size: a fix for an endless loop (0.4.0 slice 12, custom data sets). euro.cfg is read by 0x9059e0
 # (docs/research/2026-10-16-update-team-databases.md). When a line of it is not a "*" header (after a header
 # that names an unknown nation, or a file that does not match the database), the original tests the same line
@@ -188,9 +194,33 @@ from discipline_ban import INSNS as BAN_INSNS  # noqa: E402
 
 assert not set(BAN_INSNS) & (set(INSNS) | set(PATCHES))
 INSNS.update(BAN_INSNS)
+# The OFC Champions League at a load after Australia's move to Asia (oceania_entry.py).
+from oceania_entry import INSNS as OCEANIA_INSNS  # noqa: E402
+
+assert not set(OCEANIA_INSNS) & (set(INSNS) | set(PATCHES))
+INSNS.update(OCEANIA_INSNS)
 
 # Saves above 2 GB (0.6.0): unsigned file positions in ftell and the seek of a save part (save_size.py).
 from save_size import INSNS as SAVE_SIZE_INSNS  # noqa: E402
 
 assert not set(SAVE_SIZE_INSNS) & (set(INSNS) | set(PATCHES))
 INSNS.update(SAVE_SIZE_INSNS)
+
+# Faults of the original that long games reach (0.6.2 slice 11, original_faults.py): national managers, money above
+# 2,147,483,647 and the human manager's age.
+from original_faults import INSNS as ORIGINAL_FAULT_INSNS  # noqa: E402
+
+assert not set(ORIGINAL_FAULT_INSNS) & (set(INSNS) | set(PATCHES))
+INSNS.update(ORIGINAL_FAULT_INSNS)
+
+# International caps above 255 (0.6.2 slice 12) in the same way.
+from caps_wide import INSNS as CAPS_INSNS  # noqa: E402
+
+assert not set(CAPS_INSNS) & (set(INSNS) | set(PATCHES))
+INSNS.update(CAPS_INSNS)
+
+# A weather postponement keeps the match day's place in its fixture list (0.6.2 item 84) in the same way.
+from match_day import INSNS as MATCH_DAY_INSNS  # noqa: E402
+
+assert not set(MATCH_DAY_INSNS) & (set(INSNS) | set(PATCHES))
+INSNS.update(MATCH_DAY_INSNS)

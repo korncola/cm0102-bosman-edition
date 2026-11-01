@@ -1,10 +1,2 @@
 # Known faults of ctest future_2300 (tests/seasons/future/test_future_2300.c): one key per line, then a tab and the
 # fault. The test fails on a fault that is not here, and on a key here that passes (then remove the line).
-intl.editions.world_cup	No World Cup after 2030: rt_intl_next_year gives IDLE_YEAR 2200 (after-table rule: every 4 years)
-intl.editions.euro_champ	No Euro after 2028 (after-table rule: every 4 years)
-intl.editions.goldcup	No Copa America after 2024 (after-table rule: every 4 years)
-intl.editions.african_nations	No Africa Cup of Nations after 2027 (after-table rule: every 2 years)
-intl.editions.asia_nations	No Asian Cup after 2027 (after-table rule: every 4 years)
-intl.editions.oceania_nations	No OFC Nations Cup after 2024 (after-table rule: every 4 years)
-intl.editions.olympics	No Olympic football after 2024 (after-table rule: every 4 years)
-intl.editions.fifa_confed	The ended Confederations Cup waits at the idle year 2200, which a game to 2300 reaches

@@ -1,9 +1,31 @@
 cmake_minimum_required(VERSION 3.20)
-project(cm0102-mac VERSION 0.6.1 LANGUAGES C)
+project(cm0102-mac VERSION 0.7.0 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 
 find_package(SDL2 REQUIRED)
+
+# The secure connection of online play (0.7.0 slice 5, src/recomp_rt/win/secure.c): mbedTLS 3.6, the LTS branch
+# (Apache-2.0), built from its release with the settings of src/recomp_rt/win/tls_config.h. For a build with
+# no download, unpack the release and pass -DFETCHCONTENT_SOURCE_DIR_MBEDTLS=<its folder>.
+include(FetchContent)
+set(ENABLE_PROGRAMS OFF CACHE BOOL "Build the Mbed TLS programs" FORCE)
+set(ENABLE_TESTING OFF CACHE BOOL "Build the Mbed TLS tests" FORCE)
+set(MBEDTLS_FATAL_WARNINGS OFF CACHE BOOL "Mbed TLS warnings stop the build" FORCE)
+set(USE_SHARED_MBEDTLS_LIBRARY OFF CACHE BOOL "Build a shared Mbed TLS" FORCE)
+set(MBEDTLS_USER_CONFIG_FILE "${CMAKE_SOURCE_DIR}/src/recomp_rt/win/tls_config.h" CACHE FILEPATH
+    "Mbed TLS settings of Bosman Edition" FORCE)
+# DOWNLOAD_EXTRACT_TIMESTAMP exists from CMake 3.24; the Linux build's container (Ubuntu 22.04) has 3.22, which
+# takes the option as part of URL_HASH and stops.
+set(MBEDTLS_FETCH_EXTRA "")
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+    set(MBEDTLS_FETCH_EXTRA DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+endif()
+FetchContent_Declare(mbedtls
+    URL https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-3.6.7/mbedtls-3.6.7.tar.bz2
+    URL_HASH SHA256=a7e8bcbec0e6f761b4af24f25677626b35f762f68eef79c08677a363212d11f6
+    ${MBEDTLS_FETCH_EXTRA})
+FetchContent_MakeAvailable(mbedtls)
 
 add_executable(cm0102
     src/main.c
@@ -113,6 +135,8 @@ if(NOT WIN32)
     # The Open folder buttons (0.6.1 item 5): host_open_folder starts the file manager with the folder.
     add_executable(host_folder_test tests/host/test_open_folder.c src/recomp_rt/host/posix.c)
     add_test(NAME host_folder COMMAND host_folder_test)
+    add_executable(folder_names_test tests/host/test_folder_names.c src/recomp_rt/win/folder_names.c src/recomp_rt/host/posix.c)
+    add_test(NAME folder_names COMMAND folder_names_test)
     # Season databases in the download (0.6.0 slice 14): zip reader, SHA-256, recognition, first pick.
     add_executable(seasons_db_test tests/seasons/test_seasons_db.c src/recomp_rt/win/seasons_db.c
         src/recomp_rt/win/seasons_zip.c src/recomp_rt/win/seasons_table.c src/recomp_rt/win/dbfolders.c
@@ -125,6 +149,49 @@ if(NOT WIN32)
     add_executable(heap_test tests/recomp/test_heap.c src/recomp_rt/heap.c)
     target_include_directories(heap_test PRIVATE src/recomp_rt)
     add_test(NAME heap COMMAND heap_test)
+    # The game's sockets (0.7.0 slice 2): WinSock behaviour on the host's sockets over 127.0.0.1.
+    add_executable(net_core_test tests/net/test_net_core.c src/recomp_rt/win/net_core.c
+        src/recomp_rt/host/net_posix.c)
+    target_include_directories(net_core_test PRIVATE src/recomp_rt src/recomp_rt/win)
+    add_test(NAME net_core COMMAND net_core_test)
+    # Online games in the game list (0.7.0 slice 4): lobby HTTP rules, JSON, game list rows, join check.
+    find_package(Threads REQUIRED)
+    add_executable(lobby_test tests/net/test_lobby.c src/recomp_rt/win/lobby_http.c src/recomp_rt/win/lobby.c
+        src/recomp_rt/win/lobby_rows.c src/recomp_rt/win/net_core.c src/recomp_rt/win/secure.c
+        src/recomp_rt/host/net_posix.c)
+    target_include_directories(lobby_test PRIVATE src/recomp_rt src/recomp_rt/win)
+    target_link_libraries(lobby_test PRIVATE Threads::Threads mbedtls)
+    add_test(NAME lobby COMMAND lobby_test)
+    # Joins through the relay (0.7.0 slice 5): WebSocket frames, the socket pair, a fake relay with a host and a
+    # human manager over the game's sockets, and the secure connection against a local TLS server.
+    add_executable(relay_test tests/net/test_relay.c src/recomp_rt/win/relay.c src/recomp_rt/win/websocket.c
+        src/recomp_rt/win/secure.c src/recomp_rt/win/lobby_http.c src/recomp_rt/win/net_core.c
+        src/recomp_rt/host/net_posix.c)
+    target_include_directories(relay_test PRIVATE src/recomp_rt src/recomp_rt/win)
+    target_link_libraries(relay_test PRIVATE Threads::Threads mbedtls)
+    add_test(NAME relay COMMAND relay_test)
+    add_test(NAME relay_tls COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/net/tls_check.py" $<TARGET_FILE:relay_test>)
+    set_tests_properties(relay_tls PROPERTIES SKIP_RETURN_CODE 77)
+    # Clear errors, connection test and ping (0.7.0 slice 7): control packets, failure reasons, texts, the test.
+    add_executable(net_errors_test tests/net/test_net_errors.c src/recomp_rt/win/net_errors.c
+        src/recomp_rt/win/net_test.c src/recomp_rt/win/lobby_http.c src/recomp_rt/win/lobby.c
+        src/recomp_rt/win/lobby_rows.c src/recomp_rt/win/net_core.c src/recomp_rt/win/secure.c
+        src/recomp_rt/host/net_posix.c)
+    target_include_directories(net_errors_test PRIVATE src/recomp_rt src/recomp_rt/win)
+    target_link_libraries(net_errors_test PRIVATE Threads::Threads mbedtls)
+    add_test(NAME net_errors COMMAND net_errors_test)
+    add_executable(invite_test tests/net/test_invite.c src/recomp_rt/win/invite.c src/recomp_rt/win/lobby_rows.c
+        src/recomp_rt/win/lobby_http.c src/recomp_rt/win/lobby.c src/recomp_rt/win/secure.c src/recomp_rt/host/net_posix.c)
+    target_include_directories(invite_test PRIVATE src/recomp_rt src/recomp_rt/win)
+    target_link_libraries(invite_test PRIVATE Threads::Threads mbedtls)
+    add_test(NAME invite COMMAND invite_test)
+    add_executable(link_test tests/net/test_link.c src/recomp_rt/host/link.c src/recomp_rt/host/posix.c)
+    target_include_directories(link_test PRIVATE src/recomp_rt)
+    add_test(NAME link COMMAND link_test)
+    add_executable(link_pass_test tests/net/test_link_pass.c src/recomp_rt/host/link_pass.c)
+    target_include_directories(link_pass_test PRIVATE src/recomp_rt)
+    target_link_libraries(link_pass_test PRIVATE Threads::Threads)
+    add_test(NAME link_pass COMMAND link_pass_test)
     # The zone of the heap for the player search (0.6.1, playersearch.c).
     add_executable(heap_zone_test tests/recomp/test_heap_zone.c src/recomp_rt/heap.c)
     target_include_directories(heap_zone_test PRIVATE src/recomp_rt)
@@ -137,9 +204,14 @@ if(NOT WIN32)
     # the editions and the rules of the code sites.
     add_test(NAME season_intl_table COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_intl.py" --check)
     add_executable(season_intl_test tests/seasons/test_season_intl.c src/recomp_rt/win/season_intl_rules.c
-        src/recomp_rt/win/season_intl_table.c)
+        src/recomp_rt/win/season_intl_table.c src/recomp_rt/win/season_nl_table.c)
     target_include_directories(season_intl_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_intl COMMAND season_intl_test)
+    # World Cup qualifying places with hosts (0.6.2 slice 5, open item 59): 48 teams for every host set.
+    add_executable(season_wcq26_places_test tests/seasons/test_season_wcq26_places.c
+        src/recomp_rt/win/season_wcq26_places.c)
+    target_include_directories(season_wcq26_places_test PRIVATE src/recomp_rt/win)
+    add_test(NAME season_wcq26_places COMMAND season_wcq26_places_test)
     # Nations Leagues (0.6.0 slice 28): the C table of the editions and leagues matches the tables, and the
     # ranking, promotion and relegation and play-off path rules.
     add_test(NAME season_nl_table COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_nl.py" --check)
@@ -169,6 +241,13 @@ if(NOT WIN32)
     add_test(NAME season_rules COMMAND season_rules_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv"
         "${CMAKE_BINARY_DIR}/seasons")
     set_tests_properties(season_rules PROPERTIES FIXTURES_REQUIRED rules_table)
+    # Play-off winners that go up with no play-off of the game (0.6.2 open item 63): Série B from 2025 to 2301.
+    add_executable(season_playoff_winners_test tests/seasons/test_season_playoff_winners.c
+        src/recomp_rt/win/season_playoff_winners.c src/recomp_rt/win/season_rules.c
+        src/recomp_rt/win/season_league_table.c src/recomp_rt/host/posix.c)
+    target_include_directories(season_playoff_winners_test PRIVATE src/recomp_rt/win)
+    add_test(NAME season_playoff_winners COMMAND season_playoff_winners_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv")
+    set_tests_properties(season_playoff_winners PROPERTIES FIXTURES_REQUIRED rules_table)
     # Domestic cups that the rules table does not hold in some seasons (0.6.0 slice 21b).
     add_executable(season_cup_breaks_test tests/seasons/test_season_cup_breaks.c
         src/recomp_rt/win/season_cup_breaks.c src/recomp_rt/win/season_rules.c src/recomp_rt/host/posix.c)
@@ -188,6 +267,11 @@ if(NOT WIN32)
     add_test(NAME season_names_table COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_names.py" --check)
     # 0.6.1 item 2: the abbreviation column of the names table (Select Team shows it).
     add_test(NAME season_names_abbr COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/names_abbr_check.py")
+    # 0.6.2 open item 71: after the table each file keeps the names of its last season with a name, to 2301.
+    add_executable(season_names_test tests/seasons/test_season_names.c src/recomp_rt/win/season_names.c
+        src/recomp_rt/host/posix.c)
+    target_include_directories(season_names_test PRIVATE src/recomp_rt/win src/recomp_rt include)
+    add_test(NAME season_names COMMAND season_names_test "${CMAKE_BINARY_DIR}/seasons/names.tsv" "${CMAKE_BINARY_DIR}/seasons")
     # Future testing step 2: the history checker finds each planted fault of a small fixture save that it writes.
     add_test(NAME season_future_history_check COMMAND python3 -I
         "${CMAKE_SOURCE_DIR}/tests/seasons/future/history_check_test.py")
@@ -215,6 +299,9 @@ if(NOT WIN32)
         src/recomp_rt/win/season_fifa_days_table.c)
     target_include_directories(season_fifa_days_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_fifa_days COMMAND season_fifa_days_test)
+    add_executable(youth_pool_test tests/seasons/test_youth_pool.c src/recomp_rt/win/youth_pool_rule.c)
+    target_include_directories(youth_pool_test PRIVATE src/recomp_rt/win)
+    add_test(NAME youth_pool COMMAND youth_pool_test)
     # The UEFA league phase draw (0.6.0 slice 25): pots, opponents, nation rules and match days.
     add_executable(season_uefa_league_test tests/seasons/test_season_uefa_league.c
         src/recomp_rt/win/season_uefa_league_draw.c)
@@ -248,9 +335,16 @@ if(NOT WIN32)
     target_include_directories(season_subs_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_subs COMMAND season_subs_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv")
     set_tests_properties(season_subs PROPERTIES FIXTURES_REQUIRED rules_table)
+    # The club cup editions after the rules table (0.6.2 slice 9a): every year to 2301, the Club World Cup every 4.
+    add_executable(season_club_editions_test tests/seasons/test_season_club_editions.c
+        src/recomp_rt/win/season_club_editions.c src/recomp_rt/win/season_rules.c src/recomp_rt/host/posix.c)
+    target_include_directories(season_club_editions_test PRIVATE src/recomp_rt/win)
+    add_test(NAME season_club_editions COMMAND season_club_editions_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv")
+    set_tests_properties(season_club_editions PROPERTIES FIXTURES_REQUIRED rules_table)
     # The whole season part of a save (0.6.1 items 4 and 10): its write keeps inside its size.
     add_executable(season_part_test tests/seasons/test_season_part.c
-        src/recomp_rt/win/season_change.c src/recomp_rt/win/season_friendly_dates.c src/recomp_rt/win/season_years.c)
+        src/recomp_rt/win/season_change.c src/recomp_rt/win/season_friendly_dates.c src/recomp_rt/win/season_years.c
+        src/recomp_rt/win/caps_wide.c src/recomp_rt/win/season_intl_marks.c)
     target_include_directories(season_part_test PRIVATE src/recomp_rt/win src/recomp_rt)
     add_test(NAME season_part COMMAND season_part_test)
     # The key competition check of a load (0.6.1 item 10): the names of the player's cm0102.exe and its Data.
@@ -288,6 +382,8 @@ if(NOT WIN32)
     add_test(NAME future_2300 COMMAND future_2300_test "${CMAKE_SOURCE_DIR}/tests/seasons/future/known_faults.tsv")
     # The expected rule of every competition (the input of the history checker): its columns and values.
     add_test(NAME future_competitions COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/future/competitions_check.py")
+    # The run set and its release check (0.6.2 slice 15), without a game: tests/seasons/future/run_set_test.py.
+    add_test(NAME future_run_set COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/future/run_set_test.py")
     add_executable(winfit_test tests/winfit/test_winfit.c)
     target_include_directories(winfit_test PRIVATE src/recomp_rt/win)
     add_test(NAME winfit COMMAND winfit_test)
@@ -384,14 +480,16 @@ if(EXISTS "${CM0102_EXE}")
 
     # The host functions (src/recomp_rt/host.h): Windows when cross-compiled with mingw-w64, else POSIX.
     if(WIN32)
-        set(RECOMP_HOST src/recomp_rt/host/win32.c)
+        set(RECOMP_HOST src/recomp_rt/host/win32.c src/recomp_rt/host/net_win32.c)
     else()
-        set(RECOMP_HOST src/recomp_rt/host/posix.c)
+        set(RECOMP_HOST src/recomp_rt/host/posix.c src/recomp_rt/host/net_posix.c)
     endif()
     add_executable(cm0102_recomp ${RECOMP_GEN}
         src/recomp_rt/rt.c
         src/recomp_rt/heap.c
         ${RECOMP_HOST}
+        src/recomp_rt/host/link.c
+        src/recomp_rt/host/link_pass.c
         ${RECOMP_WIN}
         src/cm3/key_comp_names.c
         src/cm3/key_ids_table.c
@@ -474,6 +572,9 @@ if(EXISTS "${CM0102_EXE}")
         --exe "${CM0102_EXE}" --classes "${CMAKE_BINARY_DIR}/seasons/comp_classes.c" --check)
     # League sizes (0.6.0 slice 18): the committed wraps of set_up_rules match tools/recomp/league_sizes.py.
     add_test(NAME season_size_wraps COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_size_wraps.py" --check)
+    # Cup lists (0.6.2 item 64): every cup list of the original starts cleared in a season game.
+    add_test(NAME cup_list_clear COMMAND "${RECOMP_PYTHON}" -I "${CMAKE_SOURCE_DIR}/tests/seasons/cup_list_clear_check.py"
+        --exe "${CM0102_EXE}")
     target_include_directories(cm0102_recomp PRIVATE src/recomp_rt src/recomp_rt/win "${RECOMP_OUT}/gen"
         ${SDL2_INCLUDE_DIRS})
     target_compile_definitions(cm0102_recomp PRIVATE CM0102_DEFAULT_EXE="${CM0102_EXE}"
@@ -488,8 +589,11 @@ if(EXISTS "${CM0102_EXE}")
         if(APPLE)
             target_link_options(cm0102_recomp PRIVATE "LINKER:-stack_size,0x10000000")
         endif()
-        target_link_libraries(cm0102_recomp PRIVATE ${SDL2_LIBRARIES} m)
+        find_package(Threads REQUIRED)
+        target_link_libraries(cm0102_recomp PRIVATE ${SDL2_LIBRARIES} m Threads::Threads)
     endif()
+    # The secure connection of online play (src/recomp_rt/win/secure.c).
+    target_link_libraries(cm0102_recomp PRIVATE mbedtls)
 else()
     message(STATUS "cm0102_recomp: ${CM0102_EXE} not found, so the recompiled game is not built")
 endif()

@@ -47,6 +47,7 @@
 #include "season_names.h"
 #include "season_rules.h"
 #include "season_playoffs.h"
+#include "season_cup_third_place.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -171,14 +172,12 @@ static const SeasonLeagueRule *league_rule(const char *file, int season)
     return NULL;
 }
 
-/* The row of the rules of a season, or the last before it (Q248), as season_sizes.c reads it. */
+/* The row of the rules of a season, or the last before it with no end year (the after-table rule, Q248), as
+ * season_sizes.c reads it. */
 static const SeasonRule *row_of_season(const char *file, int season)
 {
-    for (int s = season; s >= SEASON_FIRST_YEAR && s > season - 10; s--) {
-        const SeasonRule *r = season_rules_find(s, file, 0);
-        if (r) return r;
-    }
-    return NULL;
+    int s = season_rules_last_season(season, file);
+    return s ? season_rules_find(s, file, 0) : NULL;
 }
 
 /* 1 when the row of season gives a play-off that this kind plays: 4 places in a row, directly below the direct
@@ -190,7 +189,9 @@ int season_playoffs_shape(const char *file, int season, int *direct)
     const SeasonRule *r = row_of_season(file, season);
     const SeasonLeagueRule *e = r ? league_rule(file, r->season) : NULL;
     if (!e || e->po_up != PLAYOFF_CLUBS || r->up < 0) return 0;
-    /* Two ties whose winners both go up (Série B from 2025) are not one play-off for one place. */
+    /* Two ties whose winners both go up (Série B from 2025) are not one play-off for one place. The test is wider than
+     * season_playoffs_winners_up ("the two winners go up"): the rows of Belgium and Portugal 2008/09 say "two
+     * winners" too, and are no play-off of this kind either. */
     if (r->playoffs_text && strstr(r->playoffs_text, "two winners")) return 0;
     int d;
     if (e->po_up_first == r->up && r->up >= 1) d = r->up - 1;
@@ -363,7 +364,10 @@ RT_WRAP(0051a150, playoff_level_test)
                 leg == 1 ? "" : (flags & 3u) == 3u ? ", extra time 0-0 and penalties 5-4 given"
                                                     : ", no extra time or penalties asked for");
     }
+    ThirdPlaceTies third;                       /* open item 73: season_cup_third_place.h */
+    season_cup_third_place_before(cpu.ecx, &third);
     o_0051a150();
+    if (!rt_unwinding) season_cup_third_place_after(&third);
 }
 
 /* RECOMP_TEST_PLAYOFF_FIXTURES=1 (tests only), called from the add_fixture wrap (season_kind_cup_breaks.c): the first

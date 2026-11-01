@@ -91,14 +91,12 @@ static int within(const char *file, int n)
     return n;
 }
 
-/* The row of a season, or the last row before it (Q248: after the last row the rules stay). */
+/* The row of a season, or the last row before it (Q248: after the last row the rules stay, with no end year:
+ * the after-table rule). */
 static const SeasonRule *row_of_season(const char *file, int season)
 {
-    for (int s = season; s >= SEASON_FIRST_YEAR && s > season - 10; s--) {
-        const SeasonRule *r = season_rules_find(s, file, 0);
-        if (r) return r;
-    }
-    return NULL;
+    int s = season_rules_last_season(season, file);
+    return s ? season_rules_find(s, file, 0) : NULL;
 }
 
 /* 1 when the real season of a row begins with the year ("2011", "2010/11", "2011-12 (first stage ...)"). */
@@ -268,6 +266,47 @@ uint32_t rt_fra_lge_first(uint32_t original, uint32_t edx)
     return (uint32_t)(limit - (int)edx);
 }
 
+void o_005bd160(void);
+
+/* FraLgeCup::collect_entrants 0x5bd160, thiscall (cup). Its two National loops (0x5bd20f and 0x5bd2b1, see
+ * rt_fra_lge_first) take only clubs whose last division (+0x5b) is set (0x5bd222 and 0x5bd2c4 skip a 0). A start after the last season of the club moves
+ * table (2026 on, a date jump, 0.6.2 slice 10) keeps the database's National: 20 clubs with the December 2025
+ * database, 3 of them with no last division, so the cup found 53 of its 54 and stopped at fra_lge_cup.cpp 73
+ * (0x5bca3a, box at 0x5bcb21). When the National clubs that the loops can take are fewer than the room, a club with
+ * no last division counts as a club from outside the CFA for this call: +0x5b holds its own division (the National)
+ * while the original collects, and 0 again after. With enough clubs nothing changes. Only the constructor's call
+ * (FraLgeCup::FraLgeCup 0x5bc980, return 0x5bca0f) stops at line 73 when short; the call of a season change (return
+ * 0x5bd4d5) plays a short cup, so it stays the original's. */
+RT_WRAP(005bd160, fra_lge_entrants)
+{
+    enum { MOST = 64 };
+    uint32_t lent[MOST];
+    int nlent = 0;
+    uint32_t table = rd32(g_mem, CLUBS);
+    if (sizes_on() && readable(table) && rd32(g_mem, cpu.esp) == 0x5bca0fu) {
+        int32_t national = (int32_t)rd32(g_mem, 0x9cf5d4u);
+        int count = (int)rd32(g_mem, CLUB_COUNT), can = 0, none = 0;
+        for (int i = 0; i < count; i++) {
+            uint32_t at = table + (uint32_t)i * CLUB_SIZE, div = rd32(g_mem, at + CLUB_DIVISION);
+            if (!readable(div) || (int32_t)rd32(g_mem, div) != national) continue;
+            if (rd32(g_mem, at + 0x5bu)) can++;
+            else none++;
+        }
+        int top = top_clubs(0x9cf5d0u, 0x9cf5ccu, 0u), room = top < 0 ? 16 : 54 - top;     /* as rt_cup_room */
+        for (int i = 0; none && can + nlent < room && nlent < MOST && i < count; i++) {
+            uint32_t at = table + (uint32_t)i * CLUB_SIZE, div = rd32(g_mem, at + CLUB_DIVISION);
+            if (!readable(div) || (int32_t)rd32(g_mem, div) != national || rd32(g_mem, at + 0x5bu)) continue;
+            wr32(g_mem, at + 0x5bu, div);
+            lent[nlent++] = at;
+        }
+        if (nlent)
+            fprintf(stderr, "recomp: league sizes: French League Cup: %d National clubs with no last division count "
+                            "as clubs from outside the CFA (%d others, room %d)\n", nlent, can, room);
+    }
+    o_005bd160();
+    for (int i = 0; i < nlent; i++) wr32(g_mem, lent[i] + 0x5bu, 0);
+}
+
 /* EngFaCup::collect_entrants 0x56fab0 (O294) puts the National League clubs ([0x9cf69c]) in a stack array at
  * [esp + 0x3c] (store at 0x56fd98, count [esp + 0x18]) and the English clubs below it in a stack array at
  * [esp + 0x94] (store at 0x56fd7b, count [esp + 0x14], at most 300). It then copies byte [esp + 0x12] places from
@@ -364,7 +403,8 @@ static void sizes_rules(uint32_t obj)
      * with fixed counts (the German Regionalliga split needs exactly 36 clubs, cmp bl, 0x24 at 0x5dbc3b, box
      * ger_first.cpp 1049 at 0x5dbcd9: the 2. Bundesliga with 2 relegation places against the Regionalliga's 4
      * promotions left it short in June 2017). */
-    if (open_neighbour(obj, ABOVE)) set_places(obj, UP, UP_PLAYOFF, r->up, "promotion");
+    if (open_neighbour(obj, ABOVE))
+        set_places(obj, UP, UP_PLAYOFF, r->up + season_playoffs_winners_up(file, r->season), "promotion");
     if (open_neighbour(obj, BELOW)) set_places(obj, DOWN, DOWN_PLAYOFF, r->down, "relegation");
 }
 

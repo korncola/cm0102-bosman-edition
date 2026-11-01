@@ -22,7 +22,18 @@ A same-save check plays the same clicks twice, once with the option on and once 
 
 The script is `tests/smoke/smoke_run.py --same-save`, with `--match` for the match check. `tests/smoke/same_save_views.py` checks the screens.
 
+The file speed-ups have their own runs. The path lookup keeps each folder's names until the folder changes (`RECOMP_FOLDER_CACHE=0` turns it off). The season change keeps the player stats history file open (`RECOMP_KEEP_FILES=0` turns it off). Both switches are read once and are on by default. The run `files-off` turns both off. The same-save runs end before a season change, so a run across a season change with both switches on and off compares the saves too.
+
+Long holiday runs can differ when their pace differs, even with the same seed and steps. The daily staff pass 0x5ce2d0 reads its local [esp+0x70] before it writes it, and that stack slot holds what timed message pumps left there. This is the original's behaviour and is kept (open item 85). So compare long runs only when they ran at the same pace, and repeat a run that differs before treating it as a fault.
+
 The checks run before each merge of game code and again on the merged build. The pass rule is equal saves. Five files can differ only when the option opens a screen that the off run does not open, because that moves memory. We record each such case and tell Max. Any other difference stops the merge until we find the cause.
+
+Some changes alter the game by decision. Since 0.6.2 (Q48), the history rows of editions after the start date are removed in every game. This changes the first-season holders and so the play of a new game. The reference run `history-q48-off` plays the same game with that fix off (`RECOMP_HISTORY_AFTER_START=off`). The checks use it this way:
+- `season-code-off` must equal `history-q48-off` in every part.
+- In a new game, `rules-on` plays with the fix off and must equal `history-q48-off` except in the accepted rules-on parts. The run `rules-on-q48` plays the shipped default (changing rules on, fix on) and must equal the same run of `--ref-build`.
+- In start.sav and prematch.sav, `history-q48-off` may differ from `normal` only in `index.dat` and `nation_comp_history.dat`, and there only by the 3.9.68 row of the Copa América 2001, which goes when the game plays its own final. In any other saved game it must equal `normal`. In a new game it is a reference run only.
+
+The runs, parts and rows are in `q48_runs`, `Q48_SAVE_PARTS` and `Q48_SAVE_ROWS` in `smoke_run.py`. Any other difference still fails, and a check that compares no run fails. The effect of the fix itself is checked by the history checker (`tests/seasons/future/history_check.py`).
 
 ## Start-season soaks
 
@@ -48,6 +59,10 @@ Long games run from 2001/02 to 2027/28 with all nations and different random see
 
 A date jump starts a new game in a far year, with every date of the database moved to that year. It needs an Update Team or Custom database. The test variable `RECOMP_START_SEASON` takes a start year up to 2099. With the date jump switch `RECOMP_DATE_JUMP=1` it takes a year up to 2300. The program reads the switch once at the start, and it is off by default. The same-save set proves that the switch changes nothing in a game of the normal start years (run `date-jump-on`). The season code itself has no year limit: its hooks, rules and save parts work in every year (ctest `future_2300` and `season_part` step them to 2301).
 
+## The run set
+
+The run set is the fixed list of games that a release must pass (from 0.6.2): Tier A games from seven starts with three seeds each to 2100, a game with England, Spain and Brazil, one Tier A game to 2300, the date jumps to 2098, 2198 and 2298, and two Tier B games of the full world to 2300. The list is `tests/seasons/future/run_set.tsv`. `tests/seasons/future/run_set.py` plays it several games at a time. It runs the history checker (`tests/seasons/future/history_check.py`) on the save of every leg and keeps one save a decade. For Tier B it also checks the world's health and the Tier B limits: a national side with no manager for more than a season, a game day twice as slow as in the first seasons, and a save that would pass 4 GB before 2300. It starts no game below 100 GB of free disk. Each game ends with pass or fail. The release script runs `run_set.py --verify` on the folder of a run of the whole set and stops unless every game passed on the same game code and the checker finds no fault on the kept saves. ctest `future_run_set` tests the script without a game.
+
 ## Tier A runs
 
 A Tier A run reaches a far year quickly. It plays only the competitions: the calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players, contracts, and save and load. It skips the AI transfer market, background matches, new injuries and AI manager moves (sackings). Tier A has no AI sales. So a Tier A step, which is not original code, acts when an AI club fills all 50 squad slots. The club lets its weakest players over 21 go until 37 remain. Each match gets an instant result from the two sides' reputation, so the stronger side wins more often. The test switch is `RECOMP_TIER_A=1`. The program reads it once at the start, and it is off by default. The same-save set proves that the switch changes nothing when it is off.
@@ -62,11 +77,51 @@ A game with all nations uses more memory each season. The heap now has room for 
 
 Saves can now be up to 4 GB. A save that would be larger stops with a clear message and keeps the earlier save. `tests/smoke/big_save_run.py` makes a save above 3 GB and loads it again, checks a season part above 2 GB, and checks the clean stop above 4 GB. It needs about 12 GB of free disk for a short time. These checks run at the merge of a memory or save change and in the long games at each release.
 
+A save holds at most 999 parts. The game keeps a temporary file for each season, so the temporary files of one type go into one merged part. `tests/seasons/save_parts_run.py fill` adds temporary files until a save holds 990 and 999 parts, then saves and loads twice. Each save must hold at most 200 parts and every added file. `tests/seasons/save_parts_run.py old` loads a save of 0.6.0, 0.6.1 or an earlier 0.6.2 build, saves and loads twice, and checks that every temporary file of the old save is still there. These checks run at the merge of a save change.
+
 ## Screen sweeps and smoke screenshots
 
 The screen sweep opens the tables, results, fixtures, schedule and history of every competition, once each season. The data sweep reads each competition from memory at the start and end of each season. It looks for dates outside the season and for empty tables where the rules give clubs. The scripts are `tests/seasons/screen_sweep_run.py` and `tests/seasons/data_sweep_run.py`. They run at each release.
 
 The smoke test plays a fixed set of clicks through the main screens in the classic and widescreen modes. It compares each screenshot with a reference picture. The script is `tests/smoke/smoke_run.py --mode classic` or `--mode widescreen`. It runs at each merge and at each release. The pass rule is no error box and pictures that match. When a change draws something new on purpose, we look at the picture and record a new reference.
+
+## Online play
+
+Network games (0.7.0) have their own tests. The two-game run (`tests/smoke/network_run.py`) starts a host game and joining games on this Mac with timed clicks, and compares the joiners' screens with the host's. It runs at each change of the network code, also under wine with the Windows build. The server tests in `server/` run against a local copy of the lobby and relay.
+
+Before the release, four release tests run (spec Q29). Their scripts are in `tests/online/`. Each script waits for room on the machine, and for any network run of another worktree to end, because two network runs on one Mac collide on port 6667. Each one adds a line to `run-logs/s9-tests/results.tsv`. While several sessions test network play, each run that hosts a network game goes through `the maintainer's notes`, which lets one host at a time use port 6667.
+
+Test 3 starts its workflow with a push of the branch `online-ci-test` (`github_join_run.py --push`), because GitHub starts a manual workflow only from the default branch, and `main` belongs to the 0.6.0 work. It needs no secret: the Mac puts the AppImage and a zip of the Windows program with its game folder on a draft release, which only people with write access see, and deletes it after the run.
+
+| Test | Script | Pass rule |
+|---|---|---|
+| 1. Two and four games on this Mac through the real lobby and relay | `release_mac_run.py` | Each two-game run with 1 and 3 joiners through the relay passes. Without the relay in the build the script runs the lobby and LAN runs and reports STAGE. |
+| 2. Dropped (Q45): the Windows 11 virtual machine joins a game on this Mac | `vm_join_run.py` (kept, not run) | This Mac's Parallels Desktop edition refuses `prlctl resume`, `start` and `exec`, which need the Pro or Business Edition. Test 3's GitHub Windows machine covers a real Windows machine. |
+| 3. GitHub's Windows and Linux machines join a game on this Mac | `github_join_run.py --push`, `remote_join.py`, `.github/workflows/online-release-join.yml` | Both joiners pass their checks and their screens equal the host's within 2 colour levels. |
+| 4. A four-player game through a World Cup, a Euros and every season change between them | `season_net_run.py` | The host plays a network game from 2001 to 1 September 2004 with the match engine on, one season a leg. Each leg restores the last save, and three joiners take their clubs back with their passwords. Leg 0 also has a drop and rejoin and a game of another version. The last leg ends with a host quit. No box, no stall, every division moves on. |
+
+`tests/online/match_day_run.py` measures the traffic of a match day with two human managers. It passes when both games ran, the joiner made its manager and the host played a match. Its figures are in the network research note, section 16.
+
+Results:
+
+| Date | Test | Build | Result |
+|---|---|---|---|
+| 2026-10-27 | 4, short check: 1 leg of 3 days, England, LAN, local lobby (`--days 3 --legs 1`) | online-0.7.0 8b7b21bd | Leg 0 passed every check: four human managers with passwords, join3's drop (lobby 3 online) and rejoin with its password (4 online), the box of a game of version 0.0.1 that names the host's version, the host's holiday and its save after 3 game days. The restore leg then restored the save and Player Two took Barnsley back with the password. The quit leg waits for slice 6. |
+| 2026-10-29 | 2 | | Dropped (Q45): `prlctl resume` answered "The command is available only in Parallels Desktop for Mac Pro or Business Edition". |
+| 2026-10-27 | 3 | | Not run: the workflow is not on GitHub (a push waits for Max), and the build has no relay. |
+
+| 2026-10-28 | Match day, two human managers, LAN | online-0.7.0 8b7b21bd | Measured days 16.7.01 to 19.7.01: 72 KB a minute to the joiner, one 6.2 KB screen for each of its clicks (research note section 16). FAIL as a match day: the joiner's own friendly did not start, and the host waited on Latest Scores. Open. |
+
+| 2026-10-28 | 1, stage before slice 5 | online-0.7.0 8b7b21bd | STAGE: the lobby run (local copy) and the four-game LAN run pass. Against the real server the lobby run failed: the game's lobby client of this build speaks only `http://`, so the script now uses the local copy until the build has slice 5. |
+| 2026-10-28 | 4, short check: 2 legs of 10 days, England, LAN, local lobby | online-0.7.0 8b7b21bd | STAGE: every check passes in both legs (the new game with the drop by kill, the rejoin and the version box; then the restore, where all three joiners took their clubs back with their passwords). The quit leg waits for slice 6, the relay for slice 5. |
+
+| 2026-10-29 | 3, GitHub's Linux and Windows machines | online-0.7.0 7d60ee73 with slice 9 (05e55d19) | Both joined the Mac's game `00S9-CI` through the live lobby and relay (https://online.cm0102bosman.co.uk): each ended with code 0, joined through the relay, sent its 4 clicks, and its three screens equal the host's within 2 colour levels (the Mac's picture decode rounds otherwise; Windows and Linux are equal). The packages came from a draft release, deleted after the run; no secret. The run reported FAIL on two faults of its own checks (a tolerance of 0, and two joiners on one relay address counted once); both are fixed, and the same data passes. Run 40927613267. |
+
+| 2026-10-29 | 4, the full run: 2001 to 4 September 2004, England, 10 legs of 120 days and a quit leg | online-0.7.0 6f12558e with slice 9 | PASS. Legs 0 and 1 over the LAN with a local lobby (leg 1 on slice 6's build with the send fix, after leg 1 on the earlier build found the "scrman 2480" box), legs 2 to 10 through the relay and the live lobby. Each leg: the three joiners took their clubs back with their passwords; every division moved on; the run crossed the World Cup 2002, the Euro 2004 and the season changes of 2002, 2003 and 2004. Quit leg: the host saved at its quit, and each joiner showed "The host left the game", then the start screen. Two test faults fixed on the way: Go on Holiday sits higher in the menu of a manager with no club (the board sacked the host in 2004), and the first quit leg's host stayed on Manager Status after Finish for 10 minutes with two joiners "Waiting" (not seen again in the second try; open). |
+
+| 2026-10-30 | 4, the quit leg 10 times through the live relay | online-0.7.0 877cac08 (slice 5's relay close, slice 6's hold of the other joiners' packets) | 10 of 10 PASS: no hang, the host saved at its quit, and every joiner showed "The host left the game", then the start screen. On slice 6's build before these fixes, 1 of 5 passed (2 with "The connection to the host was lost", 2 with the hang after Finish). |
+
+<!-- s9 results -->
 
 ## Platform checks
 

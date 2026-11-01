@@ -39,6 +39,16 @@ int host_stat(const char *path, HostStat *out)
     out->is_dir = S_ISDIR(st.st_mode);
     out->size = (uint64_t)st.st_size;
     out->mtime = (int64_t)st.st_mtime;
+#ifdef __APPLE__
+    out->mtime_ns = (int64_t)st.st_mtimespec.tv_nsec;
+    out->ctime_ns = (int64_t)st.st_ctimespec.tv_nsec;
+#else
+    out->mtime_ns = (int64_t)st.st_mtim.tv_nsec;
+    out->ctime_ns = (int64_t)st.st_ctim.tv_nsec;
+#endif
+    out->ctime = (int64_t)st.st_ctime;
+    out->dev = (uint64_t)st.st_dev;
+    out->ino = (uint64_t)st.st_ino;
     return 0;
 }
 
