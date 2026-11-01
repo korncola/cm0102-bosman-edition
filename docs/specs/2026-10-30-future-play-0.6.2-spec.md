@@ -329,7 +329,7 @@ Merge danger: two-way door. Only a game that starts in 2026/27 takes the new cod
 - [x] A 2026/27 new game with changing rules on and with changing rules off starts with no box and plays one season (England, 11 July 2026 to 1 June 2027; and the full world with changing rules on to 28 July 2027).
 - [x] The rules report of the 2026/27 start matches its expected file (2026-england, changing-2026-england to 2027/28, changing-2026-all-start). Every line is a kind that the 2025/26 start of main also has.
 - [x] The history of the 2026/27 start holds the 2026 World Cup (Spain, Argentina, England), and the game plays no 2026 finals (its World Cup waits for 2030 from the first day).
-- [x] The history checker finds no new fault in the 2026/27 game (run set row quick2026). The one fault is the known Africa Cup of Nations gap. The three Argentine titles of 2025 in the database are no fault (the AFA's Campeón de Liga).
+- [x] The history checker finds no new fault in the 2026/27 game (run set row quick2026): no fault at all. The October 2026 database also lacks the Africa Cup of Nations 2025 row, which the game now adds (Morocco, the CAF Appeal Board result). The three Argentine titles of 2025 in the database are no fault (the AFA's Campeón de Liga).
 - [x] Every 2026/27 rules row is checked against a cited source (with the date read) and the database's divisions, and corrected where it differs. A row that no source confirms keeps its value and says so in its notes.
 - [x] The run set holds a 2026 start with three seeds.
 - [x] Same-save set PASS for the 2001 game against main 962d9986: start, prematch, new game and match (the match check at load 6.8).
