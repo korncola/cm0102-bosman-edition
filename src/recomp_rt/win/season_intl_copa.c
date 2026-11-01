@@ -142,6 +142,8 @@ static int copa16(uint32_t self)
     if (!e || e->teams != TEAMS) return -1;
     for (int i = 0; i < EDITIONS; i++)
         if (editions[i].year == year_of(self)) return i;
+    /* An edition after the table continues the last one: its guests and bracket (0.6.2 decision A). */
+    if (!season_intl_table_edition("goldcup", year_of(self))) return EDITIONS - 1;
     return -1;
 }
 

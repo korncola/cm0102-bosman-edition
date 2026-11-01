@@ -413,7 +413,8 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
     the game, Q152); a difference in any other part fails. allowed may also be a dict {run name: parts}: then
     only those runs may differ, each in its own parts. required: {run name: part}: that run's save must hold
     the part (0.6.0 slice 11: rules-on of a new game has the season part). rows: {run name: keys}: that run's
-    accepted difference must also be exactly those nation history rows (q48_rows_ok)."""
+    accepted difference must also be exactly those nation history rows (q48_rows_ok), or with keys HOST_ROWS only
+    the host fields of its nation history rows (host_rows_ok)."""
     if ONLY_RUNS:
         unknown = [n for n in ONLY_RUNS if n not in [r[0] for r in runs]]
         if unknown:
@@ -518,7 +519,12 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
                 print(f"ok    {name}: the save holds the same files as {base} (merged parts)")
                 continue
             ok_parts = allowed.get(name, ()) if isinstance(allowed, dict) else allowed
-            if differ and set(differ) <= set(ok_parts) and rows and name in rows and \
+            if differ and set(differ) <= set(ok_parts) and rows and name in rows and rows[name] == HOST_ROWS and \
+                    not host_rows_ok(saves[base], saves[name]):
+                failed += 1
+                print(f"FAIL  {name}: the save differs from {base} in more than the hosts of its history rows")
+                continue
+            if differ and set(differ) <= set(ok_parts) and rows and name in rows and rows[name] != HOST_ROWS and \
                     not q48_rows_ok(saves[base], saves[name], rows[name]):
                 failed += 1
                 print(f"FAIL  {name}: the save differs from {base} in other history rows than {rows[name]}")
@@ -667,6 +673,33 @@ def q48_rows_ok(base, path, keys):
     return sorted((c, y) for c, y, _ in b) == sorted(keys)
 
 
+# 0.6.2 slice 5 (open item 18, spec Decisions): in a season game every final writes its host into its history row,
+# also the finals whose class asks for no host (Cup::record_season_honours 0x519c2f). A new 2001 game with changing
+# rules on plays the final of the Copa America 2001 (29 July) in its first days, so its row names Colombia, while
+# the game with changing rules off (the base game, and history-q48-off) keeps no host there. So rules-on may differ
+# from history-q48-off in index.dat and nation_comp_history.dat, and rules-on-q48 from rules-on-q48-ref (a reference
+# build before slice 5), only in the host fields of history rows that had no host.
+HOST_ROWS = "hosts"
+HOST_ROW_PARTS = ("index.dat", "nation_comp_history.dat")
+
+
+def host_rows_ok(base, path):
+    """1 when the nation history rows of path are those of base, but for host fields (+0x16) that base leaves empty."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools", "save"))
+    import savfile
+    a = savfile.Sav(base).read_member("nation_comp_history.dat")
+    b = savfile.Sav(path).read_member("nation_comp_history.dat")
+    if len(a) != len(b):
+        return 0
+    for i in range(0, len(a), 26):
+        x, y = a[i:i + 26], b[i:i + 26]
+        if x[:0x16] + x[0x1a:] != y[:0x16] + y[0x1a:]:
+            return 0
+        if x[0x16:0x1a] != y[0x16:0x1a] and struct.unpack_from("<i", x, 0x16)[0] != -1:
+            return 0
+    return 1
+
+
 # A saved test game that opens on another screen than the news ends its load at another wait (0.6.0 slice 11).
 # yeovil.sav (a copy of Max's save, 20.8.02) opens on the squad screen: the load ends when Continue Game shows.
 LOAD_END = {"yeovil.sav": "wait continue"}
@@ -699,9 +732,11 @@ def same_save(program, game, mode, days, save_name=None, search=False, options=F
         steps = [s for s in STEPS if "5-holiday" not in s and "quit" not in s]
         return compare_runs(program, game, mode, q48_runs(new_game_runs(SAME_SAVE_RUNS), True),
                             without_intro_click(steps) + ["400000 quit"], days,
-                            allowed={"rules-on": (RULES_PART,) + RULES_ON_PARTS, "off": NEW_GAME_LAYOUT_PARTS,
+                            allowed={"rules-on": (RULES_PART,) + RULES_ON_PARTS + HOST_ROW_PARTS,
+                                     "rules-on-q48": HOST_ROW_PARTS, "off": NEW_GAME_LAYOUT_PARTS,
                                      "foreign-off": NEW_GAME_LAYOUT_PARTS},
-                            required={"rules-on": RULES_PART}, text_050=True)
+                            required={"rules-on": RULES_PART}, rows={"rules-on": HOST_ROWS, "rules-on-q48": HOST_ROWS},
+                            text_050=True)
     # --save: load the saved test game, then the same Go on Holiday steps as the new game.
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fixtures"))
     import fixtures  # noqa: E402  (fixtures.py imports this file)

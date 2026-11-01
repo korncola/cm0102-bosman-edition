@@ -154,9 +154,9 @@ PATCHES = {
     # docs/research/2026-10-19-world-cup-48.md, "Qualifying"). Each gives the original's value outside the gate (a
     # section whose campaign +0x40 + 2 is a World Cup of 48 teams, in a season game). this in the register named.
     0x921098: (0x4, "rt_wcq26_south_america_direct(esi, 4u)"),     # set_up_rules 0x921040: direct places, 6
-    0x91377F: (0x2, "rt_wcq26_asia_direct(esi, 2u)"),               # final groups 0x913740: direct places, 4
-    0x913BCE: (0x2, "rt_wcq26_asia_playoff_row(esi, 2u)"),          # play-off 0x913b60: the fifths of stage 9
-    0x913BDA: (0x2, "rt_wcq26_asia_playoff_row(esi, 2u)"),          # and of stage 10
+    0x91377F: (0x2, "rt_wcq26_asia_direct(esi, 2u)"),               # final groups 0x913740: group A's places
+    0x913BCE: (0x2, "rt_wcq26_asia_playoff_row(esi, 0, 2u)"),       # play-off 0x913b60: the row after them, stage 9
+    0x913BDA: (0x2, "rt_wcq26_asia_playoff_row(esi, 1, 2u)"),       # and stage 10
     0x911CF6: (0xD, "rt_wcq26_asia_stages(esi, 0xdu)"),             # ctor: no stage 12 (tie with Europe)
     0x910133: (0x32, "rt_wcq26_africa_first(esi, 0x32u)"),          # first round 0x910120: 2 x (pool - 45)
     0x90F6F0: (0x32, "rt_wcq26_africa_first(edi, 0x32u)"),          # template 0x90f600: first round teams
@@ -217,8 +217,8 @@ PATCHES = {
     0x4024FD: (0x4, "rt_intl_cup_groups(esi, 4u)"),                 # ACN draw: random place in a pot, again
     0x402531: (0x4, "rt_intl_cup_groups(esi, 4u)"),                 # ACN draw: next pot
     0x402772: (0x3, "rt_intl_cup_ko(esi, 3u)"),                     # ACN update_for_date 0x4025a0: group stages
-    0x40E90A: (0xC, "(4u * (rt_intl_cup_ko(esi, 2u) + 1u))"),       # Asian Cup ctor: malloc of the stage array
-    0x40E923: (0x3, "(rt_intl_cup_ko(esi, 2u) + 1u)"),              # Asian Cup ctor: stage count +0x2c
+    0x40E90A: (0xC, "(4u * (rt_intl_cup_ko_ctor(esi, 2u) + 1u))"),  # Asian Cup ctor: malloc of the stage array
+    0x40E923: (0x3, "(rt_intl_cup_ko_ctor(esi, 2u) + 1u)"),         # Asian Cup ctor: stage count +0x2c
     0x40F593: (0x8, "(4u * rt_intl_cup_ko(ecx, 2u))"),              # Asian Cup vtable +0x30: stage[ko]
     0x40F5A5: (0x2, "rt_intl_cup_ko(ecx, 2u)"),                     # Asian Cup stage news (vtable +0x44)
     0x40F627: (0x8, "(4u * rt_intl_cup_ko(esi, 2u))"),              # Asian Cup stage news: round record of stage[ko]
@@ -327,6 +327,12 @@ INSNS = {
     # EuroChamp build_team_slots 0x57bd80: no host from find_hosts (0x57be34) leads to the box "euro_champ.cpp
     # 837" (0x57becc..0x57bf22). Euro 2020 and 2028 have no host place in the table, so in a season game the
     # builder goes on to the default nations (0x57bf2f) with no host (win/season_intl.c).
+    # 0.6.2 slice 5 (win/season_intl.c). HostCountry::daily_update 0x5fa850 stores the draw of a host row 5 years
+    # before its finals (random(3) at 0x5faaa0): a pair that names a nation that no longer exists is drawn again
+    # (Q6, Q32). Cup::record_season_honours 0x519a90 writes no host for the classes whose slot +0x88 gives 0: at
+    # 0x519c2f a season game takes the edition's first host (open item 18).
+    0x5FAAAE: ("mov byte ptr [edx + 0x1e], al", "SYNC(); W8(edx + 0x1eu, rt_intl_host_pick(edx, eax & 0xffu));"),
+    0x519C2F: ("mov ecx, dword ptr [esp + 0x10]", "SYNC(); ebx = rt_intl_history_host(esi, ebx); ecx = R32(esp + 0x10u);"),
     0x57BE3D: ("jle 0x57becc", "if (cc_le(F)) { if (rt_intl_euro_no_host()) goto L_57bf2f; goto L_57becc; }"),
     # EuroChampQual::get_group_team_count 0x57d9d0 gives the size of each qualifying group by the hosts that the
     # pool leaves out (+0xf6): 1 (0x57d9de) or 2 (0x57d9e5), else the box "euro_champ_qual.cpp 581" (0x57da3d).
@@ -358,6 +364,14 @@ INSNS = {
     # another size gets a new array. The instruction after the step only moves this to ecx.
     0x401D85: ("mov ecx, esi", "SYNC(); rt_intl_cup_stages(esi); ecx = esi;"),
     0x40F785: ("mov ecx, esi", "SYNC(); rt_intl_cup_stages(esi); ecx = esi;"),
+    # 0.6.2 open items 44 and 46 (win/season_intl_cups.c): every host plays. The entrants take the two hosts of
+    # find_hosts first (ACN 0x402338, Asian Cup 0x40fea7). The hosts after the second (2027 ACN: Uganda; 2007
+    # Asian Cup: Thailand, Vietnam) join them before the ACN sort (0x402446, its start dl and the count edi) and
+    # before the Asian Cup pick from the list on the stack (0x4afbd0 at 0x40ffc8: list esp + 0x228, count ebp and
+    # [esp + 0x14], hosts in +0xee ebx). [esp + 0x13] keeps the host count dl in both (0x40234c, 0x40feb5). The
+    # replaced instructions only move; the flags are set again before they are read (0x40243d, 0x40ffbf).
+    0x40242F: ("mov ecx, dword ptr [esi + 0xee]", "SYNC(); t0 = rt_intl_cup_acn_hosts(esi, edi, edx & 0xffu); edi = t0 >> 8; edx = (edx & 0xffffff00u) | ((edx + t0) & 0xffu); W8(esp + 0x13u, edx & 0xffu); ecx = R32(esi + 0xeeu);"),
+    0x40FFB2: ("mov cl, byte ptr [esi + 0xf2]", "SYNC(); t0 = rt_intl_cup_asian_hosts(esi, esp + 0x228u, ebp, ebx); t1 = t0 & 0xffu; ebp = t0 >> 8; W32(esp + 0x14u, ebp); ebx += t1; edx = (edx & 0xffffff00u) | ((edx + t1) & 0xffu); W8(esp + 0x13u, edx & 0xffu); ecx = (ecx & 0xffffff00u) | R8(esi + 0xf2u);"),
 
     # Copa America of 16 teams (0.6.0 slice 27, win/season_intl_copa.c). Group A (0x5e11e0) takes the teams
     # 3 * k of +0xee: 4 * k with 16 teams. start_new_season 0x5e1530 keeps the stage array of the ctor: after
@@ -386,6 +400,14 @@ INSNS = {
     # the final groups (0x913740), the play-off (0x913bc1) and the statuses (0x912642) take the format of no
     # host. The flags are not read before pop and ret.
     0x9141EA: ("mov dword ptr [esi + 0xf3], ecx", "W32(esi + 0xf3u, ecx); rt_wcq_asia_format(esi); rt_wcq26_asia_format(esi);"),
+    # World Cup qualifying from the 2026 cycle (0.6.2 slice 5, open item 59, win/season_wcq26.c): the AFC and OFC
+    # pools leave out every host. The count of hosts and holder +0xee that the pool size takes off (Asia 44 -
+    # count, Oceania 10 - count) gets the hosts that the pool wraps left out (this in esi). Final groups 0x913740:
+    # after group A is made the status counts at [esp + 0x10] get group B's direct places (this in esi; the
+    # stack holds no push here, 0x913983). The flags of none of them are read.
+    0x9140B2: ("movsx edx, byte ptr [esi + 0xee]", "edx = (uint32_t)(int32_t)(int8_t)rt_wcq26_pool_exempt(esi, R8(esi + 0xeeu));"),
+    0x91FBD3: ("movsx edx, byte ptr [esi + 0xee]", "edx = (uint32_t)(int32_t)(int8_t)rt_wcq26_pool_exempt(esi, R8(esi + 0xeeu));"),
+    0x9139C0: ("mov edi, ebx", "edi = ebx; W8(esp + 0x10u, rt_wcq26_asia_direct_b(esi, R8(esp + 0x10u)));"),
     # A2: Asia stage 12 (0x913d50, this in esi, the two teams at [ebp]) takes its partner from the European
     # section (0x91def0, ecx the Europe object). The partner of the cycle replaces it; the European runner-up
     # stays the fallback.

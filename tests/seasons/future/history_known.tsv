@@ -1,30 +1,15 @@
 # Known faults of history_check.py on the saves of run-logs/release-test-0.6.0 (0.6.0, 30 October 2026).
 # Each row matches one check of one competition in every year (*). Remove a row when its fix lands.
 check	competition	year	note
-no-host	2005 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2007 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2009 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2011 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2013 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2015 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2017 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2019 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
 confederation	2020-21 Finals; 2022-23 UEFA Nations League (start	*	real history: a guest nation or club, or Australia in OFC before 2006
-no-host	2021 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2023 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2025 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-no-host	2027 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
 duplicate	A-League	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	A-League Men	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 missing	AFC Asian Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-no-host	AFC Asian Cup	*	open items 3 and 18: game rows without a host
 gap	AFC Champions League	*	open items 2 and 19: editions not written
 missing	AFC Champions League	*	open items 1, 2, 19 and 20: editions stop or are not written
 missing	AFC Champions League Elite	*	open items 1, 2, 19 and 20: editions stop or are not written
 gap	Africa Cup of Nations	*	open items 2 and 19: editions not written
 missing	Africa Cup of Nations	*	open items 1, 2, 19 and 20: editions stop or are not written
-no-host	Africa Cup of Nations	*	open items 3 and 18: game rows without a host
-no-host	African Cup of Nations	*	open items 3 and 18: game rows without a host
 same-final	Asian Super Cup	*	real history before the start (2000 to 2002, 2015 to 2017)
 duplicate	Belgian First Amateur Division	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	Belgian First Division B	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
@@ -32,7 +17,6 @@ duplicate	Belgian National Division 1	*	open items 3 and 17: rows held twice bef
 duplicate	Belgian Third Division	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 confederation	CIS Champions Cup	*	real history: a guest nation or club, or Australia in OFC before 2006
 missing	CONCACAF Gold Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-no-host	CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
 duplicate	Campeonato Baiano	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	Campeonato Cearense	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 missing	Campeonato Cearense	*	open items 1, 2, 19 and 20: editions stop or are not written
@@ -46,13 +30,10 @@ duplicate	Campeonato Paulista Série A1	*	open items 3 and 17: rows held twice b
 duplicate	Campeonato Pernambucano	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 duplicate	Challenger Pro League	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 missing	Conference Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-no-host	Copa America	*	open items 3 and 18: game rows without a host
 missing	Copa América	*	open items 1, 2, 19 and 20: editions stop or are not written
 next-edition	Copa América	*	open item 1: the class waits for 2200
-no-host	Copa América	*	open items 3 and 18: game rows without a host
 same-final	Copa América	*	a game result: check by hand
 missing	Copa América Centenario	*	open items 1, 2, 19 and 20: editions stop or are not written
-no-host	Copa América Centenario	*	open items 3 and 18: game rows without a host
 missing	Copa Sudamericana	*	open items 1, 2, 19 and 20: editions stop or are not written
 duplicate	Croatian Football Cup	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	DFB-Pokal	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
@@ -65,8 +46,7 @@ duplicate	English Isthmian League Premier Division	*	open items 3 and 17: rows h
 duplicate	English Southern League Premier Division	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 missing	FA Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 duplicate	FAI Cup	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
-no-host	FIFA Club World Cup	*	open items 3 and 18: game rows without a host
-no-host	FIFA Confederations Cup	*	open items 3 and 18: game rows without a host
+no-host	FIFA Club World Cup	*	not a fault: the original writes no host for the Club World Cup (slot +0x88 0x5dce00); its row of every year holds a random nation (0.6.2 slice 5)
 missing	FIFA World Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 missing	Football at the Summer Olympics	*	open items 1, 2, 19 and 20: editions stop or are not written
 next-edition	Football at the Summer Olympics	*	open item 1: the class waits for 2200
@@ -117,7 +97,6 @@ duplicate	Trophée des Champions	*	open items 58 and 59: rows held twice in the 
 duplicate	Turkish Super Cup	*	open item 17: a second edition in one calendar year (the final moves from August to January); slice 7 gives it the next free label, checked in a game for the Emperor's Cup only
 missing	UEFA European Championship	*	open items 1, 2, 19 and 20: editions stop or are not written
 next-edition	UEFA European Championship	*	open item 1: the class waits for 2200
-no-host	UEFA European Championship	*	open items 3 and 18: game rows without a host
 duplicate	UEFA Intertoto Cup	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 gap	Welsh Cup	*	open items 2 and 19: editions not written
 gap	OFC Men's Nations Cup	2024	open items 2 and 19: editions not written
@@ -129,16 +108,12 @@ entrant-count	AFC Asian Cup	2004	open item 44: the finals of 2004 to 2015 have 1
 entrant-count	AFC Asian Cup	2007	open item 44
 entrant-count	AFC Asian Cup	2011	open item 44
 entrant-count	AFC Asian Cup	2015	open item 44
-entrant-host	AFC Asian Cup	2007	open item 44: Thailand, a 2007 co-host, does not play
 entrant-count	OFC*Nations Cup*	2002	open item 45: 6 teams, the table 8 (4 in 2008)
 entrant-count	OFC*Nations Cup*	2008	open item 45
 entrant-count	OFC*Nations Cup*	2012	open item 45
 entrant-count	OFC*Nations Cup*	2016	open item 45
 entrant-count	OFC*Nations Cup*	2024	open item 45
-entrant-host	OFC*Nations Cup*	2012	open item 45: the host does not play
-entrant-host	OFC*Nations Cup*	2016	open item 45
-entrant-host	OFC*Nations Cup*	2024	open item 45
-entrant-host	Africa*Cup of Nations	2002	open item 46: the host does not play (Mali 2002)
-entrant-host	Africa*Cup of Nations	2027	open item 46: Kenya, Tanzania and Uganda do not play in 2027
+entrant-host	Africa*Cup of Nations	2002	open item 46: Mali 2002 does not play in a 2001 game (the original row names Egypt; a fix acts at the new game, against Q152: decision for Max)
 entrant-route	Intercontinental Cup	2002	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
 entrant-route	Intercontinental Cup	2003	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
+no-host	OFC Men's Nations Cup	2008	not a fault: the 2008 OFC Nations Cup was played home and away with no host (int-continental-87)

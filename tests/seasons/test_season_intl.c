@@ -57,6 +57,9 @@ static int rename_row(const char *old)
     return -1;
 }
 
+static int no_colombia(const char *file, const char *name) { (void)file; return strcmp(name, "Colombia"); }
+static int none_alive(const char *file, const char *name) { (void)file; (void)name; return 0; }
+
 int main(void)
 {
     /* The base game and the season code off: the original's values. */
@@ -78,8 +81,9 @@ int main(void)
     CHECK(rt_intl_first_year(INTL_EURO, 2004) == 2004, "2001 on: Euro first edition stays");
     CHECK(rt_intl_next_year(INTL_CONFED, 2003, 2) == 2005, "2001 on: Confederations Cup 2005");
     CHECK(rt_intl_next_year(INTL_CONFED, 2005, 2) == 2009, "2001 on: Confederations Cup 2009");
-    CHECK(rt_intl_next_year(INTL_CONFED, 2017, 2) == 2200, "2001 on: no Confederations Cup after 2017");
-    CHECK(rt_intl_next_year(INTL_CONFED, 2200, 2) == 2200, "2001 on: the waiting object stays");
+    CHECK(rt_intl_next_year(INTL_CONFED, 2017, 2) == 2999, "2001 on: no Confederations Cup after 2017 (never year)");
+    CHECK(rt_intl_next_year(INTL_CONFED, 2999, 2) == 2999, "2001 on: the ended object stays");
+    CHECK(rt_intl_next_year(INTL_CONFED, 2200, 2) == 2999, "2001 on: an object of a 0.6.1 save at 2200 ends");
     CHECK(rt_intl_next_year(INTL_COPA, 2001, 2) == 2004, "2001 on: Copa America 2004");
     CHECK(rt_intl_next_year(INTL_COPA, 2015, 2) == 2016, "2001 on: Copa America Centenario");
     CHECK(rt_intl_next_year(INTL_ASIAN, 2004, 4) == 2007, "2001 on: Asian Cup 2007");
@@ -115,11 +119,117 @@ int main(void)
     CHECK(rt_intl_first_year(INTL_ACN, 2016) == 2017, "2016: ACN 2017");
     CHECK(rt_intl_first_year(INTL_OLYMPICS, 2016) == 2016, "2016: Olympics in August 2016");
     game(1, 2018, 1);
-    CHECK(rt_intl_first_year(INTL_CONFED, 2019) == 2200, "2018: no Confederations Cup");
+    CHECK(rt_intl_first_year(INTL_CONFED, 2019) == 2999, "2018: no Confederations Cup (never year)");
     game(1, 2026, 1);
     CHECK(rt_intl_first_year(INTL_WORLD_CUP, 2026) == 2030, "2026: the 2030 World Cup (slice 29, Q560)");
     game(1, 2030, 1);
-    CHECK(rt_intl_first_year(INTL_WORLD_CUP, 2030) == 2200, "2030: no World Cup in the table after 2030");
+    CHECK(rt_intl_first_year(INTL_WORLD_CUP, 2030) == 2034, "2030: the World Cup continues every 4 years");
+
+    /* After the table (0.6.2 decision A, open items 1, 13, 15, 32 and 34): each class continues on its last
+     * cycle with the last edition's format; the ended Confederations Cup waits for the never year 2999. */
+    game(1, 2001, 1);
+    CHECK(rt_intl_next_year(INTL_WORLD_CUP, 2030, 4) == 2034, "after the table: World Cup 2034");
+    CHECK(rt_intl_next_year(INTL_EURO, 2028, 4) == 2032, "after the table: Euro 2032");
+    CHECK(rt_intl_next_year(INTL_COPA, 2024, 2) == 2028, "after the table: Copa America 2028");
+    CHECK(rt_intl_next_year(INTL_ACN, 2027, 2) == 2029, "after the table: ACN 2029, every 2 years");
+    CHECK(rt_intl_next_year(INTL_ASIAN, 2027, 4) == 2031, "after the table: Asian Cup 2031");
+    CHECK(rt_intl_next_year(INTL_OFC, 2024, 2) == 2028, "after the table: OFC Nations Cup 2028 (Max)");
+    CHECK(rt_intl_next_year(INTL_OLYMPICS, 2024, 4) == 2028, "after the table: Olympics 2028");
+    CHECK(rt_intl_next_year(INTL_WORLD_CUP, 2298, 4) == 2302, "after the table: World Cup 2302");
+    CHECK(rt_intl_next_year(INTL_ACN, 2299, 2) == 2301, "after the table: ACN 2301");
+    /* A 0.6.0 or 0.6.1 object that waits at 2200 goes to the next edition after it (slice 4b repairs the dates). */
+    CHECK(rt_intl_next_year(INTL_WORLD_CUP, 2200, 4) == 2202, "an object at 2200: World Cup 2202");
+    const SeasonIntlEdition *a = season_intl_edition("world_cup", 2034);
+    CHECK(a && a->teams == 48 && a->season == 2033 && a->start_year == 2034 && a->month == 6 && a->day == 8 &&
+              !a->golden && !strcmp(a->hosts, "Saudi Arabia"), "World Cup 2034: 48 teams, season 2033/34, 8 June, "
+                                                               "Saudi Arabia (Q5)");
+    /* 0.6.2 slice 5: the hosts after the table. */
+    CHECK(!strcmp(season_intl_edition("euro_champ", 2032)->hosts, "Italy;Turkey/T\xfcrkiye"), "Euro 2032: Italy, Turkey");
+    CHECK(!strcmp(season_intl_edition("olympics", 2028)->hosts, "United States/USA"), "Olympics 2028: United States");
+    CHECK(!strcmp(season_intl_edition("olympics", 2032)->hosts, "Australia"), "Olympics 2032: Australia");
+    CHECK(!*season_intl_edition("world_cup", 2038)->hosts, "World Cup 2038: the host row gives the host (Q4)");
+    CHECK(season_intl_host_slot("world_cup", 2038) == 2 && season_intl_host_slot("world_cup", 2006) == 2,
+          "World Cup 2038 takes the original's 2006 row (moved on 32 years)");
+    CHECK(season_intl_host_slot("african_nations", 2029) == 6 && season_intl_host_slot("african_nations", 2045) == 6,
+          "ACN 2029 and 2045 take the row of 2012");
+    CHECK(season_intl_host_slot("goldcup", 2028) == -1, "the Copa America rotates (Q32)");
+    CHECK(!strcmp(season_intl_edition("goldcup", 2028)->hosts, "Colombia") &&
+              !strcmp(season_intl_edition("goldcup", 2032)->hosts, "Peru"),
+          "Copa America 2028 and 2032: the table's hosts in order (Q32)");
+    CHECK(!strcmp(season_intl_edition("oceania_nations", 2028)->hosts, "New Zealand"), "OFC 2028: New Zealand");
+    CHECK(!strcmp(season_intl_rotation_host("asia_nations", 1, NULL), "Indonesia"), "Asian Cup rotation: each co-host");
+    CHECK(!strcmp(season_intl_rotation_host("goldcup", 0, no_colombia), "Peru"), "a host that no longer exists is left out");
+    CHECK(!season_intl_rotation_host("goldcup", 0, none_alive), "no live host: none");
+    CHECK(season_intl_rotation_step("goldcup", 2028) == 0 && season_intl_rotation_step("goldcup", 2036) == 2,
+          "rotation steps count the editions after the table");
+    {
+        int all[3] = {1, 1, 1}, two[3] = {0, 1, 1}, one[3] = {0, 0, 1}, none[3] = {0, 0, 0};
+        CHECK(season_intl_pick_pair(all, 1, 0) == 1, "Q6: a valid drawn pair stays");
+        CHECK(season_intl_pick_pair(two, 0, 0) == 1 && season_intl_pick_pair(two, 0, 1) == 2,
+              "Q6: a pair with a nation that no longer exists is drawn again from the others");
+        CHECK(season_intl_pick_pair(one, 0, 5) == 2, "Q6: the one valid pair");
+        CHECK(season_intl_pick_pair(none, 1, 0) == -1, "Q6: no valid pair, the host rotates (Q32)");
+    }
+    CHECK(!season_intl_table_edition("world_cup", 2034), "World Cup 2034 is not a table row");
+    CHECK(season_intl_table_edition("world_cup", 2030) == season_intl_edition("world_cup", 2030),
+          "a table edition is the table row");
+    CHECK(!season_intl_edition("world_cup", 2032), "no World Cup in 2032");
+    CHECK(!season_intl_edition("fifa_confed", 2021), "no Confederations Cup after 2017");
+    a = season_intl_edition("african_nations", 2029);
+    CHECK(a && a->teams == 24 && a->season == 2028 && a->start_year == 2029, "ACN 2029: 24 teams, June 2029");
+    a = season_intl_edition("asia_nations", 2031);
+    CHECK(a && a->teams == 24 && a->season == 2030 && a->month == 1, "Asian Cup 2031: 24 teams, January");
+    a = season_intl_edition("goldcup", 2032);
+    CHECK(a && a->teams == 16, "Copa America 2032: 16 teams, as 2024");
+    a = season_intl_edition("euro_champ", 2300);
+    CHECK(a && a->teams == 24 && a->season == 2299, "Euro 2300: 24 teams");
+    CHECK(!season_intl_edition("euro_champ", 32768), "no edition past the 16-bit year");
+    game(1, 2098, 1);
+    CHECK(rt_intl_first_year(INTL_WORLD_CUP, 2098) == 2102, "2098: the 2098 World Cup lies before, 2102");
+    CHECK(rt_intl_first_year(INTL_EURO, 2098) == 2100, "2098: Euro 2100");
+    CHECK(rt_intl_first_year(INTL_ACN, 2098) == 2099, "2098: ACN 2099 (season 2098/99)");
+    CHECK(rt_intl_first_year(INTL_CONFED, 2098) == 2999, "2098: no Confederations Cup");
+    a = season_intl_rule_edition("world_cup", 2102);
+    CHECK(a && a->teams == 48, "2098 on: World Cup 2102 with 48 teams");
+    game(1, 2298, 0);
+    CHECK(rt_intl_first_year(INTL_WORLD_CUP, 2298) == 2302, "2298: World Cup 2302, none in the past");
+    CHECK(rt_intl_first_year(INTL_OLYMPICS, 2298) == 2300, "2298: Olympics 2300");
+    a = season_intl_rule_edition("world_cup", 2302);
+    CHECK(a && a->teams == 48, "2298 off: the start season's 48 teams");
+
+    /* No class waits after its table (the idle year 2200 of 0.6.0 and 0.6.1): from every start with changing
+     * rules on, each next edition comes on the class's cycle, and only the Confederations Cup ends. With changing
+     * rules off the first edition of a start after the table is on the class's cycle too (then the original's
+     * step, checked above). */
+    {
+        static const int cycle[INTL_CLASSES] = {4, 4, 0, 4, 2, 4, 4, 4};
+        int waits = 0;
+        for (int start = 2001; start <= 2301; start += 7)
+            for (int rules = 0; rules <= 1; rules++) {
+                game(1, start, rules);
+                for (uint32_t c = 0; c < INTL_CLASSES; c++) {
+                    uint32_t y = rt_intl_first_year(c, (uint32_t)start);
+                    if (!rules) {               /* a 2001 start keeps the original's year (start_edition_2001) */
+                        const char *f = season_intl_class_file(c);
+                        if (start != 2001 && (c == INTL_CONFED ? start > 2017 && y != 2999
+                                                               : !season_intl_edition(f, (int)y)))
+                            waits++;
+                        continue;
+                    }
+                    for (int k = 0; k < 120 && y < 2400u; k++) {
+                        uint32_t n = rt_intl_next_year(c, y, cycle[c] ? (uint32_t)cycle[c] : 2u);
+                        if (c == INTL_CONFED) {
+                            if (rules && y > 2017 && y != 2999) waits++;     /* off: every 2 years (Q232) */
+                        } else if (n <= y || (y > 2030 && rules && n - y != (uint32_t)cycle[c])) {
+                            waits++;
+                        }
+                        if (n <= y) break;
+                        y = n;
+                    }
+                }
+            }
+        CHECK(waits == 0, "no class waits after its table, only the Confederations Cup ends");
+    }
 
     /* Finals dates. */
     game(1, 2001, 0);

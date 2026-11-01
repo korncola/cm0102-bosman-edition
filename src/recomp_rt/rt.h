@@ -430,6 +430,8 @@ uint32_t rt_intl_wc_holder(uint32_t holder);
 uint32_t rt_intl_wc_holder_slot(uint32_t year);
 uint32_t rt_intl_oceania_left_out(uint32_t id);
 uint32_t rt_intl_euro_no_host(void);
+uint32_t rt_intl_host_pick(uint32_t row, uint32_t r);
+uint32_t rt_intl_history_host(uint32_t cup, uint32_t club);
 /* The European Championship of 24 teams (win/season_intl_euro.c): the team count (16), the knockout stage index
  * (3) and a new stage array after the step of start_new_season. Each gives the original's value for an edition
  * of 16 teams and in the base game. */
@@ -451,7 +453,9 @@ uint32_t rt_wcq26_africa_first(uint32_t self, uint32_t original);
 uint32_t rt_wcq26_africa_groups(uint32_t self, uint32_t original);
 void rt_wcq26_africa_format(uint32_t self);
 uint32_t rt_wcq26_asia_direct(uint32_t self, uint32_t original);
-uint32_t rt_wcq26_asia_playoff_row(uint32_t self, uint32_t original);
+uint32_t rt_wcq26_asia_direct_b(uint32_t self, uint32_t current);
+uint32_t rt_wcq26_asia_playoff_row(uint32_t self, int g, uint32_t original);
+uint32_t rt_wcq26_pool_exempt(uint32_t self, uint32_t exempt);
 uint32_t rt_wcq26_asia_stages(uint32_t self, uint32_t original);
 void rt_wcq26_asia_format(uint32_t self);
 uint32_t rt_wcq26_oceania_stages(uint32_t self, uint32_t original);
@@ -463,7 +467,12 @@ uint32_t rt_wcq26_europe_index(uint32_t self, uint32_t original);
 uint32_t rt_intl_cup_teams(uint32_t self, uint32_t original);
 uint32_t rt_intl_cup_groups(uint32_t self, uint32_t original);
 uint32_t rt_intl_cup_ko(uint32_t self, uint32_t original);
+uint32_t rt_intl_cup_ko_ctor(uint32_t self, uint32_t original);     /* the Asian Cup ctor: by the edition only */
 void rt_intl_cup_stages(uint32_t self);
+/* The hosts after the second of the ACN (entrants 0x4022c0 at 0x40242f) and the Asian Cup (0x40fdf0 at 0x40ffb2):
+ * each gives the new count << 8 | the hosts it added; no change in the base game. */
+uint32_t rt_intl_cup_acn_hosts(uint32_t self, uint32_t count, uint32_t hosts);
+uint32_t rt_intl_cup_asian_hosts(uint32_t self, uint32_t list, uint32_t count, uint32_t placed);
 /* The Copa America of 16 teams (win/season_intl_copa.c): the knockout stage index (2), the group count (3) and a
  * new stage array after the step of start_new_season. Each gives the original's value for an edition of 12
  * teams and in the base game. */
