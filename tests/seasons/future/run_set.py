@@ -93,7 +93,14 @@ DAYS = 365.25
 RESULT_CHECKS = {"same-final"}               # checks that depend on real results, not on Tier A's instant results
 SAVE_NAME = "samesave.sav"                    # the save of a leg (smoke_run.SAVE_NAME)
 SWITCHES = ("RECOMP_TIER_A", "RECOMP_DATE_JUMP", "RECOMP_TEST_EXTRA")
-SAVE_ON = (7, 20)                             # every leg saves on about 20 July after its last season
+SAVE_ON = 200                                 # every leg saves on day 200 (from 0, about 20 July) after its last season
+SCRIPT_TIMEOUT = "recomp: script: wait"       # a step of the new game script that timed out (testrun.c)
+
+
+def game_days(year, day):
+    """The day count of RECOMP_SAVE_AFTER_DAYS (testrun.c game_day): year * 366 + the day of the year from 0, so a
+    year that is not a leap year counts one day more than it has."""
+    return year * 366 + day
 LEG_HEAD = ["leg", "seasons", "result", "seconds", "save_date", "save_mb", "faults", "note"]
 
 
@@ -329,19 +336,28 @@ def play_game(row, o):
     health = row["tier"] == "B"
     legs, kept_decades, save, previous_work, new_faults = [], set(), None, None, 0
     plan = legs_of(row)
-    since = datetime.date(row["start"], 7, 1)          # the first day of a new game: about 1 July of the start year
+    since = game_days(row["start"], 181)              # the first day of a new game: about 1 July of the start year
     for k, (s0, s1) in enumerate(plan):
         work = os.path.join(folder, f"leg{k:03d}")
         if os.path.exists(work):
             return finish(folder, row, "fail", f"{work} exists: delete the game's folder to play it again", "",
                           k, new_faults, began, o)
-        # RECOMP_SAVE_AFTER_DAYS counts game days from the leg's first day: from the save it loads, to 20 July after
-        # its last season, so leap years do not move the saves
-        days = (datetime.date(s1 + 1, *SAVE_ON) - since).days
+        # RECOMP_SAVE_AFTER_DAYS counts in its own days (game_days) from the leg's first human turn: from the save it
+        # loads, to day SAVE_ON after the leg's last season. In real days a 10-season leg saved up to 20 days early.
+        days = game_days(s1 + 1, SAVE_ON) - since
         so["timeout"] = 14400 * (s1 - s0 + 1)
         wait_room(o, log)
         if k == 0:
             code, took, box = soak_run.new_game_leg(so, work, days)
+            err = os.path.join(work, "stderr.txt")
+            if code == 3 and not box and os.path.exists(err) and SCRIPT_TIMEOUT in open(err, errors="replace").read():
+                # The new game script is timed in ms, not by state: under the load of eight games making their worlds
+                # a step went astray (a2013s2 and a2013s3 of pass 1; the same seed passed alone). No game exists
+                # yet, so the leg is made again, once.
+                os.rename(work, work + "-script-timeout")
+                log("leg 0: the new game script timed out; making the game again")
+                wait_room(o, log)
+                code, took, box = soak_run.new_game_leg(so, work, days)
         else:
             code, took, box = soak_run.load_leg(so, work, save, days)
         saved = os.path.join(work, "user", SAVE_NAME)
@@ -364,7 +380,7 @@ def play_game(row, o):
                                                        f"{year}-{game.date[1] + 1:03d}", "", "", ""], LEG_HEAD)
             return finish(folder, row, "fail", f"leg {k} ({seasons}): the save is of day {game.date[1] + 1} of {year}, "
                                                f"before July {s1 + 1}", "", k, new_faults, began, o)
-        since = datetime.date(year, 1, 1) + datetime.timedelta(days=game.date[1])
+        since = game_days(year, game.date[1])
         for c, comp, y, detail in faults:
             tsv_row(os.path.join(folder, "faults.tsv"), [c, comp, y, "known" if checker.is_known((c, comp, y)) else "new",
                                                          detail, os.path.relpath(saved, folder)],
