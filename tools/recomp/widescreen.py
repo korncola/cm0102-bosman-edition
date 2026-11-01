@@ -207,3 +207,9 @@ from caps_wide import INSNS as CAPS_INSNS  # noqa: E402
 
 assert not set(CAPS_INSNS) & (set(INSNS) | set(PATCHES))
 INSNS.update(CAPS_INSNS)
+
+# A weather postponement keeps the match day's place in its fixture list (0.6.2 item 84) in the same way.
+from match_day import INSNS as MATCH_DAY_INSNS  # noqa: E402
+
+assert not set(MATCH_DAY_INSNS) & (set(INSNS) | set(PATCHES))
+INSNS.update(MATCH_DAY_INSNS)
