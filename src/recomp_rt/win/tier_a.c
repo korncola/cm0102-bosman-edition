@@ -122,6 +122,10 @@ static int skip(int nargs, uint32_t from)
 #define TRANSFERS 0xde1f54u          /* TRANSFER_MANAGER, the this of 0x8c16b0 and 0x8c1870 (0x83db1c, 0x83db60) */
 #define SLOTS 50                     /* club squad slots +0xd7 (VIRTUAL_STAFF 0x90d8f0 counts 0x32) */
 #define RELEASE_TO 45
+#define CLUB_TABLE 0xae23b4u
+#define CLUB_COUNT 0xae235cu
+#define NATION_COUNT 0xae2350u
+#define CLUB_SIZE 0x245u
 
 static uint32_t call_this(uint32_t fn, uint32_t self, int n, uint32_t *args)
 {
@@ -134,8 +138,11 @@ static uint32_t call_this(uint32_t fn, uint32_t self, int n, uint32_t *args)
  * alone 207 of 8,107 clubs still had all 50 slots filled in July 2108. So a Tier A AI club with all its squad slots
  * filled also releases its weakest players over 21 (current ability, player row +0x05; the age field +0x18, which the
  * reserve rule compares at 0x8cf9a8) until RELEASE_TO remain, through the original's release queue as the
- * assessment does: queue_free_transfer 0x8c16b0 (staff, 0, -1) unless already queued (0x8c1870), released by the
- * next TRANSFER_MANAGER::daily_update 0x8c5880. A test-only step: the normal game never runs it. */
+ * assessment does: queue_free_transfer 0x8c16b0 (staff, 0, -1) unless already queued (0x8c1870). A test-only step:
+ * the normal game never runs it. It runs for every club before each TRANSFER_MANAGER::daily_update 0x8c5880 (below),
+ * which releases the queued players (process_free_transfer_queue 0x8c18c0 at 0x8c599c): in the assessment it came
+ * too late, as the day loop assesses a club only every 30 to 100 days (0x5cdcee..0x5cdd10), and Motherwell had 50
+ * filled slots in September 2041 of a 2001 start (match_eng.cpp 612). */
 static void release_surplus(uint32_t club)
 {
     uint32_t sp[SLOTS];
@@ -171,6 +178,22 @@ static void release_surplus(uint32_t club)
                 (char *)(g_mem + club + 4), SLOTS, queued);
 }
 
+/* TRANSFER_MANAGER::daily_update 0x8c5880, thiscall (date, slice), ret 8, called at 0x5cd3ee in the day loop. */
+void o_008c5880(void);
+
+RT_WRAP(008c5880, tier_a_transfer_daily_update)
+{
+    if (tier_a_in_play()) {
+        Cpu saved = cpu;
+        uint32_t base = rd32(g_mem, CLUB_TABLE);
+        int clubs = (int)rd32(g_mem, CLUB_COUNT) - 2 * (int)rd32(g_mem, NATION_COUNT);  /* national sides last */
+        for (int i = 0; i < clubs && !rt_unwinding; i++) release_surplus(base + (uint32_t)i * CLUB_SIZE);
+        if (rt_unwinding) return;
+        cpu = saved;
+    }
+    o_008c5880();
+}
+
 RT_WRAP(0083a730, tier_a_update_club_shortlist)
 {
     if (!tier_a_in_play()) {
@@ -181,7 +204,6 @@ RT_WRAP(0083a730, tier_a_update_club_shortlist)
     Cpu saved = cpu;
     uint32_t a[4] = {rd32(g_mem, cpu.ecx + 0xdc) + rd32(g_mem, club) * 9u, club, 1, 0};
     rt_callback(0x83cb40u, 4, a);
-    if (!rt_unwinding) release_surplus(club);
     if (rt_unwinding) return;
     cpu = saved;
     rt_ret_stdcall(0, 1);
