@@ -196,7 +196,12 @@ uint32_t rt_discipline_oceania_body(void)
  * later load made no object, so the OFC Champions League stopped after the season of the first load (2011 or 2012 in
  * the run set), and every save after packed the old part file again. 1 in that game, so the load makes the object
  * whose part its save holds. The same test as the Oceania ruling body above; the base game never moves Australia. */
-uint32_t rt_oceania_entry_kept(void) { return rt_discipline_oceania_body(); }
+uint32_t rt_oceania_entry_kept(void)
+{
+    uint32_t kept = rt_discipline_oceania_body();
+    if (kept) fprintf(stderr, "recomp: season intl: the Oceania entry keeps its OFC Champions League (Australia moved)\n");
+    return kept;
+}
 
 /* The Asian entry's creator has the same test (0x6699d0 on entry +4 at 0x831c6b, je 0x831e5b at 0x831c75). In that
  * game with no Asian nation selected but Australia, the new game made no Asian object, and a load after the move made
