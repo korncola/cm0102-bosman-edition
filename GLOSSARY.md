@@ -125,7 +125,7 @@ A test that runs one function of the original in an emulator, runs the same func
 _Avoid_: emulation test, golden test
 
 **Tier A run**:
-A test run to a far year that plays only the competitions: calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players and contracts. Results come at once from club and nation reputation. It skips the transfer market, background matches, new injuries and AI manager moves. The Tier A switch `RECOMP_TIER_A=1` turns it on.
+A test run to a far year that plays only the competitions: calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players and contracts. Results come at once from club and nation reputation. It skips the transfer market, background matches, new injuries and AI manager moves. A full AI club lets its weakest players over 21 go, because Tier A has no sales. The Tier A switch `RECOMP_TIER_A=1` turns it on.
 _Avoid_: fast mode, fast-forward mode, competition-only run
 
 **Tier B run**:

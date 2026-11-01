@@ -769,11 +769,13 @@ def health(game):
         sid, age, real = age_bad[0]
         faults.append(("overflow", "age", year, f"{len(age_bad)} players with an age field that is not the age "
                                                 f"from the birth date (staff {sid}: {age}, not {real})"))
-    rows_ = sav.read("player.dat") if "player.dat" in sav.members else b""
+    player_rows = sav.read("player.dat") if "player.dat" in sav.members else b""
 
     def ability(sid):                                         # current ability, player row +0x05 (0x6dbc50's pick)
         row = ages.get(sid, (99, -1))[1]
-        return struct.unpack_from("<h", rows_, row * PLAYER + 5)[0] if 0 <= row < len(rows_) // PLAYER else -1
+        if not 0 <= row < len(player_rows) // PLAYER:
+            return -1
+        return struct.unpack_from("<h", player_rows, row * PLAYER + 5)[0]
 
     for o in range(0, club_count * CLUB, CLUB):
         ids = [s32(clubs, o + 0xD7 + 4 * j) for j in range(SLOTS)]

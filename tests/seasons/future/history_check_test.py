@@ -143,12 +143,30 @@ def fixture_part(fixtures):
 # Aland's players are in its senior squad; Borduria's in no squad, so its senior and under-21 squads are empty.
 HEALTH_FAULTS = {("no-youth", "Aland", 2040), ("empty-squad", "Borduria", 2040),
                  ("empty-squad", "Borduria under-21", 2040), ("overflow", "age", 2040), ("overflow", "balance", 2040),
-                 ("full-squad", "Carpania FC", 2040)}
-# Full squads (open item 78): Carpania FC fills its 50 slots with Aland's players (staff 0 to 29, then 0 to 19
-# again), none aged 21 or under; Durania Stars fills them with Borduria's 30 (20 aged 21 or under) and 20 of
-# Aland's, so only Carpania FC is a fault. The other clubs have empty slots (-1).
+                 ("full-squad", "Carpania FC", 2040), ("full-squad", "Elbonia Rovers", 2040)}
+# Full squads (open item 78). Ages by the age field: Aland's 30 players (staff 0 to 29) are 30; of Borduria's 30
+# (staff 30 to 59), 21 are 21 or under (YOUNG, staff 59 by its wrong age field 7). Abilities (player.dat): Aland 50,
+# Borduria 60 for the older, 100 + id for YOUNG, so YOUNG are the best. Each full club lists YOUNG last, so the
+# slot order alone would keep them out of the 14 best.
+# - Carpania FC: Aland's players only, no one 21 or under: a fault.
+# - Elbonia Rovers: YOUNG and 29 of Aland's. The 14 best are young, 7 young remain: a fault.
+# - Borduria Sport: YOUNG with staff 59 twice and 28 of Aland's: 8 young remain, no fault.
+# - Durania Stars: 49 of Aland's in 49 slots, not full: no fault.
+YOUNG = [30 + k for k in range(30) if 24 - k % 10 <= 21]
 FULL_SQUADS = {"Carpania FC": list(range(30)) + list(range(20)),
-               "Durania Stars": list(range(30, 60)) + list(range(20))}
+               "Elbonia Rovers": list(range(29)) + YOUNG,
+               "Borduria Sport": list(range(28)) + YOUNG + [59],
+               "Durania Stars": list(range(30)) + list(range(19))}
+
+
+def players():
+    out = bytearray()
+    for i in range(60):
+        r = bytearray(0x46)
+        struct.pack_into("<ih", r, 0, i, 0)
+        struct.pack_into("<h", r, 5, 50 if i < 30 else 100 + i if i in YOUNG else 60)
+        out += r
+    return bytes(out)
 
 
 def staff():
@@ -237,7 +255,7 @@ def records(changing=1):
                ("Euro Super Cup_1.tmp", b"\0" * 64), ("Hatay Cup_14.tmp", part(2999)),
                ("fixtures_2038.tmp", fixture_part(FIXTURES_2038)), ("fixtures_2039.tmp", fixture_part(FIXTURES_2039)),
                ("fixtures_2040.tmp", fixture_part(FIXTURES_2040)), ("staff.dat", staff()),
-               ("finance.dat", finance())]
+               ("player.dat", players()), ("finance.dat", finance())]
     return members, want
 
 
