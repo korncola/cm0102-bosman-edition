@@ -25,7 +25,8 @@ the history checker on the save (history_check.py with its rules, names, nations
 Tier B). Every fault fails the game, a fault of the known list too: 0.6.2 ships only when the checker finds no fault in
 the run set (Q12); faults.tsv marks the known ones. The game plays on, so one run lists the faults of every decade. A
 leg that is not ok fails the game and ends it. At the end, every division and domestic cup must move on from each
-season to the next over the reports of all legs (league-stall: rules_report_check.league_stalls, as soak_run.py).
+season to the next over the reports of all legs (league-stall: rules_report_check.league_stalls, as soak_run.py),
+and with changing rules on the Greek Super League 2 plays one group from 2026/27 (greek-second, open item 68).
 
 The Tier B limits, over the legs of a Tier B game:
     no-manager  a national side with no manager in two saves in a row (more than one season)
@@ -226,6 +227,36 @@ def tier_b_limits(legs, last_year=2300):
     return faults
 
 
+# ---- The leagues ----
+
+GRE_ONE_GROUP = 2026                          # the first season of one Super League 2 group (open item 68)
+GRE_CLUBS = 14                                # the table's 16 clubs, at the GreSecond class's cap of 14 (item 68)
+IDLE = 2998                                   # the year of a division that is not held (season_divisions.c)
+
+
+def greek_second(comps):
+    """[(season, detail)]: a season from 2026/27 in which the Greek Super League 2 does not play as one group of
+    GRE_CLUBS clubs, the other group waiting at IDLE (open item 68: the rules table holds one group of 16 from
+    2026/27; a forum game kept the North and South groups). comps: the comp lines of the rules reports
+    (rules_report_check.read_report). Only the start line of a season counts: a leg that loads a save writes its
+    first lines under the start year, and the end line of the season before with the next year. Only a game with
+    changing rules on and Greece loaded has these lines."""
+    out = []
+    lines = [c for c in comps if c["file"] == "gre_second" and c["phase"] == "start" and c["season"] >= GRE_ONE_GROUP]
+    for season in sorted({c["season"] for c in lines}):
+        groups = {}
+        for c in lines:
+            if c["season"] == season:
+                groups[c.get("slot", len(groups))] = c        # one group a slot
+        playing = [c for c in groups.values() if c["year"] == season]
+        waiting = [c for c in groups.values() if c["year"] == IDLE]
+        if len(playing) != 1 or len(playing) + len(waiting) != len(groups):
+            out.append((season, f"{len(playing)} groups play, {len(waiting)} wait at {IDLE}, not one group"))
+        elif playing[0]["clubs"] != GRE_CLUBS:
+            out.append((season, f"the group has {playing[0]['clubs']} clubs, not {GRE_CLUBS}"))
+    return out
+
+
 # ---- One game ----
 
 def database_of(row, o):
@@ -356,11 +387,14 @@ def play_game(row, o):
     limits = tier_b_limits(legs, row["last"]) if health else []
     # every division and domestic cup moves on from one season to the next, over the reports of all legs (O278)
     import rules_report_check as rrc
-    comps = [c for k in range(len(plan)) for c in rrc.read_report(os.path.join(folder, f"leg{k:03d}", "report.tsv"))[1]
-             if os.path.exists(os.path.join(folder, f"leg{k:03d}", "report.tsv"))]
+    reports = [os.path.join(folder, f"leg{k:03d}", "report.tsv") for k in range(len(plan))]
+    comps = [c for r in reports if os.path.exists(r) for c in rrc.read_report(r)[1]]
     limits += [("league-stall", line) for line in rrc.league_stalls(comps)]
+    if row["changing"] == "on":
+        limits += [("greek-second", f"{season}/{(season + 1) % 100:02d}: {detail}")
+                   for season, detail in greek_second(comps)]
     for c, detail in limits:
-        tsv_row(os.path.join(folder, "faults.tsv"), [c, "Tier B" if c != "league-stall" else "leagues",
+        tsv_row(os.path.join(folder, "faults.tsv"), [c, "Tier B" if c in ("no-manager", "slow", "size") else "leagues",
                                                      legs[-1]["year"], "new", detail, ""],
                 ["check", "competition", "year", "known", "detail", "save"])
     reached = f"{legs[-1]['year']}" if legs else ""

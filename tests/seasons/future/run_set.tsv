@@ -40,3 +40,4 @@ b2025	B	2025	on	all	1	2300	1	release	run	Tier B: a 2025 start to 2300
 quick2025	normal	2025	on	England	1	2026	1	quick	run	tests the script: two seasons, one save and load
 quickjump	jump	2098	on	England	1	2099	1	quick	run	tests the script: a date jump, two seasons
 quicka	A	2025	on	England	1	2034	5	quick	run	tests the script: Tier A, two legs of five seasons
+quickgre	normal	2025	on	Greece	1	2027	1	quick	run	open item 68: the Greek Super League 2 plays one group from 2026/27
