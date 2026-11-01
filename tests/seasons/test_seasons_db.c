@@ -240,7 +240,8 @@ static void test_prepare_without_zip(void)
     CHECK(seasons_db_prepare_in(game, save, 2002, &r) == SEASONS_PREPARE_NO_ZIP && r.error[0] && !r.name[0]);
     CHECK(seasons_db_prepare_in(game, save, 2004, &r) == SEASONS_PREPARE_NO_ZIP);
     CHECK(seasons_db_prepare_in(game, save, 2006, &r) == SEASONS_PREPARE_NO_ZIP);
-    CHECK(seasons_db_prepare_in(game, save, 2026, &r) == SEASONS_PREPARE_NO_DATABASE && r.error[0]);
+    CHECK(seasons_db_prepare_in(game, save, 2027, &r) == SEASONS_PREPARE_NO_DATABASE && r.error[0]);
+    CHECK(seasons_db_prepare_in(game, save, 2026, &r) == SEASONS_PREPARE_NO_ZIP && r.error[0] && !r.name[0]);
     CHECK(seasons_db_prepare_in(game, save, 2003, &r) == SEASONS_PREPARE_NO_ZIP && r.error[0] && !r.name[0]);
     /* A zip that is no season database: the unpack fails and leaves no folder. */
     char sd[1100], zp[1200];

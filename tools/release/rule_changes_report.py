@@ -9,7 +9,7 @@ A field value of unknown, n/a or empty is no information. It is skipped, and the
 next known value is compared with the last known one, so a change is listed once
 and an unknown season never shows as a change.
 
-Usage: rule_changes_report.py [--rules DIR] [--out FILE] [--last-season 2025/26]
+Usage: rule_changes_report.py [--rules DIR] [--out FILE] [--last-season 2026/27]
 """
 import argparse
 import collections
@@ -195,7 +195,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--rules', default=os.path.join(root, 'docs', 'research', 'rules-0.6.0'))
     ap.add_argument('--out', default=os.path.join(root, 'docs', 'release', '0.6.0-rule-changes.md'))
-    ap.add_argument('--last-season', default='2025/26')
+    ap.add_argument('--last-season', default='2026/27')
     a = ap.parse_args()
     text = render(load(a.rules), a.last_season)
     os.makedirs(os.path.dirname(a.out), exist_ok=True)

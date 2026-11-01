@@ -26,6 +26,9 @@ a2021s3	A	2021	on	all	3	2100	10	release	run	Q11
 a2025s1	A	2025	on	all	1	2100	10	release	run	Q11
 a2025s2	A	2025	on	all	2	2100	10	release	run	Q11
 a2025s3	A	2025	on	all	3	2100	10	release	run	Q11
+a2026s1	A	2026	on	all	1	2100	10	release	run	Q56: the 2026/27 tile, October 2026
+a2026s2	A	2026	on	all	2	2100	10	release	run	Q56: the 2026/27 tile, October 2026
+a2026s3	A	2026	on	all	3	2100	10	release	run	Q56: the 2026/27 tile, October 2026
 a2001offs1	A	2001	off	all	1	2100	10	release	run	Q11: changing rules off
 a2001offs2	A	2001	off	all	2	2100	10	release	run	Q11: changing rules off
 a2001offs3	A	2001	off	all	3	2100	10	release	run	Q11: changing rules off
