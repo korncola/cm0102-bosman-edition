@@ -1874,7 +1874,7 @@ static void repair_idle(void)
  * rt_oceania_step) and its own start_new_season (0x797d60, vtable +8) makes the edition, as a season change does,
  * once more when that draw day has passed. The rules table holds the cup in every season
  * (tests/seasons/future/competitions.tsv, oceania_club_champ, cycle 1), so that edition is one the table holds.
- * Only a game that moved a selected Australia (rt_discipline_oceania_body) is repaired; there a class holds a past
+ * Only a game that moved a selected Australia (rt_discipline_oceania_body) is repaired. There a class holds a past
  * edition for about a year at most (the season pass of 15 August starts its next one) unless its save came from
  * before the fix. */
 #define OFC_CLUB_NEW_SEASON 0x00797d60u
