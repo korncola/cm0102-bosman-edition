@@ -22,7 +22,8 @@ tests/seasons/gate_run.py; the runner unpacks the own databases once, before the
 
 After each leg: the leg's own checks (soak_run: no box, no line of the season change net, exit code 0, a save), then
 the history checker on the save (history_check.py with its rules, names, nations and access files; with --health for
-Tier B). Every fault fails the game, a fault of the known list too: 0.6.2 ships only when the checker finds no fault in
+Tier B; a Tier A game skips same-final, a check of real results). Every fault fails the game, a fault of the known
+list too: 0.6.2 ships only when the checker finds no fault in
 the run set (Q12); faults.tsv marks the known ones. The game plays on, so one run lists the faults of every decade. A
 leg that is not ok fails the game and ends it. At the end, every division and domestic cup must move on from each
 season to the next over the reports of all legs (league-stall: rules_report_check.league_stalls, as soak_run.py),
@@ -89,9 +90,17 @@ SETS = {"release": {"release", "nightly"}, "nightly": {"nightly"}, "quick": {"qu
 GAME_CODE = ["src", "tools/recomp", "tools/seasons", "docs/research/rules-0.6.0"]
 FOUR_GB = 4 << 30
 DAYS = 365.25
+RESULT_CHECKS = {"same-final"}               # checks that depend on real results, not on Tier A's instant results
 SAVE_NAME = "samesave.sav"                    # the save of a leg (smoke_run.SAVE_NAME)
 SWITCHES = ("RECOMP_TIER_A", "RECOMP_DATE_JUMP", "RECOMP_TEST_EXTRA")
-SAVE_ON = (7, 20)                             # every leg saves on about 20 July after its last season
+SAVE_ON = 200                                 # every leg saves on day 200 (from 0, about 20 July) after its last season
+SCRIPT_TIMEOUT = "recomp: script: wait"       # a step of the new game script that timed out (testrun.c)
+
+
+def game_days(year, day):
+    """The day count of RECOMP_SAVE_AFTER_DAYS (testrun.c game_day): year * 366 + the day of the year from 0, so a
+    year that is not a leap year counts one day more than it has."""
+    return year * 366 + day
 LEG_HEAD = ["leg", "seasons", "result", "seconds", "save_date", "save_mb", "faults", "note"]
 
 
@@ -171,7 +180,7 @@ class Checker:
     def is_known(self, fault):
         return hc.is_known(self.known, fault[0], fault[1], fault[2])
 
-    def run(self, save, health):
+    def run(self, save, health, tier=None):
         """(game, faults [(check, competition, year, detail)], health summary, health rows). Every fault counts, a
         known one too: 0.6.2 ships only when the checker finds no fault in the run set (Q12). is_known marks the
         faults of history_known.tsv in the lists."""
@@ -183,6 +192,8 @@ class Checker:
             summary, rows, sick = hc.health(game)
             faults += sick
         faults += [("save-part", n, game.date[0], "the size does not fit its count, not read") for n in game.unread]
+        if tier == "A":             # a check of real results counts only in Tier B (spec, Decisions: test switches)
+            faults = [f for f in faults if f[0] not in RESULT_CHECKS]
         return game, faults, summary, rows
 
 
@@ -325,19 +336,28 @@ def play_game(row, o):
     health = row["tier"] == "B"
     legs, kept_decades, save, previous_work, new_faults = [], set(), None, None, 0
     plan = legs_of(row)
-    since = datetime.date(row["start"], 7, 1)          # the first day of a new game: about 1 July of the start year
+    since = game_days(row["start"], 181)              # the first day of a new game: about 1 July of the start year
     for k, (s0, s1) in enumerate(plan):
         work = os.path.join(folder, f"leg{k:03d}")
         if os.path.exists(work):
             return finish(folder, row, "fail", f"{work} exists: delete the game's folder to play it again", "",
                           k, new_faults, began, o)
-        # RECOMP_SAVE_AFTER_DAYS counts game days from the leg's first day: from the save it loads, to 20 July after
-        # its last season, so leap years do not move the saves
-        days = (datetime.date(s1 + 1, *SAVE_ON) - since).days
+        # RECOMP_SAVE_AFTER_DAYS counts in its own days (game_days) from the leg's first human turn: from the save it
+        # loads, to day SAVE_ON after the leg's last season. In real days a 10-season leg saved up to 20 days early.
+        days = game_days(s1 + 1, SAVE_ON) - since
         so["timeout"] = 14400 * (s1 - s0 + 1)
         wait_room(o, log)
         if k == 0:
             code, took, box = soak_run.new_game_leg(so, work, days)
+            err = os.path.join(work, "stderr.txt")
+            if code == 3 and not box and os.path.exists(err) and SCRIPT_TIMEOUT in open(err, errors="replace").read():
+                # The new game script is timed in ms, not by state: under the load of eight games making their worlds
+                # a step went astray (a2013s2 and a2013s3 of pass 1; the same seed passed alone). No game exists
+                # yet, so the leg is made again, once.
+                os.rename(work, work + "-script-timeout")
+                log("leg 0: the new game script timed out; making the game again")
+                wait_room(o, log)
+                code, took, box = soak_run.new_game_leg(so, work, days)
         else:
             code, took, box = soak_run.load_leg(so, work, save, days)
         saved = os.path.join(work, "user", SAVE_NAME)
@@ -353,14 +373,14 @@ def play_game(row, o):
         loaded = os.path.join(work, "user", "soak.sav")         # load_leg's copy of the save it loaded
         if os.path.exists(loaded):
             os.remove(loaded)
-        game, faults, summary, rows = checker.run(saved, health)
+        game, faults, summary, rows = checker.run(saved, health, row["tier"])
         year = game.date[0]
         if (year, game.date[1]) < (s1 + 1, 181):         # the save must come after the season change of s1
             tsv_row(os.path.join(folder, "legs.tsv"), [k, seasons, "short", f"{took:.0f}",
                                                        f"{year}-{game.date[1] + 1:03d}", "", "", ""], LEG_HEAD)
             return finish(folder, row, "fail", f"leg {k} ({seasons}): the save is of day {game.date[1] + 1} of {year}, "
                                                f"before July {s1 + 1}", "", k, new_faults, began, o)
-        since = datetime.date(year, 1, 1) + datetime.timedelta(days=game.date[1])
+        since = game_days(year, game.date[1])
         for c, comp, y, detail in faults:
             tsv_row(os.path.join(folder, "faults.tsv"), [c, comp, y, "known" if checker.is_known((c, comp, y)) else "new",
                                                          detail, os.path.relpath(saved, folder)],
@@ -568,7 +588,7 @@ def verify(folder, which="release", rows=None):
             if SAVE_NAME in files:
                 save = os.path.join(dirpath, SAVE_NAME)
                 try:
-                    _, faults, _, _ = checker.run(save, row["tier"] == "B")
+                    _, faults, _, _ = checker.run(save, row["tier"] == "B", row["tier"])
                 except Exception as e:          # a save the checker cannot read is a fault of the run
                     out.append(f"{row['name']}: {os.path.relpath(save, folder)}: not read ({e})")
                     continue

@@ -45,6 +45,11 @@ def main():
     if run_set.legs_of({"start": 2098, "last": 2100, "leg_years": 1}) != [(2098, 2098), (2099, 2099), (2100, 2100)]:
         bad.append("legs of a date jump: not one season each")
 
+    # The day count of RECOMP_SAVE_AFTER_DAYS (testrun.c): 366 a year. From day 196 of 2056 to day 200 of 2066 it
+    # gives 3664; the calendar gives 3657, which saved the leg of pass 1 on day 181 of 2066, before July.
+    if run_set.game_days(2066, run_set.SAVE_ON) - run_set.game_days(2056, 196) != 3664:
+        bad.append("game_days: not the count of testrun.c (year * 366 + day)")
+
     def leg(k, year, seconds, size, no_manager=frozenset()):
         return {"leg": k, "year": year, "seconds": seconds, "days": 365, "bytes": size, "no_manager": set(no_manager)}
 
@@ -150,11 +155,14 @@ def main():
     if not finds(make("gone", [result(r) for r in runs], checkpoint="b2001"), "checkpoint save of leg 0 is gone"):
         bad.append("verify: a lost checkpoint save passes")
     members, _ = hct.records()
-    lines = make("faults", [result(r) for r in runs], checkpoint="a2006s1", save=members)
+    lines = make("faults", [result(r) for r in runs], checkpoint="b2001", save=members)
     for text in ("samesave.sav: duplicate Euro Finals 2028", "samesave.sav: no-host World Finals 2034",
                  "samesave.sav: same-final Euro Super Cup 2028"):      # history faults that the fixture plants
         if not finds(lines, text):
             bad.append(f"verify: the checker does not find {text!r} on a kept save")
+    lines = make("faults-a", [result(r) for r in runs], checkpoint="a2006s1", save=members)
+    if not finds(lines, "samesave.sav: duplicate Euro Finals 2028") or finds(lines, "same-final"):
+        bad.append("verify: a Tier A save does not skip same-final (a check of real results) or skips more")
     waiting = run_set.verify(os.path.join(work, "ok"))                 # the real set: a2001nation waits
     if not finds(waiting, "a2001nation: not in the run"):
         bad.append("verify: the waiting row a2001nation does not block a release")
