@@ -34440,6 +34440,7 @@ static const SeasonHistClear clears_30[] = {
 static const SeasonHistRow rows_30[] = {
     {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
     {"FIFA World Cup", 2026, {"Spain", "Argentina", "England", "Canada"}, {"", "", "", ""}},
+    {"African Cup of Nations", 2025, {"Morocco", "Senegal", "Nigeria", "Morocco"}, {"", "", "", ""}},
 };
 static const SeasonHistClear clears_31[] = {
     {"Croatian First Division", 2012},
@@ -34491,7 +34492,7 @@ const SeasonHistDb season_history_dbs[] = {
     {"October 2024", 2024, clears_27, 1, rows_27, 1},
     {"December 2025", 2025, clears_28, 1, rows_28, 1},
     {"May 2026", 2025, clears_29, 1, rows_29, 1},
-    {"October 2026", 2026, clears_30, 1, rows_30, 2},
+    {"October 2026", 2026, clears_30, 1, rows_30, 3},
     {"Autumn 2013", 2013, clears_31, 5, rows_31, 10},
 };
 const int season_history_dbs_count = 32;
