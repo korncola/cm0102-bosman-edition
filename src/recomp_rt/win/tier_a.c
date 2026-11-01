@@ -119,6 +119,58 @@ static int skip(int nargs, uint32_t from)
  * contract. The assessment needs neither skipped step: create_initial_shortlists 0x83a1b0 calls it for every
  * club with no 0x844660 before it (0x83a227), and it clears stale targets itself. With its third argument 1 it
  * returns at once for a human club (0x600a50 at 0x83cbdf, 0x83cbf4), as in the normal game. */
+#define TRANSFERS 0xde1f54u          /* TRANSFER_MANAGER, the this of 0x8c16b0 and 0x8c1870 (0x83db1c, 0x83db60) */
+#define SLOTS 50                     /* club squad slots +0xd7 (VIRTUAL_STAFF 0x90d8f0 counts 0x32) */
+#define RELEASE_TO 45
+
+static uint32_t call_this(uint32_t fn, uint32_t self, int n, uint32_t *args)
+{
+    cpu.ecx = self;
+    return rt_callback(fn, n, args);
+}
+
+/* The squad assessment releases too few players to stop squads growing: the normal game also sells about 18 % of
+ * a big squad each year (clubs at 45 slots or more, a 2020/21 season), and Tier A has no bids. With the assessment
+ * alone 207 of 8,107 clubs still had all 50 slots filled in July 2108. So a Tier A AI club with all its squad slots
+ * filled also releases its weakest players over 21 (current ability, player row +0x05; the age field +0x18, which the
+ * reserve rule compares at 0x8cf9a8) until RELEASE_TO remain, through the original's release queue as the
+ * assessment does: queue_free_transfer 0x8c16b0 (staff, 0, -1) unless already queued (0x8c1870), released by the
+ * next TRANSFER_MANAGER::daily_update 0x8c5880. A test-only step: the normal game never runs it. */
+static void release_surplus(uint32_t club)
+{
+    uint32_t sp[SLOTS];
+    int n = 0;
+    for (uint32_t j = 0; j < SLOTS; j++) {
+        uint32_t s = rd32(g_mem, club + 0xd7 + 4 * j);
+        if (s) sp[n++] = s;
+    }
+    if (n < SLOTS) return;
+    uint32_t a1c[1] = {club}, a5[5] = {club, 0, 1, 0, 0};
+    if (rt_callback(0x53b900u, 1, a1c) || rt_unwinding) return;      /* a national side (database_is_national_team) */
+    if (rt_callback(0x600a50u, 5, a5) || rt_unwinding) return;      /* a human club (as 0x83cbdf) */
+    int queued = 0;
+    uint32_t tm = rd32(g_mem, TRANSFERS);
+    while (n > RELEASE_TO && !rt_unwinding) {
+        int best = -1, best_ca = 0x7fffffff;
+        for (int k = 0; k < n; k++) {
+            uint32_t pr = rd32(g_mem, sp[k] + 0x61);
+            if (!pr || (int16_t)rd16(g_mem, sp[k] + 0x18) <= 21) continue;
+            int ca = (int16_t)rd16(g_mem, pr + 5);
+            if (ca < best_ca) best = k, best_ca = ca;
+        }
+        if (best < 0) break;
+        uint32_t s = sp[best], a1[1] = {s};
+        sp[best] = sp[--n];
+        if (call_this(0x8c1870u, tm, 1, a1) || rt_unwinding) continue;   /* already queued: it leaves anyway */
+        uint32_t a3[3] = {s, 0, 0xffffffffu};
+        call_this(0x8c16b0u, tm, 3, a3);
+        queued++;
+    }
+    if (queued && !rt_unwinding)
+        fprintf(stderr, "recomp: Tier A: %.50s has %d squad slots filled, releases %d players over 21\n",
+                (char *)(g_mem + club + 4), SLOTS, queued);
+}
+
 RT_WRAP(0083a730, tier_a_update_club_shortlist)
 {
     if (!tier_a_in_play()) {
@@ -129,6 +181,7 @@ RT_WRAP(0083a730, tier_a_update_club_shortlist)
     Cpu saved = cpu;
     uint32_t a[4] = {rd32(g_mem, cpu.ecx + 0xdc) + rd32(g_mem, club) * 9u, club, 1, 0};
     rt_callback(0x83cb40u, 4, a);
+    if (!rt_unwinding) release_surplus(club);
     if (rt_unwinding) return;
     cpu = saved;
     rt_ret_stdcall(0, 1);
