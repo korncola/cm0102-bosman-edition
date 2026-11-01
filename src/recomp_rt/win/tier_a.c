@@ -9,8 +9,7 @@
  *
  * The skips, each a full no-op that pops the original's arguments (no caller reads eax, cited per wrap). They act
  * only when the game is made (0xdd711c), so a Tier A game is made as the normal game is:
- * - The AI transfer market: update_club_shortlist 0x83a730 (ret 4 at 0x83a772, called at 0x5cdd15; its squad
- *   assessment stays, see its wrap),
+ * - The AI transfer market: update_club_shortlist 0x83a730 (ret 4 at 0x83a772, called at 0x5cdd15),
  *   make_club_bids 0x84a020 (ret 4 at 0x84abbf, called at 0x5cdd6d), the day loop's calls of the position lists
  *   0x839e60 (ret 4 at 0x83a12c, called at 0x5cda46) and 0x83a780 (ret at 0x83a9c4, called at 0x5cda56; the
  *   constructor 0x839cf8, the load 0x83b229 and 0x83a6b3 still build them), and add_player_to_club_shortlists
@@ -103,22 +102,6 @@ static int skip(int nargs, uint32_t from)
     return 1;
 }
 
-/* Shortlist_Manager::update_club_shortlist 0x83a730, thiscall (club), ret 4 (0x83a772), one caller in the day loop
- * (0x5cdd15, for a random share of the clubs each day). It frees the club's target slots (0x844660 at 0x83a749),
- * assesses its squad (assess_club_squad 0x83cb40 at 0x83a763, args: the club's shortlist entry [this + 0xdc] +
- * id * 9, the club, 1, 0) and updates its shortlist (0x83b6e0 at 0x83a76b). In Tier A only the assessment stays
- * (0.6.2 open item 78). It is the one kept step of the market that makes a big squad smaller: above R / 500 + 25
- * players (R the club's reputation +0x80) it queues weak players with a low value for a free transfer
- * (queue_free_transfer 0x8c16b0 at 0x83db6b), and the kept TRANSFER_MANAGER::daily_update 0x8c5880 releases them
- * (process_free_transfer_queue 0x8c18c0). With the whole call skipped, squads only grew: new players and youth
- * joined, and nobody was sold or released before his contract ended. In July 2108 335 of 8,107 clubs had all 50
- * squad slots filled against 29 in the normal game, so the top-up 0x90dae0 could not add virtual players, and a
- * reserve side with an over-21 rule (3 allowed) fielded 10: Albion Rovers in January 2045 of a 2013 start (box
- * match_eng.cpp 652). The listing part of the assessment (transfer_list_player 0x842320 at 0x83dc42) calls
- * add_player_to_club_shortlists 0x842c00, which Tier A skips below, so a listed player leaves at the end of his
- * contract. The assessment needs neither skipped step: create_initial_shortlists 0x83a1b0 calls it for every
- * club with no 0x844660 before it (0x83a227), and it clears stale targets itself. With its third argument 1 it
- * returns at once for a human club (0x600a50 at 0x83cbdf, 0x83cbf4), as in the normal game. */
 #define TRANSFERS 0xde1f54u          /* TRANSFER_MANAGER, the this of 0x8c16b0 and 0x8c1870 (0x83db1c, 0x83db60) */
 #define SLOTS 50                     /* club squad slots +0xd7 (VIRTUAL_STAFF 0x90d8f0 counts 0x32) */
 #define RELEASE_TO 45
@@ -133,16 +116,18 @@ static uint32_t call_this(uint32_t fn, uint32_t self, int n, uint32_t *args)
     return rt_callback(fn, n, args);
 }
 
-/* The squad assessment releases too few players to stop squads growing: the normal game also sells about 18 % of
- * a big squad each year (clubs at 45 slots or more, a 2020/21 season), and Tier A has no bids. With the assessment
- * alone 207 of 8,107 clubs still had all 50 slots filled in July 2108. So a Tier A AI club with all its squad slots
- * filled also releases its weakest players over 21 (current ability, player row +0x05; the age field +0x18, which the
- * reserve rule compares at 0x8cf9a8) until RELEASE_TO remain, through the original's release queue as the
- * assessment does: queue_free_transfer 0x8c16b0 (staff, 0, -1) unless already queued (0x8c1870). A test-only step:
- * the normal game never runs it. It runs for every club before each TRANSFER_MANAGER::daily_update 0x8c5880 (below),
- * which releases the queued players (process_free_transfer_queue 0x8c18c0 at 0x8c599c): in the assessment it came
- * too late, as the day loop assesses a club only every 30 to 100 days (0x5cdcee..0x5cdd10), and Motherwell had 50
- * filled slots in September 2041 of a 2001 start (match_eng.cpp 612). */
+/* Not original code: a Tier A step (0.6.2 open item 78). Tier A has no AI sales, so squads only grew: new players
+ * and youth joined, and nobody left before his contract ended. In July 2108 335 of 8,107 clubs had all 50 squad
+ * slots (+0xd7) filled against 29 in the normal game (which sells about 18 % of a big squad a year: clubs at 45
+ * slots or more, 2020/21). The top-up 0x90dae0 then has no slot for a virtual player, and a reserve side under the
+ * rule "3 over 21" (0x8cf7e0 type 3, the age field +0x18 compared at 0x8cf9a8) fielded 10 or fewer: Albion Rovers in
+ * January 2045 of a 2013 start (match_eng.cpp 652), Motherwell in September 2041 of a 2001 start (612). So an AI
+ * club with all its squad slots filled releases its weakest players over 21 (current ability, player row +0x05, as
+ * the original's pick 0x6dbc50 and the national fill read it) until RELEASE_TO remain. The release is the
+ * original's: queue_free_transfer 0x8c16b0 (staff, 0, -1; as Shortlist_Manager::assess_club_squad 0x83cb40 calls
+ * it at 0x83db6b) unless already queued (0x8c1870), and TRANSFER_MANAGER::daily_update 0x8c5880 releases the queue
+ * the same day (process_free_transfer_queue 0x8c18c0 at 0x8c599c). It runs for every club before each daily
+ * update (the wrap below), only in play. */
 static void release_surplus(uint32_t club)
 {
     uint32_t sp[SLOTS];
@@ -196,17 +181,7 @@ RT_WRAP(008c5880, tier_a_transfer_daily_update)
 
 RT_WRAP(0083a730, tier_a_update_club_shortlist)
 {
-    if (!tier_a_in_play()) {
-        o_0083a730();
-        return;
-    }
-    uint32_t club = rt_arg(0);
-    Cpu saved = cpu;
-    uint32_t a[4] = {rd32(g_mem, cpu.ecx + 0xdc) + rd32(g_mem, club) * 9u, club, 1, 0};
-    rt_callback(0x83cb40u, 4, a);
-    if (rt_unwinding) return;
-    cpu = saved;
-    rt_ret_stdcall(0, 1);
+    if (!skip(1, 0)) o_0083a730();
 }
 
 RT_WRAP(0084a020, tier_a_make_club_bids)
