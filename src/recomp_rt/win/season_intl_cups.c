@@ -370,12 +370,12 @@ static int rest_delay(int c, uint32_t self, Day first, int y)
     long delay = now + REST_DAYS - from;
     delay = delay > 0 ? (delay + 6) / 7 * 7 : 0;
     if (delay > MAX_DELAY) {
-        fprintf(stderr, "recomp: season intl: %s %d round of 16 made on day %d of %d, %ld days late: %d kept\n",
+        fprintf(stderr, "recomp: season intl: %s %d knockout made on day %d of %d, %ld days late: %d kept\n",
                 cups[c].file, year_of(self), today, today_year, delay, MAX_DELAY);
         delay = MAX_DELAY;
     }
     if (logging())
-        fprintf(stderr, "recomp: season intl: %s %d round of 16 made on day %d of %d, first day %d of %d, delay %ld\n",
+        fprintf(stderr, "recomp: season intl: %s %d knockout made on day %d of %d, first day %d of %d, delay %ld\n",
                 cups[c].file, year_of(self), today, today_year, season_day_of_year(wy, wm0 + 1, wd), wy, delay);
     return (int)delay;
 }
