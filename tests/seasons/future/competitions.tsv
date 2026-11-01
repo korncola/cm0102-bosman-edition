@@ -83,3 +83,4 @@ all_ireland	All-Ireland Cup	domestic_cup	Ireland	0		0		2013	not held after the l
 conf_cup	Conference League Cup	domestic_cup	England	0		0		2023	not held after the last row: NEVER 2999	code as decided	season_cups_more.c:season_new_cup_next	end_year from the table rows (season start year).
 subs_rule	Substitutes and bench size	league	nation	0		1	2028	none	exact lookup: after 2027 the last written values stay, with no end year	code as decided	season_subs_rule.c; season_kind_subs.c:season_of	
 nation_rules	Foreign player, window and work permit rules	league	nation	0		1	2028	none	all rows to the season apply in order: the last rule stays	code as decided	season_nation.c:season_nation_state	
+kor_super	K League Super Cup	super_cup	South Korea	0		0		2006	not held after 2006: the Tier A game of 2001 plays 2004 to 2006, then none	code as decided	run-logs/runset-pass1 a2001s1 leg000	The real K League Super Cup was last held in 2006.

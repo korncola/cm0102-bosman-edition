@@ -22,7 +22,8 @@ tests/seasons/gate_run.py; the runner unpacks the own databases once, before the
 
 After each leg: the leg's own checks (soak_run: no box, no line of the season change net, exit code 0, a save), then
 the history checker on the save (history_check.py with its rules, names, nations and access files; with --health for
-Tier B). Every fault fails the game, a fault of the known list too: 0.6.2 ships only when the checker finds no fault in
+Tier B; a Tier A game skips same-final, a check of real results). Every fault fails the game, a fault of the known
+list too: 0.6.2 ships only when the checker finds no fault in
 the run set (Q12); faults.tsv marks the known ones. The game plays on, so one run lists the faults of every decade. A
 leg that is not ok fails the game and ends it. At the end, every division and domestic cup must move on from each
 season to the next over the reports of all legs (league-stall: rules_report_check.league_stalls, as soak_run.py),
@@ -89,6 +90,7 @@ SETS = {"release": {"release", "nightly"}, "nightly": {"nightly"}, "quick": {"qu
 GAME_CODE = ["src", "tools/recomp", "tools/seasons", "docs/research/rules-0.6.0"]
 FOUR_GB = 4 << 30
 DAYS = 365.25
+RESULT_CHECKS = {"same-final"}               # checks that depend on real results, not on Tier A's instant results
 SAVE_NAME = "samesave.sav"                    # the save of a leg (smoke_run.SAVE_NAME)
 SWITCHES = ("RECOMP_TIER_A", "RECOMP_DATE_JUMP", "RECOMP_TEST_EXTRA")
 SAVE_ON = (7, 20)                             # every leg saves on about 20 July after its last season
@@ -171,7 +173,7 @@ class Checker:
     def is_known(self, fault):
         return hc.is_known(self.known, fault[0], fault[1], fault[2])
 
-    def run(self, save, health):
+    def run(self, save, health, tier=None):
         """(game, faults [(check, competition, year, detail)], health summary, health rows). Every fault counts, a
         known one too: 0.6.2 ships only when the checker finds no fault in the run set (Q12). is_known marks the
         faults of history_known.tsv in the lists."""
@@ -183,6 +185,8 @@ class Checker:
             summary, rows, sick = hc.health(game)
             faults += sick
         faults += [("save-part", n, game.date[0], "the size does not fit its count, not read") for n in game.unread]
+        if tier == "A":             # a check of real results counts only in Tier B (spec, Decisions: test switches)
+            faults = [f for f in faults if f[0] not in RESULT_CHECKS]
         return game, faults, summary, rows
 
 
@@ -353,7 +357,7 @@ def play_game(row, o):
         loaded = os.path.join(work, "user", "soak.sav")         # load_leg's copy of the save it loaded
         if os.path.exists(loaded):
             os.remove(loaded)
-        game, faults, summary, rows = checker.run(saved, health)
+        game, faults, summary, rows = checker.run(saved, health, row["tier"])
         year = game.date[0]
         if (year, game.date[1]) < (s1 + 1, 181):         # the save must come after the season change of s1
             tsv_row(os.path.join(folder, "legs.tsv"), [k, seasons, "short", f"{took:.0f}",
@@ -568,7 +572,7 @@ def verify(folder, which="release", rows=None):
             if SAVE_NAME in files:
                 save = os.path.join(dirpath, SAVE_NAME)
                 try:
-                    _, faults, _, _ = checker.run(save, row["tier"] == "B")
+                    _, faults, _, _ = checker.run(save, row["tier"] == "B", row["tier"])
                 except Exception as e:          # a save the checker cannot read is a fault of the run
                     out.append(f"{row['name']}: {os.path.relpath(save, folder)}: not read ({e})")
                     continue

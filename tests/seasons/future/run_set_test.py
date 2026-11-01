@@ -150,11 +150,14 @@ def main():
     if not finds(make("gone", [result(r) for r in runs], checkpoint="b2001"), "checkpoint save of leg 0 is gone"):
         bad.append("verify: a lost checkpoint save passes")
     members, _ = hct.records()
-    lines = make("faults", [result(r) for r in runs], checkpoint="a2006s1", save=members)
+    lines = make("faults", [result(r) for r in runs], checkpoint="b2001", save=members)
     for text in ("samesave.sav: duplicate Euro Finals 2028", "samesave.sav: no-host World Finals 2034",
                  "samesave.sav: same-final Euro Super Cup 2028"):      # history faults that the fixture plants
         if not finds(lines, text):
             bad.append(f"verify: the checker does not find {text!r} on a kept save")
+    lines = make("faults-a", [result(r) for r in runs], checkpoint="a2006s1", save=members)
+    if not finds(lines, "samesave.sav: duplicate Euro Finals 2028") or finds(lines, "same-final"):
+        bad.append("verify: a Tier A save does not skip same-final (a check of real results) or skips more")
     waiting = run_set.verify(os.path.join(work, "ok"))                 # the real set: a2001nation waits
     if not finds(waiting, "a2001nation: not in the run"):
         bad.append("verify: the waiting row a2001nation does not block a release")
