@@ -24,6 +24,8 @@ The script is `tests/smoke/smoke_run.py --same-save`, with `--match` for the mat
 
 The file speed-ups have their own runs. The path lookup keeps each folder's names until the folder changes (`RECOMP_FOLDER_CACHE=0` turns it off). The season change keeps the player stats history file open (`RECOMP_KEEP_FILES=0` turns it off). Both switches are read once and are on by default. The run `files-off` turns both off. The same-save runs end before a season change, so a run across a season change with both switches on and off compares the saves too.
 
+Long holiday runs can differ when their pace differs, even with the same seed and steps. The daily staff pass 0x5ce2d0 reads its local [esp+0x70] before it writes it, and that stack slot holds what timed message pumps left there. This is the original's behaviour and is kept (open item 85). So compare long runs only when they ran at the same pace, and repeat a run that differs before treating it as a fault.
+
 The checks run before each merge of game code and again on the merged build. The pass rule is equal saves. Five files can differ only when the option opens a screen that the off run does not open, because that moves memory. We record each such case and tell Max. Any other difference stops the merge until we find the cause.
 
 Some changes alter the game by decision. Since 0.6.2 (Q48), the history rows of editions after the start date are removed in every game. This changes the first-season holders and so the play of a new game. The reference run `history-q48-off` plays the same game with that fix off (`RECOMP_HISTORY_AFTER_START=off`). The checks use it this way:
