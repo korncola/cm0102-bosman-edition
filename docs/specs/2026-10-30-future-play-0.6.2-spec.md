@@ -184,7 +184,7 @@ Merge danger: two-way door. Blast radius: every international competition.
 Blocked by: 4a
 Delivers: a save with a competition waiting for the idle year moves it to its next edition at load (Q8).
 Merge danger: one-way door, because the repair changes old saves at load. Blast radius: every international competition in loaded saves.
-- [ ] Fixture: a 2098 date jump made on the 0.6.1 build (its finals wait for 2200). After a load in 0.6.2, it plays the next World Cup, Euros and Olympics.
+- [x] Fixture: a 2098 date jump made on the 0.6.1 build (its finals wait for 2200). After a load in 0.6.2, it plays the next World Cup, Euros and Olympics.
 
 ### 5. Hosts
 Blocked by: 4a
