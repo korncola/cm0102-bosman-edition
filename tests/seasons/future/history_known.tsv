@@ -80,9 +80,6 @@ gap	Lega Pro girone C	*	open items 2 and 19: editions not written
 missing	Lega Pro girone C	*	open items 1, 2, 19 and 20: editions stop or are not written
 missing	Leinster Senior Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 duplicate	NIFL Championship	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
-duplicate	NIFL Championship 1	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
-duplicate	NIFL Cup	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
-duplicate	NIFL Premiership	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 duplicate	New South Wales Super League	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 confederation	OFC Club Championship	*	real history: a guest nation or club, or Australia in OFC before 2006
 gap	OFC Club Championship	*	open items 2 and 19: editions not written
@@ -101,14 +98,12 @@ duplicate	Portuguese Second Division B South	*	open items 3 and 17: rows held tw
 missing	President's Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 duplicate	Primera B Nacional	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	Primera División	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
-duplicate	Prva HNL	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 confederation	Recopa Sudamericana	*	real history: a guest nation or club, or Australia in OFC before 2006
 same-final	Russian Super Cup	*	a game result: check by hand
 duplicate	Serie C girone A	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 missing	Serie C girone A	*	open items 1, 2, 19 and 20: editions stop or are not written
 duplicate	Serie C girone B	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 missing	Serie C girone B	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Super League Greece	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 missing	Supercopa de España	*	open items 1, 2, 19 and 20: editions stop or are not written
 missing	Supercoppa Serie C	*	open items 1, 2, 19 and 20: editions stop or are not written
 duplicate	Superliga Argentina	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts

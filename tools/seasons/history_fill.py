@@ -221,10 +221,17 @@ REPAIRS = (("September 2010 ODB", "FIFA World Cup", (2007,)),)
 # competition, label after the shift, runner-up of the row that moves, its label). Each move names the real season
 # of the row: Autumn 2013 holds 2011/12 (Dinamo Zagreb / Hajduk Split, Olympiacos / Panathinaikos) and 2012/13
 # (Dinamo Zagreb / Lokomotiva, Olympiacos / PAOK) both at 2012; the final tables: en.wikipedia.org, 2012-13 Prva HNL
-# and 2012-13 Super League Greece. The file order of such rows does not tell which is the newer (German Cup,
+# and 2012-13 Super League Greece. Also the Northern Irish Premier Division (2012/13 Cliftonville / Crusaders), First
+# Division (2012/13 Ards; 2011/12 Ballinamallard United) and League Cup (2012/13 Cliftonville 4-0 Crusaders on
+# 26 January 2013; 2011/12 Crusaders 1-0 Coleraine): en.wikipedia.org, 2012-13 IFA Premiership, 2012-13 IFA
+# Championship and 2012-13 Irish League Cup. The Southern League Premier Division and the Trophee des Champions of
+# that database hold rows that name other clubs than the real ones, which no move mends (open item 59). The file order of such rows does not tell which is the newer (German Cup,
 # October 2016), so each move is a researched row of this list.
 LAST_ROW_MOVES = (("Autumn 2013", "Croatian First Division", 2012, "NK Lokomotiva Zagreb", 2013),
-                  ("Autumn 2013", "Greek National A Division", 2012, "PAOK Salonika", 2013))
+                  ("Autumn 2013", "Greek National A Division", 2012, "PAOK Salonika", 2013),
+                  ("Autumn 2013", "Northern Irish League Premier Division", 2012, "Crusaders", 2013),
+                  ("Autumn 2013", "Northern Irish League First Division", 2012, "", 2013),
+                  ("Autumn 2013", "Northern Irish League Cup", 2012, "Crusaders", 2013))
 # Finals that a database of 2010/11 or later may lack (0.6.2 slice 7, open item 20): each researched edition whose
 # label is missing after the nation shift is added, when its final is before the start. A final in July of the
 # start year counts: the game plays no finals in the July of its start (no game row of the 2010 World Cup in the

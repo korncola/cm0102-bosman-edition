@@ -34317,3 +34317,12 @@ add	Autumn 2013	2013	Croatian First Division	2012		differ	GNK Dinamo Zagreb	Croa
 clear	Autumn 2013	2013	Greek National A Division	2012										
 add	Autumn 2013	2013	Greek National A Division	2012		differ	Olympiacos Piraeus	Greece	Panathinaikos AO	Greece	PAOK Salonika	Greece		
 add	Autumn 2013	2013	Greek National A Division	2013		differ	Olympiacos Piraeus	Greece	PAOK Salonika	Greece	Atromitos Athens	Greece		
+clear	Autumn 2013	2013	Northern Irish League Premier Division	2012										
+add	Autumn 2013	2013	Northern Irish League Premier Division	2013		differ	Cliftonville	Northern Ireland	Crusaders	Northern Ireland	Linfield	Northern Ireland		
+add	Autumn 2013	2013	Northern Irish League Premier Division	2012		differ	Linfield	Northern Ireland	Portadown	Northern Ireland	Cliftonville	Northern Ireland		
+clear	Autumn 2013	2013	Northern Irish League First Division	2012										
+add	Autumn 2013	2013	Northern Irish League First Division	2012		differ	Ballinamallard United	Northern Ireland	Newry City	Northern Ireland				
+add	Autumn 2013	2013	Northern Irish League First Division	2013		differ	Ards	Northern Ireland						
+clear	Autumn 2013	2013	Northern Irish League Cup	2012										
+add	Autumn 2013	2013	Northern Irish League Cup	2013		differ	Cliftonville	Northern Ireland	Crusaders	Northern Ireland				
+add	Autumn 2013	2013	Northern Irish League Cup	2012		differ	Crusaders	Northern Ireland	Coleraine	Northern Ireland				
