@@ -338,16 +338,19 @@ def uefa_missing_rule():
 
 
 def titles_rule():
-    """duplicate: three Argentine titles in 2025 (the AFA's Campeon de Liga beside the Apertura and Clausura) are no
-    fault, three in 2026 are."""
+    """duplicate: three Argentine titles in 2025 (the AFA's Campeón de Liga beside the Apertura and Clausura) are no
+    fault in the database rows of a 2026 start, but are in a game that writes its own 2025 rows."""
     sys.path.insert(0, HERE)
     import history_check
     bad = []
-    for name, year, most, want in (("Argentine Premier Division", 2025, 2, 3), ("Argentine Premier Division", 2026, 2, 2),
-                                   ("Argentine Premier Division", 2025, 1, 3), ("Mexican First Division", 2025, 2, 2)):
-        got = history_check.titles_allowed(name, year, most, (1, 0))
+    for name, year, start, most, want in (("Argentine Premier Division", 2025, 2026, 2, 3),
+                                          ("Argentine Premier Division", 2026, 2026, 2, 2),
+                                          ("Argentine Premier Division", 2025, 2025, 2, 2),
+                                          ("Argentine Premier Division", 2025, 2001, 2, 2),
+                                          ("Mexican First Division", 2025, 2026, 2, 2)):
+        got = history_check.titles_allowed(name, year, start, most, (1, 0))
         if got != want:
-            bad.append(f"titles_allowed {name} {year}: {got}, not {want}")
+            bad.append(f"titles_allowed {name} {year} (start {start}): {got}, not {want}")
     return bad
 
 

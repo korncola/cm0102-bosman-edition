@@ -351,10 +351,11 @@ SEVERAL_TITLES = ((re.compile(r"(UEFA )?Inter-?Toto Cup", re.I), 0, 3),         
 TITLES_OF_YEAR = {("Argentine Premier Division", 2025): 3}
 
 
-def titles_allowed(name, year, most, several):
+def titles_allowed(name, year, start, most, several):
     """The rows a competition may hold in a label year: most (1, or 2 for a split season), the count of its
-    SEVERAL_TITLES format from that format's first year, or the count of TITLES_OF_YEAR."""
-    return max(most, several[0] if year >= several[1] else 1, TITLES_OF_YEAR.get((name, year), 1))
+    SEVERAL_TITLES format from that format's first year, or the count of TITLES_OF_YEAR. TITLES_OF_YEAR counts only
+    before the start year: those rows come from the database, and a game writes its own rows with its own format."""
+    return max(most, several[0] if year >= several[1] else 1, TITLES_OF_YEAR.get((name, year), 1) if year < start else 1)
 
 FRIENDLY = re.compile(r"^(Friendly|Reserve|'B' International|Under 21 International)")
 
@@ -396,7 +397,7 @@ def check(game, rules=None, changes=()):
         several = next((k, f) for pat, f, k in SEVERAL_TITLES if pat.fullmatch(name)) \
             if any(pat.fullmatch(name) for pat, f, k in SEVERAL_TITLES) else (1, 0)
         for y, n in sorted(per_year.items()):
-            if n > titles_allowed(name, y, most, several) and y >= start - 1:
+            if n > titles_allowed(name, y, start, most, several) and y >= start - 1:
                 pairs = "; ".join(f"{r[4][0]} / {r[5][0]}" for r in rs if r[3] == y)
                 faults.append(("duplicate", name, y, f"{n} rows: {pairs}"))
         # a missing host where the competition has hosts
