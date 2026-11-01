@@ -1,9 +1,31 @@
 cmake_minimum_required(VERSION 3.20)
-project(cm0102-mac VERSION 0.6.1 LANGUAGES C)
+project(cm0102-mac VERSION 0.7.0 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 
 find_package(SDL2 REQUIRED)
+
+# The secure connection of online play (0.7.0 slice 5, src/recomp_rt/win/secure.c): mbedTLS 3.6, the LTS branch
+# (Apache-2.0), built from its release with the settings of src/recomp_rt/win/tls_config.h. For a build with
+# no download, unpack the release and pass -DFETCHCONTENT_SOURCE_DIR_MBEDTLS=<its folder>.
+include(FetchContent)
+set(ENABLE_PROGRAMS OFF CACHE BOOL "Build the Mbed TLS programs" FORCE)
+set(ENABLE_TESTING OFF CACHE BOOL "Build the Mbed TLS tests" FORCE)
+set(MBEDTLS_FATAL_WARNINGS OFF CACHE BOOL "Mbed TLS warnings stop the build" FORCE)
+set(USE_SHARED_MBEDTLS_LIBRARY OFF CACHE BOOL "Build a shared Mbed TLS" FORCE)
+set(MBEDTLS_USER_CONFIG_FILE "${CMAKE_SOURCE_DIR}/src/recomp_rt/win/tls_config.h" CACHE FILEPATH
+    "Mbed TLS settings of Bosman Edition" FORCE)
+# DOWNLOAD_EXTRACT_TIMESTAMP exists from CMake 3.24; the Linux build's container (Ubuntu 22.04) has 3.22, which
+# takes the option as part of URL_HASH and stops.
+set(MBEDTLS_FETCH_EXTRA "")
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+    set(MBEDTLS_FETCH_EXTRA DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+endif()
+FetchContent_Declare(mbedtls
+    URL https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-3.6.7/mbedtls-3.6.7.tar.bz2
+    URL_HASH SHA256=a7e8bcbec0e6f761b4af24f25677626b35f762f68eef79c08677a363212d11f6
+    ${MBEDTLS_FETCH_EXTRA})
+FetchContent_MakeAvailable(mbedtls)
 
 add_executable(cm0102
     src/main.c
@@ -127,6 +149,49 @@ if(NOT WIN32)
     add_executable(heap_test tests/recomp/test_heap.c src/recomp_rt/heap.c)
     target_include_directories(heap_test PRIVATE src/recomp_rt)
     add_test(NAME heap COMMAND heap_test)
+    # The game's sockets (0.7.0 slice 2): WinSock behaviour on the host's sockets over 127.0.0.1.
+    add_executable(net_core_test tests/net/test_net_core.c src/recomp_rt/win/net_core.c
+        src/recomp_rt/host/net_posix.c)
+    target_include_directories(net_core_test PRIVATE src/recomp_rt src/recomp_rt/win)
+    add_test(NAME net_core COMMAND net_core_test)
+    # Online games in the game list (0.7.0 slice 4): lobby HTTP rules, JSON, game list rows, join check.
+    find_package(Threads REQUIRED)
+    add_executable(lobby_test tests/net/test_lobby.c src/recomp_rt/win/lobby_http.c src/recomp_rt/win/lobby.c
+        src/recomp_rt/win/lobby_rows.c src/recomp_rt/win/net_core.c src/recomp_rt/win/secure.c
+        src/recomp_rt/host/net_posix.c)
+    target_include_directories(lobby_test PRIVATE src/recomp_rt src/recomp_rt/win)
+    target_link_libraries(lobby_test PRIVATE Threads::Threads mbedtls)
+    add_test(NAME lobby COMMAND lobby_test)
+    # Joins through the relay (0.7.0 slice 5): WebSocket frames, the socket pair, a fake relay with a host and a
+    # human manager over the game's sockets, and the secure connection against a local TLS server.
+    add_executable(relay_test tests/net/test_relay.c src/recomp_rt/win/relay.c src/recomp_rt/win/websocket.c
+        src/recomp_rt/win/secure.c src/recomp_rt/win/lobby_http.c src/recomp_rt/win/net_core.c
+        src/recomp_rt/host/net_posix.c)
+    target_include_directories(relay_test PRIVATE src/recomp_rt src/recomp_rt/win)
+    target_link_libraries(relay_test PRIVATE Threads::Threads mbedtls)
+    add_test(NAME relay COMMAND relay_test)
+    add_test(NAME relay_tls COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/net/tls_check.py" $<TARGET_FILE:relay_test>)
+    set_tests_properties(relay_tls PROPERTIES SKIP_RETURN_CODE 77)
+    # Clear errors, connection test and ping (0.7.0 slice 7): control packets, failure reasons, texts, the test.
+    add_executable(net_errors_test tests/net/test_net_errors.c src/recomp_rt/win/net_errors.c
+        src/recomp_rt/win/net_test.c src/recomp_rt/win/lobby_http.c src/recomp_rt/win/lobby.c
+        src/recomp_rt/win/lobby_rows.c src/recomp_rt/win/net_core.c src/recomp_rt/win/secure.c
+        src/recomp_rt/host/net_posix.c)
+    target_include_directories(net_errors_test PRIVATE src/recomp_rt src/recomp_rt/win)
+    target_link_libraries(net_errors_test PRIVATE Threads::Threads mbedtls)
+    add_test(NAME net_errors COMMAND net_errors_test)
+    add_executable(invite_test tests/net/test_invite.c src/recomp_rt/win/invite.c src/recomp_rt/win/lobby_rows.c
+        src/recomp_rt/win/lobby_http.c src/recomp_rt/win/lobby.c src/recomp_rt/win/secure.c src/recomp_rt/host/net_posix.c)
+    target_include_directories(invite_test PRIVATE src/recomp_rt src/recomp_rt/win)
+    target_link_libraries(invite_test PRIVATE Threads::Threads mbedtls)
+    add_test(NAME invite COMMAND invite_test)
+    add_executable(link_test tests/net/test_link.c src/recomp_rt/host/link.c src/recomp_rt/host/posix.c)
+    target_include_directories(link_test PRIVATE src/recomp_rt)
+    add_test(NAME link COMMAND link_test)
+    add_executable(link_pass_test tests/net/test_link_pass.c src/recomp_rt/host/link_pass.c)
+    target_include_directories(link_pass_test PRIVATE src/recomp_rt)
+    target_link_libraries(link_pass_test PRIVATE Threads::Threads)
+    add_test(NAME link_pass COMMAND link_pass_test)
     # The zone of the heap for the player search (0.6.1, playersearch.c).
     add_executable(heap_zone_test tests/recomp/test_heap_zone.c src/recomp_rt/heap.c)
     target_include_directories(heap_zone_test PRIVATE src/recomp_rt)
@@ -415,14 +480,16 @@ if(EXISTS "${CM0102_EXE}")
 
     # The host functions (src/recomp_rt/host.h): Windows when cross-compiled with mingw-w64, else POSIX.
     if(WIN32)
-        set(RECOMP_HOST src/recomp_rt/host/win32.c)
+        set(RECOMP_HOST src/recomp_rt/host/win32.c src/recomp_rt/host/net_win32.c)
     else()
-        set(RECOMP_HOST src/recomp_rt/host/posix.c)
+        set(RECOMP_HOST src/recomp_rt/host/posix.c src/recomp_rt/host/net_posix.c)
     endif()
     add_executable(cm0102_recomp ${RECOMP_GEN}
         src/recomp_rt/rt.c
         src/recomp_rt/heap.c
         ${RECOMP_HOST}
+        src/recomp_rt/host/link.c
+        src/recomp_rt/host/link_pass.c
         ${RECOMP_WIN}
         src/cm3/key_comp_names.c
         src/cm3/key_ids_table.c
@@ -522,8 +589,11 @@ if(EXISTS "${CM0102_EXE}")
         if(APPLE)
             target_link_options(cm0102_recomp PRIVATE "LINKER:-stack_size,0x10000000")
         endif()
-        target_link_libraries(cm0102_recomp PRIVATE ${SDL2_LIBRARIES} m)
+        find_package(Threads REQUIRED)
+        target_link_libraries(cm0102_recomp PRIVATE ${SDL2_LIBRARIES} m Threads::Threads)
     endif()
+    # The secure connection of online play (src/recomp_rt/win/secure.c).
+    target_link_libraries(cm0102_recomp PRIVATE mbedtls)
 else()
     message(STATUS "cm0102_recomp: ${CM0102_EXE} not found, so the recompiled game is not built")
 endif()

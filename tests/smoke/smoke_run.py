@@ -47,8 +47,9 @@ the save of search-off.
 Options box check (--same-save --save <name> --options): the runs open the Bosman Edition Options box from the
 side bar before the holiday (0.5.0 slice 6). options and options-again switch Faster holidays off and on and
 close the box. options-tabs clicks the tabs Game, Graphics and Game, options-rules switches the default of
-Changing rules off and on (0.6.0 slice 13: the open game keeps its own value), and options-backups switches
-Save backups off and on, so the box is built as often. Each save
+Changing rules off and on (0.6.0 slice 13: the open game keeps its own value), options-backups switches
+Save backups off and on, and options-network clicks the tabs Network, Game and Network (0.7.0 slice 6: the
+game password field and the list of human managers online), so the box is built as often. Each save
 must be the same as the save of options. The runs give the box the same save folder path end
 (OPTIONS_USER_SUB).
 
@@ -208,7 +209,7 @@ SAME_SAVE_RUNS = [
              "clickable_names": "off", "attribute_colours": "off", "faster_days": "off",
              "match_columns": "off", "condition_colours": "off", "save_backups": "off", "remember_window": "off",
              "squad_views": "off", "attribute_groups": "off", "foreign_colours": "off",
-             "full_player_search": "off", "changing_rules": "off"}),
+             "full_player_search": "off", "changing_rules": "off", "online_play": "off"}),
     ("foreign-on", {"faster_days": "off", "foreign_colours": "on"}),
     ("foreign-off", {"faster_days": "off", "foreign_colours": "off"}),
     ("search-on", {"faster_days": "off", "full_player_search": "on"}),
@@ -220,6 +221,9 @@ SAME_SAVE_RUNS = [
     # (q48_runs below).
     ("rules-on", {"faster_days": "off", "changing_rules": "on"}),
     ("rules-off", {"faster_days": "off", "changing_rules": "off"}),
+    # Online play (0.7.0 slice 4): acts only in network games, so a single-player game must not change.
+    ("online-on", {"faster_days": "off", "online_play": "on"}),
+    ("online-off", {"faster_days": "off", "online_play": "off"}),
     # Idle CPU (#58) has no option: a test-only variable turns the sleep of an idle pass off.
     ("sleep-off", {"faster_days": "off", "_env": {"RECOMP_IDLE_SLEEP": "0"}}),
     # Q342: the season code off (slice 11 year sites, the season part, the Choose Season code) gives the save of
@@ -330,6 +334,8 @@ MATCH_RUNS = [
     ("search-off", {"full_player_search": "off"}),
     ("rules-on", {"changing_rules": "on"}),
     ("rules-off", {"changing_rules": "off"}),
+    ("online-on", {"online_play": "on"}),
+    ("online-off", {"online_play": "off"}),
     ("sleep-off", {"_env": {"RECOMP_IDLE_SLEEP": "0"}}),
     ("season-code-off", {"_env": {"RECOMP_SEASON_CODE": "off"}}),
     ("box-fixes-off", {"_env": {"RECOMP_BOX_FIXES": "off"}}),
@@ -587,11 +593,13 @@ def options_runs(load, holiday):
         OPTIONS_CLOSE + holiday
     backups = load + OPTIONS_OPEN + ["1000 click 584 155", "2500 click 452 402", "4000 click 371 402"] + \
         OPTIONS_CLOSE + holiday
+    network = load + OPTIONS_OPEN + ["1000 click 680 155", "2500 click 584 155", "4000 click 680 155"] + \
+        OPTIONS_CLOSE + holiday
 
     def run(name, steps):
         return (name, {"faster_days": "on", "_steps": steps, "_user_sub": OPTIONS_USER_SUB})
     return ([run("options", switch), run("options-again", switch), run("options-tabs", tabs),
-             run("options-rules", rules), run("options-backups", backups)],)
+             run("options-rules", rules), run("options-backups", backups), run("options-network", network)],)
 
 
 # The season part of a save (0.6.0 slice 11, src/recomp_rt/win/season.c). A save of a new game with

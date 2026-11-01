@@ -21,6 +21,8 @@
 #include "options.h"
 #include "winfit.h"
 #include "winscale.h"
+#include "net_core.h"
+#include "invite.h"
 
 #include <SDL.h>
 #include <stdlib.h>
@@ -76,12 +78,13 @@ static uint32_t mouse_lparam(void) { return ((uint32_t)mouse_y & 0xffff) << 16 |
 static uint32_t press_count;
 uint32_t win_press_count(void) { return press_count; }
 static uint64_t press_at;
+static int press_x, press_y;       /* where the press went down */
 
 static void post_mouse(uint32_t msg, int x, int y)
 {
     mouse_x = x;
     mouse_y = y;
-    if (msg == WM_LBUTTONDOWN) { press_count++; press_at = SDL_GetTicks64(); }
+    if (msg == WM_LBUTTONDOWN) { press_count++; press_at = SDL_GetTicks64(); press_x = x, press_y = y; }
     post(msg, (uint32_t)buttons, mouse_lparam());
 }
 
@@ -674,6 +677,14 @@ static void load_script(void)
 }
 
 /* Ends the program at once, as the quit step does, with this exit code. */
+void win_quit_now(void)
+{
+    win_save_window();
+    if (rt_on_fatal) rt_on_fatal();
+    SDL_Quit();
+    exit(0);
+}
+
 static void script_exit(int code)
 {
     if (rt_on_fatal) rt_on_fatal();
@@ -726,11 +737,13 @@ static void handle_event(SDL_Event *e)
         update_scaling();
         win_screen_dirty = 1;
         break;
+    case SDL_DROPFILE:                         /* macOS gives a cm0102:// link this way (invite.h) */
+        if (e->drop.file && !strncasecmp(e->drop.file, "cm0102:", 7)) invite_open(e->drop.file);
+        SDL_free(e->drop.file);
+        break;
     case SDL_QUIT:
-        win_save_window();
-        if (rt_on_fatal) rt_on_fatal();
-        SDL_Quit();
-        exit(0);
+        if (net_session_defer_quit()) break;       /* a host saves first (net_session.c) */
+        win_quit_now();
     case SDL_MOUSEMOTION:
         if (key_click.on) { key_click.real_x = e->motion.x; key_click.real_y = e->motion.y; break; }
         post_mouse(WM_MOUSEMOVE, e->motion.x, e->motion.y);
@@ -904,8 +917,7 @@ static void run_script(void)
         else if (!strcmp(s->action, "shot")) shot_window(s->text);
         else if (!strcmp(s->action, "report")) display_report_key();
         else if (!strcmp(s->action, "quit")) {
-            win_save_window();
-            script_exit(0);
+            if (!net_session_defer_quit()) win_quit_now();
         }
     }
 }
@@ -916,10 +928,17 @@ void win_poll_events(void)
     if (win_screen_dirty && now - last_present >= 16) present_now();
     if (now - last_poll < 2) return;              /* the game pumps very often; SDL needs less */
     last_poll = now;
+    if (net_session_quit_overdue()) win_quit_now();
     end_click_for_key();
     SDL_Event e;
     while (SDL_PollEvent(&e))
         handle_event(&e);
+    char link[128];
+    if (host_link_take(link, sizeof link)) {        /* a link that a second copy gave (host/link_pass.c) */
+        invite_open(link);
+        if (window) SDL_RaiseWindow(window);
+    }
+    invite_poll();
     if (window) run_script();
 }
 
@@ -975,6 +994,42 @@ RT_IMPORT(GetMessageA)
  * (a click that ends a text entry and then hits the button under the pointer), go through at once. */
 #define REPEAT_DELAY 400u
 #define REPEAT_INTERVAL 100u
+
+/* A joining game in a network game (0.7.0, #45, Q34, research note 2026-10-27-network-code-reading.md,
+ * section 11). Its client loop run_network_client 0x7fdc00 calls the poll at 0x7fdf17 (return address 0x7fdf1c)
+ * and sends the widget to the host as a click (opcode 6, Display::send_widget_click 0x568560, call at 0x7fe1df)
+ * when it differs from the last one (0x7fdf2c). Each new screen from the host clears the Display, so while the
+ * button stays down the same press went to every screen that arrived: on a LAN a normal click acted on two or
+ * more host screens, and the press of the join click (the game list's Next, before the loop runs) reached the
+ * host's Enter Name as Next ("Names Are Blank"). The original's WinSock hid this behind the peer's delayed
+ * acknowledgement (up to 200 ms), so its next screen came after a normal click had ended.
+ *
+ * So the poll at 0x7fdf17 gives -1 (nothing) for a held press that already gave a widget, unless the widget is
+ * another one and no new host screen came since: no packet with opcode 0, which resets the Display
+ * (Display::process_command_packet 0x564080, case 0 at 0x564131 calls Display::reset 0x55f7c0, counted by
+ * nc_resets_in). Other packets do not count: the host sent 5 bytes within 2 ms of each click (logged
+ * 2026-10-27), before the next poll of the same press. The loop then clears its last widget at 0x7fe1e8, as
+ * for a pointer over no widget, and the next press clicks as before. A widget from a poll outside the client
+ * loop counts too: the join click. The exception keeps a click that ends a text entry: the hit test 0x560490
+ * gives the field in one poll and the widget under the pointer in the next poll of the same press (logged
+ * 2026-10-27: field 0xb, then Next 0x15 on Enter Name), both on the same host screen, and the loop sends both.
+ * Only the poll at 0x7fdf17 changes. A screen loop of the joining game and every single-player poll are as
+ * before.
+ *
+ * Through the relay (0.7.0 slice 5) the client loop polls again only after the host's answer to the click
+ * (opcode 9, 5 bytes), about 130 ms later through the deployed relay (2026-10-28). A press is shorter than that,
+ * so the field came and the button under the pointer never did: Next on Enter Name was lost. So when the press
+ * that gave the last widget at this poll is up by its next poll, no new host screen came, and the pointer is
+ * still exactly where the press went down, that poll runs once more with the button flag 0xb67a34 set. The rule
+ * above then applies to it as to a held press: the same widget gives nothing. A new host screen before the poll
+ * stops the replay before the poll, because the poll acts on the screen with the flag set (lists, entries). */
+#define CLIENT_LOOP_POLL 0x7fdf1cu
+static uint32_t replay_press;               /* the press that the client loop's poll ran once more */
+/* The poll of the screen loop ScreenManager::monitor 0x7fc7e0 (call at 0x7fcc14): the game waits for input there,
+ * as when the original handles a click and its Auto Save. A host's quit saves there (net_session.c). */
+#define SCREEN_LOOP_POLL 0x7fcc19u
+static uint32_t click_press, click_widget;  /* the press that last gave a widget, and that widget */
+static uint64_t click_resets;               /* nc_resets_in at that poll */
 static uint32_t last_press, last_widget = 0xffffu, last_top;
 static uint64_t next_repeat_at;
 
@@ -1059,16 +1114,30 @@ RT_WRAP(0055f620, input_poll)
     int key_down_in = key_click.on && (int32_t)(q_head - key_click.down_at) >= 0;
     keys_display = cpu.ecx;
     uint32_t poll_ret = rd32(g_mem, cpu.esp), poll_display = cpu.ecx;
+    if (poll_ret == SCREEN_LOOP_POLL && net_session_screen_idle()) win_quit_now();
     waits_poll();
+    int replay = poll_ret == CLIENT_LOOP_POLL && click_press == press_count && replay_press != press_count &&
+                 !(buttons & 1) && !rd32(g_mem, 0xb67a34u) && mouse_x == press_x && mouse_y == press_y &&
+                 nc_resets_in() == click_resets;
+    if (replay) {
+        replay_press = press_count;
+        wr32(g_mem, 0xb67a34u, 1);
+    }
     o_0055f620();
+    if (replay) wr32(g_mem, 0xb67a34u, 0);
     options_screen_after_poll(poll_ret, poll_display, cpu.eax & 0xffffu);   /* the options box item */
     names_after_poll();
     if (key_down_in) key_click.polls++;
     if (script_click.on && (int32_t)(q_head - script_click.down_at) >= 0) script_click.polls++;
     uint32_t widget = cpu.eax & 0xffffu;
-    int held = (buttons & 1) && rd32(g_mem, 0xb67a34u) && !rd32(g_mem, 0xb67a3cu);
+    int held = replay || ((buttons & 1) && rd32(g_mem, 0xb67a34u) && !rd32(g_mem, 0xb67a3cu));
     idle_rest(widget);
     if (widget == 0xffffu || !held) return;
+    /* The client loop of a joining game sends each press to one host screen only. */
+    uint64_t resets = nc_resets_in();
+    if (poll_ret == CLIENT_LOOP_POLL && press_count == click_press &&
+        (widget == click_widget || resets != click_resets)) { cpu.eax |= 0xffffu; return; }
+    click_press = press_count, click_widget = widget, click_resets = resets;
     uint32_t top = rd32(g_mem, 0xb74450u + 0x7d4u + 0x0eu);   /* the screen node on top (waits.c) */
     if (press_count != last_press || widget != last_widget) {
         last_press = press_count;

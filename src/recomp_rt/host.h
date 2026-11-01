@@ -95,6 +95,23 @@ int host_pick_folder(const char *title, char *out, size_t room);
  * with the folder as its one argument (Mac and Linux). */
 int host_open_folder(const char *path);
 
+/* The cm0102:// link handler (0.7.0 slice 8, host/link.c): the computer starts this program with a link
+ * cm0102://join/<code> from an invite link page. on 1 writes it for this program, for the current user only,
+ * and writes nothing when it is there already. on 0 removes it when it starts this program (on Linux: this AppImage). Windows: the key
+ * HKEY_CURRENT_USER\Software\Classes\cm0102. Linux, only in an AppImage: the file
+ * cm0102-bosman-edition.desktop in ~/.local/share/applications. macOS: nothing, because the app's Info.plist
+ * names the link and the system reads it. 1 when the handler is this program's now, 0 when there is none, -1
+ * on a failure (with a message on stderr). */
+int host_link_handler(int on);
+
+/* One copy of the game takes the invite links of a user (0.7.0 slice 8, Q41, host/link_pass.c). host_link_pass
+ * gives the link to the copy that listens on the channel of this user folder: 1 when that copy kept it, and the
+ * caller then ends. host_link_listen makes this copy the one that listens, when no other copy does: 0 when it
+ * listens. host_link_take gives a link that arrived, once: 1 with the link in out. */
+int host_link_pass(const char *user_dir, const char *link);
+int host_link_listen(const char *user_dir);
+int host_link_take(char *out, size_t room);
+
 /* Time. */
 void host_gmtime(time_t t, struct tm *out);
 void host_localtime(time_t t, struct tm *out);

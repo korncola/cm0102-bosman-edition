@@ -526,6 +526,10 @@ uint32_t rt_copa_next_year(uint32_t self, uint32_t year, uint32_t step);
 extern uint32_t rt_staff_reserve;
 uint32_t rt_staff_reserve_size(void);
 
+/* The buffer of the game list's names (0.7.0 slice 4a, src/recomp_rt/win/game_list.c): 51 slots of 50 bytes and
+ * 2 more, in place of the global 0xdd6cd0 of 10 slots. The sites of tools/recomp/game_list.py read it. */
+uint32_t rt_game_list_names(void);
+
 /* Full player search (#57, src/recomp_rt/win/playersearch.c): 1 when the option is on. The replaced jumps
  * at 0x7afc8d, 0x7afc9d and 0x7afcdf in tools/recomp/widescreen.py ask it. */
 uint32_t rt_full_player_search(uint32_t screen, uint32_t staff);

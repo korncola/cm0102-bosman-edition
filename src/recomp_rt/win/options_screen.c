@@ -1,8 +1,9 @@
 /* The Bosman Edition Options box (spec 2026-10-16-features-0.5.0, slice 6; #56).
  *
  * A box the size of the original's Game Settings box (build 0x823950), with every option of the settings
- * file (options.h) on two tabs, Graphics and Game, nine rows each (Graphics was Screen until 0.6.0, Max's play
- * test). Labels and notes come from the mockup docs/research/mockups/2026-10-16-options-screen.html, variant B.
+ * file (options.h) on three tabs, Graphics and Game with nine rows each (Graphics was Screen until 0.6.0, Max's
+ * play test), and Network (0.7.0 slice 4: Online play). The tab buttons share their row 2:2:1, so Graphics and
+ * Game keep their places of the two-tab box. Labels and notes come from the mockup docs/research/mockups/2026-10-16-options-screen.html, variant B.
  * The version line shows the project version (CMakeLists.txt, CM0102_VERSION).
  *
  * The box is a screen of the runtime on the game's own screen stack, as Team views (views.c). The push of
@@ -50,11 +51,35 @@
  * it. A switch in the box does not change the game: smoke_run.py --same-save --options compares two
  * switches with two tab clicks.
  *
- * Node slots: 0 the tab (1 Graphics, 2 Game), 1 the place that opened the box (1 start screen, 2 game). Only
+ * Network tab, 0.7.0 slice 6 (Q38, Q39). Below Online play:
+ * - On the start screen and while this game hosts (a single-player game shows Online play only, Q152):
+ * - Game password: a text field that hides its text (Display::add_item 0x55f990 with type 0x18 and text flags 0x8c,
+ *   as the original's password box at 0x822f56..0x822f9f). It writes into a buffer of the runtime, as the game name
+ *   field writes into 0xdd70dc (0x81f243..0x81f287). The box saves it as game_password at the next click in the box
+ *   and at Close, and the join check uses it at once (nc_set_host_password).
+ * - Human managers online, while this computer hosts a network game (net_session_managers): the name, the club and
+ *   a Kick button for each. Kick opens the original's confirm box (confirm_push 0x591840 with 7 arguments, as Exit
+ *   Game calls it at 0x764362..0x7643a6), "Kick <name>? Their club goes on holiday.", with No and Yes. Its input
+ *   puts its code and the button (1 No, 2 Yes) in 0xdd6be0 and 0xdd6be4 and closes (0x591e7d..0x591e94); the box
+ *   below then gets an input with no widget, and Yes kicks (net_session_kick): the original's leave path puts the
+ *   club on holiday.
+ *
+ * Network tab, 0.7.0 slice 7. Between Online play and Game password, outside a single-player game, a Connection
+ * test row: the Test button starts
+ * the connection test (net_test.c), and the row's text shows "Testing ..." and then its result. The box builds
+ * again at its next input with no widget once the test ended. Before a test, the text is this host's place in the
+ * lobby with its game code, or a line that says what the test does. The list of human managers online shows each
+ * one's ping (nc_ping_ms of the player slot's socket). With many human managers the list rows get closer, so that
+ * 15 fit above Close.
+ *
+ * Node slots: 0 the tab (1 Graphics, 2 Game, 3 Network), 1 the place that opened the box (1 start screen, 2 game). Only
  * numbers, so the box needs no leave function. */
 #include "win.h"
 #include "options.h"
 #include "dbfolders.h"
+#include "net_core.h"
+#include "net_errors.h"
+#include "season.h"
 #include "../host.h"
 
 #include <stdio.h>
@@ -95,7 +120,8 @@ extern const uint32_t rt_site_options_item, rt_site_main_poll;
 #define BUTTON_TEXT 0xae3184u
 
 #define VALUE_ID 0x7d3au            /* data: row index * 16 + value index. Ids that the original does not use. */
-#define TAB_ID 0x7d3bu              /* data: the tab, 1 or 2 */
+#define TAB_ID 0x7d3bu              /* data: the tab, 1 to TABS */
+#define TABS 3
 #define CLOSE_ID 0x7d3cu
 #define ITEM_ID 0x4b8u              /* the side bar item; the side bar input 0x7615d0 uses no such id */
 #define REBUILD 0xfffffff5u         /* -0xb: build the box again */
@@ -104,10 +130,24 @@ extern const uint32_t rt_site_options_item, rt_site_main_poll;
 #define ROWS 9
 #define TEXT_SIZE 0x200u
 
+#define PASSWORD_ID 0x7d60u         /* the game password field */
+#define KICK_ID 0x7d61u             /* data: the player slot */
+#define TEST_ID 0x7d62u             /* the Test button of the connection test */
+#define KICK_CODE 0x7d              /* the confirm's code; the original's codes are below 0x40 */
+#define CONFIRM_PUSH 0x591840u      /* cdecl (title, heading, text, 1, colour, colour, code) */
+#define GAME_TITLE 0x839570u        /* cdecl (): the title text (0x7643a0) */
+#define HEADING_COLOUR 0x839590u    /* cdecl (x) (0x76437d) */
+#define CONFIRM_CODE 0xdd6be0u
+#define CONFIRM_BUTTON 0xdd6be4u
+#define FIELD_COLOUR 0xaebe04u      /* the field colour of 0x822f5f */
+#define PASSWORD_MAX 40
+#define MANAGERS 15
+#define LIST_BOTTOM 505             /* the Kick list ends above Close (509) */
+
 typedef enum { ROW_SWITCH, ROW_DISPLAY, ROW_PATH } RowKind;
 
 typedef struct {
-    int tab;                        /* 1 Graphics, 2 Game */
+    int tab;                        /* 1 Graphics, 2 Game, 3 Network */
     OptionId id;
     RowKind kind;
     const char *label;
@@ -133,6 +173,7 @@ static const Row rows[] = {
     {2, OPT_SAVE_BACKUPS, ROW_SWITCH, "Save backups", ""},
     {2, OPT_CHANGING_RULES, ROW_SWITCH, "Changing rules", "Default for a new game\nSetup Game sets each game"},
     {2, OPT_SAVE_FOLDER, ROW_PATH, "Save folder", "Applies at the next start\nOld saves do not move"},
+    {3, OPT_ONLINE_PLAY, ROW_SWITCH, "Online play", "Off: LAN games only"},
 };
 #define ROW_COUNT ((int)(sizeof rows / sizeof rows[0]))
 
@@ -142,6 +183,11 @@ static const char *const display_word[] = {"widescreen", "classic"};
 
 /* Game memory for the texts and the column weights. The create functions copy each text. */
 static uint32_t scratch;
+static uint32_t password_field;     /* the buffer of the game password field */
+static int kick_slot;               /* the player slot of the open Kick confirm, 0 with none */
+static int test_asked;              /* the connection test started while this box is open */
+static int test_built;              /* the box was built while the test ran */
+static char kick_name[64];
 static int failed_row = -1;         /* the row whose last value could not be written to settings.txt */
 static int open_failed;             /* the last Open folder of the box could not start the file manager */
 static char picked[1100];           /* the save folder chosen in this run, for the next start */
@@ -344,12 +390,160 @@ static void build_row(const Row *r, int index, int y1, int y2, uint32_t green, u
     note(index == failed_row ? "Not saved: settings.txt\ncannot be written" : n, weights_two, 4, y1, y2, light);
 }
 
+/* A small text in two lines at most, split at the space nearest the middle when it is longer than one line. */
+static void two_lines(int x1, int y1, int x2, int y2, const char *s, uint32_t colour)
+{
+    size_t n = strlen(s), per_line = (size_t)(x2 - x1) * rt_screen_w / 800u / 6u;
+    if (n <= per_line) {
+        box_text(x1, y1, x2, y2, 1, 0, 1, 1, colour, s);
+        return;
+    }
+    size_t cut = n / 2;
+    for (size_t d = 0; d < n / 2; d++) {
+        if (s[n / 2 + d] == ' ') { cut = n / 2 + d; break; }
+        if (s[n / 2 - d] == ' ') { cut = n / 2 - d; break; }
+    }
+    char first[200];
+    snprintf(first, sizeof first, "%.*s", (int)cut, s);
+    int mid = (y1 + y2) / 2;
+    box_text(x1, y1 + 1, x2, mid, 1, 0, 1, 1, colour, first);
+    box_text(x1, mid + 1, x2, y2 - 1, 1, 0, 1, 1, colour, s[cut] == ' ' ? s + cut + 1 : s + cut);
+}
+
+/* The Connection test row (0.7.0 slice 7, see the head of this file). */
+static void test_row(int y, uint32_t green, uint32_t light)
+{
+    int a = area(ROW_X1, y, ROW_X2, y + 32, 4, weights_two, 1, 0);
+    plain(a, 0, "Connection test", 3, light);
+    int ms;
+    NetTest t = net_test_state(&ms);
+    char line[200];
+    if (test_asked && t != NT_NONE) net_test_text(line, sizeof line, t, ms);
+    else if (!net_lobby_host_line(line, sizeof line)) snprintf(line, sizeof line, "Checks the lobby and the relay");
+    test_built = test_asked && t == NT_RUNNING;
+    if (t == NT_RUNNING && test_asked) current(a, 1, "Test");
+    else choice(a, 1, "Test", TEST_ID, 0, green);
+    two_lines(column_x(weights_two, 4, 2) + 4, y, ROW_X2, y + 32, line, light);
+}
+
+/* The Network tab below its switch rows (see the head of this file). */
+static void network_rows(int y, uint32_t green, uint32_t light)
+{
+    /* A single-player game shows only the Online play row, as slice 4 did: the rows below changed the game's memory
+     * layout and with it later days (Q152, smoke_run.py --same-save --options, run options-network, 2026-10-28; with
+     * the field alone left out the run still failed). The Connection test row is one of them (slice 7): the start
+     * screen's box and a host's box show it. */
+    if (season_game_on() && !net_session_hosting()) return;
+    test_row(y, green, light);
+    y += 35;
+    if (!password_field) password_field = win_static_alloc(PASSWORD_MAX + 8);   /* not the game heap (Q152) */
+    snprintf((char *)g_mem + password_field, PASSWORD_MAX + 1, "%s", options_string(OPT_GAME_PASSWORD));
+    int a = area(ROW_X1, y, ROW_X2, y + 32, 4, weights_two, 1, 0);
+    plain(a, 0, "Game password", 3, light);
+    uint32_t w[18] = {0x18, (uint32_t)column_x(weights_two, 4, 1) + 2, (uint32_t)y + 2,
+                      (uint32_t)column_x(weights_two, 4, 3) - 4, (uint32_t)y + 30, 0, 0, 0x22, colour16(FIELD_COLOUR),
+                      0, 0x8c, 2, colour16(BUTTON_TEXT), password_field, PASSWORD_MAX, PASSWORD_ID, 0, 0xffffffffu};
+    call_this(WIDGET_CREATE, display(), 18, w);
+    note("Empty: no password", weights_two, 4, y, y + 32, light);
+    y += 42;
+    box_text(ROW_X1, y, ROW_X2, y + 22, 1, 0, 1, 3, light, "Human managers online");
+    y += 26;
+    NetManager m[MANAGERS];
+    int n = net_session_managers(m, MANAGERS);
+    if (!net_session_hosting()) {
+        box_text(ROW_X1, y, ROW_X2, y + 18, 1, 0, 1, 1, light, "Shown while this computer hosts a network game");
+        return;
+    }
+    if (!n) box_text(ROW_X1, y, ROW_X2, y + 18, 1, 0, 1, 1, light, "None");
+    static const uint8_t weights_kick[] = {40, 32, 12, 12};
+    int step = n ? (LIST_BOTTOM - y) / n : 15;
+    if (step > 15) step = 15;
+    for (int i = 0; i < n; i++, y += step) {
+        int r = area(ROW_X1, y, ROW_X2, y + step - 1, 4, weights_kick, 1, 0);
+        plain(r, 0, m[i].name[0] ? m[i].name : "New manager", 1, light);
+        plain(r, 1, m[i].club, 1, light);
+        int ms = net_session_ping(m[i].slot);
+        char ping[16];
+        if (ms >= 0) snprintf(ping, sizeof ping, "%d ms", ms);
+        else snprintf(ping, sizeof ping, "...");
+        fprintf(stderr, "recomp: options box: %s ping %s\n", m[i].name[0] ? m[i].name : "New manager", ping);
+        plain(r, 2, ping, 1, light);
+        uint32_t b[11] = {(uint32_t)r, 3, 0, 1, 0, 0xc, 1, green, text("Kick"), KICK_ID, (uint32_t)m[i].slot};
+        call_this(CELL_BUTTON, SCREENS, 11, b);
+    }
+}
+
+/* Saves the game password field when it changed. */
+static void save_password(void)
+{
+    if (!password_field) return;
+    char typed[PASSWORD_MAX + 1];
+    snprintf(typed, sizeof typed, "%s", (const char *)g_mem + password_field);
+    if (!strcmp(typed, options_string(OPT_GAME_PASSWORD))) return;
+    int ok = options_set(OPT_GAME_PASSWORD, typed);
+    nc_set_host_password(options_string(OPT_GAME_PASSWORD));
+    fprintf(stderr, "recomp: option game_password %s (%d)\n", typed[0] ? "set" : "cleared", ok);
+}
+
+/* Kick: the original's confirm box over the Options box. */
+static void ask_kick(int slot)
+{
+    NetManager m[MANAGERS];
+    int n = net_session_managers(m, MANAGERS);
+    kick_slot = 0;
+    for (int i = 0; i < n; i++)
+        if (m[i].slot == slot) {
+            kick_slot = slot;
+            snprintf(kick_name, sizeof kick_name, "%s", m[i].name);
+        }
+    if (!kick_slot) return;
+    static uint32_t heading, question;
+    if (!heading) {
+        heading = win_static_alloc(32);
+        question = win_static_alloc(160);
+        win_put_str(heading, "Please Confirm", 32);
+    }
+    char q[160];
+    int managers = 0;
+    for (int i = 0; i < n; i++)
+        if (m[i].slot == slot) managers = m[i].managers;
+    if (managers > 1) snprintf(q, sizeof q, "Kick %s? Their clubs go on holiday.", kick_name);
+    else if (managers == 1) snprintf(q, sizeof q, "Kick %s? Their club goes on holiday.", kick_name);
+    else snprintf(q, sizeof q, "Kick this new human manager? They have no club yet.");
+    win_put_str(question, q, 160);
+    uint32_t one[1] = {1}, zero[1] = {0};
+    uint32_t args[7] = {call(GAME_TITLE, 0, NULL), heading, question, 1, call(HEADING_COLOUR, 1, one),
+                        call(HEADING_COLOUR, 1, zero), KICK_CODE};
+    call(CONFIRM_PUSH, 7, args);                /* its result is not a status (0x59192a..0x591938) */
+    fprintf(stderr, "recomp: options box: %s\n", q);
+}
+
+/* The answer of the Kick confirm, at the box's input with no widget. 1 when there was one. */
+static int kick_answer(void)
+{
+    if (rd32(g_mem, CONFIRM_CODE) != KICK_CODE) return 0;
+    uint32_t button = rd32(g_mem, CONFIRM_BUTTON);
+    wr32(g_mem, CONFIRM_CODE, 0);
+    wr32(g_mem, CONFIRM_BUTTON, 0);
+    if (button == 2 && kick_slot) {
+        NetManager m[MANAGERS];
+        int n = net_session_managers(m, MANAGERS), same = 0;
+        for (int i = 0; i < n; i++) same |= m[i].slot == kick_slot && !strcmp(m[i].name, kick_name);
+        fprintf(stderr, "recomp: options box: Kick %s: %s\n", kick_name, same ? "yes" : "gone already");
+        if (same) net_session_kick(kick_slot);
+    } else {
+        fprintf(stderr, "recomp: options box: Kick %s: no\n", kick_name);
+    }
+    kick_slot = 0;
+    return 1;
+}
+
 /* The build of the box: cdecl, no arguments. The frame follows 0x823950. */
 static void options_build(void)
 {
     if (!scratch) scratch = rt_alloc_zero(TEXT_SIZE + 16);
     int tab = (int)node_slot(0);
-    if (tab != 1 && tab != 2) {
+    if (tab < 1 || tab > TABS) {
         tab = 1;
         set_slot(0, 1);
     }
@@ -367,9 +561,10 @@ static void options_build(void)
     box_text(490, 115, 724, 135, 1, 0, 1, 1, light, "Changes save at once to settings.txt");
 
     /* The tabs: the open tab as a framed label, the other as a button. */
-    int t = area(165, 142, 724, 168, 2, NULL, 1, 0);
-    static const char *const tab_names[2] = {"Graphics", "Game"};
-    for (int i = 1; i <= 2; i++) {
+    static const uint8_t weights_tabs[TABS] = {2, 2, 1};
+    int t = area(165, 142, 724, 168, TABS, weights_tabs, 1, 0);
+    static const char *const tab_names[TABS] = {"Graphics", "Game", "Network"};
+    for (int i = 1; i <= TABS; i++) {
         if (i == tab) current(t, i - 1, tab_names[i - 1]);
         else choice(t, i - 1, tab_names[i - 1], TAB_ID, (uint32_t)i, green);
     }
@@ -380,6 +575,8 @@ static void options_build(void)
         build_row(&rows[i], i, y, y + 32, green, light);
         y += 35;
     }
+
+    if (tab == 3) network_rows(y, green, light);
 
     int close = area(155, 509, 734, 539, 1, NULL, 1, 0);
     uint32_t b[11] = {(uint32_t)close, 0, 0, 0x30, colour16(BUTTON_COLOUR), 0xc, 3, colour16(BUTTON_TEXT),
@@ -456,17 +653,36 @@ static void options_input(void)
 {
     int16_t w = (int16_t)rt_arg(0);
     uint32_t r = 0;
+    if (w < 0 && kick_answer()) {
+        handled_press = win_press_count();          /* a held Yes or No does not click in the box below */
+        rt_ret_cdecl(REBUILD);
+        return;
+    }
+    if (w < 0 && test_built && net_test_state(NULL) != NT_RUNNING) {
+        rt_ret_cdecl(REBUILD);                      /* the connection test ended: show its result */
+        return;
+    }
     /* A held button gives its widget again after 400 ms of real time (the repeat of the poll, user32.c). After
      * a build the same widget number can be another button, and the count of builds would depend on the
      * speed of the machine. So the box takes one click for each press of the mouse button. */
     if (w >= 0 && win_press_count() == handled_press) w = -1;
     if (w >= 0) {
-        handled_press = win_press_count();
         uint32_t at = display() + WIDGETS + 8 + (uint32_t)w * WIDGET_SIZE;
         uint32_t id = (uint16_t)rd32(g_mem, at), data = rd32(g_mem, at + 0x40);
-        if (id == CLOSE_ID) {
+        /* A click that ends the text entry gives the field, then the button under the pointer in the next poll of
+         * the same press (research note, section 11): the field does not take the press. */
+        if (id != PASSWORD_ID) handled_press = win_press_count();
+        save_password();
+        if (id == TEST_ID) {
+            test_asked = 1;
+            net_lobby_test_start();
+            r = REBUILD;
+        } else if (id == KICK_ID) {
+            ask_kick((int)data);
+            r = kick_slot ? 0xfffffffcu : REBUILD;    /* -4: build again with the confirm on top (0x7643b1) */
+        } else if (id == CLOSE_ID) {
             r = CLOSE;
-        } else if (id == TAB_ID && (data == 1 || data == 2)) {
+        } else if (id == TAB_ID && data >= 1 && data <= TABS) {
             set_slot(0, data);
             r = REBUILD;
         } else if (id == VALUE_ID && data / 16 < (uint32_t)ROW_COUNT) {
@@ -542,6 +758,7 @@ int options_screen_open(int from)
     set_slot(0, 1);
     set_slot(1, (uint32_t)from);
     failed_row = -1;
+    test_asked = test_built = 0;
     open_failed = 0;
     handled_press = win_press_count();              /* the press that opened the box does not click in it */
     fprintf(stderr, "recomp: options box opened from %s\n", from == 1 ? "the start screen" : "the side bar");

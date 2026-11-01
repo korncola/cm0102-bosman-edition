@@ -342,6 +342,68 @@ _Avoid_: secret attribute, intrinsic (for the whole set)
 The text lines that the original makes from a print button, on the squad and competition screens. The PDF choice of Print To writes it to a PDF in the `Prints` folder.
 _Avoid_: report, export, screenshot
 
+### Network play
+
+**Network game**:
+A game that several human managers play together, each on their own computer. One computer hosts it, and the others join it over a LAN, a VPN or online (0.7.0, #45).
+_Avoid_: multiplayer game, online game (for the game itself), session
+
+**Host**:
+The computer that runs a network game. Only the host runs the match engine and keeps the save. The other computers show the screens that the host sends.
+_Avoid_: server (for the host's computer)
+
+**Human manager**:
+A person who takes part in a network game and controls one club.
+_Avoid_: player, client, user (inside a network game)
+
+**Game list**:
+The original's Select Network Game screen. It lists each open network game on the LAN and online, with Join.
+_Avoid_: lobby (for the screen), server list, browser
+
+**Lobby**:
+The Bosman Edition server that keeps the list of open online games. A host tells the lobby about its game, and the game list asks the lobby for it.
+_Avoid_: matchmaker, master server
+
+**Relay**:
+The Bosman Edition server that passes traffic between a host and its human managers. No router setting is needed. It keeps no game data.
+_Avoid_: proxy, tunnel, TURN
+
+**Invite link**:
+A web link to one network game. It opens a page with a button that starts Bosman Edition and joins that game.
+_Avoid_: join code, deep link
+
+**Game code**:
+The 8 characters that name one online network game in the lobby, for example K7M2Q9RT. The invite link holds it, and the relay uses it.
+_Avoid_: join code, room code
+
+**Always-on game**:
+A network game that a host leaves open for a long time, so that human managers can join and leave when they want. It moves forward only when a human manager clicks Continue.
+_Avoid_: persistent league, server game
+
+**Away**:
+The state of a human manager who left a network game. Their club is on holiday as in the original. They can take it back with their manager password.
+_Avoid_: offline, AFK, dropped
+
+**Game password**:
+The optional password of a network game. The host sets it on the Network tab of the Bosman Edition Options box, and a human manager types it in the password box to join. It is not the manager password, which protects one club.
+_Avoid_: server password, join code
+
+**Kick**:
+The host removes a human manager from a network game, from the list on the Network tab. Their club goes on holiday, as when they leave.
+_Avoid_: ban, boot, remove (for this action)
+
+**Online play**:
+The option that lets the game list show online games and lets a host put its game in the lobby. It is on by default. When it is off, the game shows LAN games only.
+_Avoid_: internet mode, online mode
+
+**Connection test**:
+A check on the Network tab of the Bosman Edition Options box that the lobby and relay can be reached. It says that online play works, or it says what is wrong.
+_Avoid_: network check, diagnostics
+
+**Ping**:
+The time in ms for a message to go from the host to a human manager's game and back. The Network tab shows it for each human manager online, and the game list row shows the highest one of the game.
+_Avoid_: latency, lag
+
 ### Research maps
 
 **Function map**:
