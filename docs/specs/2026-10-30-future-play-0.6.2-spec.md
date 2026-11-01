@@ -332,5 +332,5 @@ Merge danger: two-way door. Only a game that starts in 2026/27 takes the new cod
 - [x] The history checker finds no new fault in the 2026/27 game (run set row quick2026). The one fault is the known Africa Cup of Nations gap. The three Argentine titles of 2025 in the database are no fault (the AFA's Campeón de Liga).
 - [x] Every 2026/27 rules row is checked against a cited source (with the date read) and the database's divisions, and corrected where it differs. A row that no source confirms keeps its value and says so in its notes.
 - [x] The run set holds a 2026 start with three seeds.
-- [ ] Same-save set PASS for the 2001 game against main (the match check at a load under 16).
+- [x] Same-save set PASS for the 2001 game against main 962d9986: start, prematch, new game and match (the match check at load 6.8).
 - [x] ctest passes (70 of 70).
