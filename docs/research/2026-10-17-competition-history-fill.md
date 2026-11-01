@@ -128,7 +128,7 @@ The nation part pointer [0xae23dc]. After the grow it is base + (count - nation 
 
 The game then treats the rows as its own: at the creation of the game it keeps only the rows of the selected nations (0x539ae0, function map; seen in the test: the Scottish rows are in memory after the load and gone at the first turn of an England-only game). A saved game holds the rows; its load does not run the fill.
 
-Nothing changes for a start in 2001, for a start year that is not the season of the database (the table has rows for that season only), for a Custom database, and with `RECOMP_SEASON_CODE=off`.
+The researched rows do not come for a start in 2001, for a start year that is not the season of the database (the table has rows for that season only), for a Custom database. Nothing runs with `RECOMP_SEASON_CODE=off`. Since 0.6.2 (open item 74) the fill also runs without a shift plan, in every season game (a 2001 start with changing rules on included): it writes the past editions of the records that the season code adds, which no database holds (the Finalissima of 1985, 1993 and 2022; `new_comp_rows` in `season_history.c`, source Wikipedia, "Finalissima", Results). The base game adds no record and gets no row.
 
 ### Test
 

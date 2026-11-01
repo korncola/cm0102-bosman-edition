@@ -79,7 +79,7 @@ Saves:
 - A save from 0.6.0 or 0.6.1 with a competition waiting for the idle year moves it to its next edition after the save's date, at load (Q8).
 - Saves, season parts and news parts accept years up to at least 2300 and news in more than 200 seasons.
 - Caps go in a wider field, kept in the season part of the save. The original byte stops at 255 (Q25).
-- The save keeps each type of data in one part, merged across seasons, so the part count stops growing. Older saves still load (Q26).
+- The save keeps each type of data in one part, merged across seasons, so the part count stops growing. Older saves still load (Q26). A type is the name of a temporary file with each run of digits as '#', such as `fixtures_#.tmp`; a type with two files or more is one merged part, a type with one file stays a part of its own. The data files (`.dat`) are one part each already.
 
 Original game faults, fixed in every game, base game included (Q23, Q24, Q27):
 - Every national team opens a vacancy when its manager retires.
@@ -89,6 +89,8 @@ Original game faults, fixed in every game, base game included (Q23, Q24, Q27):
 - The top wage fix acts from a balance of about £1.65 billion, where the original's 32-bit sum already wraps (Q44).
 - The human manager's age stops at 127, the largest age the game's byte holds, in place of the age from the birth date (Q45).
 - Every money text that can pass £2,147,483,647 is traced and shows the full amount, news items included (Q46).
+- History rows of editions after the start date are cleared, so each edition has one row; the game's own row replaces the data row of the same edition (Q48, 30 October 2026). A new base game then differs from the original in its history rows and in the first-season holders that the game reads from them (the 2001 Charity Shield: Manchester United, not Arsenal, against Liverpool).
+- The same-save set under Q48 (slice 7, 31 October 2026): a loaded 2001 save differs only in nation_comp_history.dat and index.dat, the 3.9.68 row Copa América 2001 Colombia / Mexico, which goes when the game writes its own 2001 final (29 July). The new game differs in its history rows and all that follows the changed holders. The run rules-on differs from normal through one row only (a bisect of the 128 rows of 2002): the Asian Cup Winners' Cup 2002 Al Hilal. Without it the newest holder is Al Shabab (2001), and with changing rules on the season code makes the Asian Super Cup edition (season_kind_club_world.c), whose Cup Winners' Cup entrant is that holder. Accepted by the lead for Max (31 October 2026).
 
 The same game (Q152): every game code change keeps the same saves in the same-save set, unless the change acts only after a table end year, after 2099 or above £2.1 billion, which the set does not reach. The speed fixes give the same results as the code they replace (Q18).
 
@@ -98,7 +100,8 @@ Year limits:
 
 Test switches (Q9, Q30):
 - The Tier A switch and the date jump switch are in the normal build. The program reads them once at start, and both are off by default. The same-save set proves that they change nothing when off.
-- A Tier A run keeps the calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players, and save and load. It skips the AI transfer market, background matches, contracts, injuries and AI manager moves (Q16, changed by Q31: without retirements and new players, ages wrap and the under-21 and Olympic squads empty). Each match gets an instant result from the two sides' reputation, so the stronger side wins more often (Q16).
+- A Tier A run keeps the calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players, contracts, the filling of manager vacancies, and save and load. It skips the AI transfer market, background matches, new injuries and the sacking of managers (Q16, changed by Q31: without retirements and new players, ages wrap and the under-21 and Olympic squads empty). Each match gets an instant result from the two sides' reputation, so the stronger side wins more often (Q16).
+- Contracts stay (slice 3 build, approved 31 October 2026). With them skipped, a player stayed at his club after his contract ended and could not play, and the game stopped when a club could not field 11 (Aston Villa, August 2028, in an England game from 2025). The vacancy pass stays because retirements and season changes open vacancies, and only it fills them. Without it, more clubs and national teams would have no manager each year.
 - Tier A counts as the same as the normal game over 10 years when they agree on editions, dates, hosts and entrant rules. Winners can differ (Q10). Two windows: one from a 2013 start, inside the tables, and one from a 2098 date jump, after the tables.
 - Checks that depend on real results, such as the same finalists in a row, count only in Tier B.
 
@@ -165,10 +168,10 @@ Merge danger: two-way door, tests only. Blast radius: false passes or false faul
 Blocked by: 1, 2
 Delivers: a test switch that skips the work in the decisions above and gives instant results from reputation. It measures the time per year.
 Merge danger: two-way door. Off by default. Blast radius: none for players if the same-save set passes.
-- [ ] 10 years from a 2013 start and 10 years from a 2098 date jump, each in Tier A and in the normal game, agree on editions, dates, hosts and entrant rules.
+- [x] 10 years from a 2013 start and 10 years from a 2098 date jump, each in Tier A and in the normal game, agree on editions, dates, hosts and entrant rules.
 - [ ] Each nation keeps eligible under-21 and under-23 players in 2050 and 2100 of a Tier A run.
-- [ ] Same-save set PASS with the switch off.
-- [ ] The time per year is measured and reported.
+- [x] Same-save set PASS with the switch off.
+- [x] The time per year is measured and reported.
 
 ### 4a. International finals continue
 Blocked by: 1, 2, 3
@@ -202,7 +205,7 @@ Blocked by: 2
 Delivers: one row per year at the start, and history years in their right places for every database. Faults 3 (duplicates), 17 and 20.
 Merge danger: two-way door. Blast radius: the history screens of every start.
 - [ ] The checker finds no year held twice in the starts of the run set.
-- [ ] The 2023 and 2010 starts show the World Cup in its real years.
+- [x] The 2023 and 2010 starts show the World Cup in its real years.
 
 ### 8. The Nations League and the Asian Cup qualifiers
 Blocked by: 2, 3
@@ -215,26 +218,26 @@ Merge danger: one-way door, because the repair changes saves at load. Blast radi
 Blocked by: 1, 2, 3
 Delivers: the Copa Sudamericana, Recopa, FIFA Intercontinental Cup and AFC Champions League Two continue every year. The Club World Cup is played every four years from 2029. No club cup stops in 2101. The 2027 Libertadores row gets its places text. Faults 7 and 11.
 Merge danger: two-way door. Blast radius: continental and world club cups.
-- [ ] Tier A to 2100: the checker finds every edition with the right entrants.
+- [ ] Tier A to 2100: the checker finds every edition with the right entrants. Not run: slice 3 is not on main. Normal game in its place: a 2098 date jump to August 2101 gives every edition of the Sudamericana, Recopa, FIFA Intercontinental Cup and ACL Two from 2098 to 2101 and the Club World Cup of 2101, with no club cup entrant fault (run-logs/0.6.2-s9a/j2098).
 
 ### 9b. Suruga Bank finalists and the Super Cup venue
 Blocked by: 2
 Delivers: the Suruga Bank finalists are the year's J.League Cup and Copa Sudamericana winners to 2019. The UEFA Super Cup venue changes each year after 2027. Faults 5 and 22, Q28.
 Merge danger: two-way door. Blast radius: these two competitions.
-- [ ] Long game to 2019: each Suruga Bank final has that year's two winners (checked in Tier B or a normal game, because it depends on results).
-- [ ] Tier A to 2040: no two Super Cups in a row in one venue.
+- [x] Long game to 2019: each Suruga Bank final has that year's two winners (checked in Tier B or a normal game, because it depends on results).
+- [x] Tier A to 2040: no two Super Cups in a row in one venue.
 
 ### 10. Leagues and domestic cups after the table
 Blocked by: 1, 2, 3
 Delivers: leagues, play-offs and Brazilian state leagues keep their last rules with no end year. Faults 8 and 9.
 Merge danger: two-way door. Blast radius: promotion and relegation in every league.
-- [ ] Tier A to 2100: league sizes, promotion and play-off places stay as in the last table row. Run as a date jump from 2098 to 2100 (slice 3 not on main yet): every division keeps the places and sizes of a 2027 start, except the Brazilian Série A and B, which drift inside the table too (fault 63, open).
+- [x] Tier A to 2100: league sizes, promotion and play-off places stay as in the last table row. Run as a date jump from 2098 to 2100 (slice 3 not on main then): every division keeps the places and sizes of 2027/28 in a 2025 start, Série A and B too after the fix of open item 63.
 - [x] Unit tests to 2301: no lookback limit ends a rule.
 
 ### 11. Original faults: national managers, money, manager age
 Blocked by: none
 Delivers: every national team gets a new manager, money above £2.1 billion is right on every screen and in AI budgets, and the manager's age is right after 2100. Faults 26, 27, 28 and 33.
-Merge danger: two-way door. The base game changes at the first month change in play (1 August in a 2001 game): about 95 national teams of the 3.9.68 data have no manager from the start and get one then (Q43). The same-save set does not reach that point, so it must PASS. A loaded save with a national team that has no manager gets one at the next month change. That is an expected change. Blast radius: national team jobs, money screens and AI transfer budgets.
+Merge danger: two-way door. The base game changes at the first month change in play (1 August in a 2001 game): about 95 national teams of the 3.9.68 data have no manager from the start and get one then (Q43). The same-save set of a new game, start.sav, prematch.sav and the match does not reach that point, so it must PASS. The 14 days of yeovil.sav (20 August 2002) pass 1 September: there 78 national teams get a vacancy, an accepted change (Q43), and the run original-faults-keep of yeovil.sav keeps only the money and age faults (item 72). A loaded save with a national team that has no manager gets one at the next month change. That is an expected change. Blast radius: national team jobs, money screens and AI transfer budgets.
 - [x] A save with a retired national manager of a small nation opens a vacancy. A save where a national team already has no manager fills it at the next month change.
 - [x] Saves edited to balances of £2.5 billion, £5 billion and £12 billion show the right balance, and the club still bids.
 - [x] Every screen that formats money through the 32-bit Cash object is traced and fixed.
@@ -250,10 +253,10 @@ Merge danger: one-way door, because the save holds a new field. Blast radius: ca
 ### 13. Save parts merged across seasons
 Blocked by: 12
 Delivers: the part count of a save stops growing. Fault 29.
-Merge danger: one-way door, because the save format changes. Blast radius: every save and load. Old saves must load.
-- [ ] A save with 990 parts saves again and loads.
-- [ ] 0.6.0 and 0.6.1 saves load.
-- [ ] Same-save set PASS.
+Merge danger: one-way door, because the save format changes. Blast radius: every save and load. Old saves must load. Every save made after this slice has merged parts (a new game keeps fixtures_2001.tmp and fixtures_2002.tmp from its first day), and 0.6.0, 0.6.1 and earlier 0.6.2 builds cannot load it: their load stops at the box "Cup..cpp 5246". The changelog of 0.6.2 must say so.
+- [x] A save with 990 parts saves again and loads.
+- [x] 0.6.0 and 0.6.1 saves load.
+- [x] Same-save set PASS.
 
 ### 14. Speed fixes
 Blocked by: none
@@ -266,8 +269,8 @@ Merge danger: two-way door. Blast radius: every game, if a result changes.
 Blocked by: 1, 2, 3, 13
 Delivers: one script runs the whole run set in parallel within the game limit, keeps checkpoint saves, runs the checker on each save, applies the Tier B limits, and joins the release script.
 Merge danger: two-way door, tests only. Blast radius: release checks.
-- [ ] The script runs the run set and writes one pass or fail per game.
-- [ ] The release script stops on any checker fault.
+- [x] The script runs the run set and writes one pass or fail per game.
+- [x] The release script stops on any checker fault.
 
 ### 16. Full run set, every finding fixed, release 0.6.2
 Blocked by: all
@@ -290,12 +293,14 @@ Merge danger: one-way door if it changes the save format. Blast radius: every sa
 
 ### 19. Nation names, Kazakhstan and the Netherlands Antilles
 Blocked by: none
-Delivers: the national sides of a renamed nation take the nation's name, in a new game, at each season point and at the load of an older save. Kazakhstan moves from the AFC to UEFA from the 2002/03 season. The dead Netherlands Antilles plays no competition beside Curaçao (fault 51, already fixed on main). Faults 42, 43 and 51.
-Merge danger: two-way door. The load of a 0.6.1 save gives its old side names the nation's names, and that changes only names. Blast radius: the names that the fixtures, results and history screens show for six national sides, and the international competitions of 2001 and 2002 starts, where Kazakhstan now plays the UEFA qualifiers and no longer the AFC ones.
+Delivers: the national sides of a renamed nation take the nation's name, in a new game, at each season point and at the load of an older save. Kazakhstan moves from the AFC to UEFA from the 2002/03 season. The dead Netherlands Antilles plays no competition beside Curaçao (fault 51, already fixed on main). Every UEFA member plays the World Cup qualifying of 2006 to 2022, apart from the hosts (fault 57). Faults 42, 43, 51 and 57.
+Merge danger: two-way door. The load of a 0.6.1 save gives its old side names the nation's names, and that changes only names. Blast radius: the names that the fixtures, results and history screens show for six national sides, and the international competitions of 2001 and 2002 starts, where Kazakhstan now plays the UEFA qualifiers and no longer the AFC ones, and the European World Cup qualifying of 2006 to 2022, whose groups now hold 5 or 6 nations.
 - [x] The checker finds no side-name and no nation-confed fault in a 2001 start with changing rules on, played past the 2002 season point, and in a 2025 start on the December 2025 data.
 - [x] The checker finds no entrant-dead fault in the CONCACAF Nations League of a 2022 start played to November 2023. Fault 51 is not on main: only saves of builds before 29b9dc82 show it, so this slice changes no code for it.
 - [x] history_check_test.py: the UEFA moves of nations.tsv match the season code.
 - [x] Same-save set PASS.
+- [x] Fault 57: a 2001 game has 51 European nations in the 2006 qualifying, a 2013 start 52 in 2018 (all of its data less Russia, the host) and a 2017 start 55 in 2022. The checker finds no entrant-missing fault there. history_check_test.py tests the rule.
+- [x] Fault 57: same-save set against main 99bf45fb: start, prematch, new game, yeovil and match equal main (ref-build). Yeovil fails only original-faults-keep, as main does (open item 72).
 
 ### 20. A youth pool for every nation
 Blocked by: none

@@ -24,6 +24,13 @@ The script is `tests/smoke/smoke_run.py --same-save`, with `--match` for the mat
 
 The checks run before each merge of game code and again on the merged build. The pass rule is equal saves. Five files can differ only when the option opens a screen that the off run does not open, because that moves memory. We record each such case and tell Max. Any other difference stops the merge until we find the cause.
 
+Some changes alter the game by decision. Since 0.6.2 (Q48), the history rows of editions after the start date are removed in every game. This changes the first-season holders and so the play of a new game. The reference run `history-q48-off` plays the same game with that fix off (`RECOMP_HISTORY_AFTER_START=off`). The checks use it this way:
+- `season-code-off` must equal `history-q48-off` in every part.
+- In a new game, `rules-on` plays with the fix off and must equal `history-q48-off` except in the accepted rules-on parts. The run `rules-on-q48` plays the shipped default (changing rules on, fix on) and must equal the same run of `--ref-build`.
+- In start.sav and prematch.sav, `history-q48-off` may differ from `normal` only in `index.dat` and `nation_comp_history.dat`, and there only by the 3.9.68 row of the Copa América 2001, which goes when the game plays its own final. In any other saved game it must equal `normal`. In a new game it is a reference run only.
+
+The runs, parts and rows are in `q48_runs`, `Q48_SAVE_PARTS` and `Q48_SAVE_ROWS` in `smoke_run.py`. Any other difference still fails, and a check that compares no run fails. The effect of the fix itself is checked by the history checker (`tests/seasons/future/history_check.py`).
+
 ## Start-season soaks
 
 For each start season from 2001/02 to 2025/26, a soak plays a new game with all nations loaded and the changing rules on. The manager goes on holiday and the quick result engine plays the matches.
@@ -48,11 +55,25 @@ Long games run from 2001/02 to 2027/28 with all nations and different random see
 
 A date jump starts a new game in a far year, with every date of the database moved to that year. It needs an Update Team or Custom database. The test variable `RECOMP_START_SEASON` takes a start year up to 2099. With the date jump switch `RECOMP_DATE_JUMP=1` it takes a year up to 2300. The program reads the switch once at the start, and it is off by default. The same-save set proves that the switch changes nothing in a game of the normal start years (run `date-jump-on`). The season code itself has no year limit: its hooks, rules and save parts work in every year (ctest `future_2300` and `season_part` step them to 2301).
 
+## The run set
+
+The run set is the fixed list of games that a release must pass (from 0.6.2): Tier A games from seven starts with three seeds each to 2100, a game with England, Spain and Brazil, one Tier A game to 2300, the date jumps to 2098, 2198 and 2298, and two Tier B games of the full world to 2300. The list is `tests/seasons/future/run_set.tsv`. `tests/seasons/future/run_set.py` plays it several games at a time. It runs the history checker (`tests/seasons/future/history_check.py`) on the save of every leg and keeps one save a decade. For Tier B it also checks the world's health and the Tier B limits: a national side with no manager for more than a season, a game day twice as slow as in the first seasons, and a save that would pass 4 GB before 2300. It starts no game below 100 GB of free disk. Each game ends with pass or fail. The release script runs `run_set.py --verify` on the folder of a run of the whole set and stops unless every game passed on the same game code and the checker finds no fault on the kept saves. ctest `future_run_set` tests the script without a game.
+
+## Tier A runs
+
+A Tier A run reaches a far year quickly. It plays only the competitions: the calendar, draws, entrants, league tables, season changes, history, finances, retirements, new players, contracts, and save and load. It skips the AI transfer market, background matches, new injuries and AI manager moves (sackings). Each match gets an instant result from the two sides' reputation, so the stronger side wins more often. The test switch is `RECOMP_TIER_A=1`. The program reads it once at the start, and it is off by default. The same-save set proves that the switch changes nothing when it is off.
+
+A Tier A year takes 4 to 6 minutes with all nations on the M5 Max at load 6 to 12, about 7 times faster than the normal game at the same load. The time does not grow from 2013 to 2066. The save grows by about 9 MB a year.
+
+The script is `tests/seasons/soak_run.py` with `--env RECOMP_TIER_A=1`, and `--checkpoints 10` to keep one save per decade. Tier A counts as the same as the normal game when both play 10 years from the same start, database and seed, and each July save agrees on editions, dates, hosts and entrant rules. The script is `tests/seasons/future/tier_a_compare.py`. Winners can differ. The history checker then reads each checkpoint save.
+
 ## Memory and big saves
 
 A game with all nations uses more memory each season. The heap now has room for about 2 GB of game data. A code test (`tests/recomp/test_heap.c`) fills a small heap and checks that it still serves new blocks.
 
 Saves can now be up to 4 GB. A save that would be larger stops with a clear message and keeps the earlier save. `tests/smoke/big_save_run.py` makes a save above 3 GB and loads it again, checks a season part above 2 GB, and checks the clean stop above 4 GB. It needs about 12 GB of free disk for a short time. These checks run at the merge of a memory or save change and in the long games at each release.
+
+A save holds at most 999 parts. The game keeps a temporary file for each season, so the temporary files of one type go into one merged part. `tests/seasons/save_parts_run.py fill` adds temporary files until a save holds 990 and 999 parts, then saves and loads twice. Each save must hold at most 200 parts and every added file. `tests/seasons/save_parts_run.py old` loads a save of 0.6.0, 0.6.1 or an earlier 0.6.2 build, saves and loads twice, and checks that every temporary file of the old save is still there. These checks run at the merge of a save change.
 
 ## Screen sweeps and smoke screenshots
 

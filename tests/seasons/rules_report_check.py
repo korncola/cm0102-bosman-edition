@@ -230,6 +230,18 @@ def league_playoffs():
 
 
 
+def two_winners_first(r):
+    """0.6.2 open item 63: 1 for a row whose 4 play-off places, just below its direct places, are two ties whose
+    winners both go up (Série B from 2025: up 2, places 3 to 6), else 0. The game plays no such play-off, so both
+    winners' places go up directly (Q247, season_playoffs_winners_up in src/recomp_rt/win/season_playoff_winners.c)."""
+    e = league_playoffs().get(r["id"])
+    if (e is None or "the two winners go up" not in (r["playoffs_text"] or "") or not isinstance(r["up"], int) or
+            encode_leagues.count(e["po_up"]) != 4):
+        return 0
+    first = e["po_up"].split("-")[0]
+    return 1 if first.isdigit() and int(first) == r["up"] + 1 else 0
+
+
 NOT_PLAYED = "not played in the game"
 
 
@@ -377,6 +389,11 @@ def differences(seasons, comps, rows):
                 if want == "na" and c[key] == 0:
                     continue
                 accept = {c[key], c[key] + (1 if c[extra] else 0), c[key] + c[extra]}
+                # 0.6.2 open item 63: two ties whose winners both go up, 4 places just below the direct places (Série B
+                # from 2025). The game plays no such play-off, so both winners' places go up directly (Q247,
+                # season_playoffs_winners_up): the game's direct places are the row's and 2, and only that.
+                if key == "up" and two_winners_first(r):
+                    accept = {c[key] - 2}
                 if not isinstance(want, int) or want not in accept:
                     out.add((season, key, f"{label}: game {c[key]} (+{c[extra]} play-off places), "
                                           f"table {want} ({r[key + '_text'][:80]})"))
@@ -386,6 +403,8 @@ def differences(seasons, comps, rows):
                 want = (encode_leagues.count(e["po_up"]), encode_leagues.count(e["po_down"]))
                 game = (c["playoff_up"], c["playoff_down"])
                 same = game == want if e["po_status"] == "ok" else bool(sum(game)) == bool(sum(want))
+                if two_winners_first(r):        # open item 63: no play-off places, its winners' places go up directly
+                    same = game == (0, want[1])
                 if not same:
                     out.add((season, "playoffs", f"{label}: game {game[0]} up and {game[1]} down play-off places, "
                                                  f"table {want[0]} and {want[1]} ({r['playoffs_text'][:80]!r})"))

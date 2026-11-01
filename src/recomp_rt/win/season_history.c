@@ -13,7 +13,10 @@
  *             name (51 bytes), +0x53 the nation (a pointer after the id pass, 0x5315de); nation +0x04 its name.
  *   comps     +0x04 the name (51 bytes). */
 #include "win.h"
+#include "season.h"
 #include "season_history.h"
+#include "season_change.h"
+#include "season_comps.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,8 +34,12 @@
 #define CLUB_COMPS_PTR 0xae23d0u   /* the club competition records */
 #define CLUB_COMP_COUNT 0xae2378u
 #define CLUB_COMP_SIZE 0x6bu
+#define FRIENDLY_RECORDS 0x7fu     /* the last records belong to the friendly object (new-comp-records doc 1.6) */
 
 #define GROW_HISTORY 0x00527f60u   /* database_grow_comp_history_table (count): blank rows at the end, 1 on success */
+#define GAME_DAY 0xae2c90u          /* s16, the day of the year of the game date (from 0) */
+#define GAME_YEAR 0xae2c92u         /* u16, the year of the game date: the label year that 0x4afce0 writes */
+#define FIX_BASE_GAME 1             /* 0.6.2 slice 7: the rows after the start also go in the base game */
 
 /* --- Undo: the rows that the fill changed, by index (the grow moves the table), and the old row count. --- */
 
@@ -42,6 +49,13 @@ static size_t saved_n, saved_cap;
 static int filled;                  /* 1 while a fill is in memory */
 static uint32_t old_count;          /* the row count before the fill */
 static uint32_t n_added, n_cleared, n_unmatched, n_duplicates;
+/* The rows that the game wrote since the last load or new game, by content (competition, label, four places):
+ * the lookup 0x4afd80 sorts the whole table (qsort 0x945333 at 0x4afd9b), so an index does not last. Rows of one
+ * label that the game writes in one year all stay. In memory only: a save of the calendar year of the start
+ * between two such rows of one competition does not keep them apart. */
+typedef struct { uint32_t comp, label, place[4], day; } Own;     /* day: year * 400 + day of the year */
+static Own *own;
+static size_t own_n, own_cap;
 
 static void save_row(uint32_t index)
 {
@@ -78,6 +92,7 @@ void season_history_undo(void)
 
 void season_history_forget(void)
 {
+    own_n = 0;
     filled = 0;
     saved_n = 0;
 }
@@ -248,15 +263,64 @@ static void drop_duplicates(void)
     }
 }
 
+/* Open item 74 (0.6.2, the forum): the past editions of a competition whose record the season code adds
+ * (season_comps.h, `like`), so no database holds its history. A row goes in when its label year is not after
+ * the start year N (a game from 2021/22 plays the 2022 Finalissima itself). Source: Wikipedia, "Finalissima",
+ * Results (31 October 2026): 1985 France 2-0 Uruguay, Parc des Princes, Paris; 1993 Argentina 1-1 Denmark,
+ * Argentina on penalties, Mar del Plata; 2022 Argentina 3-0 Italy, Wembley Stadium, London. No host, as the
+ * game's own edition writes none (the class's history row, season_gold_cup.c; competitions.tsv has_host 0). */
+static const SeasonHistRow new_comp_rows[] = {
+    {"Finalissima", 1985, {"France", "Uruguay", "", ""}, {"France", "Uruguay", "", ""}},
+    {"Finalissima", 1993, {"Argentina", "Denmark", "", ""}, {"Argentina", "Denmark", "", ""}},
+    {"Finalissima", 2022, {"Argentina", "Italy", "", ""}, {"Argentina", "Italy", "", ""}},
+};
+#define NEW_COMP_ROWS ((uint32_t)(sizeof new_comp_rows / sizeof new_comp_rows[0]))
+
+/* The record that the season code added (season_comps.h: the last records of the nation block, before the 0x7f
+ * friendly records) with this name in the data, or 0. Never in the base game: it adds none, and a Custom
+ * database's own record of that name is left alone there (Q152). */
+static uint32_t find_record(const char *want)
+{
+    /* the base game test of the module's own record pass (wanted, season_comps.c): at the load the rules flag
+     * of the game is not set yet, so season_comps_on() would say no for a 2001 game with changing rules on */
+    if (!season_code_on() || (season_start_year() == SEASON_FIRST_YEAR && !season_next_rules())) return 0;
+    uint32_t base = rd32(g_mem, CLUB_COMPS_PTR), n = rd32(g_mem, CLUB_COMP_COUNT);
+    uint32_t k = (uint32_t)season_comps_added_records();
+    if (!base || n < FRIENDLY_RECORDS + k || n > 100000u) return 0;
+    for (uint32_t i = n - FRIENDLY_RECORDS - k; i < n - FRIENDLY_RECORDS; i++) {
+        const char *name = season_change_data_name(base + i * CLUB_COMP_SIZE);
+        if (name && !strcmp(name, want)) return base + i * CLUB_COMP_SIZE;
+    }
+    return 0;
+}
+
+/* 1 when the table holds a row of this competition and label year. */
+static int has_row(uint32_t hist, uint32_t count, uint32_t comp, uint16_t label)
+{
+    for (uint32_t i = 0; i < count; i++)
+        if (rd32(g_mem, hist + i * HISTORY_SIZE + 4) == comp && rd16(g_mem, hist + i * HISTORY_SIZE + 8) == label)
+            return 1;
+    return 0;
+}
+
 void season_history_fill(const char *name, int N)
 {
     season_history_undo();
     saved_n = 0;
     n_added = n_cleared = n_unmatched = n_duplicates = 0;
-    drop_duplicates();
-    const SeasonHistDb *e = entry_for(name, N);
-    if (!e) return;
     uint32_t hist = rd32(g_mem, HISTORY_PTR), count = rd32(g_mem, HISTORY_COUNT);
+    /* The rows of the added records that this game takes (none in the base game: it adds no record). */
+    const SeasonHistRow *extra[NEW_COMP_ROWS];
+    uint32_t n_extra = 0;
+    for (uint32_t k = 0; hist && k < NEW_COMP_ROWS; k++) {
+        uint32_t c = new_comp_rows[k].label <= N ? find_record(new_comp_rows[k].comp) : 0;
+        if (c && !has_row(hist, count, c, new_comp_rows[k].label)) extra[n_extra++] = &new_comp_rows[k];
+    }
+    if (name) drop_duplicates();
+    const SeasonHistDb *e = name ? entry_for(name, N) : NULL;
+    if (!e && !n_extra) return;
+    hist = rd32(g_mem, HISTORY_PTR);
+    count = rd32(g_mem, HISTORY_COUNT);
     uint32_t clubs = rd32(g_mem, CLUBS_PTR), n_clubs = rd32(g_mem, CLUB_COUNT);
     if (!hist || !clubs) return;
     index_comps(hist, count);
@@ -266,13 +330,14 @@ void season_history_fill(const char *name, int N)
      * year (dropped). */
     index_clubs(clubs, n_clubs);
     typedef struct { uint32_t comp, place[4]; uint16_t label; } New;
-    New *nw = malloc((e->n_rows + 1) * sizeof *nw);
+    uint32_t n_rows = (e ? e->n_rows : 0) + n_extra;
+    New *nw = malloc((n_rows + 1) * sizeof *nw);
     uint32_t n_new = 0, n_dropped = 0;
     typedef struct { uint32_t comp; uint16_t label; } Key;
-    Key *dropped = malloc((e->n_rows + 1) * sizeof *dropped);
+    Key *dropped = malloc((n_rows + 1) * sizeof *dropped);
     if (!nw || !dropped) rt_fatal("season history: no memory");
-    for (uint32_t k = 0; k < e->n_rows; k++) {
-        const SeasonHistRow *row = &e->rows[k];
+    for (uint32_t k = 0; k < n_rows; k++) {
+        const SeasonHistRow *row = e && k < e->n_rows ? &e->rows[k] : extra[k - (e ? e->n_rows : 0)];
         uint32_t c = find_comp(row->comp);
         if (!c) continue;
         int missing[4] = {0, 0, 0, 0};
@@ -306,7 +371,7 @@ void season_history_fill(const char *name, int N)
         int keep = 0;
         for (uint32_t k = 0; k < n_dropped && !keep; k++) keep = dropped[k].comp == c && dropped[k].label == y;
         if (keep) continue;
-        for (uint32_t k = 0; k < e->n_clears; k++)
+        for (uint32_t k = 0; e && k < e->n_clears; k++)
             if (e->clears[k].label == y && find_comp(e->clears[k].comp) == c) { freed[n_freed++] = i; break; }
     }
     free(dropped);
@@ -338,11 +403,187 @@ void season_history_fill(const char *name, int N)
     }
     n_added = n_new;
     fprintf(stderr, "recomp: season history: %s in %d: %u rows written, %u database rows cleared, %u names not "
-                    "found, %u rows in the table (at %08x, before the grow %08x)\n", e->db, N, n_added, n_cleared,
+                    "found, %u rows in the table (at %08x, before the grow %08x)\n", e ? e->db : name ? name : "no plan",
+            N, n_added, n_cleared,
             n_unmatched, rd32(g_mem, HISTORY_COUNT), hist, base_before);
     free(freed);
     free(nw);
     log_rows("load");
+}
+
+/* --- Rows after the start (0.6.2 slice 7, open items 3 and 17; the head of season_history.h). --- */
+
+/* Test switch RECOMP_HISTORY_AFTER_START, read once: off (neither part), create (only the drop at the creation),
+ * write (only the work at 0x4afce0); unset: both. */
+static int after_start_part(char part)
+{
+    static int mode = -1;
+    if (mode < 0) {
+        const char *v = getenv("RECOMP_HISTORY_AFTER_START");
+        mode = !v || !*v ? 3 : !strcmp(v, "off") ? 0 : !strcmp(v, "create") ? 1 : !strcmp(v, "write") ? 2 : 3;
+        if (mode != 3) fprintf(stderr, "recomp: season history: rows after the start: %s only\n", v);
+    }
+    return part == 'c' ? (mode & 1) != 0 : (mode & 2) != 0;
+}
+
+int season_history_after_start_on(void)
+{
+    if (!season_code_on()) return 0;
+    if (FIX_BASE_GAME) return 1;
+    return season_start_year() != SEASON_FIRST_YEAR || season_changing_rules();
+}
+
+static uint32_t n_after;
+
+/* 1 when the game wrote row r in this program; *day gets the day it wrote it. */
+static int own_row(uint32_t r, uint32_t *day)
+{
+    for (size_t k = 0; k < own_n; k++) {
+        const Own *o = &own[k];
+        if (o->comp != rd32(g_mem, r + 4) || o->label != rd16(g_mem, r + 8)) continue;
+        int f = 0;
+        while (f < 4 && o->place[f] == rd32(g_mem, r + 0xa + 4 * (uint32_t)f)) f++;
+        if (f < 4) continue;
+        if (day) *day = o->day;
+        return 1;
+    }
+    return 0;
+}
+
+/* The number of rows of the competition with this label. */
+static uint32_t rows_of_label(uint32_t hist, uint32_t count, uint32_t comp, int label)
+{
+    uint32_t n = 0;
+    for (uint32_t i = 0; i < count; i++) {
+        uint32_t r = hist + i * HISTORY_SIZE;
+        n += rd32(g_mem, r + 4) == comp && (int)rd16(g_mem, r + 8) == label;
+    }
+    return n;
+}
+
+/* 1 when the competition holds two or more rows a year in most of the 10 years before the start that have rows (the
+ * halves of a split season, two groups of one division). */
+static int split_season(uint32_t hist, uint32_t count, uint32_t comp, int S)
+{
+    int years = 0, two = 0;
+    for (int y = S - 10; y < S; y++) {
+        uint32_t k = rows_of_label(hist, count, comp, y);
+        years += k > 0;
+        two += k >= 2;
+    }
+    return years && two * 2 > years;
+}
+
+void season_history_drop_after_start(int S, int official)
+{
+    n_after = 0;
+    if (!season_history_after_start_on() || !after_start_part('c')) return;
+    uint32_t hist = rd32(g_mem, HISTORY_PTR), count = rd32(g_mem, HISTORY_COUNT);
+    if (!hist) return;
+    uint32_t *drop = malloc((count + 1) * sizeof *drop), n = 0;
+    if (!drop) rt_fatal("season history: no memory");
+    for (uint32_t i = 0; i < count; i++) {
+        uint32_t r = hist + i * HISTORY_SIZE, comp = rd32(g_mem, r + 4);
+        int label = (int)rd16(g_mem, r + 8);
+        if (!comp || label < S) continue;
+        /* The official data labels a split season by the year where it starts (label 2001: the Apertura 2001 and
+         * the Clausura 2002, docs/research/2026-10-17-competition-history-fill.md), so its rows of the label S are
+         * the season that the game plays and labels S + 1: a competition with two or more rows of S and of S - 1. */
+        if (label == S && !(official && rows_of_label(hist, count, comp, S) >= 2 &&
+                            rows_of_label(hist, count, comp, S - 1) >= 2))
+            continue;
+        drop[n++] = i;
+    }
+    if (n && !filled) {
+        filled = 1;
+        old_count = count;
+    }
+    for (uint32_t k = 0; k < n; k++) {
+        save_row(drop[k]);
+        wr32(g_mem, hist + drop[k] * HISTORY_SIZE + 4, 0);
+    }
+    n_after = n;
+    free(drop);
+    if (n_after)
+        fprintf(stderr, "recomp: season history: %u rows after the start season %d cleared\n", n_after, S);
+}
+
+void o_004afce0(void);
+
+/* comp_util_add_history_record, cdecl (Comp *comp, Club *first, Club *second, Club *third, Club *host): the row of
+ * an edition that the game has played. It reuses a free row at the end of the table or grows it (0x527f60), and
+ * writes the competition record [comp + 4] (0x4afd51), the game year [0xae2c92] as the label (0x4afd57,
+ * 0x4afd62) and the four places from its arguments (0x4afd6a to 0x4afd7b). Before it, the rows of the data for
+ * the same edition go: every other row of the competition with a later label (the game never writes a label after
+ * the game year), and in the calendar year of the start the row of this label, unless the data holds two or more
+ * rows of it (the Argentine and Mexican first divisions keep the two halves of a season under one label, and in
+ * the Update Team databases those halves ended before the start: Autumn 2013 holds the Inicial 2012 and the Final
+ * 2013 under 2013).
+ * A second edition in one calendar year (a final that moves across the new year: the Emperor's Cup on 1 January
+ * 2005 and on 31 December 2005, the Turkish Super Cup from August to January) takes the next free label, so each
+ * edition keeps a row of its own. The label goes in through the game year [0xae2c92], which only 0x4afd57 reads
+ * in 0x4afce0 and its callee 0x527f60; it is set back right after the call. The first-season clear runs to S + 1:
+ * after it every row of a later label is a row of the game. */
+RT_WRAP(004afce0, comp_util_add_history_record)
+{
+    uint32_t obj = rt_arg(0), hist = rd32(g_mem, HISTORY_PTR), count = rd32(g_mem, HISTORY_COUNT);
+    uint32_t comp = obj ? rd32(g_mem, obj + 4) : 0;
+    int year = (int)rd16(g_mem, GAME_YEAR), S = season_start_year(), n = 0;
+    uint32_t today = (uint32_t)year * 400u + (uint32_t)(int16_t)rd16(g_mem, GAME_DAY);
+    int on = comp && hist && season_history_after_start_on() && after_start_part('w');
+    if (on && year <= S + 1) {
+        int same = 0;
+        for (uint32_t i = 0; year == S && i < count; i++) {
+            uint32_t r = hist + i * HISTORY_SIZE;
+            same += rd32(g_mem, r + 4) == comp && (int)rd16(g_mem, r + 8) == year && !own_row(r, NULL);
+        }
+        for (uint32_t i = 0; i < count; i++) {
+            uint32_t r = hist + i * HISTORY_SIZE;
+            int label = (int)rd16(g_mem, r + 8);
+            if (rd32(g_mem, r + 4) != comp || label < year || (label == year && (year != S || same >= 2)) ||
+                own_row(r, NULL))
+                continue;
+            wr32(g_mem, r + 4, 0);
+            n++;
+        }
+        if (n && getenv("RECOMP_HISTORY_LOG"))
+            fprintf(stderr, "recomp: season history: %d data rows of label %d or later cleared before the game's "
+                            "row\n", n, year);
+    }
+    /* A second edition in one calendar year: the label is held by a row of the game (every row from S + 1 on, after
+     * the drop at the creation, or a row this program wrote) from another day. Not for a split season: two rows a
+     * year in most of the 10 years before the start, or in the year before. */
+    int label = year;
+    if (on && !split_season(hist, count, comp, S) && rows_of_label(hist, count, comp, year - 1) < 2) {
+        while (label < year + 8) {
+            int game_row = 0, same_day = 0, any = 0;
+            for (uint32_t i = 0; i < count; i++) {
+                uint32_t r = hist + i * HISTORY_SIZE, day = 0;
+                if (rd32(g_mem, r + 4) != comp || (int)rd16(g_mem, r + 8) != label) continue;
+                any = 1;
+                int mine = own_row(r, &day);
+                game_row |= mine || label >= S + 1;
+                same_day |= mine && day == today;
+            }
+            if (!any || !game_row || same_day) break;
+            label++;
+        }
+        if (label != year && getenv("RECOMP_HISTORY_LOG"))
+            fprintf(stderr, "recomp: season history: a second edition in %d gets the label %d\n", year, label);
+    }
+    Own o = {comp, (uint32_t)label, {rt_arg(1), rt_arg(2), rt_arg(3), rt_arg(4)}, today};
+    if (label != year) wr16(g_mem, GAME_YEAR, (uint32_t)label);
+    o_004afce0();
+    if (label != year) wr16(g_mem, GAME_YEAR, (uint32_t)year);
+    if (rt_unwinding || !comp) return;
+    if (own_n == own_cap) {
+        size_t cap = own_cap ? own_cap * 2 : 64;
+        Own *m = realloc(own, cap * sizeof *m);
+        if (!m) rt_fatal("season history: no memory for the game's rows");
+        own = m;
+        own_cap = cap;
+    }
+    own[own_n++] = o;
 }
 
 /* --- Test log: RECOMP_HISTORY_LOG=<competition>;<competition>;... At the first human turn, every row of each

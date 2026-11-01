@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 
+#include "season_nl.h"                 /* SeasonNlGoldCup */
+
 typedef struct {
     const char *file;       /* source file of the class: world_cup, euro_champ, fifa_confed, olympics, goldcup,
                                african_nations, asia_nations, oceania_nations */
@@ -105,6 +107,17 @@ enum {
  * CONCACAF's; the guests that the original takes for 12 teams, 0x5e1fbd..0x5e206c, were not read). The Confederations Cup and the Olympics
  * (8 nations of all confederations, an under-23 side) do not count. 0 outside a season game. */
 int season_intl_finals_busy(int conf, int y, int doy);
+
+/* The CONCACAF Gold Cup of a year (open item 55; the lookup of season_gold_cup.c, slice 28 part b): with changing
+ * rules on, the edition of season_nl_table.c, after its last one the last again every two years (Q248); with it
+ * off, the first edition after the start year, again every two years (Q232). NULL for a year with none. A
+ * repeated edition is a static copy with its year, valid to the next call. */
+const SeasonNlGoldCup *season_intl_gold_edition(int year);
+
+/* 1 when day doy of year y lies in the days of a Gold Cup after the start year, from 2 days before its first day
+ * to the end of its span (as season_intl_finals_busy). 0 outside a season game. The caller asks only when the game
+ * has a Gold Cup object (season_gold_cup_busy). */
+int season_intl_gold_busy(int y, int doy);
 
 /* The source file of a class of the code sites ("?" for none). */
 const char *season_intl_class_file(uint32_t cls);

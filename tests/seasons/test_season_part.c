@@ -37,6 +37,7 @@ int season_day_of_year(int y, int m, int d) { (void)y, (void)m; return d; }
 void season_from_day_of_year(int y, int doy, int *m, int *d) { (void)y; *m = 1, *d = doy; }
 int season_fifa_day(int y, int m, int want) { (void)y, (void)m; return want; }
 int season_intl_finals_busy(int conf, int y, int doy) { (void)conf, (void)y, (void)doy; return 0; }
+int season_gold_cup_busy(int y, int doy) { (void)y, (void)doy; return 0; }
 const SeasonCompClass season_comp_classes[1];
 const int season_comp_class_count = 0;
 const SeasonCompClass *season_comps_class(uint32_t vtable) { (void)vtable; return NULL; }
@@ -175,9 +176,65 @@ static void caps_test(void)
         put32(in + caps_at + 12, 77);
         put32(in + at, 0xdeadbeefu);
         check(season_change_part_read(in, at + 4, 3) == 0, "bytes after the caps in version 3: damaged");
-        check(season_change_part_read(in, at + 4, 4) == 1 && caps_wide_full(77, 255) == 301,
-              "  but a later version keeps its own fields after the caps");
+        put32(in + at, 0);                    /* version 4 and later: an empty goals field after the caps */
+        put32(in + at + 4, 0xdeadbeefu);
+        check(season_change_part_read(in, at + 8, 5) == 1 && caps_wide_full(77, 255) == 301,
+              "  but a later version keeps its own fields after the caps and goals");
     }
+    caps_wide_reset();
+}
+
+/* 0.6.2 item 66: international goals above 255 stay in the byte as 255 and in the store, and version 4 keeps them
+ * after the caps field. */
+static void goals_test(void)
+{
+    char text[200];
+    caps_wide_reset();
+    uint32_t b = goals_wide_add(5, 250, 3);
+    check(b == 253 && goals_wide_full(5, b) == 253 && !goals_wide_count(), "goals 250 + 3: byte 253, nothing stored");
+    b = goals_wide_add(5, b, 2);
+    check(b == 255 && goals_wide_full(5, b) == 255 && !goals_wide_count(), "goals 253 + 2: byte 255, nothing stored");
+    b = goals_wide_add(5, 253, 4);
+    check(b == 255 && goals_wide_full(5, b) == 257, "goals 253 + 4: byte 255 (not 1), 257 goals");
+    b = goals_wide_add(5, b, 0);
+    check(b == 255 && goals_wide_full(5, b) == 257, "goals 257 + 0: 257");
+    b = goals_wide_add(5, b, 3);
+    check(b == 255 && goals_wide_full(5, b) == 260 && goals_wide_count() == 1, "goals 257 + 3: 260, one player");
+    check(caps_wide_full(5, 255) == 255 && !caps_wide_count(), "goals are not caps");
+    check(goals_wide_add(5, 100, 1) == 101 && !goals_wide_count(), "a byte below 255 again: the old count goes");
+
+    /* Version 4: the caps field (here empty) and then the goals. */
+    static uint8_t in[ROOM], out[ROOM];
+    uint32_t at = make_part(in, 2);
+    at += put32(in + at, 0);                  /* the row A18 list */
+    uint32_t caps_at = at;
+    at += put32(in + at, 1);
+    at += put32(in + at, 31);
+    at += put32(in + at, 280);
+    uint32_t goals_at = at;
+    at += put32(in + at, 1);
+    at += put32(in + at, 31);
+    at += put32(in + at, 300);
+    int read = season_change_part_read(in, at, 4);
+    check(read == 1 && caps_wide_full(31, 255) == 280 && goals_wide_full(31, 255) == 300,
+          "version 4: read, 280 caps and 300 goals");
+    uint32_t size = season_change_part_size();
+    memset(out, MARK, sizeof out);
+    if (read && size <= ROOM) season_change_part_write(out);
+    snprintf(text, sizeof text, "version 4: version %d, size %u of %u, same bytes back", season_change_part_form(),
+             size, at);
+    check(season_change_part_form() == 4 && size == at && !memcmp(in, out, at), text);
+    put32(in + caps_at, 0);                   /* no caps above 255: the goals alone */
+    memmove(in + caps_at + 4, in + goals_at, at - goals_at);
+    at -= goals_at - caps_at - 4;
+    read = season_change_part_read(in, at, 4);
+    check(read == 1 && !caps_wide_count() && goals_wide_full(31, 255) == 300, "version 4 with goals only: read");
+    size = season_change_part_size();
+    if (read && size <= ROOM) season_change_part_write(out);
+    check(season_change_part_form() == 4 && size == at && !memcmp(in, out, at),
+          "version 4 with goals only: version 4, same bytes back (the caps count 0 is written)");
+    put32(in + at - 4, 255);
+    check(season_change_part_read(in, at, 4) == 0, "a stored goal count of 255: damaged");
     caps_wide_reset();
 }
 
@@ -227,6 +284,7 @@ int main(void)
         check(season_change_part_read(in, at, 2) == 0, "a news count larger than the part holds: damaged");
     }
     caps_test();
+    goals_test();
     season_change_reset();
     caps_wide_reset();
     check(season_change_part_size() == 0, "after a reset: no part");

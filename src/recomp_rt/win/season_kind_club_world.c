@@ -34,6 +34,7 @@
 #include "win.h"
 #include "season.h"
 #include "season_change.h"
+#include "season_club_editions.h"
 #include "season_comps.h"
 #include "season_rules.h"
 
@@ -80,13 +81,10 @@ static int season_game(void)
     return season_code_on() && (season_start_year() != SEASON_FIRST_YEAR || season_changing_rules());
 }
 
-/* The row of a class in season s. After the last row of the table the rule stays (Q248): the last row. */
-static const SeasonRule *row_of(const char *file, int s)
-{
-    const SeasonRule *r = NULL;
-    for (int y = s; y >= SEASON_RULE_FIRST && !r; y--) r = season_rules_find(y, file, 0);
-    return r;
-}
+/* The row of a class in season s. After the last row of the table the rule stays (Q248): the last row. The Club
+ * World Cup, whose last rows do not hold it, plays every 4 years after the table with its last held row (Q3,
+ * season_club_editions.h): the seasons 2028/29, 2032/33 and on with the 32 clubs of 2024/25. */
+static const SeasonRule *row_of(const char *file, int s) { return season_club_world_row(file, s); }
 
 /* -1: no row (the kind changes nothing), 1: the table holds the competition in season s, 0: not held. */
 static int held(const char *file, int s)
@@ -106,14 +104,15 @@ static int last_row_season(const char *file)
 }
 
 /* The year of the next edition from season s on: s when the table holds it, else the next season that holds
- * it, else NEVER. 0 when the table has no row of the class (nothing changes). */
+ * it (after the table by the rule of row_of), else NEVER. 0 when the table has no row of the class (nothing
+ * changes). */
 static int next_edition(const char *file, int s)
 {
     int h = held(file, s);
     if (h < 0) return 0;
     if (h) return s;
     int last = last_row_season(file);
-    for (int y = s + 1; y <= last; y++)
+    for (int y = s + 1; y <= (last > s ? last : s) + SEASON_CWC_CYCLE; y++)
         if (held(file, y) == 1) return y;
     return NEVER;
 }

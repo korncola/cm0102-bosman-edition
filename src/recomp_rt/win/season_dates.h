@@ -33,10 +33,13 @@ typedef struct {
     int8_t staff_history;           /* staff history year, +0x08, except the kept careers */
     int8_t comp_history;            /* club and nation competition history year, +0x08, every row */
     int8_t last_rows;               /* with comp_history 0: the shift of the 2001 rows of last_ids */
+    int8_t nation_history;          /* the nation competition rows (0.6.2 slice 7): their own shift */
     uint16_t last_count;
     const uint16_t *last_ids;       /* competition ids (club comps, then nation comps) */
     uint32_t kept_rows;             /* the staff rows that kept_hex covers, 0 for none */
     const char *kept_hex;           /* bit i (byte i / 8, bit i % 8): the career of staff row i keeps its years */
+    uint16_t nation_count;
+    const int16_t *nation_comps;    /* pairs (competition id, shift): nation competitions with a shift of their own */
 } SeasonDateShifts;
 
 extern const SeasonDateShifts season_date_shifts[];     /* season_dates_table.c */

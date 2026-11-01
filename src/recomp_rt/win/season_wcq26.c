@@ -581,9 +581,10 @@ static int superseded(uint32_t nations, int count, const char *name)
 void o_00919e30(void);
 
 /* The European nations of a campaign's pool, in nation order (out may be NULL to count): every European nation
- * whose national team names it, less Russia, less an old record that a later one replaces, less the hosts of the
- * World Cup of the campaign. It reads only the nation, club and host tables, which a load restores in full, so the
- * group sizes of the draw and of a loaded game agree (europe_group_size): the pool size +0xf2 is not in the save
+ * whose national team names it, less Russia from the 2026 cycle (it played the qualifying groups of 2022), less an
+ * old record that a later one replaces, less the hosts of the World Cup of the campaign. It reads only the
+ * nation, club and host tables, which a load restores in full, so the group sizes of the draw and of a loaded game
+ * agree (europe_group_size): the pool size +0xf2 is not in the save
  * (League::load 0x687b10 succeeds at a load, and the ctor then skips build_entry_pool, 0x918328..0x918339), so
  * the group builders 0x9190db and 0x919722 of a loaded game read 0 there. log: 1 for the lines of the pool. */
 static int europe_nations(uint32_t self, uint32_t *out, int max, int log)
@@ -595,7 +596,7 @@ static int europe_nations(uint32_t self, uint32_t *out, int max, int log)
     for (int id = 0; id < count && n < max; id++) {
         uint32_t nation = nations + (uint32_t)id * NATION_SIZE, c = rd32(g_mem, nation + 0x71u);
         if (!readable(c) || rd32(g_mem, c) != rd32(g_mem, 0x9cfa10u)) continue;
-        if (!strcmp(win_str(nation + 4u), "Russia")) {
+        if (!strcmp(win_str(nation + 4u), "Russia") && season_wcq26(self)) {
             russia = 1;
             continue;
         }
@@ -617,7 +618,8 @@ static int europe_nations(uint32_t self, uint32_t *out, int max, int log)
     }
     if (log)
         fprintf(stderr, "recomp: season intl: wc qualifying %d: Europe pool of %d nations (%s, %d hosts out)\n",
-                year_of(self) + 2, n, russia ? "Russia out" : "no Russia in the data", n_hosts);
+                year_of(self) + 2, n,
+                russia ? "Russia out" : season_wcq26(self) ? "no Russia in the data" : "Russia in", n_hosts);
     return n;
 }
 
@@ -641,29 +643,120 @@ void season_wcq26_log_pool(uint32_t self, const char *what)
             (int16_t)rd16(g_mem, self + F_YEAR), n, kosovo ? "in" : "out", len ? odd : " no odd nation");
 }
 
+/* The campaigns of 2006 to 2022 (open item 57 of 0.6.2). build_entry_pool 0x919e30 takes at most 50 less the
+ * exempt nations (above), and get_group_size 0x918dd0 gives groups of 5, with one or two exempt nations groups of
+ * 6 at the stages 2, 4 and 6, or 2, 4 and 7 (0x918de9..0x918e13). A 2001 game on 0.6.0 played the 2006
+ * qualifying with 49 nations, without Liechtenstein, and the 2010 one with 50, without Serbia (the forum save of
+ * 2041 and long game seed 5; real: 51 and 53 entrants). In a season game the pool of these campaigns is every
+ * European nation (europe_nations, Russia in), sorted by the original's compare, in the original's group count
+ * (+0xff, set by build_entry_pool from the exempt count: 10 groups with no exempt nation, 9 with one or two, 8
+ * with three, 0x91a0c2..0x91a114). The exempt nations are the European hosts, as a season game has no holder
+ * (rt_intl_wc_holder). Each group then holds 5 or 6 (wide_size): the grid of the draw 0x918ec0 holds 6 a group
+ * (0x918ef1) and every group stage of the template 0x9185c0 has 10 rounds (0x91860e), which a group of 5 or 6
+ * plays. A pool above 6 a group keeps its best by reputation. A data with fewer than 5 a group keeps the
+ * original's pool and sizes. */
+#define WIDE_FIRST 2006
+#define WIDE_LAST 2022
+#define WIDE_ROOM 6                     /* nations a group: the grid's row (0x918ef1) */
+
+static int europe_wide(uint32_t self)
+{
+    if (!is(self, VT_EUROPE) || !season_intl_on() || season_wcq26(self)) return 0;
+    int y = year_of(self) + 2;
+    return y >= WIDE_FIRST && y <= WIDE_LAST;
+}
+
+static int wide_groups(uint32_t self) { return (int8_t)rd8(g_mem, self + EU_LAST_GROUP) + 2; }
+
+/* 1 when the groups of a 2006 to 2022 campaign take the sizes of wide_size: its pool holds 5 to 6 a group. The
+ * draw 0x91a5db and the group builders 0x91a5e2 and 0x9196d0 run in one call (0x91a5db..0x91a6f9), before the pool
+ * size +0xf2 goes to 0 (0x91a73d). The save writes the pool and its size (0x91b109..0x91b154) and the load reads
+ * them back (0x91ad13..0x91adb8), so a load before the draw keeps the wide pool and its sizes. */
+static int wide_sized(uint32_t self)
+{
+    int groups = wide_groups(self), n = (int)rd32(g_mem, self + EU_POOL_SIZE);
+    return europe_wide(self) && groups >= 1 && groups <= 10 && n >= 5 * groups && n <= WIDE_ROOM * groups;
+}
+
+/* The size of group g (0 = A) of a wide campaign: the last (pool - 5 * groups) groups of 6, the others of 5. */
+static int wide_size(uint32_t self, int g)
+{
+    int groups = wide_groups(self), six = (int)rd32(g_mem, self + EU_POOL_SIZE) - 5 * groups;
+    return g >= groups - six ? 6 : 5;
+}
+
+#define NATIONS_MAX 128                 /* europe_nations of any data (55 European nations in 2025) */
+
+/* The pool +0xee of a campaign made again: its European nations (europe_nations), sorted by the original's compare
+ * (0x91a0b0), the best `room` of them; the pool size +0xf2 the count. The original's pool block is freed. Returns
+ * the count, or -1 when no pool was made. */
+static int pool_again(uint32_t self, int room, int log)
+{
+    uint32_t teams[NATIONS_MAX];
+    int n = europe_nations(self, teams, NATIONS_MAX, log);
+    if (rt_unwinding) return -1;
+    uint32_t pool = game_malloc(4u * (uint32_t)(n > POOL_MAX ? n : POOL_MAX));
+    if (rt_unwinding || !pool) return -1;
+    for (int k = 0; k < n; k++) wr32(g_mem, pool + 4u * (uint32_t)k, teams[k]);
+    uint32_t qa[4] = {pool, (uint32_t)n, 4, CLUB_COMPARE};
+    call_cdecl(GAME_QSORT, 4, qa);
+    if (rt_unwinding) return -1;
+    if (n > room) {
+        if (log)
+            fprintf(stderr, "recomp: season intl: wc qualifying %d: Europe keeps the best %d of %d nations\n",
+                    year_of(self) + 2, room, n);
+        n = room;
+    }
+    game_free(rd32(g_mem, self + EU_POOL));
+    if (rt_unwinding) return -1;
+    wr32(g_mem, self + EU_POOL, pool);
+    wr32(g_mem, self + EU_POOL_SIZE, (uint32_t)n);
+    return n;
+}
+
+static void wide_pool(uint32_t self)
+{
+    int groups = wide_groups(self), have = (int)rd32(g_mem, self + EU_POOL_SIZE);
+    if (groups < 1 || groups > 10) return;
+    int n = europe_nations(self, NULL, NATIONS_MAX, 0);
+    if (rt_unwinding || n <= have || n < 5 * groups) return;
+    n = pool_again(self, WIDE_ROOM * groups, logging());
+    if (n >= 0 && logging())
+        fprintf(stderr, "recomp: season intl: wc qualifying %d: Europe pool of %d nations (the original's %d) in "
+                        "%d groups\n", year_of(self) + 2, n, have, groups);
+}
+
+/* The return address of build_entry_pool's call in the ctor 0x918200 (0x918339); start_new_season calls it at
+ * 0x9194cf. */
+#define POOL_CTOR_RET 0x0091833eu
+
+/* 1 when the wide pool waits for start_new_season: a ctor's campaign whose World Cup before it lies after the game
+ * year (a 2001 game makes the 2006 campaign at the new game, and start_new_season 0x9194cf makes its pool again
+ * after the 2002 World Cup, before the draw). So a new game of 2001 keeps the original's memory to that point. */
+static int wide_waits(uint32_t self, uint32_t ret)
+{
+    return ret == POOL_CTOR_RET && year_of(self) > (int16_t)rd16(g_mem, GAME_DATE + 2u) + 2;
+}
+
 RT_WRAP(00919e30, wcq26_europe_pool)
 {
-    uint32_t self = cpu.ecx;
+    uint32_t self = cpu.ecx, ret = rd32(g_mem, cpu.esp);
     o_00919e30();
     if (!rt_unwinding && !europe_on(self) && is(self, VT_EUROPE)) {
         uint32_t eax = cpu.eax;
         season_wcq26_log_pool(self, "wc qualifying (original)");
         cpu.eax = eax;
     }
+    /* A pool of 2006 to 2022 when the original made one: it returns 0 and sets no group count when it finds too
+     * few nations (0x91a08c). */
+    if (!rt_unwinding && europe_wide(self)) {
+        uint32_t eax = cpu.eax;
+        if (eax == 1u && !wide_waits(self, ret)) wide_pool(self);
+        if (!rt_unwinding) cpu.eax = eax;
+        return;
+    }
     if (rt_unwinding || !europe_on(self)) return;
-    uint32_t teams[POOL_MAX];
-    int n = europe_nations(self, teams, POOL_MAX, logging());
-    if (rt_unwinding) return;
-    uint32_t pool = game_malloc(4u * POOL_MAX);
-    if (rt_unwinding || !pool) return;
-    for (int k = 0; k < n; k++) wr32(g_mem, pool + 4u * (uint32_t)k, teams[k]);
-    uint32_t qa[4] = {pool, (uint32_t)n, 4, CLUB_COMPARE};
-    call_cdecl(GAME_QSORT, 4, qa);
-    if (rt_unwinding) return;
-    game_free(rd32(g_mem, self + EU_POOL));
-    if (rt_unwinding) return;
-    wr32(g_mem, self + EU_POOL, pool);
-    wr32(g_mem, self + EU_POOL_SIZE, (uint32_t)n);
+    if (pool_again(self, POOL_MAX, logging()) < 0) return;
     wr8(g_mem, self + EU_EXEMPT, 0);
     wr8(g_mem, self + EU_LAST_GROUP, EU_GROUPS - 2);
     wr8(g_mem, self + EU_RUNNERS_UP, EU_GROUPS - 1);
@@ -712,15 +805,19 @@ static int europe_group_size(uint32_t self, int g)
 void o_00918dd0(void);
 
 /* get_group_size, thiscall (stage as a byte), ret 4 (0x918ea8): 5 for every group with no exempt nation
- * (0x918e9e). */
+ * (0x918e9e). A wide campaign of 2006 to 2022 takes wide_size. */
 RT_WRAP(00918dd0, wcq26_europe_group_size)
 {
     uint32_t self = cpu.ecx;
+    int stage = (int8_t)rd8(g_mem, cpu.esp + 4u);
+    if (wide_sized(self)) {
+        rt_ret_stdcall((uint32_t)wide_size(self, stage + 1), 1);
+        return;
+    }
     if (!europe_shape(self)) {
         o_00918dd0();
         return;
     }
-    int stage = (int8_t)rd8(g_mem, cpu.esp + 4u);
     rt_ret_stdcall((uint32_t)europe_group_size(self, stage + 1), 1);
 }
 

@@ -403,7 +403,8 @@ static void sizes_rules(uint32_t obj)
      * with fixed counts (the German Regionalliga split needs exactly 36 clubs, cmp bl, 0x24 at 0x5dbc3b, box
      * ger_first.cpp 1049 at 0x5dbcd9: the 2. Bundesliga with 2 relegation places against the Regionalliga's 4
      * promotions left it short in June 2017). */
-    if (open_neighbour(obj, ABOVE)) set_places(obj, UP, UP_PLAYOFF, r->up, "promotion");
+    if (open_neighbour(obj, ABOVE))
+        set_places(obj, UP, UP_PLAYOFF, r->up + season_playoffs_winners_up(file, r->season), "promotion");
     if (open_neighbour(obj, BELOW)) set_places(obj, DOWN, DOWN_PLAYOFF, r->down, "relegation");
 }
 

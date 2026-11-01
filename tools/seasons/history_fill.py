@@ -22,7 +22,13 @@ Gap rows (row CONCACAF place 1, the maintainer, 27 October 2026): a database of 
 which the game keeps. Where it holds no row at all of a competition in GAP_COMPETITIONS, the kept researched rows
 of that competition are added (`add`, nothing cleared). The US Open Cup: Con_Champ::pick_clubs 0x4c11a0 gives
 CONCACAF place 1 to its newest winner (0x4afd80), and September 2010 ODB, December 2010 SIM, April 2011 SIM and
-March 2012 SIM hold no US Open Cup row.
+March 2012 SIM hold no US Open Cup row. Where such a database holds a row of a GAP_COMPETITIONS competition whose
+winner is a club of another nation than the competition's, the row is cleared and the researched row of its label
+added (`clear`, `add` with result `differ`): eleven databases, April 2021 to May 2026, name club 977, Atlanta of
+Argentina, as the 2019 US Open Cup winner in place of Atlanta United FC, and the CONCACAF Champions Cup of 2020 to
+2022 starts took it (0.6.2 open item 49). Only clubs of the club table are tested (a national side has no nation
+field there). Note: a --write run on a database folder that lacks some databases of the first run leaves their
+rows out of plan.tsv; the rows of item 49 were added from this function's output on test-fixtures/databases.
 
 --write writes docs/research/history-0.6.0/fill-report.tsv (counts per database) and unmatched.tsv (names that do
 not match in a database). The files hold competition and club names only.
@@ -205,6 +211,17 @@ def resolve(names, name, nation, kind):
 
 
 GAP_COMPETITIONS = ("US Open Cup",)
+# Repairs of a database of 2010/11 or later (0.6.2 slice 7, open item 20): (database, competition, label years
+# whose rows are cleared, after the year shift). September 2010 ODB holds no World Cup 2010 row; its last row (1998
+# in the file, 2007 after the nation shift of +9) names France alone, with no other place. GAP_FINALS then adds
+# the researched 2010 row.
+REPAIRS = (("September 2010 ODB", "FIFA World Cup", (2007,)),)
+# Finals that a database of 2010/11 or later may lack (0.6.2 slice 7, open item 20): each researched edition whose
+# label is missing after the nation shift is added, when its final is before the start. A final in July of the
+# start year counts: the game plays no finals in the July of its start (no game row of the 2010 World Cup in the
+# 2010 gate saves of 0.6.0). October 2023 holds no World Cup 2022 row, April 2011 SIM and March 2012 SIM no World
+# Cup or Euro row after 2000.
+GAP_FINALS = ("FIFA World Cup", "European Football Championship")
 
 
 def gap_databases(dbroot):
@@ -223,34 +240,91 @@ def gap_databases(dbroot):
     return sorted(out, key=lambda x: (x[1], x[0]))
 
 
-def gap_rows(name, start, folder, rows, ref, alias, plan, report):
-    """The gap rows of one database of 2010/11 or later (see the top)."""
+def club_nation(d, i):
+    """The nation name of club index i of a database, "" for a national side or none."""
+    r = d.row(0, i) if 0 <= i < d.count(0) else None
+    nat = s32(r, 0x53) if r else -1
+    return d.text(4, nat) if nat >= 0 else ""
+
+
+def nation_shifts(shifts_path):
+    """{database: (nation shift, {competition id: shift})} of databases-date-shifts*.tsv."""
+    comps = {}
+    for r in hg.read_tsv(os.path.join(os.path.dirname(shifts_path), "databases-date-shifts-nation-comps.tsv")):
+        comps.setdefault(r["database"], {})[int(r["competition_id"])] = int(r["shift"])
+    return {r["database"]: (int(r.get("nation_history") or 0), comps.get(r["database"], {}))
+            for r in hg.read_tsv(shifts_path)}
+
+
+def gap_rows(name, start, folder, rows, ref, alias, plan, report, shift, nshift):
+    """The gap rows of one database of 2010/11 or later (see the top). shift: the database's comp_history years;
+    nshift: its nation shifts (nation_shifts)."""
     d = hg.Data(folder)
     held = {d.comp(cid)[1] for cid, *_ in d.history()}
     comps = {}
-    for cid in range(d.count(12)):
+    for cid in range(d.count(12) + d.count(16)):     # the club competitions, then the nation competitions
         c = d.comp(cid)
         if c:
             comps.setdefault(c[1], (cid, c[2]))
     names = Names(d, ref, alias)
-    added = 0
+    added = differ = 0
     for comp in GAP_COMPETITIONS:
-        if comp in held or comp not in comps:
+        if comp not in comps:
             continue
+        wrong = None                                    # None: no row at all; else the labels of foreign winners
+        if comp in held:
+            wrong = {str(y + shift) for cid, y, a, *_ in d.history()
+                     if cid == comps[comp][0] and club_nation(d, a) not in ("", comps[comp][1])}
+            if not wrong:
+                continue
         for r in rows:
             if r["competition"] != comp or r["nation"] != comps[comp][1] or not r.get("label", "").isdigit():
                 continue
-            if not kept(r, start):
+            if not kept(r, start) or (wrong is not None and r["label"] not in wrong):
                 continue
             places = [resolve(names, r.get(f, ""), r["nation"], r["kind"]) for f in ("first", "second", "third", "host")]
             if places[0] is None or not places[0][0]:
                 continue
             places = [v or ("", "") for v in places]
+            if wrong is not None:
+                plan.append("\t".join(["clear", name, str(start), comp, r["label"]] + [""] * (len(PLAN_COLS) - 5)))
+            plan.append("\t".join(["add", name, str(start), comp, r["label"], r.get("part", ""),
+                                   "add" if wrong is None else "differ"] + [x for v in places for x in v]))
+            added += 1
+            differ += wrong is not None
+    cleared = set()
+    for db, comp, clears in REPAIRS:
+        if db != name or comp not in comps:
+            continue
+        for label in clears:
+            plan.append("\t".join(["clear", name, str(start), comp, str(label)] + [""] * (len(PLAN_COLS) - 5)))
+            cleared.add((comp, label))
+    ns, own = nshift
+    have = collections.defaultdict(set)         # the labels of each nation competition after its shift
+    for cid, y, *_ in d.history():
+        c = d.comp(cid)
+        if c and c[0] == "nation":
+            have[c[1]].add(y + own.get(cid, ns))
+    for comp in GAP_FINALS:
+        if comp not in comps:
+            continue
+        for r in rows:
+            if r["competition"] != comp or r["nation"] != comps[comp][1] or not r.get("label", "").isdigit() \
+                    or r.get("held") != "yes":
+                continue
+            label = int(r["label"])
+            if not (FIRST_FILL <= label <= start) or ended_of(r) > (start, START_MONTH) or \
+                    (label in have[comp] and (comp, label) not in cleared):
+                continue
+            places = [resolve(names, r.get(f, ""), r["nation"], r["kind"]) for f in ("first", "second", "third", "host")]
+            if places[0] is None or not places[0][0]:
+                raise SystemExit(f"{name}: the repair row {comp} {r['label']} has no winner in the database")
+            places = [v or ("", "") for v in places]
             plan.append("\t".join(["add", name, str(start), comp, r["label"], r.get("part", ""), "add"]
                                   + [x for v in places for x in v]))
             added += 1
     if added:
-        report.append("\t".join(map(str, [name, start, added, added, added, 0, 0, 0, 0, 0, 0, 0])))
+        report.append("\t".join(map(str, [name, start, added, added, added - differ, 0, differ, 0, 0, 0, 0, 0])))
         print(report[-1], flush=True)
 
 
@@ -269,6 +343,7 @@ def main(argv):
     shifts = {r["database"]: r for r in hg.read_tsv(shifts_path)}
     last = {r["database"]: set(map(int, r["competition_ids"].split())) for r in hg.read_tsv(last_path)}
     rows = research_rows()
+    nshifts = nation_shifts(shifts_path)
     ref = hg.Data(argv[0])
     alias = aliases()
     skip = skips()
@@ -291,8 +366,13 @@ def main(argv):
         sh = shifts.get(name, {})
         cs, ls = int(sh.get("comp_history", 0) or 0), int(sh.get("last_rows", 0) or 0)
         held = collections.defaultdict(list)
+        ns, own = nshifts.get(name, (cs, {}))
         for cid, y, a, b, c, h in d.history():
-            yy = y + cs if cs else (y + ls if (y == hg.LAST_ROW and cid in last.get(name, ())) else y)
+            if d.comp(cid)[0] == "nation":
+                cs_row = own.get(cid, ns)
+                yy = y + cs_row if cs_row else (y + ls if (y == hg.LAST_ROW and cid in last.get(name, ())) else y)
+            else:
+                yy = y + cs if cs else (y + ls if (y == hg.LAST_ROW and cid in last.get(name, ())) else y)
             held[(cid, yy)].append((d.club(a), d.club(b)))
         names = Names(d, ref if name != "3.9.68" else None, alias)
         n = collections.Counter()
@@ -338,7 +418,8 @@ def main(argv):
                                           n["nocomp"], n["um_first"], n["um_other"], n["cleared"], n["kept_db"]])))
         print(report[-1], flush=True)
     for name, start, folder in gap_databases(argv[1]):
-        gap_rows(name, start, folder, rows, ref, alias, plan, report)
+        gap_rows(name, start, folder, rows, ref, alias, plan, report,
+                 int(shifts.get(name, {}).get("comp_history", 0) or 0), nshifts.get(name, (0, {})))
     um = ["database\tnation\tname\trows"] + ["\t".join([a, b, c, str(k)]) for (a, b, c), k in sorted(unmatched.items())]
     print(f"{len(unmatched)} unmatched names (database, name)")
     vl = ["database\tname\tdatabase_name"] + ["\t".join(x) for x in sorted(via)]

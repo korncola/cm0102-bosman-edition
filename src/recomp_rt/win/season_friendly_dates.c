@@ -287,15 +287,17 @@ static int finals_busy(uint32_t a, uint32_t b, int y, int doy)
         if (!readable(cont)) continue;
         for (int c = 0; c < SEASON_CONFS; c++)
             if (rd32(g_mem, cont) == rd32(g_mem, KEY_CONTINENTS + 4u * (uint32_t)c) &&
-                season_intl_finals_busy(c, y, doy))
+                (season_intl_finals_busy(c, y, doy) ||
+                 (c == SEASON_CONF_NORTH_AMERICA && season_gold_cup_busy(y, doy))))   /* open item 55 */
                 return 1;
     }
     return 0;
 }
 
-/* The FIFA day a qualifier of club home v club away on day d of year y moves to: the nearest free one of the same
+/* The day a qualifier of club home v club away on day d of year y moves to: the nearest free FIFA day of the same
  * year, 2 or more days after today, not after day ey/ed (its stage's last match day; ey 0: none) and not in the
- * days of a final of either side's confederation; d when it is on such a day already; -1 when none is free. */
+ * days of a final of either side's confederation; d when it is on such a day already. With no such FIFA day, and
+ * d in a final's days: the nearest such day that is not a FIFA day (open item 55). -1 when none is free. */
 static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, int ed)
 {
     int doys[FIFA_DOYS_MAX], n = fifa_doys(y, doys, FIFA_DOYS_MAX);
@@ -309,6 +311,22 @@ static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, in
             if (ey && (y > ey || (y == ey && c > ed)) && c > d) continue;      /* past its stage's last day */
             for (int k = 0; k < n; k++) ok |= doys[k] == c;
             if (!ok || finals_busy(home, away, y, c) || side_busy(home, away, y, c)) continue;
+            return rt_unwinding ? -1 : c;
+        }
+    /* Open item 55: no free FIFA day, and its own day lies in a final's days. It then takes the nearest day that is
+     * not a FIFA day, with the same bounds, where neither side has a national match on that day or the day either
+     * side of it, rather than meet the final. Not seen in a game: in long game seed 6 to 2030 no qualifier kept a
+     * day in a final's days (run-logs/0.6.2-s6). Inference: a domestic league day can be taken, which leaves the
+     * clubs without their internationals that day; the final losing its last fixture is worse. */
+    if (rt_unwinding || !finals_busy(home, away, y, d)) return -1;
+    for (int dist = 1; dist <= SNAP_DAYS && !rt_unwinding; dist++)
+        for (int sign = -1; sign <= 1; sign += 2) {
+            int c = d + sign * dist;
+            if (c < 0 || c >= days_in(y) || (y == today_year && c < today + 2) || y < today_year) continue;
+            if (ey && (y > ey || (y == ey && c > ed)) && c > d) continue;
+            if (finals_busy(home, away, y, c) || side_busy(home, away, y, c) ||
+                (c > 0 && side_busy(home, away, y, c - 1)) || (c + 1 < days_in(y) && side_busy(home, away, y, c + 1)))
+                continue;
             return rt_unwinding ? -1 : c;
         }
     return -1;
@@ -401,9 +419,12 @@ static void stay_info(uint32_t rec, uint32_t home, uint32_t away, int d, int y, 
 static void log_move(uint32_t rec, uint32_t home, uint32_t away, int d, int c, int y, const char *how)
 {
     if (!getenv("RECOMP_SCREEN_LOG")) return;
+    int doys[FIFA_DOYS_MAX], n = c >= 0 ? fifa_doys(y, doys, FIFA_DOYS_MAX) : 0, fifa = 0;
+    for (int k = 0; k < n; k++) fifa |= doys[k] == c;
     if (c >= 0)
-        fprintf(stderr, "recomp: intl dates: %.40s %.30s v %.30s moves from day %d to the FIFA day %d of %d%s\n",
-                win_str(rec + 4), win_str(home + 4), win_str(away + 4), d, c, y, how);
+        fprintf(stderr, "recomp: intl dates: %.40s %.30s v %.30s moves from day %d to the %s %d of %d%s\n",
+                win_str(rec + 4), win_str(home + 4), win_str(away + 4), d, fifa ? "FIFA day" : "day (not a FIFA day: "
+                "none was free, and its day lies in a final's days)", c, y, how);
     else
         stay_info(rec, home, away, d, y, how);
 }

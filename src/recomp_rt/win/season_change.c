@@ -428,11 +428,12 @@ void season_change_reset(void)
     creating = 0;                               /* also when a longjmp left create_game */
 }
 
-/* Version 3 (0.6.2 slice 12) when the game has caps above 255 (caps_wide.c): the row A18 list then always has its
- * count, so the readers of 0.6.0 and 0.6.1 take the list and leave the caps after it (season_friendly_part_read of
+/* Version 3 (0.6.2 slice 12) when the game has caps above 255, version 4 (item 66) when it has goals above 255
+ * (caps_wide.c): the row A18 list then always has its count, so the readers of 0.6.0 and 0.6.1 take the list and
+ * leave the caps and goals after it (season_friendly_part_read of
  * those versions reads the entries that the count gives and ignores the bytes after them). Else version 2 or 1, as
  * before. */
-static int part_caps(void) { return caps_wide_count() > 0; }
+static int part_caps(void) { return caps_wide_form() != 0; }
 
 uint32_t season_change_part_size(void)
 {
@@ -446,7 +447,7 @@ uint32_t season_change_part_size(void)
 
 int season_change_part_form(void)
 {
-    return part_caps() ? 3 : season_change_part_size() ? 2 : 1;
+    return part_caps() ? caps_wide_form() : season_change_part_size() ? 2 : 1;
 }
 
 static void put32(uint8_t *p, uint32_t v) { memcpy(p, &v, 4); }
@@ -479,7 +480,7 @@ void season_change_part_write(uint8_t *out)
         put32(out + at, 0);
         pending = 4;
     }
-    caps_wide_part_write(out + at + pending);   /* version 3 */
+    caps_wide_part_write(out + at + pending);   /* version 3 or 4 */
 }
 
 int season_change_part_read(const uint8_t *in, uint32_t n, uint32_t form)
@@ -530,16 +531,13 @@ int season_change_part_read(const uint8_t *in, uint32_t n, uint32_t form)
     season_point = (int)point;
     at += 4;
     if (form < 3) return season_friendly_part_read(in + at, n - at);   /* row A18; nothing more in a save before it */
-    /* Version 3: the row A18 list with its count and whole entries, then the caps above 255. */
+    /* Version 3 and later: the row A18 list with its count and whole entries, then the caps (and goals) above 255. */
     if (n - at < 4) return 0;
     uint32_t pending = get32(in + at);
     if (pending > (n - at - 4) / SEASON_FRIENDLY_ENTRY) return 0;
     uint32_t list = 4 + pending * SEASON_FRIENDLY_ENTRY;
     if (!season_friendly_part_read(in + at, list)) return 0;
-    uint32_t caps = n - at - list;
-    /* A later version keeps the caps field (u32 count, 8 bytes a player) here and adds its own after it. */
-    if (form > 3 && caps >= 4 && get32(in + at + list) <= (caps - 4) / 8) caps = 4 + 8 * get32(in + at + list);
-    if (!caps_wide_part_read(in + at + list, caps)) {
+    if (!caps_wide_part_read(in + at + list, n - at - list, form)) {   /* the caps, and from version 4 the goals */
         season_change_reset();
         return 0;
     }
@@ -548,8 +546,57 @@ int season_change_part_read(const uint8_t *in, uint32_t n, uint32_t form)
 
 /* ---- The news item ---- */
 
-/* One news item for season to every human manager. The text stays in the list: write_text reads it. */
+/* The news screen draws the body of an item with Text::draw_wrapped 0x4aeaf0 (call at 0x78901a: x 0x78 to 0x302,
+ * font 3). It wraps into a global array of 50 lines of 501 bytes at 0xadae1c (0x4aec26) and never checks the line
+ * count (the index [ebp-0x1b0] goes up at 0x4aeff5). Each '\n' ends a line (0x4aec7c). A longer body wrote line 51
+ * over 0xae0ff6..0xae11ea: the ConmebolSeeding pointer at 0xae1000, so the Libertadores seeding of the next
+ * January marked 1 club and the game stopped at conmebol_liber.cpp 663 (open item 69: the 2020/21 news of a 2013
+ * start, 27 September 2020). So the news of a season goes in parts, one item each, of at most PART_LINES lines with
+ * the heading. The lines of a sentence come from its length, at LINE_CHARS characters a line. That is about half
+ * of what a line of the 651-pixel box (0x302 - 0x78 + 1) holds in font 3, so the room covers the word that wraps
+ * to the next line and a larger Fonts setting (inference: the widths were not measured per character). The
+ * count calls no game code, so the send at the season change uses no game memory (Q152), and write_text splits
+ * the text in the same way at any later load. */
+#define PART_LINES 40                   /* of the 50 that the line array holds */
+#define HEAD_LINES 2                    /* "These changes come in with ...:" and the empty line after it */
+#define LINE_CHARS 40
+#define MAX_PARTS 32
+
+static int sentence_lines(uint32_t n) { return 1 + (int)(n / LINE_CHARS); }
+
+/* The parts of a season's text: the offset of the first sentence of each part. Returns the count, 1 or more. */
+static int news_parts(const SeasonNews *s, uint32_t *start)
+{
+    int parts = 1, lines = HEAD_LINES;
+    start[0] = 0;
+    if (!s || !s->len) return 1;
+    for (uint32_t at = 0; at < s->len;) {
+        const char *nl = memchr(s->text + at, '\n', s->len - at);
+        uint32_t n = nl ? (uint32_t)(nl - (s->text + at)) : s->len - at;
+        int k = sentence_lines(n);
+        if (lines + k > PART_LINES && lines > HEAD_LINES && parts < MAX_PARTS) {
+            start[parts++] = at;
+            lines = HEAD_LINES;
+        }
+        lines += k;
+        at += n + 1;
+    }
+    return parts;
+}
+
+/* One news item for each part of the season's news to every human manager. The part goes in slot 2 of the item,
+ * at +13: set_slot 0x785790 stores slot k at +5 + 4k (0x7857ac). The text stays in the list: write_text reads it
+ * and splits it again in the same way. */
+static void news_send_part(int season, int part);
+
 static void news_send(int season)
+{
+    uint32_t start[MAX_PARTS];
+    int parts = news_parts(news_of(season), start);
+    for (int k = 0; k < parts && !rt_unwinding; k++) news_send_part(season, k);
+}
+
+static void news_send_part(int season, int part)
 {
     static uint32_t item;
     if (!item) item = win_static_alloc(NEWS_ITEM_ROOM);
@@ -563,11 +610,14 @@ static void news_send(int season)
     if (rt_unwinding) return;
     call_this(NEWS_SET_SLOT, item, 2, s1);
     if (rt_unwinding) return;
+    uint32_t s2[2] = {2, (uint32_t)part};
+    call_this(NEWS_SET_SLOT, item, 2, s2);
+    if (rt_unwinding) return;
     uint32_t b[1] = {item};
     call_this(NEWS_SEND_ALL, store, 1, b);
     if (logging() && !rt_unwinding)
-        fprintf(stderr, "recomp: season change: news item for %d/%02d sent on day %d of %d\n", season,
-                (season + 1) % 100, game_day(), game_year());
+        fprintf(stderr, "recomp: season change: news item for %d/%02d part %d sent on day %d of %d\n", season,
+                (season + 1) % 100, part + 1, game_day(), game_year());
 }
 
 static int our_item(uint32_t item)
@@ -598,16 +648,26 @@ RT_WRAP(0077bc80, news_write_text)
         return;
     }
     int season = (int)rd32(g_mem, item + 9), full = rt_arg(2) != 0;
-    char head[160];
+    char head[160], of[40] = "";
     const SeasonNews *s = news_of(season);
-    const char *body = s && s->len ? s->text : "The rules of the new season are in force.";
+    uint32_t start[MAX_PARTS];
+    int parts = news_parts(s, start), part = (int)rd32(g_mem, item + 13);
+    if (part < 0 || part >= parts) part = 0;   /* an item of an older version: slot 2 is 0 (0x77bbe0 clears it) */
+    char body[TEXT_ROOM + 1] = "The rules of the new season are in force.";
+    if (s && s->len) {
+        uint32_t end = part + 1 < parts ? start[part + 1] - 1 : s->len;
+        memcpy(body, s->text + start[part], end - start[part]);
+        body[end - start[part]] = 0;
+    }
+    if (parts > 1) snprintf(of, sizeof of, " (part %d of %d)", part + 1, parts);
     call_this(TEXT_CLEAR, text, 0, NULL);
     if (rt_unwinding) return;
     if (!full) {
-        snprintf(head, sizeof head, "New rules for the %d/%02d season", season, (season + 1) % 100);
+        snprintf(head, sizeof head, "New rules for the %d/%02d season%s", season, (season + 1) % 100, of);
         text_put(text, head);
     } else {
-        snprintf(head, sizeof head, "These changes come in with the %d/%02d season:\n\n", season, (season + 1) % 100);
+        snprintf(head, sizeof head, "These changes come in with the %d/%02d season%s:\n\n", season, (season + 1) % 100,
+                 of);
         text_put(text, head);
         if (!rt_unwinding) text_put(text, body);
     }

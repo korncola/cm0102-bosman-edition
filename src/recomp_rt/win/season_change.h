@@ -199,12 +199,12 @@ void season_change_reset(void);                               /* before a new ga
  * season_change_part_size gives 0 when the game has none of these (the part stays version 1). A reader takes
  * these fields of a later version too and leaves what follows them. */
 /* Version 3 (0.6.2 slice 12) keeps these fields, then the row A18 list always with its u32 count and whole entries of
- * SEASON_FRIENDLY_ENTRY bytes, then the caps above 255 (caps_wide.h). A game with no caps above 255 writes version 2
- * (or 1), byte for byte as before. A later version keeps the caps field there (its count may be 0) and adds its own
- * fields after it. */
+ * SEASON_FRIENDLY_ENTRY bytes, then the caps above 255 (caps_wide.h). Version 4 (item 66) adds the goals above 255
+ * after the caps field, whose count may then be 0. A game with no caps or goals above 255 writes version 2 (or 1),
+ * byte for byte as before. A later version keeps these fields and adds its own after them. */
 #define SEASON_FRIENDLY_ENTRY 20u    /* the bytes of one entry of the row A18 list (season_friendly_dates.c) */
 uint32_t season_change_part_size(void);
-int season_change_part_form(void);                            /* the part version: 1, 2 or 3 */
+int season_change_part_form(void);                            /* the part version: 1 to 4 */
 void season_change_part_write(uint8_t *out);                  /* season_change_part_size bytes */
 int season_change_part_read(const uint8_t *in, uint32_t n, uint32_t form);   /* 0 for damaged bytes */
 

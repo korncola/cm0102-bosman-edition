@@ -324,6 +324,15 @@ static const SeasonNlEdition *table_edition(const NlConf *c, int year)
     return NULL;
 }
 
+/* The last edition of the table, or NULL. */
+static const SeasonNlEdition *last_edition(const NlConf *c)
+{
+    const SeasonNlEdition *last = NULL;
+    for (int i = 0; i < season_nl_edition_count; i++)
+        if (!strcmp(season_nl_editions[i].confed, c->confed)) last = &season_nl_editions[i];
+    return last;
+}
+
 /* The edition of a year in this game. With changing rules on, the table's edition; after the table's last
  * edition the last one again every two years (Q248: the rules stay). With changing rules off, the edition of
  * the start season, again every two years (Q232). NULL for a year with no edition. */
@@ -338,6 +347,7 @@ static const SeasonNlEdition *edition(NlConf *c, int year)
                 base = &season_nl_editions[i];
     } else {
         base = season_nl_first(c->confed, season_start_year());
+        if (!base) base = last_edition(c);      /* open item 61: a start after the table takes its last row (Q248) */
         if (base && base->year == year) return base;
         if (base && base->year > year) base = NULL;
     }
@@ -346,6 +356,20 @@ static const SeasonNlEdition *edition(NlConf *c, int year)
     c->repeat.season = base->season + (year - base->year);
     c->repeat.year = year;
     return &c->repeat;
+}
+
+/* The first edition of a new game for season s: the table's first edition from s on, else (open item 61: a start
+ * after the table, for example a date jump to 2098) the first edition of `edition` whose league phase starts in
+ * season s or later. Up to 0.6.1 such a game had no Nations League: season_nl_first gives NULL after the table. */
+static const SeasonNlEdition *first_edition(NlConf *c, int s)
+{
+    const SeasonNlEdition *e = season_nl_first(c->confed, s);
+    if (e) return e;
+    for (int y = s - 2; y <= s + 2; y++) {
+        e = edition(c, y);
+        if (e && e->season >= s) return e;
+    }
+    return NULL;
 }
 
 static int next_year(const NlConf *c, int year)
@@ -1073,8 +1097,10 @@ static void nl_record_to_europe(const SeasonCompDef *d, uint32_t rec, int loadin
 static uint32_t nl_make(const SeasonCompDef *d, uint32_t rec, int year, int loading)
 {
     NlConf *c = conf_of_def(d);
-    const SeasonNlEdition *e = loading || !c ? NULL : season_nl_first(c->confed, year);
-    if (!c || (!loading && !e)) return 0;
+    const SeasonNlEdition *first = loading || !c ? NULL : first_edition(c, year);
+    if (!c || (!loading && !first)) return 0;
+    SeasonNlEdition copy = first ? *first : (SeasonNlEdition){0};
+    const SeasonNlEdition *e = first ? &copy : NULL;    /* first can be c->repeat, which edition() writes again */
     uint32_t v = build_vtable(d);
     uint32_t na[1] = {QUAL_SIZE};
     uint32_t obj = v ? call_cdecl(GAME_NEW, 1, na) : 0;
@@ -1101,14 +1127,30 @@ static uint32_t nl_make(const SeasonCompDef *d, uint32_t rec, int year, int load
     return obj;
 }
 
-const SeasonCompDef season_nl_comp = {"UEFA Nations League", "new_uefa_nations_league", RECORD_NAME, ENTRY, nl_make};
+/* Open item 61: the rule of a season for the comps module (season_comps.h, `held`). The rules table ends with a
+ * row "not_held" for 2027 (no edition known after 2026-27), and after the last row its rule stays (Q248), so a
+ * game that started from 2027 on got no Nations League: the module made no object and, for CONCACAF, no
+ * record. After the last table edition the last cycle continues (decision A): an edition's league phase is in
+ * every second season and its finals in the season after, so every season holds one. A game that started
+ * earlier keeps its object and is not changed (the module makes an object once). Inside the table: the table. */
+static int nl_held(const SeasonCompDef *d, int s)
+{
+    NlConf *c = conf_of_def(d);
+    const SeasonNlEdition *last = c ? last_edition(c) : NULL;
+    if (last && s > last->season) return 1;
+    return season_comps_held(d->comp, s);
+}
+
+const SeasonCompDef season_nl_comp = {"UEFA Nations League", "new_uefa_nations_league", RECORD_NAME, ENTRY, nl_make,
+                                      NULL, NULL, 0, 0, nl_held};
 
 /* Part b (Q368): the CONCACAF Nations League on a new record (season_comps.h, `like`): the continent, nation and
  * colour ids of the CONCACAF World Cup qualifying record. Level 14 (inference: below the qualifying of a finals,
  * which the officials code compares at 0x79d447; the World Cup has 20). */
 const SeasonCompDef season_nl_concacaf_comp = {"CONCACAF Nations League", "new_concacaf_nations_league",
                                                "CONCACAF Nations League", ENTRY, nl_make,
-                                               "World Cup CONCACAF Qualifying Section", "CONCACAF Nations League", 14};
+                                               "World Cup CONCACAF Qualifying Section", "CONCACAF Nations League", 14,
+                                               0, nl_held};
 
 /* ---- Wraps of the class's direct calls (class doc 2) ---- */
 

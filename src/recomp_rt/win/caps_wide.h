@@ -1,4 +1,5 @@
-/* International caps above 255 (0.6.2 slice 12, fault 30, Q25; caps_wide.c, tools/recomp/caps_wide.py).
+/* International caps and goals above 255 (0.6.2 slice 12, fault 30, Q25, and item 66; caps_wide.c,
+ * tools/recomp/caps_wide.py).
  *
  * The original keeps a player's caps in the unsigned byte at staff +0x22. NationalTeams::record_international_result
  * 0x76b600 raises it with no check (0x76b8c8 mov al, [esi + 0x22] / 0x76b8ce inc al / 0x76b8d0 mov [esi + 0x22], al),
@@ -28,13 +29,25 @@ uint32_t caps_wide_full(uint32_t id, uint32_t byte);
 /* The number of players with a stored count. */
 int caps_wide_count(void);
 
+/* International goals (0.6.2 item 66), the byte at staff +0x23, in the same way: record_international_result 0x76b600
+ * adds the player's goals of the match with no check (0x76b8cb mov dl, [esi + 0x23] / 0x76b8d6 add dl, cl / 0x76b8d8
+ * mov [esi + 0x23], dl), so the 256th goal gave 0. The new byte after n more goals, the full goals, and the number of
+ * players with a stored count. */
+uint32_t goals_wide_add(uint32_t id, uint32_t byte, uint32_t n);
+uint32_t goals_wide_full(uint32_t id, uint32_t byte);
+int goals_wide_count(void);
+
 /* Before a new game, a load, and the end of a game: no stored counts. */
 void caps_wide_reset(void);
 
-/* The field of the season part (version 3): u32 count, then count times u32 staff id, u32 caps (256 or more).
- * caps_wide_part_size gives 0 for an empty store. The read takes exactly n bytes: 0 for damaged bytes. */
+/* The fields of the season part. Version 3: the caps field, u32 count, then count times u32 staff id, u32 caps (256 or
+ * more). Version 4 (item 66): the caps field (its count may be 0), then the goals field in the same form. A later
+ * version keeps both and adds its own fields after them. caps_wide_form gives 4 when a player has more than 255 goals,
+ * else 3 when one has more than 255 caps, else 0 (no field: the part keeps version 1 or 2). caps_wide_part_read takes
+ * the fields of version form: 0 for damaged bytes. */
+int caps_wide_form(void);
 uint32_t caps_wide_part_size(void);
 void caps_wide_part_write(uint8_t *out);
-int caps_wide_part_read(const uint8_t *in, uint32_t n);
+int caps_wide_part_read(const uint8_t *in, uint32_t n, uint32_t form);
 
 #endif

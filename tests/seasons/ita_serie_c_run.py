@@ -15,6 +15,11 @@ Each run is a season jump of tests/seasons/rules_report_check.py with Italy. The
               loads that save and plays 120 days, across the season change into 2015/16 (the module makes group C
               again from its saved file)
     load-c2   the same with the extra division (the original's C2 objects load; the module makes none)
+    load-no-table  the load run, but the new program has no rules table (a missing or damaged Seasons/rules.tsv,
+              "The game plays without the table"): the game stays in the era with the counts its groups hold.
+              When the era came only from the table, the start of group C went to the original's code, C2/A's
+              create_table 0x653a90 counted 18 clubs and the box "ita_ser_c2a..cpp 551" came at the change
+    load-c2-no-table  the same with the extra division (after the load C2/B has no object)
     c2-two    September 2010 ODB, changing rules on, the extra division, 2010/11 to the end of 2014/15: Serie C2 of
               three groups, then two groups from 2011/12 to 2013/14 (Q529: C2/C ends), then the Serie C
     c2-two-off September 2011 ODB, changing rules off, the extra division, 2011/12 and 2012/13: two C2 groups of 20
@@ -195,7 +200,7 @@ def run_change(name, extra):
     return run
 
 
-def run_load(name, extra):
+def run_load(name, extra, table=None):
     def run(program, game, work):
         code, _ = rrc.run(program, game, 2015, 2014, os.path.join(DB, "October 2014"), ["Italy"], extra, work, 7200,
                           None, {"RECOMP_SAVE_AFTER_DAYS": "270"})
@@ -207,12 +212,15 @@ def run_load(name, extra):
         again = os.path.join(work, "again")
         os.makedirs(again, exist_ok=True)
         shutil.copyfile(first, os.path.join(again, "serie_c.sav"))
-        r, saved = cwc.load_and_play(program, game, os.path.join(again, "serie_c.sav"), again, 120, timeout=2400)
+        r, saved = cwc.load_and_play(program, game, os.path.join(again, "serie_c.sav"), again, 120, timeout=2400,
+                                     table=table and os.path.join(again, table))
         out = r.stderr
         if r.returncode != 0 or not saved:
             fails.append(f"{name}: the save did not load and play on (code {r.returncode}, {again})")
         if "message box" in out:
             fails.append(f"{name}: a message box after the load ({again}/stderr.txt)")
+        if table and "rules table: none" not in out:
+            fails.append(f"{name}: the load had a rules table")
         made = re.search(r"new competition ita_ser_c2a made for \d+ \(entry 21, record \d+\) from the save", out)
         if not extra and not made:
             fails.append(f"{name}: the module did not make group C again from the save")
@@ -318,6 +326,8 @@ RUNS = {
     "change-c2": run_change("change-c2", ["c2"]),
     "load": run_load("load", []),
     "load-c2": run_load("load-c2", ["c2"]),
+    "load-no-table": run_load("load-no-table", [], table="no-rules.tsv"),
+    "load-c2-no-table": run_load("load-c2-no-table", ["c2"], table="no-rules.tsv"),
     "c2-two": run_two("c2-two", 2010, 2014, "September 2010 ODB", "on", {2011: [20, 20], 2012: [18, 18], 2013: [18, 18]}),
     "c2-load": run_two_load("c2-load"),
     "c2-two-off": run_two("c2-two-off", 2011, 2012, "September 2011 ODB", "off", {2011: [20, 20], 2012: [20, 20]}),

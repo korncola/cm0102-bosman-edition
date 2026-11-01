@@ -337,6 +337,10 @@ uint32_t rt_ban_nation_applies(uint32_t club, uint32_t body);
 uint32_t rt_caps_add(uint32_t staff, uint32_t byte);
 uint32_t rt_caps_full(uint32_t staff);
 uint32_t rt_caps_word(uint32_t staff);       /* the same, at most 32767: the most caps record word */
+/* International goals above 255 (0.6.2 item 66): the goals byte after the goals of a match at 0x76b8d6, and the full
+ * goals of a staff record for the screens. */
+uint32_t rt_goals_add(uint32_t staff, uint32_t byte, uint32_t goals);
+uint32_t rt_goals_full(uint32_t staff);
 /* The club count of a league in a season game (0.6.0 slice 18, src/recomp_rt/win/season_sizes.c): the
  * patched stores of tools/recomp/league_sizes.py in create_table read it in place of the class's constant. */
 uint32_t rt_league_clubs(uint32_t obj, uint32_t original);
@@ -365,7 +369,7 @@ uint32_t rt_fra_lge_first(uint32_t original, uint32_t edx);   /* FraLgeCup first
 uint32_t rt_fa_cup_takes(uint32_t esp);   /* EngFaCup places by pool (0x56ffe4) */
 uint32_t rt_fra_cfa_lower_cap(uint32_t original);              /* FraCfa lower club cap (0x5b92e8) */
 uint32_t rt_ita_cup_first_position(uint32_t original);   /* ItaCup second loop start (0x63fb16) */
-uint32_t rt_cup_places_list(uint32_t list, uint32_t bytes);  /* provincial and Polish cup lists, cleared */
+uint32_t rt_cup_places_list(uint32_t list, uint32_t bytes);  /* a cup list from 0x944e46, cleared (season game) */
 uint32_t rt_promote_expected(uint32_t league, uint32_t up, uint32_t original);  /* ItaSerA chain counts (0x642476) */
 /* Italy's Serie C of three groups (0.6.0 slice 20b, win/season_divisions_ita.c, tools/recomp/new_divisions.py). */
 uint32_t rt_ita_table_bytes(uint32_t obj, uint32_t original);
@@ -409,6 +413,9 @@ uint32_t rt_oceania_step(uint32_t original);
 uint32_t rt_club_world_month(uint32_t original);
 uint32_t rt_club_world_day(uint32_t original);
 uint32_t rt_club_world_waits(uint32_t obj);
+/* The top-up's reputation rule for an under-21 side (0.6.2 fault 65, win/season_national_fill.c, tools/recomp/seasons.py
+ * at 0x90dd67): 1 keeps its virtual players. 0 in the base game. */
+uint32_t rt_u21_keeps_virtual(uint32_t club);
 /* The CONCACAF Champions Cup's club count of the edition of `year` (slice 26c, win/season_club_cups.c): 8 in the
  * base game and with no row. */
 uint32_t rt_concacaf_clubs(uint32_t year, uint32_t original);
