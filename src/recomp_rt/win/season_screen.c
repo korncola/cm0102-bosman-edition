@@ -192,7 +192,7 @@ typedef struct { Rgb bar, text; const char *range; } DecadeLook;
 static const DecadeLook decade_look[3] = {
     {{224, 138, 0}, {255, 184, 74}, "2001/02 to 2009/10"},
     {{44, 154, 68}, {111, 216, 138}, "2010/11 to 2019/20"},
-    {{47, 98, 224}, {142, 170, 255}, "2020/21 to 2025/26"},
+    {{47, 98, 224}, {142, 170, 255}, "2020/21 to 2026/27"},
 };
 static const Rgb custom_bar = {138, 138, 160};
 
@@ -683,7 +683,7 @@ static void details_of(int sel, Details *d)
     if (sel == CUSTOM_TILE) {
         d->custom = 1;
         d->year = (int)node_slot(3);
-        if (d->year < SEASONS_FIRST || d->year >= SEASONS_FIRST + SEASONS_COUNT) d->year = 2025;
+        if (d->year < SEASONS_FIRST || d->year >= SEASONS_FIRST + SEASONS_COUNT) d->year = 2026;
         snprintf(d->big, sizeof d->big, "Custom");
         snprintf(d->decade, sizeof d->decade, "Season: %d/%02d", d->year, (d->year + 1) % 100);
         d->decade_rgb = pale_rgb;
@@ -908,7 +908,7 @@ static void season_build(void)
         int ty = y + L->bar_h + L->bar_gap;
         for (int col = 0; col < 10; col++) {
             int year = 2000 + 10 * dec + col, i = year - SEASONS_FIRST;
-            if (i < 0 || i >= SEASONS_COUNT) continue;          /* 2000/01 and the cells after 2025/26 */
+            if (i < 0 || i >= SEASONS_COUNT) continue;          /* 2000/01 and the cells after 2026/27 */
             const SeasonsEntry *s = &list.season[i];
             int tx = L->grid_x + col * (L->tile_w + L->tile_gap);
             Tag t = status_tag(s);
@@ -916,7 +916,7 @@ static void season_build(void)
             tile(tx, ty, tx + L->tile_w - 1, ty + L->tile_h, s->label, t, decade_look[dec].bar, i,
                  s->status != SEASONS_NO_DATABASE, starred[i], sel == i);
         }
-        if (dec == 2) {                     /* the Custom database fills the free cells after 2025/26 */
+        if (dec == 2) {                     /* the Custom database fills the free cells after 2026/27 */
             int col = SEASONS_FIRST + SEASONS_COUNT - 2020;
             int tx = L->grid_x + col * (L->tile_w + L->tile_gap);
             char tag[40];
@@ -998,7 +998,7 @@ static int choose_apply(void)
     if (sel == CUSTOM_TILE) {
         if (!list.custom_count) return 0;
         year = (int)node_slot(3);
-        if (year < SEASONS_FIRST || year >= SEASONS_FIRST + SEASONS_COUNT) year = 2025;
+        if (year < SEASONS_FIRST || year >= SEASONS_FIRST + SEASONS_COUNT) year = 2026;
         const char *name = list.custom[node_slot(2) % (uint32_t)list.custom_count];
         if (folder_fault(name)) {
             snprintf(error_text, sizeof error_text, "%s", folder_fault_text(folder_fault(name)));
@@ -1150,7 +1150,7 @@ void season_screen_open(void)
     set_slot(0, (uint32_t)tile_index + 1);
     set_slot(1, (uint32_t)data_set_first() + 1);
     set_slot(2, (uint32_t)folder);
-    set_slot(3, (uint32_t)(tile_index == CUSTOM_TILE ? year : 2025));
+    set_slot(3, (uint32_t)(tile_index == CUSTOM_TILE ? year : 2026));
     set_slot(4, 0);
     set_slot(5, 0);
     handled_press = win_press_count();          /* the press that opened the screen does not click in it */

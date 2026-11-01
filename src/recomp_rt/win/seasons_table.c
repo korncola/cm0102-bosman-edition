@@ -156,9 +156,12 @@ const SeasonKnownDb seasons_known_dbs[] = {
     {"May 2026", "n/a", 2025, SEASONS_ROLE_EXTRA, 6708226u, 33451704u,
      "6fe60f05f6571059a52204665e1e5e21d8a7efd84322cdae969e59769b0cc970",
      "af693eb69669e59e012e445614e0e46397e32616bd0bed9a2942cf9233f5ecce"},
+    {"October 2026", "n/a", 2026, SEASONS_ROLE_SEASON, 7476308u, 40551418u,
+     "95ba9ed63e0683465f13b7fa2d3203aedcebc07f3cb64973036f594051c3546e",
+     "d31bcf7ef0589e6ab2b67e28c18d789b9c3e9e35f90db31577a2270a444a9c13"},
     {"Empty database", "n/a", 0, SEASONS_ROLE_NOT_SEASON, 6590864u, 1846u,
      "838bc3edfb2738471c42c8182dffd67a19c6929a0b94c8108d304507f157aeaf",
      "ec878079d3224ac6d7f62d65a456519307acae9192af4fa08e92799263423853"},
 };
 
-const int seasons_known_count = 52;
+const int seasons_known_count = 53;

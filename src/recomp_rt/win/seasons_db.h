@@ -26,7 +26,7 @@
 #include "dbfolders.h"
 
 #define SEASONS_FIRST 2001          /* the first season, 2001/02 */
-#define SEASONS_COUNT 25            /* 2001/02 to 2025/26 */
+#define SEASONS_COUNT 26            /* 2001/02 to 2026/27 */
 #define SEASONS_EXTRA_MAX 8         /* the most known extra versions listed for one season */
 
 /* What a known database is. */

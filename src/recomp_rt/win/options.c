@@ -59,8 +59,8 @@ static const OptionDef defs[OPT_COUNT] = {
         "changing_rules = on lets the rules of each league and cup change each July as a new game moves through the seasons. Each game keeps the value it started with."},
     /* 0.6.0 slice 13: the Choose Season screen writes it together with database. */
     [OPT_SEASON] = {"season", KIND_ENUM, "2001/02",
-        "2001/02|2002/03|2003/04|2004/05|2005/06|2006/07|2007/08|2008/09|2009/10|2010/11|2011/12|2012/13|2013/14|2014/15|2015/16|2016/17|2017/18|2018/19|2019/20|2020/21|2021/22|2022/23|2023/24|2024/25|2025/26",
-        "season = the season of a new game, 2001/02 to 2025/26. The Choose Season screen sets it together with database."},
+        "2001/02|2002/03|2003/04|2004/05|2005/06|2006/07|2007/08|2008/09|2009/10|2010/11|2011/12|2012/13|2013/14|2014/15|2015/16|2016/17|2017/18|2018/19|2019/20|2020/21|2021/22|2022/23|2023/24|2024/25|2025/26|2026/27",
+        "season = the season of a new game, 2001/02 to 2026/27. The Choose Season screen sets it together with database."},
 };
 
 #define TEXT_MAX 1100

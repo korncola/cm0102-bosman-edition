@@ -13,7 +13,7 @@
 #                  Both go into the game folder of each download as Data-3.9.60 and Data-3.9.65, where
 #                  the option database finds them (src/recomp_rt/win/files.c).
 #   --season-dbs   the folder with the zips of the Update Team databases (test-fixtures/databases/zips). The
-#                  script makes the 24 season database zips of the season database table from it
+#                  script makes the 25 season database zips of the season database table from it
 #                  (tools/release/make_season_zips.py): each holds only the 20 data files, in a folder with
 #                  the neutral name of docs/research/rules-0.6.0/databases-signatures.tsv. It checks each
 #                  zip against that table and stops on a mismatch. The zips go in Seasons/ of the game

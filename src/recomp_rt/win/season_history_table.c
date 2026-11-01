@@ -34435,13 +34435,20 @@ static const SeasonHistRow rows_29[] = {
     {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
 };
 static const SeasonHistClear clears_30[] = {
+    {"US Open Cup", 2019},
+};
+static const SeasonHistRow rows_30[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+    {"FIFA World Cup", 2026, {"Spain", "Argentina", "England", "Canada"}, {"", "", "", ""}},
+};
+static const SeasonHistClear clears_31[] = {
     {"Croatian First Division", 2012},
     {"Greek National A Division", 2012},
     {"Northern Irish League Premier Division", 2012},
     {"Northern Irish League First Division", 2012},
     {"Northern Irish League Cup", 2012},
 };
-static const SeasonHistRow rows_30[] = {
+static const SeasonHistRow rows_31[] = {
     {"Croatian First Division", 2013, {"GNK Dinamo Zagreb", "NK Lokomotiva Zagreb", "HNK Rijeka", ""}, {"Croatia", "Croatia", "Croatia", ""}},
     {"Croatian First Division", 2012, {"GNK Dinamo Zagreb", "HNK Hajduk Split", "NK Koprivnica", ""}, {"Croatia", "Croatia", "Croatia", ""}},
     {"Greek National A Division", 2012, {"Olympiacos Piraeus", "Panathinaikos AO", "PAOK Salonika", ""}, {"Greece", "Greece", "Greece", ""}},
@@ -34484,6 +34491,7 @@ const SeasonHistDb season_history_dbs[] = {
     {"October 2024", 2024, clears_27, 1, rows_27, 1},
     {"December 2025", 2025, clears_28, 1, rows_28, 1},
     {"May 2026", 2025, clears_29, 1, rows_29, 1},
-    {"Autumn 2013", 2013, clears_30, 5, rows_30, 10},
+    {"October 2026", 2026, clears_30, 1, rows_30, 2},
+    {"Autumn 2013", 2013, clears_31, 5, rows_31, 10},
 };
-const int season_history_dbs_count = 31;
+const int season_history_dbs_count = 32;

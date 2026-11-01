@@ -106,7 +106,7 @@ int main(void)
     CHECK(strstr(get(), "\nchanging_rules = on\n") != NULL);
     CHECK(strstr(get(), "changing_rules = on lets the rules of each league and cup change each July") != NULL);
     CHECK(strstr(get(), "\nseason = 2001/02\n") != NULL);
-    CHECK(strstr(get(), "season = the season of a new game, 2001/02 to 2025/26.") != NULL);
+    CHECK(strstr(get(), "season = the season of a new game, 2001/02 to 2026/27.") != NULL);
     static char first[16384];
     snprintf(first, sizeof first, "%s", get());
     options_load(path);                         /* a second start changes nothing */
@@ -189,7 +189,7 @@ int main(void)
     options_load(path);
     CHECK(options_bool(OPT_CHANGING_RULES) == 1);
 
-    /* 5d. season (0.6.0 slice 13): the 25 seasons; a bad word keeps 2001/02. The Choose Season screen writes it. */
+    /* 5d. season (0.6.0 slice 13): the 26 seasons; a bad word keeps 2001/02. The Choose Season screen writes it. */
     put("season = 2010/11\n");
     options_load(path);
     CHECK(options_enum(OPT_SEASON) == 9 && !strcmp(options_string(OPT_SEASON), "2010/11"));
@@ -197,6 +197,9 @@ int main(void)
     options_load(path);
     CHECK(options_enum(OPT_SEASON) == 24);
     put("season = 2026/27\n");
+    options_load(path);
+    CHECK(options_enum(OPT_SEASON) == 25);
+    put("season = 2027/28\n");
     options_load(path);
     CHECK(options_enum(OPT_SEASON) == 0);
     put("season = 2010\n");
@@ -324,7 +327,7 @@ int main(void)
         } else if (!strcmp(options_name(oid), "database")) {
             CHECK(options_set(oid, "folder:Mixed Case") == 1 && options_enum(oid) == DATABASE_CUSTOM);
         } else if (!strcmp(options_name(oid), "season")) {
-            CHECK(options_set(oid, "2025/26") == 1 && options_enum(oid) == 24);
+            CHECK(options_set(oid, "2026/27") == 1 && options_enum(oid) == 25);
         } else {
             CHECK(options_set(oid, "off") == 1 && options_bool(oid) == 0);
         }
