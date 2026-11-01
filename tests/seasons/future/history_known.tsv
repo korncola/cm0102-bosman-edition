@@ -142,5 +142,5 @@ entrant-host	Africa*Cup of Nations	2002	open item 46: the host does not play (Ma
 entrant-host	Africa*Cup of Nations	2027	open item 46: Kenya, Tanzania and Uganda do not play in 2027
 entrant-route	Intercontinental Cup	2002	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
 entrant-route	Intercontinental Cup	2003	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
-gap	Leinster Senior Cup	2010	real history: no competition from 2001/02 to 2009/10 (en.wikipedia.org "Leinster Senior Cup (association football)", read 1 November 2026; rules rows wal-nir-irl-21 to -196 not held)
+gap	Leinster Senior Cup	2010	real history: no edition from 2002/03 to 2008/09 (rules rows wal-nir-irl-46 to -196 not held; en.wikipedia.org "Leinster Senior Cup (association football)", read 1 November 2026: no competition between 2001 and 2009)
 gap	Leinster Senior Cup	2023	real history: 2019/20 abandoned, 2020/21 and 2021/22 not held for COVID-19 (the same source; rules rows wal-nir-irl-471 to -521 not held)
