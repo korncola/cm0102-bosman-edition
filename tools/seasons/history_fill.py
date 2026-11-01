@@ -317,6 +317,8 @@ def gap_rows(name, start, folder, rows, ref, alias, plan, report, shift, nshift)
         at = [(a, b, c, h) for c2, y, a, b, c, h in d.history() if c2 == cid and y + sh == label]
         if sum(1 for x in at if d.club(x[1]) == second) != 1 or len(at) < 2:
             raise SystemExit(f"{name}: {comp} {label} holds no pair of rows with the runner-up {second}")
+        if any(c2 == cid and y + sh == to for c2, y, *_ in d.history()):
+            raise SystemExit(f"{name}: {comp} already holds a row of {to}, so no row moves there")
         plan.append("\t".join(["clear", name, str(start), comp, str(label)] + [""] * (len(PLAN_COLS) - 5)))
         for x in at:
             places = [(d.club(i), club_nation(d, i)) if i >= 0 else ("", "") for i in x]
