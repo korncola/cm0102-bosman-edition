@@ -8,8 +8,9 @@
  * original marked -2 (0x6b3d43), its copy given a new date by find_new_fixture_date 0x5ab510 (0x6b3d5f) and added
  * with add_fixture 0x5aa680 (0x6b3d71). Both look for clashes with find_fixture_clashes 0x5ad780, whose day scan
  * 0x5adba0 takes the store's list of each day it checks from 0x5abf10 (0x5ade53) and walks it with the same cursor
- * (0x5ade64..0x5ade6c), and a scan that reaches the end leaves it at 0. When it checks the postponed match's own day and slice, the cursor of the list
- * that MATCH_DAY walks ends at 0, so the next call of 0x68d1b0 returns 0 and the rest of the list is never played.
+ * (0x5ade64..0x5ade6c); a scan that reaches the end leaves it at 0, and one that stops early leaves it part way. When
+ * it checks the postponed match's own day and slice, the cursor of the list that MATCH_DAY walks moves, so the next
+ * call of 0x68d1b0 returns 0 (or a later match) and the rest of the list is never played.
  * Nothing plays a past fixture again, so a league with such a match never completes (League::check_complete 0x689ad0:
  * every row has played (clubs - 1) x rounds) and never starts its next season. In the Tier A game a2021s1 the
  * weather postponed SC Kufu-98 v SJK on 18 October 2046 (day 291), the next match of that list, HJK v JIPPO, was
@@ -17,9 +18,12 @@
  * 107 postponements of 2041 to 2046 in that game, one lost the place.
  *
  * Here the place of the list is kept before the copy (0x6b3d2d) and set back after its add (0x6b3d76), when the
- * kept node is still in the list (the moves of a copy remove only fixtures of its new date, which is after today,
- * so none of this list goes). When the place did not change, nothing is written: the game is the original's. The test
- * switch RECOMP_MATCH_DAY_PLACE=off keeps the original's place. */
+ * kept node is still in the list. The cursor goes in the date search: 0x5ab510 checks its candidate days with
+ * find_fixture_clashes from two days before to two days after (0x5adba0 per day), and a candidate is today + 2 or
+ * later (0x5ab930), so the match's own day is among the days it scans. add_fixture's moves remove fixtures only of the
+ * days it checks around the new date (0x5abc30 at 0x5aa9e0 and 0x5aaa15), from today + 1 on, never today's. The walk
+ * from the head still checks the node before it is set back. When the place did not change, nothing is written: the
+ * game is the original's. The test switch RECOMP_MATCH_DAY_PLACE=off keeps the original's place. */
 #include "win.h"
 #include "../rt.h"
 
@@ -76,7 +80,8 @@ void rt_match_day_set_place(uint32_t list)
 
 /* Test switch RECOMP_TEST_POSTPONE=<home club id>,<away club id> (tests/seasons/match_day_place_run.py, off by default,
  * read once): Weather::check_postponement 0x923630 (thiscall (fixture) ret 4; MATCH_DAY tests bit 0 of al at 0x6b3d25)
- * postpones that match once, when MATCH_DAY asks (return address 0x6b3d25). The weather's own rolls (0x90cfc0) do not
+ * postpones that match once (al 5), when MATCH_DAY asks (return address 0x6b3d25). The weather's own rolls (0x90cfc0)
+ * do not
  * come back the same after a load, so the test names the match that the run postponed. */
 void o_00923630(void);
 
@@ -96,7 +101,7 @@ RT_WRAP(00923630, weather_check)
             done = 1;
             fprintf(stderr, "recomp: test: the weather postpones club %d v club %d on day %d\n", home, away,
                     (int16_t)rd16(g_mem, TODAY));
-            rt_ret_stdcall(1, 1);
+            rt_ret_stdcall(5, 1);       /* 5: a result of the original with the postponed bit (0, 5, 9 or 0x12) */
             return;
         }
     }

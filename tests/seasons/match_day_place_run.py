@@ -25,9 +25,11 @@ the save was made), plays --days game days on holiday and saves (tests/seasons/s
 is the proof that the run finds the fault. (The full replay of the Tier A leg from its 2041 checkpoint, about an hour,
 lost the match on a build without the fix too.)
 
-The fixture records of fixtures_<year>.tmp (the save's form of the fixture store): the clubs' ids at +0x1c and +0x20,
-the competition word at +0x24, the date (day, year) at +0x38 and +0x3a, the round at +0x44, the home goals at +0x53
-(-1 not played, -2 postponed). The game's record is 0x10 bytes shorter at the front (its date at +0x28).
+The fixture records of fixtures_<year>.tmp (the save's form of the fixture store), 0x4f bytes each, with offsets
+counted from a point 0x10 bytes before a record (so the game's date at record +0x28 is +0x38 here): the clubs' ids at
++0x1c and +0x20, the competition word at +0x24, the year at +0x38 and the day at +0x3a, the round at +0x44, the home
+goals at +0x53 (-1 not played, -2 postponed). Only records whose three dates (+0x34, +0x38, +0x3c) all fall in 2046
+are read. The run deletes the loaded copy of the save and the end save when it has read them (about 700 MB).
 """
 import os
 import struct
@@ -56,7 +58,8 @@ def records(sav, year):
         if d[i + 0x34:i + 0x36] == y and d[i + 0x38:i + 0x3a] == y and d[i + 0x3c:i + 0x3e] == y and \
                 0 <= struct.unpack_from("<h", d, i + 0x3a)[0] < 366:
             h, a = struct.unpack_from("<ii", d, i + 0x1c)
-            out.append((h, a, struct.unpack_from("<h", d, i + 0x3a)[0], d[i + 0x44], struct.unpack_from("<b", d, i + 0x53)[0]))
+            day, goals = struct.unpack_from("<h", d, i + 0x3a)[0], struct.unpack_from("<b", d, i + 0x53)[0]
+            out.append((h, a, day, d[i + 0x44], goals))
     return out
 
 
@@ -78,7 +81,8 @@ def main(argv):
     os.environ.pop("RECOMP_MATCH_DAY_PLACE", None)
     if fault:
         os.environ["RECOMP_MATCH_DAY_PLACE"] = "off"
-    o = {"program": program, "game": game, "rules": "on", "database": DATABASE, "last": 2100, "seed": 1, "timeout": 3600}
+    o = {"program": program, "game": game, "rules": "on", "database": DATABASE, "last": 2100, "seed": 1,
+         "timeout": 3600}
     work = os.path.join(keep, ("normal-" if normal else "") + ("fault-kept" if fault else "fixed"))
     code, took, box = soak_run.load_leg(o, work, save, days)
     log = os.path.join(work, "stderr.txt")
@@ -102,6 +106,8 @@ def main(argv):
     if lost:
         fails.append(f"{len(lost)} fixtures dated days {first + 1} to {last - 2} have no result, for example "
                      f"day {lost[0][0]} clubs {lost[0][1]} v {lost[0][2]}")
+    for big in (os.path.join(work, "user", "soak.sav"), end_path):
+        os.remove(big)
     text = open(log, encoding="latin-1").read()
     if LINE not in text:
         fails.append("no log line of the place set back after the postponement of day 291")
