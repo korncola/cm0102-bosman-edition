@@ -204,9 +204,13 @@ uint32_t season_intl_copa_template(void (*original)(void))
     wr8(g_mem, sp + 4u, (uint32_t)mapped);
     /* Group D plays in the kick-off slots of group A, so the game moves some group matches a week (find_fixture_
      * clashes 0x5ad780, severity 10: the Copa America 2100 of a 2098 date jump, run-logs/0.6.2-s4a/c2100u) and
-     * the groups end late: the knockout then moves by whole weeks, as that of the Asian Cup of 16
-     * (season_intl_rest_delay; the original's quarter-finals from 15 July, weekday flag 5, at 0x5e0c74). */
-    int delay = idx == KO ? season_intl_rest_delay("goldcup", year_of(self), 15, 6, 5) : 0;
+     * the groups end late: the knockout, made at the stage step 0x5e1620 when the groups end (site 0x5E169F), then
+     * moves by whole weeks, as that of the Asian Cup of 16 (season_intl_rest_delay; the original's quarter-finals
+     * from 15 July, weekday flag 5, at 0x5e0c74). Group D keeps group A's slots: the original has three group
+     * templates (0x5e0a1b..0x5e0a2b), and a fourth set of slots would change every edition of 16 in the table. */
+    int delay = idx == KO ? season_intl_rest_delay(season_gold_cup_of(self) ? "gold_cup" : "goldcup", year_of(self),
+                                                   15, 6, 5)
+                          : 0;
     season_intl_shift_more(delay);
     original();
     season_intl_shift_more(-delay);
@@ -368,8 +372,9 @@ static const struct { int year; const char *guests[2]; } guests12[] = {
 };
 
 /* After the original's entrants (12 at +0xee, sorted by strength at 0x5e20fe): the guests of guests12 replace the
- * teams that are neither from CONMEBOL nor a host, and the list is sorted again by strength. A guest that the data
- * lacks keeps the original's team. */
+ * teams that are not from CONMEBOL (a host outside CONMEBOL would be replaced too; no such edition is in guests12:
+ * Brazil hosts 2019), and the list is sorted again by strength. A guest that the data lacks is skipped; with
+ * neither guest the original's teams stay. */
 static void guests_of_year(uint32_t self)
 {
     int g = -1;
