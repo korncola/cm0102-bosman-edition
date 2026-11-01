@@ -36,8 +36,11 @@ def main():
             bad.append(f"run set: {want} is not in the release set")
     if any(r["set"] == "quick" for r in release):
         bad.append("run set: a quick game is in the release set")
-    if len([r for r in release if r["tier"] == "A" and r["last"] == 2100 and r["nations"] == "all"]) != 22:
-        bad.append("run set: not 22 Tier A games of all nations to 2100 (7 starts, three seeds, and Q15)")
+    if len([r for r in release if r["tier"] == "A" and r["last"] == 2100 and r["nations"] == "all"]) != 25:
+        bad.append("run set: not 25 Tier A games of all nations to 2100 (8 starts with Q56's 2026, three seeds, and Q15)")
+    for r in (r for r in release if r["start"] == 2026):
+        if not run_set.database_of(r, {"databases": run_set.DATABASES}).endswith("October 2026"):
+            bad.append(f"run set: {r['name']} does not play the October 2026 data")
 
     legs = run_set.legs_of({"start": 2001, "last": 2100, "leg_years": 10})
     if len(legs) != 10 or legs[0] != (2001, 2010) or legs[-1] != (2091, 2100):

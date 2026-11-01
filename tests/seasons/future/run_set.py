@@ -81,6 +81,7 @@ HOLD = "/Users/max/Projects/cm0102/run-logs/HOLD"
 DATABASES = "/Users/max/Projects/cm0102/test-fixtures/databases"
 OWN_DBS = "/Users/max/Projects/cm0102/own-dbs"
 JUMP_DATABASE = "December 2025"
+START_DATABASES = {2026: "October 2026"}      # start years after tests/seasons/gate_run.py's table (Q53, Q56)
 COLUMNS = ["name", "tier", "start", "changing", "nations", "seed", "last", "leg_years", "set", "status", "note"]
 TIERS = {"A", "B", "jump", "normal"}
 SETS = {"release": {"release", "nightly"}, "nightly": {"nightly"}, "quick": {"quick"},
@@ -272,10 +273,11 @@ def greek_second(comps):
 
 def database_of(row, o):
     """The --database folder of a row (None: the base data 3.9.68), as tests/seasons/gate_run.py picks it."""
-    if row["tier"] == "jump":
-        names = sorted(n for n in os.listdir(o["databases"]) if n.startswith(JUMP_DATABASE))
+    if row["tier"] == "jump" or row["start"] in START_DATABASES:
+        want = JUMP_DATABASE if row["tier"] == "jump" else START_DATABASES[row["start"]]
+        names = sorted(n for n in os.listdir(o["databases"]) if n.startswith(want))
         if not names:
-            raise SystemExit(f"run_set.py: no {JUMP_DATABASE} folder in {o['databases']}")
+            raise SystemExit(f"run_set.py: no {want} folder in {o['databases']}")
         return os.path.join(o["databases"], names[0])
     import gate_run
     args, _ = gate_run.database(row["start"], {"run": o["out"], "own": o["own"], "databases": o["databases"]})
