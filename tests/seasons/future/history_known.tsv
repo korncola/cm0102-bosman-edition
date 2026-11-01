@@ -145,3 +145,5 @@ entrant-route	Intercontinental Cup	2003	open item 47: the data row of the 2002 L
 gap	OFC Champions League	2005	real calendar: no OFC club championship from 2002 to 2004 (first pass of the run set, 1 November 2026)
 gap	Serie C girone C	2015	by design: without the Serie C2 extra division the game makes group C only from 2014/15 (season_divisions_ita.c:159); its 2005 and 2006 rows are the data's
 gap	President of Ireland's Cup	2013	by design: the rules table holds the cup from 2013/14 (wal-nir-irl-323); before it only the rows of the data
+gap	K League Super Cup	2026	real calendar: not held from 2007 to 2025 (aus-jap-kor-402), again from 2025/26
+gap	National League Cup	2008	by design: played in 2004/05, 2007/08 and 2008/09 only (season_cups_more.c, Q336)
