@@ -1,8 +1,6 @@
 # Known faults of history_check.py on the saves of run-logs/release-test-0.6.0 (0.6.0, 30 October 2026).
 # Each row matches one check of one competition in every year (*). Remove a row when its fix lands.
 check	competition	year	note
-duplicate	1. divisjon	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	2. Bundesliga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 no-host	2005 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
 no-host	2007 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
 no-host	2009 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
@@ -16,178 +14,76 @@ no-host	2021 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
 no-host	2023 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
 no-host	2025 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
 no-host	2027 CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-duplicate	A-League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	A-League Men	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	A-League	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	A-League Men	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 missing	AFC Asian Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 no-host	AFC Asian Cup	*	open items 3 and 18: game rows without a host
-duplicate	AFC Champions League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 gap	AFC Champions League	*	open items 2 and 19: editions not written
 missing	AFC Champions League	*	open items 1, 2, 19 and 20: editions stop or are not written
 missing	AFC Champions League Elite	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Adeccoligaen	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Adidas Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Africa Cup of Nations	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 gap	Africa Cup of Nations	*	open items 2 and 19: editions not written
 missing	Africa Cup of Nations	*	open items 1, 2, 19 and 20: editions stop or are not written
 no-host	Africa Cup of Nations	*	open items 3 and 18: game rows without a host
-duplicate	African Cup of Nations	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 no-host	African Cup of Nations	*	open items 3 and 18: game rows without a host
-duplicate	Allsvenskan	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Asian Club Championship	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Asian Cup Winners' Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Asian Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 same-final	Asian Super Cup	*	real history before the start (2000 to 2002, 2015 to 2017)
-duplicate	Belgian Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Belgian First Amateur Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Belgian First Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Belgian First Division B	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Belgian National Division 1	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Belgian Second Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Belgian Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Belgian Third Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Bundesliga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Belgian First Amateur Division	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	Belgian First Division B	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	Belgian National Division 1	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	Belgian Third Division	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 confederation	CIS Champions Cup	*	real history: a guest nation or club, or Australia in OFC before 2006
-duplicate	CONCACAF Champions Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	CONCACAF Champions League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	CONCACAF Champions' Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	CONCACAF Gold Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 no-host	CONCACAF Gold Cup	*	open items 3 and 18: game rows without a host
-duplicate	Campeonato Baiano	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Campeonato Brasileiro Série A	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Campeonato Brasileiro Série B	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Campeonato Brasileiro Série C	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Campeonato Carioca	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Campeonato Catarinense	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Campeonato Cearense	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Campeonato Baiano	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	Campeonato Cearense	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 missing	Campeonato Cearense	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Campeonato Gaúcho	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Campeonato Goiano	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Campeonato Mato-Grossense	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Campeonato Mato-Grossense	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 gap	Campeonato Mato-Grossense	*	open items 2 and 19: editions not written
 missing	Campeonato Mato-Grossense	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Campeonato Mineiro Módulo I	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Campeonato Paraense	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Campeonato Paraense	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 missing	Campeonato Paraense	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Campeonato Paranaense	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Campeonato Paulista Série A1	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Campeonato Pernambucano	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Challenger Pro League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Championnat National	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Campeonato Paranaense	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
+duplicate	Campeonato Paulista Série A1	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	Campeonato Pernambucano	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
+duplicate	Challenger Pro League	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 missing	Conference Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Copa America	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 no-host	Copa America	*	open items 3 and 18: game rows without a host
-duplicate	Copa América	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	Copa América	*	open items 1, 2, 19 and 20: editions stop or are not written
 next-edition	Copa América	*	open item 1: the class waits for 2200
 no-host	Copa América	*	open items 3 and 18: game rows without a host
 same-final	Copa América	*	a game result: check by hand
-duplicate	Copa América Centenario	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	Copa América Centenario	*	open items 1, 2, 19 and 20: editions stop or are not written
 no-host	Copa América Centenario	*	open items 3 and 18: game rows without a host
-duplicate	Copa Libertadores	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Copa Merconorte	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Copa Mercosur	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	Copa Sudamericana	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Copa del Rey	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Copa do Brasil	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Copa dos Campeões	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Coppa Italia	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Coppa Italia Serie C	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Coupe de la Ligue	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Croatian Football Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	DFB-Ligapokal	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	DFB-Pokal	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Croatian Football Cup	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	DFB-Pokal	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 same-final	DFL-Ligapokal	*	a game result: check by hand
-duplicate	Danish 1st Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Danish 2nd Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Danish 2nd Divisions	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Danish Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Danish Superliga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	EFL Championship	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	EFL Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Danish 2nd Division	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	Danish 2nd Divisions	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	Danish Cup	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 missing	EFL Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	EFL League One	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	EFL League Two	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	EFL Trophy	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Emperor's Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	English Charity Shield	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	English FA Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	English First Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	English Isthmian League Premier Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	English League Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	English Premier Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	English Second Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	English Southern League Premier Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	English Third Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	English Vans Trophy	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Eredivisie	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	FA Charity Shield	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	FA Community Shield	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	FA Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	English Isthmian League Premier Division	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	English Southern League Premier Division	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 missing	FA Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	FA Premier League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	FAI Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	FAI Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	FIFA Club World Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	FAI Cup	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 no-host	FIFA Club World Cup	*	open items 3 and 18: game rows without a host
 no-host	FIFA Confederations Cup	*	open items 3 and 18: game rows without a host
 missing	FIFA World Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Football League Championship	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Football League Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Football League First Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Football League One	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Football League Second Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Football League Third Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Football League Trophy	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Football League Two	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Football National League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	Football at the Summer Olympics	*	open items 1, 2, 19 and 20: editions stop or are not written
 next-edition	Football at the Summer Olympics	*	open item 1: the class waits for 2200
-duplicate	French CFA	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	French CFA	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 missing	Greek Super Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	I liga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	II liga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Intercontinental Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Irish Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Irish First Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Irish League Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Irish League First Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Irish League Premier Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Irish Premier League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	J.League Division 1	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	J.League Division 2	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	J.League YBC Levain Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	J.League Yamazaki Nabisco Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Japanese Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Johan Cruyff Shield	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	K League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	K League Classic	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	K League Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	KNVB Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Korea Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Korean FA Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	LFA President's Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Lamar Hunt U.S. Open Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 gap	Lamar Hunt U.S. Open Cup	*	open items 2 and 19: editions not written
 missing	Lamar Hunt U.S. Open Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	League of Ireland First Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	League of Ireland Premier Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Lega Pro girone B	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	League of Ireland First Division	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	League of Ireland Premier Division	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 gap	Lega Pro girone C	*	open items 2 and 19: editions not written
 missing	Lega Pro girone C	*	open items 1, 2, 19 and 20: editions stop or are not written
 missing	Leinster Senior Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Liga Profesional de Fútbol	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Ligue 1	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Ligue 2	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Major League Soccer	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Munster Senior Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	NIFL Championship	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	NIFL Championship 1	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	NIFL Charity Shield	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	NIFL Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	NIFL Premiership	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	New South Wales Super League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Norgesmesterskapet	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	NIFL Championship	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	NIFL Championship 1	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
+duplicate	NIFL Cup	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
+duplicate	NIFL Premiership	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
+duplicate	New South Wales Super League	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 confederation	OFC Club Championship	*	real history: a guest nation or club, or Australia in OFC before 2006
 gap	OFC Club Championship	*	open items 2 and 19: editions not written
 next-edition	OFC Men's Nations Cup	*	open item 1: the class waits for 2200
@@ -197,66 +93,33 @@ next-edition	OFC Nations Cup	*	open item 1: the class waits for 2200
 same-final	OFC Nations Cup	*	real history before the start (2000 to 2002, 2015 to 2017)
 confederation	Oceania Champions Cup	*	real history: a guest nation or club, or Australia in OFC before 2006
 same-final	Oceania Champions Cup	*	real history before the start (2000 to 2002, 2015 to 2017)
-duplicate	Peace Cup Korea	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Polish Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Polish League Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Polish Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 gap	Polish Super Cup	*	open items 2 and 19: editions not written
 missing	Polish Super Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Portuguese Second Division B Central	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Portuguese Second Division B North	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Portuguese Second Division B South	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Premier League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	President of Ireland's Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	President's Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Portuguese Second Division B Central	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	Portuguese Second Division B North	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	Portuguese Second Division B South	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 missing	President's Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Primeira Liga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Primera B Nacional	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Primera División	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Prva HNL	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Primera B Nacional	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
+duplicate	Primera División	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
+duplicate	Prva HNL	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 confederation	Recopa Sudamericana	*	real history: a guest nation or club, or Australia in OFC before 2006
-duplicate	Recopa Sudamericana	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Russian Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Russian First Division	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Russian First League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Russian Football Premier League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Russian Premier League	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 same-final	Russian Super Cup	*	a game result: check by hand
-duplicate	Samsung Hauzen Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Scottish Challenge Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Scottish League Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Segunda División	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Segunda Liga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Serie A	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Serie B	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Serie C girone A	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Serie C girone A	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 missing	Serie C girone A	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Serie C girone B	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Serie C girone B	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 missing	Serie C girone B	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Suomen Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Super League Greece	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Supercopa de España	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Super League Greece	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 missing	Supercopa de España	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Supercoppa Italiana	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 missing	Supercoppa Serie C	*	open items 1, 2, 19 and 20: editions stop or are not written
-duplicate	Supercoppa di Lega di Serie C	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Superettan	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Superliga Argentina	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Supertaça Cândido de Oliveira	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Superliga Argentina	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 gap	Svenska Cupen	*	open items 2 and 19: editions not written
-duplicate	Taça de Portugal	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Tippeligaen	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Trophée des Champions	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Turkish Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	Trophée des Champions	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
+duplicate	Turkish Super Cup	*	open item 17: a second edition in one calendar year (the final moves from August to January); slice 7 gives it the next free label, checked in a game for the Emperor's Cup only
 missing	UEFA European Championship	*	open items 1, 2, 19 and 20: editions stop or are not written
 next-edition	UEFA European Championship	*	open item 1: the class waits for 2200
 no-host	UEFA European Championship	*	open items 3 and 18: game rows without a host
-duplicate	UEFA Intertoto Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	UEFA Super Cup	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Veikkausliiga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
+duplicate	UEFA Intertoto Cup	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 gap	Welsh Cup	*	open items 2 and 19: editions not written
-duplicate	Ykkönen	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
-duplicate	Ykkösliiga	*	open items 3 and 17: two rows for one year (start-year overlap, history fill and game edition)
 gap	OFC Men's Nations Cup	2024	open items 2 and 19: editions not written
 missing	OFC Men's Nations Cup	2028	open items 2 and 19: editions not written
 same-final	CONCACAF Gold Cup	2009	real results: the same finalists count only in Tier B (spec, Decisions)

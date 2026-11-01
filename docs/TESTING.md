@@ -58,6 +58,8 @@ A game with all nations uses more memory each season. The heap now has room for 
 
 Saves can now be up to 4 GB. A save that would be larger stops with a clear message and keeps the earlier save. `tests/smoke/big_save_run.py` makes a save above 3 GB and loads it again, checks a season part above 2 GB, and checks the clean stop above 4 GB. It needs about 12 GB of free disk for a short time. These checks run at the merge of a memory or save change and in the long games at each release.
 
+A save holds at most 999 parts. The game keeps a temporary file for each season, so the temporary files of one type go into one merged part. `tests/seasons/save_parts_run.py fill` adds temporary files until a save holds 990 and 999 parts, then saves and loads twice. Each save must hold at most 200 parts and every added file. `tests/seasons/save_parts_run.py old` loads a save of 0.6.0, 0.6.1 or an earlier 0.6.2 build, saves and loads twice, and checks that every temporary file of the old save is still there. These checks run at the merge of a save change.
+
 ## Screen sweeps and smoke screenshots
 
 The screen sweep opens the tables, results, fixtures, schedule and history of every competition, once each season. The data sweep reads each competition from memory at the start and end of each season. It looks for dates outside the season and for empty tables where the rules give clubs. The scripts are `tests/seasons/screen_sweep_run.py` and `tests/seasons/data_sweep_run.py`. They run at each release.

@@ -1052,6 +1052,15 @@ static void free_find(Find *f)
     memset(f, 0, sizeof *f);
 }
 
+/* Names that a find leaves out while it is set (save_parts.c: the files of a merged part, during the original's
+ * pack 0x933610). */
+static int (*find_hidden)(const char *name);
+
+void win_find_hide(int (*hidden)(const char *name))
+{
+    find_hidden = hidden;
+}
+
 /* Adds the matching names of one folder; a name already listed (ignoring case) is skipped. */
 enum { SAV_ALL, SAV_SKIP, SAV_ONLY };      /* which names of a folder a find takes: by the ending .sav */
 static void find_add_dir(Find *f, const char *host, const char *mask, int is_root, int sav)
@@ -1062,6 +1071,7 @@ static void find_add_dir(Find *f, const char *host, const char *mask, int is_roo
     while ((name = host_readdir(d))) {
         if (is_root && (!strcmp(name, ".") || !strcmp(name, ".."))) continue;
         if (!wild_match(mask, name)) continue;
+        if (find_hidden && find_hidden(name)) continue;
         if ((sav == SAV_SKIP && has_sav_ending(name)) || (sav == SAV_ONLY && !has_sav_ending(name))) continue;
         int dup = 0;
         for (int i = 0; i < f->count && !dup; i++) dup = !strcasecmp(f->names[i], name);
@@ -1137,4 +1147,27 @@ RT_IMPORT(FindClose)
     Find *f = find_of(rt_arg(0));
     if (f) free_find(f);
     rt_ret_stdcall(f != NULL, 1);
+}
+
+int win_list_files(const char *folder, const char *mask, void (*each)(const char *name, const char *host, void *ctx),
+                   void *ctx)
+{
+    char h[2048], u[2048];
+    if (!win_paths(folder, h, u, sizeof h)) return -1;
+    Find f;
+    memset(&f, 0, sizeof f);
+    find_add_dir(&f, u, mask, 0, SAV_ALL);      /* as FindFirstFileA: the user folder first */
+    find_add_dir(&f, h, mask, 0, SAV_ALL);
+    int n = f.count;
+    for (int i = 0; i < n; i++) each(f.names[i], f.paths[i], ctx);
+    free_find(&f);
+    return n;
+}
+
+int win_create_file(const char *winpath)
+{
+    char h[2048], u[2048];
+    if (!win_paths(winpath, h, u, sizeof h)) return -1;
+    make_parents(u);
+    return host_open(u, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 }

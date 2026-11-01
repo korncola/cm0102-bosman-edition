@@ -34311,6 +34311,11 @@ static const SeasonHistRow rows_15[] = {
     {"US Open Cup", 2009, {"Seattle Sounders", "Washington DC United", "", ""}, {"United States", "United States", "", ""}},
     {"US Open Cup", 2010, {"Seattle Sounders", "Columbus Crew", "", ""}, {"United States", "United States", "", ""}},
     {"US Open Cup", 2001, {"Los Angeles Galaxy", "New England Revolution", "", ""}, {"United States", "United States", "", ""}},
+    {"FIFA World Cup", 2002, {"Brazil", "Germany", "Turkey", "South Korea"}, {"", "", "", ""}},
+    {"FIFA World Cup", 2006, {"Italy", "France", "Germany", "Germany"}, {"", "", "", ""}},
+    {"FIFA World Cup", 2010, {"Spain", "Holland", "Germany", "South Africa"}, {"", "", "", ""}},
+    {"European Football Championship", 2004, {"Greece", "Portugal", "", "Portugal"}, {"", "", "", ""}},
+    {"European Football Championship", 2008, {"Spain", "Germany", "", "Austria"}, {"", "", "", ""}},
 };
 static const SeasonHistClear clears_16[] = {
 };
@@ -34327,6 +34332,7 @@ static const SeasonHistRow rows_16[] = {
     {"US Open Cup", 2001, {"Los Angeles Galaxy", "New England Revolution", "", ""}, {"United States", "United States", "", ""}},
 };
 static const SeasonHistClear clears_17[] = {
+    {"FIFA World Cup", 2007},
 };
 static const SeasonHistRow rows_17[] = {
     {"US Open Cup", 2002, {"Columbus Crew", "Los Angeles Galaxy", "", ""}, {"United States", "United States", "", ""}},
@@ -34339,6 +34345,7 @@ static const SeasonHistRow rows_17[] = {
     {"US Open Cup", 2009, {"Seattle Sounders", "Washington DC United", "", ""}, {"United States", "United States", "", ""}},
     {"US Open Cup", 2010, {"Seattle Sounders", "Columbus Crew", "", ""}, {"United States", "United States", "", ""}},
     {"US Open Cup", 2001, {"Los Angeles Galaxy", "New England Revolution", "", ""}, {"United States", "United States", "", ""}},
+    {"FIFA World Cup", 2010, {"Spain", "Holland", "Germany", "South Africa"}, {"", "", "", ""}},
 };
 static const SeasonHistClear clears_18[] = {
 };
@@ -34354,6 +34361,11 @@ static const SeasonHistRow rows_18[] = {
     {"US Open Cup", 2010, {"Seattle Sounders", "Columbus Crew", "", ""}, {"United States", "United States", "", ""}},
     {"US Open Cup", 2011, {"Seattle Sounders", "Chicago Fire", "", ""}, {"United States", "United States", "", ""}},
     {"US Open Cup", 2001, {"Los Angeles Galaxy", "New England Revolution", "", ""}, {"United States", "United States", "", ""}},
+    {"FIFA World Cup", 2002, {"Brazil", "Germany", "Turkey", "South Korea"}, {"", "", "", ""}},
+    {"FIFA World Cup", 2006, {"Italy", "France", "Germany", "Germany"}, {"", "", "", ""}},
+    {"FIFA World Cup", 2010, {"Spain", "Holland", "Germany", "South Africa"}, {"", "", "", ""}},
+    {"European Football Championship", 2004, {"Greece", "Portugal", "", "Portugal"}, {"", "", "", ""}},
+    {"European Football Championship", 2008, {"Spain", "Germany", "", "Austria"}, {"", "", "", ""}},
 };
 static const SeasonHistClear clears_19[] = {
     {"US Open Cup", 2019},
@@ -34402,6 +34414,7 @@ static const SeasonHistClear clears_26[] = {
 };
 static const SeasonHistRow rows_26[] = {
     {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}},
+    {"FIFA World Cup", 2022, {"Argentina", "France", "Croatia", "Qatar"}, {"", "", "", ""}},
 };
 static const SeasonHistClear clears_27[] = {
     {"US Open Cup", 2019},
@@ -34437,10 +34450,10 @@ const SeasonHistDb season_history_dbs[] = {
     {"February 2010 ODB", 2009, clears_12, 1575, rows_12, 1324},
     {"June 2010", 2009, clears_13, 1573, rows_13, 1322},
     {"September 2009", 2009, clears_14, 1456, rows_14, 1255},
-    {"April 2011 SIM", 2010, clears_15, 0, rows_15, 10},
+    {"April 2011 SIM", 2010, clears_15, 0, rows_15, 15},
     {"December 2010 SIM", 2010, clears_16, 0, rows_16, 10},
-    {"September 2010 ODB", 2010, clears_17, 0, rows_17, 10},
-    {"March 2012 SIM", 2011, clears_18, 0, rows_18, 11},
+    {"September 2010 ODB", 2010, clears_17, 1, rows_17, 11},
+    {"March 2012 SIM", 2011, clears_18, 0, rows_18, 16},
     {"April 2021", 2020, clears_19, 1, rows_19, 1},
     {"November 2020", 2020, clears_20, 1, rows_20, 1},
     {"April 2022", 2021, clears_21, 1, rows_21, 1},
@@ -34448,7 +34461,7 @@ const SeasonHistDb season_history_dbs[] = {
     {"April 2023", 2022, clears_23, 1, rows_23, 1},
     {"October 2022", 2022, clears_24, 1, rows_24, 1},
     {"April 2024", 2023, clears_25, 1, rows_25, 1},
-    {"October 2023", 2023, clears_26, 1, rows_26, 1},
+    {"October 2023", 2023, clears_26, 1, rows_26, 2},
     {"October 2024", 2024, clears_27, 1, rows_27, 1},
     {"December 2025", 2025, clears_28, 1, rows_28, 1},
     {"May 2026", 2025, clears_29, 1, rows_29, 1},

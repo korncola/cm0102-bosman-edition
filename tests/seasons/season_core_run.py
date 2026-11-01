@@ -126,7 +126,7 @@ def replace_part(src, dst, data):
     blob = bytearray(open(src, "rb").read())
     sav = savfile.Sav(src)
     m = sav.member(PART)
-    if m.offset != max(x.offset for x in sav.members):
+    if m.offset != max(x.offset for x in sav.real_members()):
         raise ValueError("the season part is not the last part")
     raw = savfile.encode(data) if sav.compressed else data
     struct.pack_into("<i", blob, 12 + m.index * savfile.ENTRY_SIZE + 4, len(data))

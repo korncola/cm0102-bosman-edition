@@ -40,7 +40,8 @@ COMPS = [(0, "Aland League", 2, 0, "club"), (1, "Euro Super Cup", 2, -1, "club")
          (10, "World Finals", -1, -1, "nation"), (11, "Euro Finals", 2, -1, "nation"),
          (12, "Asia Finals", 1, -1, "nation"), (13, "Americas Finals", 3, -1, "nation"),
          (14, "Hatay Cup", 5, -1, "nation"), (15, "Nations Shield", 1, -1, "nation"),
-         (16, "Champions Match", 2, -1, "club"), (17, "Qual Zone", 1, -1, "nation")]
+         (16, "Champions Match", 2, -1, "club"), (17, "Qual Zone", 1, -1, "nation"),
+         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club")]
 
 
 def side(n):
@@ -81,6 +82,8 @@ def history():
         rows.append((15, y, side(1), side(2), -1, -1))                # an Asian record with the short name
     rows.append((15, 2032, side(2), side(0), -1, -1))                 # of an Asian cup
     want.add(("confederation", "Nations Shield", 2032))               # plain run: its continent is Asia
+    for y in range(2015, 2031):                                       # Durania Cup: not played after 2030
+        rows.append((18, y, 4, -1, -1, -1))
     return rows, want
 
 
@@ -112,19 +115,25 @@ FIXTURES_2038 = [(10, side(0), side(1), 160), (10, side(4), side(0), 164), (10, 
 # not play. Qual Zone (a World Cup qualifying, AFC): 2039 has a European side among 4 teams (a play-off, passes)
 # and the dead Old Genovia; Bonairia (no continent, never renamed) passes. Nations Shield 2039: two European sides
 # under the Asian short name.
+# Pacific Bowl (the Suruga Bank shape, open item 77): the winners of the Durania Cup, a national cup that the game
+# does not play after 2030, and of the Aland League. Its place goes to a drawn club of Durania: Elbonia Rovers (AFC,
+# not of Durania) in 2039 is a fault, Durania Stars in 2040 is not.
 FIXTURES_2039 = [(16, 0, 3, 220), (16, 4, 0, 222), (1, 0, 1, 100), (13, side(6), side(8), 150),
                  (17, side(3), side(4), 120), (17, side(0), side(11), 124), (17, side(12), side(3), 127),
-                 (15, side(0), side(1), 130)]
-FIXTURES_2040 = [(16, 0, 5, 150), (16, 3, 0, 250), (1, 0, 3, 100)]   # the match of day 250 is after the save date
+                 (15, side(0), side(1), 130), (19, 5, 0, 140)]
+FIXTURES_2040 = [(16, 0, 5, 150), (16, 3, 0, 250), (1, 0, 3, 100),   # the match of day 250 is after the save date
+                 (19, 4, 0, 140)]
 ENTRANT_FAULTS = {("entrant-count", "World Finals", 2038), ("entrant-host", "World Finals", 2038),
                   ("entrant-route", "Champions Match", 2039), ("entrant-route", "Champions Match", 2040),
                   ("entrant-confed", "Champions Match", 2040), ("entrant-holder", "Euro Super Cup", 2040),
                   ("entrant-host", "Americas Finals", 2039), ("entrant-dead", "Qual Zone", 2039),
-                  ("entrant-confed", "Asia Shield", 2039), ("entrant-count", "Champions Match", 2039)}
+                  ("entrant-confed", "Asia Shield", 2039), ("entrant-count", "Champions Match", 2039),
+                  ("entrant-route", "Pacific Bowl", 2039)}
 ENTRANT_FAULTS_PLAIN = {("entrant-dead", "Qual Zone", 2039),       # found with no rules file too; Ruritania
                         ("entrant-dead", "Americas Finals", 2039)}  # plays under the name its rename replaced
 TABLE = '{"world", 2037, 2038, 4, 0, 2038, 6, 1, "Carpania/Karpania", "row-1"},\n'
 ACCESS = ("comp\tfrom\tto\tteams\troutes\tsource\nchamp\t2030\tnone\t2\twinner:aland;winner:esc\tmade up\n"
+          "pacific\t2030\tnone\t2\twinner:durania_cup;winner:aland\tmade up\n"
           "esc\t2030\tnone\t\tholder\tmade up\n")
 
 
@@ -231,6 +240,10 @@ def records(changing=1):
                ("fixtures_2038.tmp", fixture_part(FIXTURES_2038)), ("fixtures_2039.tmp", fixture_part(FIXTURES_2039)),
                ("fixtures_2040.tmp", fixture_part(FIXTURES_2040)), ("staff.dat", staff()),
                ("finance.dat", finance())]
+    # Two files in a merged part (0.6.2 slice 13, savfile.merge): the World Finals class waiting on 2200 and the
+    # fixtures of 2039 give planted faults only when the checker reads them from it.
+    merged = [m for m in members if m[0] in ("World Finals_10.tmp", "fixtures_2039.tmp")]
+    members = [m for m in members if m not in merged] + [("x#.tmp.parts", savfile.merge(merged))]
     return members, want
 
 
@@ -365,12 +378,15 @@ def main():
                 "asia_shield\tAsia Shield\tintl_qual\tAFC\t0\t4\t2028\tnone\n"
                 "champ\tChampions Match\tsuper_cup\tUEFA\t0\t1\t2041\tnone\n"
                 "aland\tAland League\tleague\tnation\t0\t1\t2041\tnone\n"
-                "wc_qual_zone\tQual Zone\tintl_qual\tAFC\t0\t4\t2041\tnone\n")
+                "wc_qual_zone\tQual Zone\tintl_qual\tAFC\t0\t4\t2041\tnone\n"
+                "durania_cup\tDurania Cup\tdomestic_cup\tDurania\t0\t1\t2031\t2030\n"
+                "pacific\tPacific Bowl\tsuper_cup\tAFC|UEFA\t0\t1\t2041\tnone\n")
     names = os.path.join(work, "names.tsv")
     with open(names, "w", encoding="utf-8") as f:
         f.write("# a note line\npattern\tcomp\nAmericas Finals\tamericas\n(The )?World Finals\tworld\n"
                 "Euro Super Cup\tesc\nNations Shield\tshield\nAsia Shield\tasia_shield\n"
-                "Champions Match\tchamp\nAland League\taland\nQual Zone\twc_qual_zone\n")
+                "Champions Match\tchamp\nAland League\taland\nQual Zone\twc_qual_zone\n"
+                "Durania Cup\tdurania_cup\nPacific Bowl\tpacific\n")
     known = os.path.join(work, "known.tsv")
     with open(known, "w", encoding="utf-8") as f:
         f.write("check\tcompetition\tyear\tnote\nduplicate\tEuro Finals\t*\tplanted\n")
@@ -460,6 +476,45 @@ def main():
     got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
     if got != [(2039, 4), (2040, 4)]:
         bad.append(f"editions of a July to May cup: {got}, not [(2039, 4), (2040, 4)]")
+
+    # Open item 70: a group stage that ends on a December day with one match, then the knockout rounds in February
+    # (group clubs only), the final in May, and the next season's first qualifying round in June (clubs that played
+    # last in June a year before). One edition a season: the knockout rounds stay in the edition of their group stage.
+    days = []
+    for season in (2017, 2018):
+        o = datetime.date(season, 6, 27).toordinal()
+        days += [(o, 10, 11), (o, 12, 13)]
+        d = datetime.date(season, 9, 12).toordinal()
+        while d < datetime.date(season, 12, 6).toordinal():
+            days += [(d, 0, 1), (d, 2, 3), (d, 4, 5), (d, 6, 7)]
+            d += 14
+        days.append((datetime.date(season, 12, 13).toordinal(), 4, 5))
+        k = datetime.date(season + 1, 2, 13).toordinal()
+        days += [(k, 0, 1), (k, 2, 3), (k + 63, 0, 2)]
+    got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
+    if got != [(2018, 12), (2019, 12)]:
+        bad.append(f"editions of a cup whose group stage ends on a day with one match: {got}, not "
+                   f"[(2018, 12), (2019, 12)]")
+    # A cup with a first round in December, a group day of 4 matches in March, a final on its own, then 30 days
+    # later a new edition whose teams played last in the first round, 97 days before. Two editions: the teams of
+    # the new first day did not play in the 60 days before the final.
+    a = datetime.date(2030, 3, 1).toordinal()
+    days = [(a - 90, 8, 9), (a - 90, 10, 11), (a, 0, 1), (a, 2, 3), (a, 4, 5), (a, 6, 7), (a + 7, 0, 2),
+            (a + 37, 8, 9), (a + 37, 10, 11)]
+    got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
+    if got != [(2030, 12), (2030, 4)]:
+        bad.append(f"editions of a cup with a final after a group day: {got}, not [(2030, 12), (2030, 4)]")
+
+    # Open item 70: the association limit of the Champions League by season.
+    def lim(season, nations):
+        return [f[3] for f in history_check.limit_faults("CL", season + 1, datetime.date(season, 7, 1).toordinal(),
+                                                         nations)]
+    for season, nations, want_ in ((2012, ["England"] * 4, []), (2012, ["England"] * 5, ["England has 5 entrants, "
+                                   "the limit of 2012/13 is 4"]), (2017, ["England"] * 5 + ["Spain"] * 4, []),
+                                   (2017, ["England"] * 6, ["England has 6 entrants, the limit of 2017/18 is 5"]),
+                                   (2024, ["England"] * 7, []), (2008, ["England"] * 6, [])):
+        if lim(season, nations) != want_:
+            bad.append(f"association limit {season}, {len(nations)} clubs: {lim(season, nations)}, not {want_}")
 
     # nations.tsv holds the renames of the season code.
     bad += renames_match()

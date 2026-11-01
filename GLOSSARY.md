@@ -177,7 +177,7 @@ One football year from July to June, such as 2010/11, that a new game can start 
 _Avoid_: year (for the whole season), edition
 
 **Season game**:
-A game whose start season is not 2001/02, or whose changing rules are on. Only a season game gets the season names, club moves and other season changes. The base game (2001/02 with changing rules off) keeps the original's data.
+A game whose start season is not 2001/02, or whose changing rules are on. Only a season game gets the season names, club moves and other season changes. The base game (2001/02 with changing rules off) keeps the original's data, except the history rows of editions after its start (0.6.2, Q48).
 _Avoid_: modern game, new-season game
 
 **Choose Season screen**:
@@ -279,6 +279,10 @@ _Avoid_: start season (for the number), base year
 **Season part**:
 The part `bosman_season.dat` of a saved game that holds its start year and changing rules. A save has it only when the start year is not 2001 or changing rules is on.
 _Avoid_: season block, save field, header
+
+**Merged part**:
+A part of a saved game that holds all temporary files of one type, such as every `fixtures_<year>.tmp`. Its name is the type with `.parts` at the end, such as `fixtures_#.tmp.parts`. A type with one file stays a part of its own.
+_Avoid_: pack, bundle, archive part
 
 ### Options and features
 

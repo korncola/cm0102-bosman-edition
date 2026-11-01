@@ -79,7 +79,7 @@ Saves:
 - A save from 0.6.0 or 0.6.1 with a competition waiting for the idle year moves it to its next edition after the save's date, at load (Q8).
 - Saves, season parts and news parts accept years up to at least 2300 and news in more than 200 seasons.
 - Caps go in a wider field, kept in the season part of the save. The original byte stops at 255 (Q25).
-- The save keeps each type of data in one part, merged across seasons, so the part count stops growing. Older saves still load (Q26).
+- The save keeps each type of data in one part, merged across seasons, so the part count stops growing. Older saves still load (Q26). A type is the name of a temporary file with each run of digits as '#', such as `fixtures_#.tmp`; a type with two files or more is one merged part, a type with one file stays a part of its own. The data files (`.dat`) are one part each already.
 
 Original game faults, fixed in every game, base game included (Q23, Q24, Q27):
 - Every national team opens a vacancy when its manager retires.
@@ -89,6 +89,8 @@ Original game faults, fixed in every game, base game included (Q23, Q24, Q27):
 - The top wage fix acts from a balance of about £1.65 billion, where the original's 32-bit sum already wraps (Q44).
 - The human manager's age stops at 127, the largest age the game's byte holds, in place of the age from the birth date (Q45).
 - Every money text that can pass £2,147,483,647 is traced and shows the full amount, news items included (Q46).
+- History rows of editions after the start date are cleared, so each edition has one row; the game's own row replaces the data row of the same edition (Q48, 30 October 2026). A new base game then differs from the original in its history rows and in the first-season holders that the game reads from them (the 2001 Charity Shield: Manchester United, not Arsenal, against Liverpool).
+- The same-save set under Q48 (slice 7, 31 October 2026): a loaded 2001 save differs only in nation_comp_history.dat and index.dat, the 3.9.68 row Copa América 2001 Colombia / Mexico, which goes when the game writes its own 2001 final (29 July). The new game differs in its history rows and all that follows the changed holders. The run rules-on differs from normal through one row only (a bisect of the 128 rows of 2002): the Asian Cup Winners' Cup 2002 Al Hilal. Without it the newest holder is Al Shabab (2001), and with changing rules on the season code makes the Asian Super Cup edition (season_kind_club_world.c), whose Cup Winners' Cup entrant is that holder. Accepted by the lead for Max (31 October 2026).
 
 The same game (Q152): every game code change keeps the same saves in the same-save set, unless the change acts only after a table end year, after 2099 or above £2.1 billion, which the set does not reach. The speed fixes give the same results as the code they replace (Q18).
 
@@ -202,7 +204,7 @@ Blocked by: 2
 Delivers: one row per year at the start, and history years in their right places for every database. Faults 3 (duplicates), 17 and 20.
 Merge danger: two-way door. Blast radius: the history screens of every start.
 - [ ] The checker finds no year held twice in the starts of the run set.
-- [ ] The 2023 and 2010 starts show the World Cup in its real years.
+- [x] The 2023 and 2010 starts show the World Cup in its real years.
 
 ### 8. The Nations League and the Asian Cup qualifiers
 Blocked by: 2, 3
@@ -234,7 +236,7 @@ Merge danger: two-way door. Blast radius: promotion and relegation in every leag
 ### 11. Original faults: national managers, money, manager age
 Blocked by: none
 Delivers: every national team gets a new manager, money above £2.1 billion is right on every screen and in AI budgets, and the manager's age is right after 2100. Faults 26, 27, 28 and 33.
-Merge danger: two-way door. The base game changes at the first month change in play (1 August in a 2001 game): about 95 national teams of the 3.9.68 data have no manager from the start and get one then (Q43). The same-save set does not reach that point, so it must PASS. A loaded save with a national team that has no manager gets one at the next month change. That is an expected change. Blast radius: national team jobs, money screens and AI transfer budgets.
+Merge danger: two-way door. The base game changes at the first month change in play (1 August in a 2001 game): about 95 national teams of the 3.9.68 data have no manager from the start and get one then (Q43). The same-save set of a new game, start.sav, prematch.sav and the match does not reach that point, so it must PASS. The 14 days of yeovil.sav (20 August 2002) pass 1 September: there 78 national teams get a vacancy, an accepted change (Q43), and the run original-faults-keep of yeovil.sav keeps only the money and age faults (item 72). A loaded save with a national team that has no manager gets one at the next month change. That is an expected change. Blast radius: national team jobs, money screens and AI transfer budgets.
 - [x] A save with a retired national manager of a small nation opens a vacancy. A save where a national team already has no manager fills it at the next month change.
 - [x] Saves edited to balances of £2.5 billion, £5 billion and £12 billion show the right balance, and the club still bids.
 - [x] Every screen that formats money through the 32-bit Cash object is traced and fixed.
@@ -250,10 +252,10 @@ Merge danger: one-way door, because the save holds a new field. Blast radius: ca
 ### 13. Save parts merged across seasons
 Blocked by: 12
 Delivers: the part count of a save stops growing. Fault 29.
-Merge danger: one-way door, because the save format changes. Blast radius: every save and load. Old saves must load.
-- [ ] A save with 990 parts saves again and loads.
-- [ ] 0.6.0 and 0.6.1 saves load.
-- [ ] Same-save set PASS.
+Merge danger: one-way door, because the save format changes. Blast radius: every save and load. Old saves must load. Every save made after this slice has merged parts (a new game keeps fixtures_2001.tmp and fixtures_2002.tmp from its first day), and 0.6.0, 0.6.1 and earlier 0.6.2 builds cannot load it: their load stops at the box "Cup..cpp 5246". The changelog of 0.6.2 must say so.
+- [x] A save with 990 parts saves again and loads.
+- [x] 0.6.0 and 0.6.1 saves load.
+- [x] Same-save set PASS.
 
 ### 14. Speed fixes
 Blocked by: none

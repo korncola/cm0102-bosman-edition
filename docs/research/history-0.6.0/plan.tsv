@@ -34245,6 +34245,11 @@ add	April 2011 SIM	2010	US Open Cup	2008		add	Washington DC United	United States
 add	April 2011 SIM	2010	US Open Cup	2009		add	Seattle Sounders	United States	Washington DC United	United States				
 add	April 2011 SIM	2010	US Open Cup	2010		add	Seattle Sounders	United States	Columbus Crew	United States				
 add	April 2011 SIM	2010	US Open Cup	2001		add	Los Angeles Galaxy	United States	New England Revolution	United States				
+add	April 2011 SIM	2010	FIFA World Cup	2002		add	Brazil		Germany		Turkey		South Korea	
+add	April 2011 SIM	2010	FIFA World Cup	2006		add	Italy		France		Germany		Germany	
+add	April 2011 SIM	2010	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa	
+add	April 2011 SIM	2010	European Football Championship	2004		add	Greece		Portugal				Portugal	
+add	April 2011 SIM	2010	European Football Championship	2008		add	Spain		Germany				Austria	
 add	December 2010 SIM	2010	US Open Cup	2002		add	Columbus Crew	United States	Los Angeles Galaxy	United States				
 add	December 2010 SIM	2010	US Open Cup	2003		add	Chicago Fire	United States	NY/NJ Metrostars	United States				
 add	December 2010 SIM	2010	US Open Cup	2004		add	Kansas City Wizards	United States	Chicago Fire	United States				
@@ -34265,6 +34270,8 @@ add	September 2010 ODB	2010	US Open Cup	2008		add	Washington DC United	United St
 add	September 2010 ODB	2010	US Open Cup	2009		add	Seattle Sounders	United States	Washington DC United	United States				
 add	September 2010 ODB	2010	US Open Cup	2010		add	Seattle Sounders	United States	Columbus Crew	United States				
 add	September 2010 ODB	2010	US Open Cup	2001		add	Los Angeles Galaxy	United States	New England Revolution	United States				
+clear	September 2010 ODB	2010	FIFA World Cup	2007										
+add	September 2010 ODB	2010	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa	
 add	March 2012 SIM	2011	US Open Cup	2002		add	Columbus Crew	United States	Los Angeles Galaxy	United States				
 add	March 2012 SIM	2011	US Open Cup	2003		add	Chicago Fire	United States	NY/NJ Metrostars	United States				
 add	March 2012 SIM	2011	US Open Cup	2004		add	Kansas City Wizards	United States	Chicago Fire	United States				
@@ -34276,6 +34283,11 @@ add	March 2012 SIM	2011	US Open Cup	2009		add	Seattle Sounders	United States	Was
 add	March 2012 SIM	2011	US Open Cup	2010		add	Seattle Sounders	United States	Columbus Crew	United States				
 add	March 2012 SIM	2011	US Open Cup	2011		add	Seattle Sounders	United States	Chicago Fire	United States				
 add	March 2012 SIM	2011	US Open Cup	2001		add	Los Angeles Galaxy	United States	New England Revolution	United States				
+add	March 2012 SIM	2011	FIFA World Cup	2002		add	Brazil		Germany		Turkey		South Korea	
+add	March 2012 SIM	2011	FIFA World Cup	2006		add	Italy		France		Germany		Germany	
+add	March 2012 SIM	2011	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa	
+add	March 2012 SIM	2011	European Football Championship	2004		add	Greece		Portugal				Portugal	
+add	March 2012 SIM	2011	European Football Championship	2008		add	Spain		Germany				Austria	
 clear	April 2021	2020	US Open Cup	2019										
 add	April 2021	2020	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
 clear	November 2020	2020	US Open Cup	2019										
@@ -34292,6 +34304,7 @@ clear	April 2024	2023	US Open Cup	2019
 add	April 2024	2023	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
 clear	October 2023	2023	US Open Cup	2019										
 add	October 2023	2023	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
+add	October 2023	2023	FIFA World Cup	2022		add	Argentina		France		Croatia		Qatar	
 clear	October 2024	2024	US Open Cup	2019										
 add	October 2024	2024	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
 clear	December 2025	2025	US Open Cup	2019										
