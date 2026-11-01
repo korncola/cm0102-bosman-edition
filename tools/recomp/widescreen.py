@@ -188,6 +188,11 @@ from discipline_ban import INSNS as BAN_INSNS  # noqa: E402
 
 assert not set(BAN_INSNS) & (set(INSNS) | set(PATCHES))
 INSNS.update(BAN_INSNS)
+# The OFC Champions League at a load after Australia's move to Asia (oceania_entry.py).
+from oceania_entry import INSNS as OCEANIA_INSNS  # noqa: E402
+
+assert not set(OCEANIA_INSNS) & (set(INSNS) | set(PATCHES))
+INSNS.update(OCEANIA_INSNS)
 
 # Saves above 2 GB (0.6.0): unsigned file positions in ftell and the seek of a save part (save_size.py).
 from save_size import INSNS as SAVE_SIZE_INSNS  # noqa: E402
