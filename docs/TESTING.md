@@ -22,6 +22,8 @@ A same-save check plays the same clicks twice, once with the option on and once 
 
 The script is `tests/smoke/smoke_run.py --same-save`, with `--match` for the match check. `tests/smoke/same_save_views.py` checks the screens.
 
+Long holiday runs can differ when their pace differs, even with the same seed and steps. The daily staff pass 0x5ce2d0 reads its local [esp+0x70] before it writes it, and that stack slot holds what timed message pumps left there. This is the original's behaviour and is kept (open item 85). So compare long runs only when they ran at the same pace, and repeat a run that differs before treating it as a fault.
+
 The checks run before each merge of game code and again on the merged build. The pass rule is equal saves. Five files can differ only when the option opens a screen that the off run does not open, because that moves memory. We record each such case and tell Max. Any other difference stops the merge until we find the cause.
 
 Some changes alter the game by decision. Since 0.6.2 (Q48), the history rows of editions after the start date are removed in every game. This changes the first-season holders and so the play of a new game. The reference run `history-q48-off` plays the same game with that fix off (`RECOMP_HISTORY_AFTER_START=off`). The checks use it this way:
