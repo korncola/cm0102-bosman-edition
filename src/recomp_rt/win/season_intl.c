@@ -1390,7 +1390,12 @@ static void repair_idle(void)
     if (!old_build_save(table, slots) || (!season_changing_rules() && today_year >= OLD_IDLE_YEAR - 4)) return;
     for (int i = 0; i < slots && !rt_unwinding; i++) {
         uint32_t obj = rd32(g_mem, table + 4u * (uint32_t)i), vt = readable(obj) ? rd32(g_mem, obj) : 0;
-        if (!readable(vt) || (int16_t)rd16(g_mem, obj + 0x40u) != OLD_IDLE_YEAR) continue;
+        /* A class at the idle year, or one stuck in an edition more than a year past: up to 0.6.1 a final could
+         * stall after its round of 16 or quarter-finals and never end (0.6.2 open items 2, 19 and 54), so the
+         * class kept that edition for good (the forum save of August 2142: the ACN since 2012, the Asian Cup and
+         * the Copa America since 2015). The repair moves both to the next edition. */
+        int held_year = readable(vt) ? (int16_t)rd16(g_mem, obj + 0x40u) : 0;
+        if (!readable(vt) || (held_year != OLD_IDLE_YEAR && held_year >= today_year - 1)) continue;
         int k = -1;
         for (int c = 0; c < (int)(sizeof repair_classes / sizeof repair_classes[0]); c++)
             if (rd32(g_mem, vt + 8u) == repair_classes[c].new_season) k = c;
@@ -1469,8 +1474,8 @@ static void repair_idle(void)
         for (int more = 0; more < 3 && !rt_unwinding && !with_qual && cls != INTL_CONFED && draw_passed(obj); more++)
             new_season(obj, repair_classes[k].new_season);
         if (rt_unwinding) return;
-        fprintf(stderr, "recomp: season intl: a save of 0.6.1 or older: %s waits for %d, now its edition of %d\n",
-                file, OLD_IDLE_YEAR, (int16_t)rd16(g_mem, obj + 0x40u));
+        fprintf(stderr, "recomp: season intl: a save of 0.6.1 or older: %s held %d, now its edition of %d\n",
+                file, held_year, (int16_t)rd16(g_mem, obj + 0x40u));
     }
     if (!rt_unwinding) repair_confed_row();
 }
