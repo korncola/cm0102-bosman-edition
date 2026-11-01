@@ -142,3 +142,4 @@ entrant-host	Africa*Cup of Nations	2002	open item 46: the host does not play (Ma
 entrant-host	Africa*Cup of Nations	2027	open item 46: Kenya, Tanzania and Uganda do not play in 2027
 entrant-route	Intercontinental Cup	2002	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
 entrant-route	Intercontinental Cup	2003	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
+missing	Oceania Champions Cup	*	open item 88: the original stalls an edition when a group match moves (FIXTURE_MANAGER new date search 0x5ab510 at 0x5aa96e): the semi-finals come before it and no final is set, so the edition never ends (base game, seed 2: 2008)
