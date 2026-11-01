@@ -771,7 +771,7 @@ def health(game):
                                                 f"from the birth date (staff {sid}: {age}, not {real})"))
     player_rows = sav.read("player.dat") if "player.dat" in sav.members else b""
 
-    def ability(sid):                                         # current ability, player row +0x05 (0x6dbc50's pick)
+    def ability(sid):                                         # current ability, player row +0x05
         row = ages.get(sid, (99, -1))[1]
         if not 0 <= row < len(player_rows) // PLAYER:
             return -1
