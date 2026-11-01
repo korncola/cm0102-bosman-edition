@@ -37,7 +37,7 @@ The runs, parts and rows are in `q48_runs`, `Q48_SAVE_PARTS` and `Q48_SAVE_ROWS`
 
 ## Start-season soaks
 
-For each start season from 2001/02 to 2025/26, a soak plays a new game with all nations loaded and the changing rules on. The manager goes on holiday and the quick result engine plays the matches.
+For each start season from 2001/02 to 2026/27, a soak plays a new game with all nations loaded and the changing rules on. The manager goes on holiday and the quick result engine plays the matches.
 
 Each soak goes on until the game completes at least one World Cup and one European Championship, with their qualifiers and every season change between them. It stops at about 1 September after the later tournament. A 2001 start runs to September 2004, and a 2016 start runs to September 2021 because Euro 2020 was played in 2021.
 

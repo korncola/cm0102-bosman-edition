@@ -143,7 +143,7 @@ def main(argv):
             shutil.copy(os.path.join(out1, n + ".zip"), os.path.join(game, "Seasons", n + ".zip"))
 
         rows, custom = scan(tool, game, save)
-        check(len(rows) == 25 and rows["2001/02"][0] == STATUS["OFFICIAL"], "scan: 25 seasons, 2001/02 official")
+        check(len(rows) == 26 and rows["2001/02"][0] == STATUS["OFFICIAL"], "scan: 26 seasons, 2001/02 official")
         check(rows["2002/03"][0] == STATUS["MISSING"], "scan: 2002/03 (Summer 2002) has no zip in this game folder")
         check(rows["2003/04"][0] == STATUS["IN_DOWNLOAD"] and rows["2012/13"][0] == STATUS["IN_DOWNLOAD"],
               "scan: the two zips show as in the download")

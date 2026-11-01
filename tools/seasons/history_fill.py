@@ -236,8 +236,12 @@ LAST_ROW_MOVES = (("Autumn 2013", "Croatian First Division", 2012, "NK Lokomotiv
 # label is missing after the nation shift is added, when its final is before the start. A final in July of the
 # start year counts: the game plays no finals in the July of its start (no game row of the 2010 World Cup in the
 # 2010 gate saves of 0.6.0). October 2023 holds no World Cup 2022 row, April 2011 SIM and March 2012 SIM no World
-# Cup or Euro row after 2000.
+# Cup or Euro row after 2000. October 2026 holds no World Cup 2026 row.
 GAP_FINALS = ("FIFA World Cup", "European Football Championship")
+# The same for one database only (0.6.2 slice 21): October 2026 holds no Africa Cup of Nations 2025 row. The research
+# of this competition ends in 2006 with one row of 2025, so the rule is not opened to the other databases, whose rows
+# of 2008 to 2023 the research does not hold.
+GAP_FINALS_OF = {"October 2026": ("African Cup of Nations",)}
 
 
 def gap_databases(dbroot):
@@ -338,7 +342,7 @@ def gap_rows(name, start, folder, rows, ref, alias, plan, report, shift, nshift)
         c = d.comp(cid)
         if c and c[0] == "nation":
             have[c[1]].add(y + own.get(cid, ns))
-    for comp in GAP_FINALS:
+    for comp in GAP_FINALS + GAP_FINALS_OF.get(name, ()):
         if comp not in comps:
             continue
         for r in rows:

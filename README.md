@@ -35,7 +35,7 @@ Each download is ready to play. It holds the game files of the free release that
 
 - Runs on macOS 11 or later (Apple silicon and Intel), Windows 10 and 11 (64-bit), and 64-bit Linux. The Linux AppImage also runs on the Steam Deck in desktop mode.
 - Widescreen at 1280 × 800 in a window you can resize, with sharp scaling. The original 800 × 600 layout is one setting away.
-- Any season from 2001/02 to 2025/26 on the Choose Season screen, with a database for every season in the download. Each season has its own leagues, cups, European and international competitions, substitutes, foreign player rules and transfer windows.
+- Any season from 2001/02 to 2026/27 on the Choose Season screen, with a database for every season in the download. Each season has its own leagues, cups, European and international competitions, substitutes, foreign player rules and transfer windows.
 - In a long game the rules change each July as they did in real life, and a news item lists what changed. You can switch this off and keep your start season's rules.
 - Three versions of the official 2001/02 data on its tile: 3.9.60, the original data (the default), 3.9.65, the December 2001 update, and 3.9.68, with the summer 2002 transfers. Click the chosen tile to change the version.
 - A Custom database tile for a database folder of your own. You say which season it holds, and that season's rules apply.

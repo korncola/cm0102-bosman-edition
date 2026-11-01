@@ -1984,6 +1984,7 @@ const SeasonDateShifts season_date_shifts[] = {
     {"October 2024", 23, 23, 23, 1, 23, 23, 0, 24, 0, 0, 0u, 0, 0, 0},
     {"December 2025", 24, 24, 24, 1, 24, 24, 0, 24, 0, 0, 0u, 0, 0, 0},
     {"May 2026", 24, 24, 24, 1, 24, 24, 0, 24, 0, 0, 0u, 0, 0, 0},
+    {"October 2026", 25, 25, 25, 1, 25, 25, 0, 24, 0, 0, 0u, 0, 0, 0},
 };
 
-const int season_date_shifts_count = 51;
+const int season_date_shifts_count = 52;

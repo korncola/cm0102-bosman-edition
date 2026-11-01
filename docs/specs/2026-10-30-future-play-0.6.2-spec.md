@@ -115,12 +115,19 @@ The history checker:
 - For Tier B it reports these each decade: squad sizes for each nation, manager counts, club balances, save size and time per game day. It fails on any overflow or empty squad (Q17).
 
 The run set (Q11, Q14, Q15, Q22):
-- Tier A: start seasons 2001, 2002, 2006, 2013, 2021 and 2025 with changing rules on, and 2001 with changing rules off. All nations, three seeds each, to 2100.
+- Tier A: start seasons 2001, 2002, 2006, 2013, 2021, 2025 and 2026 (Q56) with changing rules on, and 2001 with changing rules off. All nations, three seeds each, to 2100.
 - Tier A, also: a 2001 game with England, Spain and Brazil only, and one game where the manager runs a national team.
 - One Tier A run to 2300 every night.
 - Date jumps to 2098, 2198 and 2298.
 - Tier B: a few long games in the background, with checkpoint saves each decade. It fails when the save would pass the 4 GB file limit before 2300, when a game day in a later decade takes more than twice as long as in the first seasons, or when a national team has no manager for more than one season.
 - 0.6.2 ships only when the checker finds no fault to 2300 in the whole run set. The run set joins the release checks of every later release (Q12).
+
+The 2026/27 tile (Max, 1 November 2026, Q51 to Q56):
+- Q51: the option defaults stay 3.9.60 and 2001/02 (the 0.6.1 choice), so a new install still starts on 2001/02. Only the Custom tile's default year moves from 2025 to 2026.
+- Q52: 2025/26 keeps December 2025. Q53: October 2026 ships in the download like the other Update Team databases.
+- Q54: every 2026/27 rules row is checked against a source and against the database's divisions, and corrected where it differs.
+- Q55: a 2026/27 game starts after the 2026 World Cup, and its history holds the real result.
+- Q56: the run set adds a 2026 start with three seeds.
 
 ## Testing
 
@@ -314,3 +321,17 @@ Merge danger: two-way door. The base game changes from the first new player of a
 - [x] The 2041 forum save played one year: main has 27 no-youth faults, the fix none.
 - [x] An England-only 2001 game to July 2009: main has 15 no-youth faults, the fix none. A 2025 start from July 2027 to May 2028: main has 21, the fix none.
 - [x] Same-save set PASS against main.
+
+### 21. A 2026/27 tile with the October 2026 database
+Blocked by: none
+Delivers: a 2026/27 tile on Choose Season with the Update Team's October 2026 database (posted on 31 October 2026), bundled in the download like the other season databases (Q51 to Q56, Max, 1 November 2026). 2025/26 keeps December 2025 (Q52). The 2026/27 rules rows are checked against a source and against the new database's divisions, and corrected where they differ (Q54). A 2026/27 game starts after the 2026 World Cup, and its history holds the real result: Spain, Argentina, England, hosts Canada, Mexico and United States (Q55). The run set gets a 2026 start with three seeds (Q56).
+- The changes follow the 2025/26 tile: the signature row (make_db_table.py), the measured date shifts (measure_date_shifts.py), the history fill row (history_fill.py, with the 2026 World Cup as a researched row), 26 seasons in place of 25, the screen's labels, the option's values, the release zips and the tests that name the last season.
+Merge danger: two-way door. Only a game that starts in 2026/27 takes the new code paths. The 2001 game and the other 25 tiles keep their tables: the new rows are added, and no row of another database changes. The rules rows that Q54 corrects also change games of earlier seasons that reach 2026/27 with changing rules on. Blast radius: the Choose Season screen, the season option, the release zips, and the 2026/27 rules of every league.
+- [x] A 2026/27 new game with changing rules on and with changing rules off starts with no box and plays one season (England, 11 July 2026 to 1 June 2027; and the full world with changing rules on to 28 July 2027).
+- [x] The rules report of the 2026/27 start matches its expected file (2026-england, changing-2026-england to 2027/28, changing-2026-all-start). Every line is a kind that the 2025/26 start of main also has.
+- [x] The history of the 2026/27 start holds the 2026 World Cup (Spain, Argentina, England), and the game plays no 2026 finals (its World Cup waits for 2030 from the first day).
+- [x] The history checker finds no new fault in the 2026/27 game (run set row quick2026): no fault at all. The October 2026 database also lacks the Africa Cup of Nations 2025 row, which the game now adds (Morocco, the CAF Appeal Board result). The three Argentine titles of 2025 in the database are no fault (the AFA's Campeón de Liga).
+- [x] Every 2026/27 rules row is checked against a cited source (with the date read) and the database's divisions, and corrected where it differs. A row that no source confirms keeps its value and says so in its notes.
+- [x] The run set holds a 2026 start with three seeds.
+- [x] Same-save set PASS for the 2001 game against main 962d9986: start, prematch, new game and match (the match check at load 6.8).
+- [x] ctest passes (70 of 70).

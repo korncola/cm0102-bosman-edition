@@ -31,7 +31,7 @@ def main():
     rows = run_set.read_set()
     release = run_set.chosen(rows, "release")
     names = {r["name"] for r in release}
-    for want in ("a2001s1", "a2001offs3", "a2025s3", "a2001esb", "a2001nation", "a2001to2300", "jump2298", "b2001"):
+    for want in ("a2001s1", "a2001offs3", "a2025s3", "a2026s1", "a2026s2", "a2026s3", "a2001esb", "a2001nation", "a2001to2300", "jump2298", "b2001"):
         if want not in names:
             bad.append(f"run set: {want} is not in the release set")
     if any(r["set"] == "quick" for r in release):
@@ -39,8 +39,10 @@ def main():
     if len([r for r in release if r["tier"] == "A" and r["last"] == 2100 and r["nations"] == "all"]) != 25:
         bad.append("run set: not 25 Tier A games of all nations to 2100 (8 starts with Q56's 2026, three seeds, and Q15)")
     for r in (r for r in release if r["start"] == 2026):
-        if not run_set.database_of(r, {"databases": run_set.DATABASES}).endswith("October 2026"):
-            bad.append(f"run set: {r['name']} does not play the October 2026 data")
+        db = run_set.database_of(r, {"databases": run_set.DATABASES, "out": "", "own": run_set.OWN_DBS})
+        if not (os.path.relpath(db, run_set.DATABASES).startswith("October 2026")
+                and os.path.isfile(os.path.join(db, "index.dat"))):
+            bad.append(f"run set: {r['name']} does not play the October 2026 data (the folder of its index.dat): {db}")
 
     legs = run_set.legs_of({"start": 2001, "last": 2100, "leg_years": 10})
     if len(legs) != 10 or legs[0] != (2001, 2010) or legs[-1] != (2091, 2100):
