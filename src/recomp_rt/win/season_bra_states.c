@@ -401,9 +401,10 @@ static int pick(uint32_t obj, const StateClass *k)
      * meetings +0x3c only while it is -1 (0x689b1d..0x689b36), and the league is complete when every row has played
      * that many (0x689b51..0x689b58). A state whose count changed kept the old season's value, its league phase was
      * never complete, and it wrote no history row: the Paraense of 13 clubs to 2014 and 10 in 2015 had no edition
-     * from 2015 (0.6.2 open item 81). With the same count the value stays. */
+     * from 2015 (0.6.2 open item 81). Only a value that check_complete made for another count k ((k - 1) x meetings)
+     * goes back; a value that a class sets itself (ScoPrm's 38) would stay, as in season_sizes.c. */
     int m = (int16_t)rd16(g_mem, obj + COMP_MATCHES), meet = (int16_t)rd16(g_mem, obj + COMP_MEETINGS);
-    if (meet > 0 && m > 0 && m != (n - 1) * meet) wr16(g_mem, obj + COMP_MATCHES, 0xffffu);
+    if (meet > 0 && m > 0 && m % meet == 0 && m / meet + 1 != n) wr16(g_mem, obj + COMP_MATCHES, 0xffffu);
     wr16(g_mem, obj + COMP_CLUBS, (uint16_t)n);
     wr32(g_mem, obj + COMP_TABLE, table);
     for (int i = 0; i < n && !rt_unwinding; i++) {
