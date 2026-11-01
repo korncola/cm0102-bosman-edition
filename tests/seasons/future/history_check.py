@@ -88,7 +88,8 @@ save date (a confederation check for every edition):
                   edition of the start year or before (it began before the game, the holder may be out)
     entrant-limit  a nation has more Champions League entrants than the association limit of the season (open item
                   70; season_uefa_cl_cap: 4 to 2014/15, 5 from 2015/16, 7 from 2024/25), in an edition of the
-                  season code's access list (from 2009/10) that began after the start year, of 500 days or less
+                  season code's access list (from 2009/10) that began after the start year, of 500 days or less;
+                  not in a base game (changing rules off), which plays the original's format
     entrant-route  an entrant of a fixed-route competition (access.tsv: UEFA Super Cup, Recopa, Suruga Bank,
                   Intercontinental Cup, Finalissima, FIFA Intercontinental Cup) won none of its route competitions
                   in the year of the match or the edition before, when that edition is at most one cycle and one
@@ -760,7 +761,9 @@ def entrants(game, rules, access, changes=()):
                                                               f"{' ...' if len(teams_) > 6 else ''}"))
             # an edition of more than 500 days holds two seasons (2019/20 ended in August 2020, 425 days after its
             # start, and 2020/21 began before that): its counts are not those of one season
-            if key == "uefa_cl" and done and datetime.date.fromordinal(first).year > game.start and last - first <= 500:
+            # with changing rules off the base game plays the original's format: no limit of the season rules
+            if key == "uefa_cl" and game.changing and done and datetime.date.fromordinal(first).year > game.start and \
+                    last - first <= 500:
                 faults += limit_faults(name, year, first, [game.club(t)[1] for t in teams])
             if want and done and len(teams) != want:
                 faults.append(("entrant-count", name, year, f"{len(teams)} entrants, the access rule has {want}"))

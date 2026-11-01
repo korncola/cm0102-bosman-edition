@@ -33,7 +33,7 @@ NATIONS = [("Aland", 2), ("Borduria", 2), ("Carpania", 2), ("Durania", 1), ("Elb
            ("Genovia", 3), ("Hatay", 5),
            ("Ruritania", 3), ("Kurlandia", 5), ("Osterlich", 5), ("Old Genovia", -1), ("Bonairia", -1)]
 CLUBS = [("Aland City", 0), ("Aland United", 0), ("Borduria Sport", 1), ("Carpania FC", 2), ("Durania Stars", 3),
-         ("Elbonia Rovers", 4)]
+         ("Elbonia Rovers", 4)] + [(f"Aland Club {k}", 0) for k in range(8)]     # 6 to 13: a Champions Cup
 SIDE0 = 100                                  # national side ids follow the club ids
 # id, name, continent, nation, file
 COMPS = [(0, "Aland League", 2, 0, "club"), (1, "Euro Super Cup", 2, -1, "club"),
@@ -41,7 +41,7 @@ COMPS = [(0, "Aland League", 2, 0, "club"), (1, "Euro Super Cup", 2, -1, "club")
          (12, "Asia Finals", 1, -1, "nation"), (13, "Americas Finals", 3, -1, "nation"),
          (14, "Hatay Cup", 5, -1, "nation"), (15, "Nations Shield", 1, -1, "nation"),
          (16, "Champions Match", 2, -1, "club"), (17, "Qual Zone", 1, -1, "nation"),
-         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club")]
+         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club"), (20, "Champions Cup", 2, -1, "club")]
 
 
 def side(n):
@@ -120,7 +120,8 @@ FIXTURES_2038 = [(10, side(0), side(1), 160), (10, side(4), side(0), 164), (10, 
 # not of Durania) in 2039 is a fault, Durania Stars in 2040 is not.
 FIXTURES_2039 = [(16, 0, 3, 220), (16, 4, 0, 222), (1, 0, 1, 100), (13, side(6), side(8), 150),
                  (17, side(3), side(4), 120), (17, side(0), side(11), 124), (17, side(12), side(3), 127),
-                 (15, side(0), side(1), 130), (19, 5, 0, 140)]
+                 (15, side(0), side(1), 130), (19, 5, 0, 140)] + \
+    [(20, 6 + k, 7 + k, 250 + 7 * k) for k in range(0, 8, 2)]   # Champions Cup 2039/40: 8 Aland clubs, the limit 7
 FIXTURES_2040 = [(16, 0, 5, 150), (16, 3, 0, 250), (1, 0, 3, 100),   # the match of day 250 is after the save date
                  (19, 4, 0, 140)]
 ENTRANT_FAULTS = {("entrant-count", "World Finals", 2038), ("entrant-host", "World Finals", 2038),
@@ -128,6 +129,7 @@ ENTRANT_FAULTS = {("entrant-count", "World Finals", 2038), ("entrant-host", "Wor
                   ("entrant-confed", "Champions Match", 2040), ("entrant-holder", "Euro Super Cup", 2040),
                   ("entrant-host", "Americas Finals", 2039), ("entrant-dead", "Qual Zone", 2039),
                   ("entrant-confed", "Asia Shield", 2039), ("entrant-count", "Champions Match", 2039),
+                  ("entrant-limit", "Champions Cup", 2039),
                   ("entrant-route", "Pacific Bowl", 2039)}
 ENTRANT_FAULTS_PLAIN = {("entrant-dead", "Qual Zone", 2039),       # found with no rules file too; Ruritania
                         ("entrant-dead", "Americas Finals", 2039)}  # plays under the name its rename replaced
@@ -378,6 +380,7 @@ def main():
                 "asia_shield\tAsia Shield\tintl_qual\tAFC\t0\t4\t2028\tnone\n"
                 "champ\tChampions Match\tsuper_cup\tUEFA\t0\t1\t2041\tnone\n"
                 "aland\tAland League\tleague\tnation\t0\t1\t2041\tnone\n"
+                "uefa_cl\tChampions Cup\tclub_continental\tUEFA\t0\t1\t2041\tnone\n"
                 "wc_qual_zone\tQual Zone\tintl_qual\tAFC\t0\t4\t2041\tnone\n"
                 "durania_cup\tDurania Cup\tdomestic_cup\tDurania\t0\t1\t2031\t2030\n"
                 "pacific\tPacific Bowl\tsuper_cup\tAFC|UEFA\t0\t1\t2041\tnone\n")
@@ -386,7 +389,7 @@ def main():
         f.write("# a note line\npattern\tcomp\nAmericas Finals\tamericas\n(The )?World Finals\tworld\n"
                 "Euro Super Cup\tesc\nNations Shield\tshield\nAsia Shield\tasia_shield\n"
                 "Champions Match\tchamp\nAland League\taland\nQual Zone\twc_qual_zone\n"
-                "Durania Cup\tdurania_cup\nPacific Bowl\tpacific\n")
+                "Durania Cup\tdurania_cup\nPacific Bowl\tpacific\nChampions Cup\tuefa_cl\n")
     known = os.path.join(work, "known.tsv")
     with open(known, "w", encoding="utf-8") as f:
         f.write("check\tcompetition\tyear\tnote\nduplicate\tEuro Finals\t*\tplanted\n")
@@ -420,6 +423,13 @@ def main():
     # Changing rules off: only the nation changes up to the start season are due.
     off = os.path.join(work, "off.sav")
     write_sav(off, records(changing=0)[0])
+    # The association limit of the season rules: a fault with changing rules on, none in the base game (lead, 1 Nov).
+    for label, save, want_limit in (("limit-on", sav, True), ("limit-off", off, False)):
+        run([save, "--out", work, "--label", label, "--known", empty, "--nations", nations, "--rules", rules,
+             "--names", names, "--table", table, "--access", access])
+        got = ("entrant-limit", "Champions Cup", 2039) in faults(work, label)
+        if got != want_limit:
+            bad.append(f"entrant-limit ({label}): {'found' if got else 'not found'}")
     run([off, "--out", work, "--label", "off", "--known", empty, "--nations", nations])
     got = {k for k in faults(work, "off") if k[0].startswith("nation-")}
     if got != NATION_FAULTS_OFF:
