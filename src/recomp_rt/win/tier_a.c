@@ -104,7 +104,9 @@ static int skip(int nargs, uint32_t from)
 
 #define TRANSFERS 0xde1f54u          /* TRANSFER_MANAGER, the this of 0x8c16b0 and 0x8c1870 (0x83db1c, 0x83db60) */
 #define SLOTS 50                     /* club squad slots +0xd7 (VIRTUAL_STAFF 0x90d8f0 counts 0x32) */
-#define RELEASE_TO 45
+#define RELEASE_TO 37             /* a club that reaches 50 is then at 45 or more for 5 / (50 - 37) of its time:
+                                     down to 45, 405 clubs had 45 slots or more in July 2108 against 153 in the
+                                     normal game (153 / 405 = 0.38, so 50 - 13) */
 #define CLUB_TABLE 0xae23b4u
 #define CLUB_COUNT 0xae235cu
 #define NATION_COUNT 0xae2350u
