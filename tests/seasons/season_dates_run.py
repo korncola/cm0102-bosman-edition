@@ -20,6 +20,9 @@ gives the data in memory at the first human turn. The checks:
                before the start, in their real years with their real winners (0.6.2 slice 7, open items 20 and
                39: the nation rows of many databases need another shift than the club rows; October 2023 kept
                France 2018 at 2020, October 2014 Germany 2014 at 2013).
+    last rows  the databases that keep their last season one year early in some competitions hold it in its own year
+               at the start (open items 59 and 83, LAST_ROWS): Autumn 2013, the Croatian and Greek first divisions
+               hold 2011/12 at 2012 and 2012/13 at 2013, once each (the test log of the rows at the creation).
     fields     the stats line of the log: 95 % of the contract ends and 80 % of the national job dates from 2
                years before the start to 6 years after, the latest joined date in the start year or the year
                before and a quarter of them there (not where the joined dates are real), the latest career year
@@ -89,6 +92,45 @@ FINALS = {
 # A final in July of the start year is history: the game plays no finals in the July of its start
 # (tools/seasons/history_fill.py, GAP_FINALS).
 START_END = (7, 31)
+
+
+# Open items 59 and 83: (name pattern, nation) of a competition and its expected (label, winner, runner-up) rows, by
+# database in its own season. Sources: the final tables of the 2011/12 and 2012/13 seasons (en.wikipedia.org,
+# 2012-13 Prva HNL and 2012-13 Super League Greece; 2011/12 Dinamo Zagreb / Hajduk Split and Olympiacos /
+# Panathinaikos).
+LAST_ROWS = {
+    "Autumn 2013": [
+        ("Croatian First Division",
+         [(2012, "GNK Dinamo Zagreb", "HNK Hajduk Split"), (2013, "GNK Dinamo Zagreb", "NK Lokomotiva Zagreb")]),
+        ("Greek National A Division",
+         [(2012, "Olympiacos Piraeus", "Panathinaikos AO"), (2013, "Olympiacos Piraeus", "PAOK Salonika")]),
+    ],
+}
+
+
+def last_rows_env(label):
+    """The test log of the rows at the creation (RECOMP_HISTORY_LOG, season_history.c) for the run of LAST_ROWS."""
+    return {"RECOMP_HISTORY_LOG": ";".join(c for c, _ in LAST_ROWS[label])} if label in LAST_ROWS else {}
+
+
+def check_last_rows(label, log):
+    """None, or the faults of LAST_ROWS for the run of database label: the rows at the creation, before the game
+    keeps only the rows of the selected nations (the runs select England)."""
+    want = LAST_ROWS.get(label)
+    if not want:
+        return None
+    bad = []
+    for comp, expect in want:
+        m = re.search(r"recomp: history log create: " + re.escape(comp) + r":(.*)", log)
+        if not m:
+            bad.append(f"{comp}: no log of the rows at the creation")
+            continue
+        rows = [tuple(x.strip().split(" ", 1)) for x in m.group(1).split(";") if x.strip()]
+        for year, first, second in expect:
+            got = [r[1] for r in rows if r[0] == str(year)]
+            if got != [f"{first} / {second}"]:
+                bad.append(f"{comp} {year}: {got}, want [{first} / {second}]")
+    return bad
 
 
 def last_final(comp, year):
@@ -306,7 +348,8 @@ def main(argv):
                     fut[label] = pool.submit(play, program, game, work, tag, None, folders[name], None,
                                              second_steps(), 2019, [folders[env["_second"]]])
                 else:
-                    fut[label] = pool.submit(play, program, game, work, tag, year, folders.get(name), env)
+                    fut[label] = pool.submit(play, program, game, work, tag, year, folders.get(name),
+                                             dict(env or {}, **last_rows_env(label)) or None)
             results = {k: v.result() for k, v in fut.items()}
         for label, year, name, env in runs:
             path, log, took = results[label]
@@ -352,6 +395,11 @@ def main(argv):
                 fail(f"{label}: last {COMP} row {res['comp']} (real champions of {year}: {want})")
             else:
                 fail(f"{label}: last {COMP} row {res['comp']}, not the year {year}")
+            wrong = check_last_rows(label, log)
+            if wrong:
+                fail(f"{label}: last rows " + "; ".join(wrong))
+            elif wrong is not None:
+                print(f"ok    {label}: the last rows of LAST_ROWS are in their own years")
             for comp in FINALS:
                 want, have = last_final(comp, year), res["finals"].get(comp)
                 # A final of the start year after July (the World Cup 2022 in December, April 2023 in 2022/23) may
