@@ -1358,14 +1358,11 @@ static void repair_confed_row(void)
                     "from %d to %d\n", OLD_IDLE_YEAR, CONFED_ANY_YEAR);
 }
 
-/* The team slots of the World Cup and the Euro (season_wc48.c, season_nl_euro.c): +0x14 the slots of 6 bytes
- * (the club +0, a flag +4), +0x36 the count, +0x38 the room. start_new_season makes them again
- * (0x92d3ca..0x92d3d3 for the World Cup), so the repair puts back the teams that the running campaign had
- * qualified, as season_wc48.c puts its hosts (0x92da40 wrap). */
-#define TEAM_SLOTS 0x14u
-#define TEAM_COUNT 0x36u
-#define TEAM_ROOM 0x38u
-#define KEEP_MAX 64
+/* start_new_season makes the team slots of the World Cup and the Euro again (+0x14, 0x92d3ca..0x92d3d3 for the
+ * World Cup). Teams that the running campaign had qualified before the load are not put back: add_qualified_team
+ * has no year test (EuroChamp 0x57c120 adds while the count +0x36 is below the room +0x38), so a waiting object can
+ * hold teams of earlier campaigns as well (the World Cup of the 0.6.1 fixture held 3 in January 2099, before its
+ * campaign of 2100 played), and the two cannot be told apart. The finals' fill gives those places by reputation. */
 
 /* 1 for a save of 0.6.0 or 0.6.1: its ended Confederations Cup waits at 2200 (0.6.1 rt_intl_next_year). In 0.6.2 it
  * waits at NEVER_YEAR, and with changing rules off it plays odd years only (2005 + 2k from the start edition), so
@@ -1385,9 +1382,12 @@ static void repair_idle(void)
     uint32_t table = rd32(g_mem, COMP_TABLE);
     int slots = (int)rd32(g_mem, COMP_SLOTS);
     if (!readable(table) || slots <= 0 || slots > 100000 || today_year >= OLD_IDLE_YEAR) return;
-    /* Only a save of an old build. With changing rules off 2200 can be a real edition of the original's step
-     * (the Euro 2004 + 4k): there only a load before 2196 moves a class (its 2200 edition is not made yet). */
-    if (!old_build_save(table, slots) || (!season_changing_rules() && today_year >= OLD_IDLE_YEAR - 4)) return;
+    /* A class at the idle year moves only in a save of an old build. With changing rules off 2200 can be a real
+     * edition of the original's step (the Euro 2004 + 4k): there only a load before 2196 moves it (its 2200
+     * edition is not made yet). A class stuck in an edition more than a year past moves in any save: a class
+     * starts its next edition at the season pass of 15 August after its finals (start_new_season of a complete
+     * competition), so no class of 0.6.2 holds a past edition for more than about a year. */
+    int idle_ok = old_build_save(table, slots) && (season_changing_rules() || today_year < OLD_IDLE_YEAR - 4);
     for (int i = 0; i < slots && !rt_unwinding; i++) {
         uint32_t obj = rd32(g_mem, table + 4u * (uint32_t)i), vt = readable(obj) ? rd32(g_mem, obj) : 0;
         /* A class at the idle year, or one stuck in an edition more than a year past: up to 0.6.1 a final could
@@ -1395,7 +1395,7 @@ static void repair_idle(void)
          * class kept that edition for good (the forum save of August 2142: the ACN since 2012, the Asian Cup and
          * the Copa America since 2015). The repair moves both to the next edition. */
         int held_year = readable(vt) ? (int16_t)rd16(g_mem, obj + 0x40u) : 0;
-        if (!readable(vt) || (held_year != OLD_IDLE_YEAR && held_year >= today_year - 1)) continue;
+        if (!readable(vt) || (held_year == OLD_IDLE_YEAR ? !idle_ok : held_year >= today_year - 1)) continue;
         int k = -1;
         for (int c = 0; c < (int)(sizeof repair_classes / sizeof repair_classes[0]); c++)
             if (rd32(g_mem, vt + 8u) == repair_classes[c].new_season) k = c;
@@ -1413,7 +1413,7 @@ static void repair_idle(void)
          * running campaign (two years after it) while its finals are still to come, else the edition after the
          * next campaign. The other classes take the first edition from the save's year whose draw is still to
          * come. */
-        int with_qual = cls == INTL_WORLD_CUP || cls == INTL_EURO, target = 0, n_quals = 0, running = 0;
+        int with_qual = cls == INTL_WORLD_CUP || cls == INTL_EURO, target = 0, n_quals = 0;
         uint32_t quals[6];
         if (with_qual) {
             static const uint32_t wc_keys[6] = {0x9cf770u, 0x9cf76cu, 0x9cf774u, 0x9cf778u, 0x9cf77cu, 0x9cf780u};
@@ -1426,11 +1426,6 @@ static void repair_idle(void)
             int today = (int16_t)rd16(g_mem, GAME_DATE);
             if (campaign && (campaign + 2 > today_year || (campaign + 2 == today_year && today < FINALS_DAY)))
                 target = repair_target(k, campaign + 2) == campaign + 2 ? campaign + 2 : 0;
-            /* Only a campaign that has played can have qualified a team: add_qualified_team has no year test
-             * (EuroChamp 0x57c120 adds while the count +0x36 is below the room +0x38), so a waiting object can
-             * hold teams of an earlier campaign (the World Cup of the 0.6.1 fixture held 3 in January 2099, before
-             * its campaign of 2100 played). */
-            running = target != 0 && today_year > campaign;
             /* The running campaign was made by the old build: for an edition after the table it has the
              * original's shape (open item 58). The Euro qualifying's rules bytes, which the load's constructor
              * set for the new shape (0x57d03b), go back to the original's. */
@@ -1446,31 +1441,10 @@ static void repair_idle(void)
         if (!target) continue;
         int before = season_changing_rules() && cls != INTL_CONFED ? target - 1 : target - step;
         wr16(g_mem, obj + 0x40u, (uint16_t)before);
-        uint32_t keep[KEEP_MAX][2];
-        int kept = 0;
-        uint32_t old_slots = running ? rd32(g_mem, obj + TEAM_SLOTS) : 0;  /* the running campaign's teams */
-        for (int i = 0; readable(old_slots) && i < (int16_t)rd16(g_mem, obj + TEAM_COUNT) && kept < KEEP_MAX; i++) {
-            keep[kept][0] = rd32(g_mem, old_slots + 6u * (uint32_t)i);
-            keep[kept][1] = rd8(g_mem, old_slots + 6u * (uint32_t)i + 4u);
-            kept += readable(keep[kept][0]);
-        }
         for (int q = 0; q < n_quals; q++) season_change_hold(quals[q], 1);
         new_season(obj, repair_classes[k].new_season);
         for (int q = 0; q < n_quals; q++) season_change_hold(quals[q], 0);
         if (rt_unwinding) return;
-        uint32_t now_slots = rd32(g_mem, obj + TEAM_SLOTS);
-        for (int i = 0; i < kept && readable(now_slots) && (int16_t)rd16(g_mem, obj + 0x40u) == target; i++) {
-            int count = (int16_t)rd16(g_mem, obj + TEAM_COUNT), in = 0;
-            if (count >= (int16_t)rd16(g_mem, obj + TEAM_ROOM)) break;
-            for (int j = 0; j < count && !in; j++) in = rd32(g_mem, now_slots + 6u * (uint32_t)j) == keep[i][0];
-            if (in) continue;
-            wr32(g_mem, now_slots + 6u * (uint32_t)count, keep[i][0]);
-            wr8(g_mem, now_slots + 6u * (uint32_t)count + 4u, keep[i][1]);
-            wr16(g_mem, obj + TEAM_COUNT, (uint16_t)(count + 1));
-        }
-        if (kept)
-            fprintf(stderr, "recomp: season intl: a save of 0.6.1 or older: %s keeps %d teams of its qualifying\n",
-                    file, kept);
         for (int more = 0; more < 3 && !rt_unwinding && !with_qual && cls != INTL_CONFED && draw_passed(obj); more++)
             new_season(obj, repair_classes[k].new_season);
         if (rt_unwinding) return;
