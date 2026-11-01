@@ -3,9 +3,10 @@
  * A Cup keeps two counters: +0xac the next round to draw (Cup::draw_round 0x51c410 moves it on at 0x51c6b2 for every
  * round but the third place, code 0x8c) and +0xab the next round to set up. Cup::set_up_round 0x51c800, thiscall
  * (round), draws the round of its argument when that round's first tie has state 0 (not drawn; 0x51c859..0x51c86c),
- * then sets up round +0xab (0x51c871): a tie of state 1 gets create_tie_fixtures 0x51cb90 with defer (state 2), a tie of
- * state 2 its fixture (state 3; 0x51c900..0x51c95f), and a tie of state 0 nothing. It then moves +0xab on, but not past
- * a third place (0x51cae0..0x51caf3), and lifts +0xac to it (0x51caf9..0x51cb09).
+ * then sets up round +0xab (0x51c871): in one pass over its ties (0x51c900..0x51c95f) a tie of state 1 gets
+ * create_tie_fixtures 0x51cb90 with defer (state 2) and then, at state 2, its fixture (state 3); a tie of state 0 gets
+ * nothing. It then moves +0xab on, but not past a third place (0x51cae0..0x51caf3), and lifts +0xac to it
+ * (0x51caf9..0x51cb09).
  *
  * So when the argument is not +0xab, round +0xab is set up whether it was drawn or not. Cup::update_for_date 0x51f890
  * sets up the third place on its own day (the last round, code 0x8c: 0x51f986..0x51f9ef and 0x51fab6..). In a base game
@@ -31,7 +32,8 @@
 #define TIE_TABLE 0xadu                 /* the tie array of each round */
 #define TIE_STATE 0x34u                 /* 0 not drawn, 1 drawn, 2 pending, 3 set up (0x51c633, 0x51cc56, 0x51cc79) */
 #define SET_UP 0xabu                    /* s8: the next round to set up (0x51c871) */
-#define DRAWN 0x45u                     /* the Cup is in play: set_up_round returns at once when 0 (0x51c828) */
+#define DRAWN 0x45u                     /* 1 after the competition's draw (Comp::Comp 0x48c5bb, as season_kind_cup_breaks.c);
+                                         * set_up_round returns at once while it is 0 (0x51c828..0x51c838) */
 #define F_DRAW_ROUND 0x0051c410u        /* Cup::draw_round, thiscall (round) ret 4 */
 
 static int readable(uint32_t p) { return p >= 0x10000u && p < 0xfff00000u; }
@@ -55,15 +57,19 @@ RT_WRAP(0051c800, cup_set_up_round)
     int rounds = readable(cup) ? (int16_t)rd16(g_mem, cup + ROUNDS) : 0, next = readable(cup) ? (int8_t)g_mem[cup + SET_UP] : -1;
     uint32_t all = readable(cup) ? rd32(g_mem, cup + TIE_TABLE) : 0;
     uint32_t ties = readable(all) && next >= 0 && next < rounds && rounds <= 64 ? rd32(g_mem, all + 4u * (uint32_t)next) : 0;
-    if (fix_on() && readable(ties) && next != arg && rd32(g_mem, cup + DRAWN) && g_mem[ties + TIE_STATE] == 0) {
+    if (fix_on() && readable(ties) && next != arg && arg >= 0 && arg < rounds && rd32(g_mem, cup + DRAWN) &&
+        g_mem[ties + TIE_STATE] == 0) {
         Cpu saved = cpu;
         uint32_t a[1] = {(uint32_t)next};
         rt_callback(F_DRAW_ROUND, 1, a);
         if (rt_unwinding) return;
         cpu = saved;
         uint32_t record = rd32(g_mem, cup + 4);
-        fprintf(stderr, "recomp: cup: %.40s round %d is drawn before its set-up (set_up_round of round %d)\n",
-                readable(record) ? win_str(record + 4) : "?", next, arg);
+        /* draw_round may wait instead (a club of a tie not known yet: the draw date a day on, 0x51c4e9) */
+        int drawn = readable(rd32(g_mem, all + 4u * (uint32_t)next)) &&
+                    g_mem[rd32(g_mem, all + 4u * (uint32_t)next) + TIE_STATE] != 0;
+        fprintf(stderr, "recomp: cup: %.40s round %d %s before its set-up (set_up_round of round %d)\n",
+                readable(record) ? win_str(record + 4) : "?", next, drawn ? "is drawn" : "waits for its draw", arg);
     }
     o_0051c800();
 }

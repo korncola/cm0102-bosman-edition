@@ -56,6 +56,7 @@ def main(argv):
         print(f"FAIL  no save: {save}")
         return 1
     os.environ["RECOMP_TIER_A"] = "1"           # the game of the save was played in Tier A (open item 88)
+    os.environ.pop("RECOMP_ORIGINAL_FAULTS", None)   # the fix acts unless that switch is keep
     o = {"program": program, "game": game, "rules": "off", "database": None, "seed": 2, "last": 2012,
          "timeout": 3600}
     code, took, box = soak_run.load_leg(o, keep, save, DAYS)
