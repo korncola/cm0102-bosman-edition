@@ -343,6 +343,10 @@ uint32_t rt_ban_nation_applies(uint32_t club, uint32_t body);
 uint32_t rt_caps_add(uint32_t staff, uint32_t byte);
 uint32_t rt_caps_full(uint32_t staff);
 uint32_t rt_caps_word(uint32_t staff);       /* the same, at most 32767: the most caps record word */
+/* A weather postponement keeps the match day's place in its fixture list (0.6.2 item 84, win/match_day_place.c,
+ * tools/recomp/match_day.py at 0x6b3d2d and 0x6b3d76). */
+void rt_match_day_keep_place(uint32_t list);
+void rt_match_day_set_place(uint32_t list);
 /* International goals above 255 (0.6.2 item 66): the goals byte after the goals of a match at 0x76b8d6, and the full
  * goals of a staff record for the screens. */
 uint32_t rt_goals_add(uint32_t staff, uint32_t byte, uint32_t goals);
