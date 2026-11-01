@@ -27,6 +27,8 @@ days (default 14) after the first news screen (RECOMP_SAVE_AFTER_DAYS) and stops
                changing_rules = off unless it sets it (new_game_runs), so the new game is the base game.
     host-loops-off  RECOMP_QSORT=original, RECOMP_HOT=original: the host copies of hot code of the
                original (qsort6.c, hot_loops.c) change no game decision
+    files-off  RECOMP_FOLDER_CACHE=0, RECOMP_KEEP_FILES=0: the kept folder names of the path lookup
+               (folder_names.c) and the kept history file of the season change (files.c) change nothing
     kinds-base  RECOMP_SEASON_CHANGE_TEST=write (0.6.0 slice 16): a rule kind that writes the game in every
                hook changes nothing in the base game, because the base game calls no kind
 Each run prints its count of idle sleeps (RECOMP_IDLE_COUNT=1). The check fails when the normal run
@@ -247,6 +249,7 @@ SAME_SAVE_RUNS = [
     # The date jump switch (0.6.2 slice 1, Q30) only raises the latest start year of a new game to 2300: with it on,
     # a game of the normal start years gives the save of normal.
     ("date-jump-on", {"faster_days": "off", "_env": {"RECOMP_DATE_JUMP": "1"}}),
+    ("files-off", {"faster_days": "off", "_env": {"RECOMP_FOLDER_CACHE": "0", "RECOMP_KEEP_FILES": "0"}}),
     # The fixes of faults of the original (0.6.2 slice 11, original_faults.c) act in every game, but only when a
     # small nation's national team loses or misses its manager (at the latest at the first month change in play),
     # for money above 2,147,483,647 (the top wage from about 1.65 billion) and at an age above 127: in these runs
@@ -333,6 +336,7 @@ MATCH_RUNS = [
     ("host-loops-off", {"_env": {"RECOMP_QSORT": "original", "RECOMP_HOT": "original"}}),
     ("original-faults-keep", {"_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
     ("save-parts-keep", {"_env": {"RECOMP_SAVE_PARTS": "keep"}}),
+    ("files-off", {"_env": {"RECOMP_FOLDER_CACHE": "0", "RECOMP_KEEP_FILES": "0"}}),
 ]
 MATCH_DAYS = 5      # 16.7.01 to 21.7.01
 # --match --sleep-danger adds this run: the idle sleep without its time rules (RECOMP_IDLE_SLEEP=force), so
