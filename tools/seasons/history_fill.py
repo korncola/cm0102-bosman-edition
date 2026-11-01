@@ -216,6 +216,22 @@ GAP_COMPETITIONS = ("US Open Cup",)
 # in the file, 2007 after the nation shift of +9) names France alone, with no other place. GAP_FINALS then adds
 # the researched 2010 row.
 REPAIRS = (("September 2010 ODB", "FIFA World Cup", (2007,)),)
+# Last rows one year early (0.6.2 open items 59 and 83): some databases of 2010/11 or later keep the last season of a
+# competition at the label of the season before, beside it, and leave the label of the start empty. (database,
+# competition, label after the shift, runner-up of the row that moves, its label). Each move names the real season
+# of the row: Autumn 2013 holds 2011/12 (Dinamo Zagreb / Hajduk Split, Olympiacos / Panathinaikos) and 2012/13
+# (Dinamo Zagreb / Lokomotiva, Olympiacos / PAOK) both at 2012; the final tables: en.wikipedia.org, 2012-13 Prva HNL
+# and 2012-13 Super League Greece. Also the Northern Irish Premier Division (2012/13 Cliftonville / Crusaders), First
+# Division (2012/13 Ards; 2011/12 Ballinamallard United) and League Cup (2012/13 Cliftonville 4-0 Crusaders on
+# 26 January 2013; 2011/12 Crusaders 1-0 Coleraine): en.wikipedia.org, 2012-13 IFA Premiership, 2012-13 IFA
+# Championship and 2012-13 Irish League Cup. The Southern League Premier Division and the Trophee des Champions of
+# that database hold rows that name other clubs than the real ones, which no move mends (open item 59). The file order of such rows does not tell which is the newer (German Cup,
+# October 2016), so each move is a researched row of this list.
+LAST_ROW_MOVES = (("Autumn 2013", "Croatian First Division", 2012, "NK Lokomotiva Zagreb", 2013),
+                  ("Autumn 2013", "Greek National A Division", 2012, "PAOK Salonika", 2013),
+                  ("Autumn 2013", "Northern Irish League Premier Division", 2012, "Crusaders", 2013),
+                  ("Autumn 2013", "Northern Irish League First Division", 2012, "", 2013),
+                  ("Autumn 2013", "Northern Irish League Cup", 2012, "Crusaders", 2013))
 # Finals that a database of 2010/11 or later may lack (0.6.2 slice 7, open item 20): each researched edition whose
 # label is missing after the nation shift is added, when its final is before the start. A final in July of the
 # start year counts: the game plays no finals in the July of its start (no game row of the 2010 World Cup in the
@@ -300,6 +316,23 @@ def gap_rows(name, start, folder, rows, ref, alias, plan, report, shift, nshift)
             plan.append("\t".join(["clear", name, str(start), comp, str(label)] + [""] * (len(PLAN_COLS) - 5)))
             cleared.add((comp, label))
     ns, own = nshift
+    for db, comp, label, second, to in LAST_ROW_MOVES:
+        if db != name or comp not in comps:
+            continue
+        cid, nation = comps[comp]
+        sh = own.get(cid, ns) if d.comp(cid)[0] == "nation" else shift
+        at = [(a, b, c, h) for c2, y, a, b, c, h in d.history() if c2 == cid and y + sh == label]
+        if sum(1 for x in at if d.club(x[1]) == second) != 1 or len(at) < 2:
+            raise SystemExit(f"{name}: {comp} {label} holds no pair of rows with the runner-up {second}")
+        if any(c2 == cid and y + sh == to for c2, y, *_ in d.history()):
+            raise SystemExit(f"{name}: {comp} already holds a row of {to}, so no row moves there")
+        plan.append("\t".join(["clear", name, str(start), comp, str(label)] + [""] * (len(PLAN_COLS) - 5)))
+        for x in at:
+            places = [(d.club(i), club_nation(d, i)) if i >= 0 else ("", "") for i in x]
+            plan.append("\t".join(["add", name, str(start), comp, str(to if d.club(x[1]) == second else label), "",
+                                   "differ"] + [v for p in places for v in p]))
+            added += 1
+            differ += 1
     have = collections.defaultdict(set)         # the labels of each nation competition after its shift
     for cid, y, *_ in d.history():
         c = d.comp(cid)

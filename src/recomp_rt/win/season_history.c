@@ -629,6 +629,11 @@ static void log_rows(const char *when)
     }
 }
 
+void season_history_log_create(void)
+{
+    log_rows("create");
+}
+
 void season_history_log_turn(void)
 {
     static int done;

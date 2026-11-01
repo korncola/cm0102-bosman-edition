@@ -573,6 +573,7 @@ void season_dates_at_create(void)
     int N = season_start_year();
     if (N == (applied_year ? applied_year : SEASON_FIRST_YEAR)) {
         season_history_drop_after_start(N, official_data());    /* 0.6.2 slice 7 */
+        season_history_log_create();
         return;
     }
     fprintf(stderr, "recomp: season dates: the game is made in %d, the data was loaded for %d: the shift is made "
@@ -580,6 +581,7 @@ void season_dates_at_create(void)
     uint32_t eax = cpu.eax;
     shift_for(N);
     season_history_drop_after_start(N, official_data());
+    season_history_log_create();
     loaded_year = N;
     log_load();
     cpu.eax = eax;
