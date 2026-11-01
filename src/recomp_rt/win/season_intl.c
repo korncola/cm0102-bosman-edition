@@ -1773,7 +1773,8 @@ static int old_build_save(uint32_t table, int slots)
 {
     for (int i = 0; i < slots; i++) {
         uint32_t obj = rd32(g_mem, table + 4u * (uint32_t)i), vt = readable(obj) ? rd32(g_mem, obj) : 0;
-        if (readable(vt) && rd32(g_mem, vt + 8u) == 0x0058bff0u) return (int16_t)rd16(g_mem, obj + 0x40u) == OLD_IDLE_YEAR;
+        if (readable(vt) && rd32(g_mem, vt + 8u) == 0x0058bff0u)
+            return (int16_t)rd16(g_mem, obj + 0x40u) == OLD_IDLE_YEAR;
     }
     return 0;
 }
@@ -1861,10 +1862,49 @@ static void repair_idle(void)
  * (rt_euroq_rules), before the competition table holds the object, so a marked campaign of a version 5 save got
  * the new shape's bytes there. They are set again now that the marks find their objects. */
 #define EUROQ_VTABLE 0x0096a0d4u        /* the Euro qualifying class (season_intl_euroq.c QUAL_VTABLE) */
+
+/* The OFC Champions League of a save made before the fix of open item 82 (rt_oceania_entry_kept above). In a game
+ * that moved a selected Australia to Asia, every load after 1 January 2006 made no OceaniaClubChamp object, and
+ * each save packed again the part file of the last load before the move. A load in this build makes the object from
+ * that part, so it holds an edition long past (2011 or 2012 in the run set) and never plays again: a 2021 save of
+ * the Tier A game a2001s1 loaded and played 230 days with no edition (run-logs/0.6.2-s4b82/red). The edition of
+ * year Y draws its clubs on its draw day (+0xb6, year +0x40 plus +0xb8; update_for_date 0x797b40 compares it with
+ * today at 0x797b75..0x797bf3: about day 231 of Y in that game) and plays in January of Y + 1 (5 to 16 January).
+ * The object takes the next edition whose draw is still to come: its year is set to the one before (the step of
+ * rt_oceania_step) and its own start_new_season (0x797d60, vtable +8) makes the edition, as a season change does,
+ * once more when that draw day has passed. The rules table holds the cup in every season
+ * (tests/seasons/future/competitions.tsv, oceania_club_champ, cycle 1), so that edition is one the table holds.
+ * Only a game that moved a selected Australia (rt_discipline_oceania_body) is repaired. There a class holds a past
+ * edition for about a year at most (the season pass of 15 August starts its next one) unless its save came from
+ * before the fix. */
+#define OFC_CLUB_NEW_SEASON 0x00797d60u
+static void repair_ofc_club(void)
+{
+    uint32_t table = rd32(g_mem, COMP_TABLE);
+    int slots = (int)rd32(g_mem, COMP_SLOTS), today_year = (int16_t)rd16(g_mem, GAME_DATE + 2u);
+    if (!readable(table) || slots <= 0 || slots > 100000 || !rt_discipline_oceania_body()) return;
+    for (int i = 0; i < slots && !rt_unwinding; i++) {
+        uint32_t obj = rd32(g_mem, table + 4u * (uint32_t)i), vt = readable(obj) ? rd32(g_mem, obj) : 0;
+        if (!readable(vt) || rd32(g_mem, vt + 8u) != OFC_CLUB_NEW_SEASON) continue;
+        int held = (int16_t)rd16(g_mem, obj + 0x40u);
+        if (held >= today_year - 1) return;
+        wr16(g_mem, obj + 0x40u, (uint16_t)(today_year - (int)rt_oceania_step(2u)));
+        new_season(obj, OFC_CLUB_NEW_SEASON);
+        if (!rt_unwinding && draw_passed(obj)) new_season(obj, OFC_CLUB_NEW_SEASON);
+        if (rt_unwinding) return;
+        fprintf(stderr, "recomp: season intl: the OFC Champions League held %d (a save before the fix of item 82), "
+                        "now its edition of %d, draw day %d of %d\n", held, (int16_t)rd16(g_mem, obj + 0x40u),
+                (int16_t)rd16(g_mem, obj + DRAW_DAY),
+                (int16_t)rd16(g_mem, obj + 0x40u) + (int16_t)rd16(g_mem, obj + DRAW_OFFSET));
+        return;
+    }
+}
+
 static void intl_loaded(int start_year)
 {
     intl_sides(start_year);
     if (!rt_unwinding) repair_idle();
+    if (!rt_unwinding) repair_ofc_club();
     for (int i = 0; i < season_intl_marks_count() && !rt_unwinding; i++) {
         uint32_t obj = season_intl_mark_object(i);
         if (obj && rd32(g_mem, obj) == EUROQ_VTABLE) rt_euroq_rules(obj);
