@@ -49,5 +49,8 @@ int caps_wide_form(void);
 uint32_t caps_wide_part_size(void);
 void caps_wide_part_write(uint8_t *out);
 int caps_wide_part_read(const uint8_t *in, uint32_t n, uint32_t form);
+/* Version 5 and later (0.6.2 slice 4b): both fields always, the caps then the goals, with counts 0 when empty. */
+uint32_t caps_wide_part_size_all(void);
+void caps_wide_part_write_all(uint8_t *out);
 
 #endif

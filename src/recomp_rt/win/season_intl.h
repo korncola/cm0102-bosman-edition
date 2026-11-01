@@ -187,6 +187,19 @@ void season_intl_set_alive(int (*alive)(const char *file, const char *name));
 int season_intl_wc_ties(int year, uint32_t *teams, int max);
 void season_intl_qual_reset(void);             /* a load or new game: no ties (load sweep) */
 
+/* Qualifying campaigns that a save of 0.6.1 or older made in the original's shape (0.6.2 slice 4b, open item 58,
+ * season_intl.c): 1 while the object holds its marked campaign year, so the gates keep the original's shape. The
+ * marks are the field of the season part of version 5 (season_change.c): u32 count, then u32 record id and u32
+ * campaign year each; read gives 0 for damaged bytes. */
+int season_intl_old_shape(uint32_t obj);
+void season_intl_mark_old(uint32_t obj);       /* the load repair: the object's running campaign */
+void season_intl_marks_reset(void);
+int season_intl_marks_count(void);
+uint32_t season_intl_mark_object(int i);       /* the object of mark i while it holds its year, else 0 */
+uint32_t season_intl_marks_size(void);         /* 0: no mark, no field */
+void season_intl_marks_write(uint8_t *out);
+int season_intl_marks_read(const uint8_t *in, uint32_t n);
+
 /* The classes of the code sites (cls of the calls above). */
 enum {
     INTL_WORLD_CUP, INTL_EURO, INTL_CONFED, INTL_COPA, INTL_ACN, INTL_ASIAN, INTL_OFC, INTL_OLYMPICS,

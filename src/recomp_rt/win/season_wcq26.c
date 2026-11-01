@@ -141,7 +141,8 @@ int season_wcq26(uint32_t self)
     int y = year_of(self) + 2;
     if (y < 2026) return 0;
     const SeasonIntlEdition *e = season_intl_rule_edition("world_cup", y);
-    return e && e->teams == 48;
+    /* A campaign that a save of 0.6.1 or older made in the original's shape keeps it (0.6.2 slice 4b, item 58). */
+    return e && e->teams == 48 && !season_intl_old_shape(self);
 }
 
 static int is(uint32_t self, uint32_t vtable) { return readable(self) && rd32(g_mem, self) == vtable; }

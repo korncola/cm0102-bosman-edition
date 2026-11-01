@@ -17,7 +17,8 @@
  * fields of version 2 first, so this reader takes them and leaves what follows.
  * Version 3 (0.6.2 slice 12) adds the caps above 255 after the row A18 list, and version 4 (item 66) the goals above
  * 255 after the caps (season_change.h, caps_wide.h). A game with no player above 255 caps or goals writes version 1
- * or 2 as before.
+ * or 2 as before. Version 5 (0.6.2 slice 4b) writes both of those fields and then the marks of qualifying campaigns
+ * that keep the original's shape (season_intl.h), only while a game holds such a campaign.
  *
  * The original opens a part by its exact name (zopen 0x9326e0, the name scan at 0x93293b) and extracts only
  * the parts whose name ends in .tmp (load_game_data 0x82a9c0 calls 0x933320 with "*.tmp" at 0x82acbc), so it

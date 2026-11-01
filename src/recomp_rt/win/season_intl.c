@@ -1651,5 +1651,192 @@ static void intl_sides(int start_year)
     hosts_after_table_at_load();
 }
 
-const SeasonRuleKind season_kind_intl = {"international", intl_sides, intl_sides, intl_season, intl_entry, NULL,
+/* ---- Saves of 0.6.0 and 0.6.1 with finals at the idle year (0.6.2 slice 4b, Q8) ---- */
+
+/* Up to 0.6.1 rt_intl_next_year and rt_intl_first_year gave the year 2200 to a class after its table (0.6.2 open
+ * items 1, 13 and 34): the object built its rounds for 2200 and waited. At the load of such a save each waiting
+ * object moves to its next edition after the save's date: its year is set to the one before that edition, and
+ * the class's own start_new_season (vtable +8) steps it there and makes the edition, as a season change does.
+ * The classes by that function: world_cup 0x92d330, euro_champ 0x57b750, fifa_confed 0x58bff0, copa_america
+ * 0x5e1530, african_nations 0x401d20, asia_nations 0x40f720, oceania_nations 0x7998e0, olympics 0x7a0450 (the
+ * step sites of tools/recomp/seasons.py). */
+#define OLD_IDLE_YEAR 2200
+#define NEVER_YEAR 2999                 /* season_intl_rules.c: the year of the ended Confederations Cup */
+#define COMP_SLOTS 0xadadf8u            /* the slots of the competition object table [0xadadfc] */
+#define COMP_TABLE 0xadadfcu
+#define DRAW_DAY 0xb6u                  /* the draw day word and its s16 year offset from +0x40 (fix_offsets) */
+#define DRAW_OFFSET 0xb8u
+#define FINALS_DAY 59                   /* 1 March: the qualifying's finals are still to come before it. Their last
+                                           ties and the draw come later in March and April (World Cup of 48: seeding
+                                           1 April and draw 2 April, season_wc48.c; Euro: the path finals of late
+                                           March, season_nl_euro.c), so a load from 1 March of the finals year takes
+                                           the next edition (inference: a draw day in the past is not made up) */
+static const struct { uint32_t cls, new_season; int step; } repair_classes[] = {
+    {INTL_WORLD_CUP, 0x0092d330u, 4}, {INTL_EURO, 0x0057b750u, 4}, {INTL_CONFED, 0x0058bff0u, 2},
+    {INTL_COPA, 0x005e1530u, 2}, {INTL_ACN, 0x00401d20u, 2}, {INTL_ASIAN, 0x0040f720u, 4},
+    {INTL_OFC, 0x007998e0u, 2}, {INTL_OLYMPICS, 0x007a0450u, 4},
+};
+
+/* The first edition year of a class from year `from` on, in this game: with changing rules on an edition of the
+ * table or after it; with changing rules off the start season's first edition and the original's step after it
+ * (rt_intl_first_year, rt_intl_next_year). 0 for none (the Confederations Cup with changing rules on). */
+static int repair_target(int k, int from)
+{
+    const char *file = season_intl_class_file(repair_classes[k].cls);
+    if (season_changing_rules()) {
+        const SeasonIntlEdition *e = season_intl_next(file, from - 1);
+        return e ? e->year : 0;
+    }
+    int first = (int)rt_intl_first_year(repair_classes[k].cls, (uint32_t)from), step = repair_classes[k].step;
+    if (first >= NEVER_YEAR) return 0;
+    while (first < from) first += step;
+    return first;
+}
+
+static void new_season(uint32_t obj, uint32_t fn)
+{
+    Cpu saved = cpu;
+    cpu.ecx = obj;
+    rt_callback(fn, 0, NULL);
+    if (!rt_unwinding) cpu = saved;
+}
+
+/* 1 when the draw day of an object (+0xb6 and its offset +0xb8 from the year +0x40) is today or before. */
+static int draw_passed(uint32_t obj)
+{
+    int day = (int16_t)rd16(g_mem, obj + DRAW_DAY);
+    int year = (int16_t)rd16(g_mem, obj + 0x40u) + (int16_t)rd16(g_mem, obj + DRAW_OFFSET);
+    int today = (int16_t)rd16(g_mem, GAME_DATE), today_year = (int16_t)rd16(g_mem, GAME_DATE + 2u);
+    return year < today_year || (year == today_year && day <= today);
+}
+
+/* The Confederations Cup row of every year: up to 0.6.1 at 2200 (season_intl.c hosts_apply), now at
+ * CONFED_ANY_YEAR. The rows stay sorted as the constructor sorts them (0x5f994a..0x5f995a). */
+static void repair_confed_row(void)
+{
+    uint32_t self = rd32(g_mem, HOSTS), confed = rd32(g_mem, KEY_CONFED);
+    uint32_t rows = readable(self) ? rd32(g_mem, self) : 0;
+    int count = readable(self) ? (int16_t)rd16(g_mem, self + 4) : 0;
+    if (!readable(rows) || count <= 0 || count > 1000 || confed == 0xffffffffu) return;
+    uint32_t row = row_find(rows, count, confed, OLD_IDLE_YEAR);
+    if (!row) return;
+    wr16(g_mem, row + ROW_YEAR, CONFED_ANY_YEAR);
+    uint32_t qa[4] = {rows, (uint32_t)count, ROW_SIZE, ROW_COMPARE};
+    call_cdecl(GAME_QSORT, 4, qa);
+    fprintf(stderr, "recomp: season intl: a save of 0.6.1 or older: the Confederations Cup row of every year moves "
+                    "from %d to %d\n", OLD_IDLE_YEAR, CONFED_ANY_YEAR);
+}
+
+/* start_new_season makes the team slots of the World Cup and the Euro again (+0x14, 0x92d3ca..0x92d3d3 for the
+ * World Cup). Teams that the running campaign had qualified before the load are not put back: add_qualified_team
+ * has no year test (EuroChamp 0x57c120 adds while the count +0x36 is below the room +0x38), so a waiting object can
+ * hold teams of earlier campaigns as well (the World Cup of the 0.6.1 fixture held 3 in January 2099, before its
+ * campaign of 2100 played), and the two cannot be told apart. The finals' fill gives those places by reputation. */
+
+/* 1 for a save of 0.6.0 or 0.6.1: its ended Confederations Cup waits at 2200 (0.6.1 rt_intl_next_year). In 0.6.2 it
+ * waits at NEVER_YEAR, and with changing rules off it plays odd years only (2005 + 2k from the start edition), so
+ * no 0.6.2 game holds it at 2200. A game without the Confederations Cup gives 0 (nothing to repair is known). */
+static int old_build_save(uint32_t table, int slots)
+{
+    for (int i = 0; i < slots; i++) {
+        uint32_t obj = rd32(g_mem, table + 4u * (uint32_t)i), vt = readable(obj) ? rd32(g_mem, obj) : 0;
+        if (readable(vt) && rd32(g_mem, vt + 8u) == 0x0058bff0u) return (int16_t)rd16(g_mem, obj + 0x40u) == OLD_IDLE_YEAR;
+    }
+    return 0;
+}
+
+static void repair_idle(void)
+{
+    int today_year = (int16_t)rd16(g_mem, GAME_DATE + 2u);
+    uint32_t table = rd32(g_mem, COMP_TABLE);
+    int slots = (int)rd32(g_mem, COMP_SLOTS);
+    if (!readable(table) || slots <= 0 || slots > 100000 || today_year >= OLD_IDLE_YEAR) return;
+    /* A class at the idle year moves only in a save of an old build. With changing rules off 2200 can be a real
+     * edition of the original's step (the Euro 2004 + 4k): there only a load before 2196 moves it (its 2200
+     * edition is not made yet). A class stuck in an edition more than a year past moves in any save: a class
+     * starts its next edition at the season pass of 15 August after its finals (start_new_season of a complete
+     * competition), so no class of 0.6.2 holds a past edition for more than about a year. */
+    int idle_ok = old_build_save(table, slots) && (season_changing_rules() || today_year < OLD_IDLE_YEAR - 4);
+    for (int i = 0; i < slots && !rt_unwinding; i++) {
+        uint32_t obj = rd32(g_mem, table + 4u * (uint32_t)i), vt = readable(obj) ? rd32(g_mem, obj) : 0;
+        /* A class at the idle year, or one stuck in an edition more than a year past: up to 0.6.1 a final could
+         * stall after its round of 16 or quarter-finals and never end (0.6.2 open items 2, 19 and 54), so the
+         * class kept that edition for good (the forum save of August 2142: the ACN since 2012, the Asian Cup and
+         * the Copa America since 2015). The repair moves both to the next edition. */
+        int held_year = readable(vt) ? (int16_t)rd16(g_mem, obj + 0x40u) : 0;
+        if (!readable(vt) || (held_year == OLD_IDLE_YEAR ? !idle_ok : held_year >= today_year - 1)) continue;
+        int k = -1;
+        for (int c = 0; c < (int)(sizeof repair_classes / sizeof repair_classes[0]); c++)
+            if (rd32(g_mem, vt + 8u) == repair_classes[c].new_season) k = c;
+        if (k < 0 || season_gold_cup_of(obj)) continue;     /* the Gold Cup has its own editions, never 2200 */
+        uint32_t cls = repair_classes[k].cls;
+        const char *file = season_intl_class_file(cls);
+        int step = repair_classes[k].step;
+        /* The World Cup and the Euro restart their qualifying in start_new_season (the six sections at 0x92d34f
+         * to 0x92d3ae, the Euro qualifying 0x9cf784 at 0x57b76f). A qualifying object is a competition of its own:
+         * it starts its next campaign when it is complete, and steps its campaign by 4 until it reaches the
+         * game's year (0x919499..0x9194c2, 0x57eba3..0x57ebb9). In a save of 0.6.1 it can be in the middle of a
+         * campaign: a restart now would leave that campaign's matches, which then reach a stage that is gone
+         * (EuroChampQual::add_result 0x57ffd0, box "league..cpp 3214" in March 2099 of the 0.6.1 fixture). So
+         * the qualifying objects are held while the finals restart, and the finals take the edition of the
+         * running campaign (two years after it) while its finals are still to come, else the edition after the
+         * next campaign. The other classes take the first edition from the save's year whose draw is still to
+         * come. */
+        int with_qual = cls == INTL_WORLD_CUP || cls == INTL_EURO, target = 0, n_quals = 0;
+        uint32_t quals[6];
+        if (with_qual) {
+            static const uint32_t wc_keys[6] = {0x9cf770u, 0x9cf76cu, 0x9cf774u, 0x9cf778u, 0x9cf77cu, 0x9cf780u};
+            for (int q = 0; q < (cls == INTL_WORLD_CUP ? 6 : 1); q++) {
+                uint32_t key = cls == INTL_WORLD_CUP ? wc_keys[q] : 0x9cf784u, id = rd32(g_mem, key);
+                uint32_t qo = id < (uint32_t)slots ? rd32(g_mem, table + 4u * id) : 0;
+                if (readable(qo)) quals[n_quals++] = qo;
+            }
+            int campaign = n_quals ? (int16_t)rd16(g_mem, quals[n_quals - 1] + 0x40u) : 0;
+            int today = (int16_t)rd16(g_mem, GAME_DATE);
+            if (campaign && (campaign + 2 > today_year || (campaign + 2 == today_year && today < FINALS_DAY)))
+                target = repair_target(k, campaign + 2) == campaign + 2 ? campaign + 2 : 0;
+            /* The running campaign was made by the old build: for an edition after the table it has the
+             * original's shape (open item 58). The Euro qualifying's rules bytes, which the load's constructor
+             * set for the new shape (0x57d03b), go back to the original's. */
+            if (target && !season_intl_table_edition(file, target))
+                for (int q = 0; q < n_quals; q++) {
+                    season_intl_mark_old(quals[q]);
+                    if (cls == INTL_EURO) rt_euroq_rules(quals[q]);
+                }
+            if (!target) target = repair_target(k, today_year + 2);
+        } else {
+            target = cls == INTL_CONFED ? NEVER_YEAR : repair_target(k, today_year);
+        }
+        if (!target) continue;
+        int before = season_changing_rules() && cls != INTL_CONFED ? target - 1 : target - step;
+        wr16(g_mem, obj + 0x40u, (uint16_t)before);
+        for (int q = 0; q < n_quals; q++) season_change_hold(quals[q], 1);
+        new_season(obj, repair_classes[k].new_season);
+        for (int q = 0; q < n_quals; q++) season_change_hold(quals[q], 0);
+        if (rt_unwinding) return;
+        for (int more = 0; more < 3 && !rt_unwinding && !with_qual && cls != INTL_CONFED && draw_passed(obj); more++)
+            new_season(obj, repair_classes[k].new_season);
+        if (rt_unwinding) return;
+        fprintf(stderr, "recomp: season intl: a save of 0.6.1 or older: %s held %d, now its edition of %d\n",
+                file, held_year, (int16_t)rd16(g_mem, obj + 0x40u));
+    }
+    if (!rt_unwinding) repair_confed_row();
+}
+
+/* A load: the side names of intl_sides, then the repair of finals at the idle year. The rules bytes of a Euro
+ * qualifying (+0xbe, +0xbf, +0xff to +0x101) are not in the save: the load's constructor sets them at 0x57d03b
+ * (rt_euroq_rules), before the competition table holds the object, so a marked campaign of a version 5 save got
+ * the new shape's bytes there. They are set again now that the marks find their objects. */
+#define EUROQ_VTABLE 0x0096a0d4u        /* the Euro qualifying class (season_intl_euroq.c QUAL_VTABLE) */
+static void intl_loaded(int start_year)
+{
+    intl_sides(start_year);
+    if (!rt_unwinding) repair_idle();
+    for (int i = 0; i < season_intl_marks_count() && !rt_unwinding; i++) {
+        uint32_t obj = season_intl_mark_object(i);
+        if (obj && rd32(g_mem, obj) == EUROQ_VTABLE) rt_euroq_rules(obj);
+    }
+}
+
+const SeasonRuleKind season_kind_intl = {"international", intl_sides, intl_loaded, intl_season, intl_entry, NULL,
                                          NULL};

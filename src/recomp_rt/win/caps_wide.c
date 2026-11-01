@@ -129,6 +129,15 @@ void caps_wide_part_write(uint8_t *out)
     if (form == 4) field_write(&goals, out + field_size(&caps));
 }
 
+/* Version 5 and later write both fields whatever their counts (season_change.c). */
+uint32_t caps_wide_part_size_all(void) { return field_size(&caps) + field_size(&goals); }
+
+void caps_wide_part_write_all(uint8_t *out)
+{
+    field_write(&caps, out);
+    field_write(&goals, out + field_size(&caps));
+}
+
 /* The fields of version form (3: the caps; 4 and later: the caps, then the goals, then a later version's own fields,
  * which the read leaves). */
 int caps_wide_part_read(const uint8_t *in, uint32_t n, uint32_t form)
