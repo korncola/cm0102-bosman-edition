@@ -54,7 +54,7 @@ Polish League Cup|Puchar Ekstraklasy	pol_lge_cup
 Copa dos Campe[õo]es	bra_champ_cup
 Turkish Super Cup	tur_super
 Russian Super Cup	rus_super
-Conference League Cup( \(Setanta Shield\))?	conf_cup
+(Conference|National) League Cup( \(Setanta Shield\))?	conf_cup
 J\.? ?League (YBC Levain |Yamazaki Nabisco )?Cup	j_league_cup
 (African|CAF) Champions League	caf_champions
 K League Super Cup|Korean Super Cup	kor_super
