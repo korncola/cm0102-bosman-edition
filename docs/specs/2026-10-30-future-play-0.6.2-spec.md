@@ -114,12 +114,19 @@ The history checker:
 - For Tier B it reports these each decade: squad sizes for each nation, manager counts, club balances, save size and time per game day. It fails on any overflow or empty squad (Q17).
 
 The run set (Q11, Q14, Q15, Q22):
-- Tier A: start seasons 2001, 2002, 2006, 2013, 2021 and 2025 with changing rules on, and 2001 with changing rules off. All nations, three seeds each, to 2100.
+- Tier A: start seasons 2001, 2002, 2006, 2013, 2021, 2025 and 2026 (Q56) with changing rules on, and 2001 with changing rules off. All nations, three seeds each, to 2100.
 - Tier A, also: a 2001 game with England, Spain and Brazil only, and one game where the manager runs a national team.
 - One Tier A run to 2300 every night.
 - Date jumps to 2098, 2198 and 2298.
 - Tier B: a few long games in the background, with checkpoint saves each decade. It fails when the save would pass the 4 GB file limit before 2300, when a game day in a later decade takes more than twice as long as in the first seasons, or when a national team has no manager for more than one season.
 - 0.6.2 ships only when the checker finds no fault to 2300 in the whole run set. The run set joins the release checks of every later release (Q12).
+
+The 2026/27 tile (Max, 1 November 2026, Q51 to Q56):
+- Q51: the option defaults stay 3.9.60 and 2001/02 (the 0.6.1 choice), so a new install still starts on 2001/02. Only the Custom tile's default year moves from 2025 to 2026.
+- Q52: 2025/26 keeps December 2025. Q53: October 2026 ships in the download like the other Update Team databases.
+- Q54: every 2026/27 rules row is checked against a source and against the database's divisions, and corrected where it differs.
+- Q55: a 2026/27 game starts after the 2026 World Cup, and its history holds the real result.
+- Q56: the run set adds a 2026 start with three seeds.
 
 ## Testing
 
