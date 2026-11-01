@@ -121,3 +121,4 @@ gap	K League Super Cup	2026	real calendar: not held from 2007 to 2025 (aus-jap-k
 gap	National League Cup	2008	by design: played in 2004/05, 2007/08 and 2008/09 only (season_cups_more.c, Q336)
 duplicate	Belgian Division 1	*	open items 3 and 17: the record of Belgian National Division 1 under its later name (rows of the data, two groups a year)
 no-host	FIFA Club World Championship	*	open item 18: the game writes no host for most finals; the name of the base game (changing rules off)
+missing	Oceania Champions Cup	*	open item 88: the original stalls an edition when a group match moves (FIXTURE_MANAGER new date search 0x5ab510 at 0x5aa96e): the semi-finals come before it and no final is set, so the edition never ends (base game, seed 2: 2008)

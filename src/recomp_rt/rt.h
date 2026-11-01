@@ -325,6 +325,12 @@ uint32_t rt_max_wage_sum(uint32_t term, uint32_t lo); /* get_max_wage 0x597019 *
 /* The rule-set load's Oceania body (win/season_intl.c, tools/recomp/discipline_ban.py at 0x55deb6): 1 when a
  * season game moved a selected Australia to Asia, so its saves hold the body. */
 uint32_t rt_discipline_oceania_body(void);
+/* The Oceania entry's creator at a load (win/season_intl.c, tools/recomp/oceania_entry.py at 0x831f84): 1 when a season
+ * game moved a selected Australia to Asia, so its saves hold the OFC Champions League. */
+uint32_t rt_oceania_entry_kept(void);
+/* The Asian entry's creator at a load (the same files, at 0x831c75): 1 in that game when no Asian nation but Australia
+ * is selected, so the load makes no Asian object, as the new game did not. */
+uint32_t rt_asia_entry_left_out(uint32_t continent);
 /* The ruling body's held ban (win/discipline_ban.c, tools/recomp/discipline_ban.py at 0x7e833c): 1 goes on without
  * the box ruling_body..cpp 661, 0 when the fix is off. */
 uint32_t rt_ruling_body_held(uint32_t body, uint32_t staff);
