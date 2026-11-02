@@ -1238,8 +1238,8 @@ uint32_t rt_nl_group_stages(uint32_t self, uint32_t original)
 int season_nl_international(uint32_t rec)
 {
     for (int i = 0; i < CONFS; i++) {
-        uint32_t o = season_comps_object(confs[i].def);
-        if (o && rec == rd32(g_mem, o + F_RECORD)) return 1;
+        uint32_t r = season_comps_record_of(confs[i].def);     /* also at a load, before the objects exist */
+        if (r && rec == r) return 1;
     }
     return season_gold_cup_record(rec);
 }

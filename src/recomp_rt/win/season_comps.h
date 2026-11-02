@@ -122,6 +122,9 @@ int season_comps_next_edition(const char *comp, int s);
 
 /* The object of a def in the game that runs, or 0 (not made, or the game has none). */
 uint32_t season_comps_object(const SeasonCompDef *d);
+/* The record of a def's competition: its object's, or at a load before the objects exist, the record whose saved
+ * file the load extracted (0.6.2 open item 91); 0 when the game has none. */
+uint32_t season_comps_record_of(const SeasonCompDef *d);
 
 /* Slice 24: the file of the def whose record the object has (its long name in the data), or NULL. A new
  * competition can take a class of the original, so season_change_file asks here first: the class would give

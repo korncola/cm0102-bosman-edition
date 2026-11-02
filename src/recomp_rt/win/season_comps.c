@@ -150,7 +150,14 @@ static const SeasonCompDef *def_at(int i)
 #define MAX_DEFS 64
 static uint32_t objects[MAX_DEFS];      /* the object of each def, 0 when not made */
 
-static void reset(void) { memset(objects, 0, sizeof objects); }
+static uint32_t loading_records[MAX_DEFS];   /* season_comps_record_of before the objects of a load exist */
+static int loading_known;
+
+static void reset(void)
+{
+    memset(objects, 0, sizeof objects);
+    loading_known = 0;
+}
 
 int season_comps_on(void)
 {
@@ -239,6 +246,38 @@ uint32_t season_comps_object(const SeasonCompDef *d)
 {
     int i = def_index(d);
     return i < 0 ? 0 : objects[i];
+}
+
+static void save_file(uint32_t rec, char *out, size_t room);
+
+/* The record of a def's competition in this game: its object's record (+4), or, before the objects of a load
+ * exist, the record of a def whose saved file the load extracted to the user folder, the test that
+ * season_comps_before_comp_table makes before it makes the object (0.6.2 open item 91). The load files every
+ * fixture of the save (load_fixtures 0x5ac3b0, from the FIXTURE_MANAGER constructor at 0x82c548) and works out its
+ * type with 0x669ae0 (0x48dd70 at 0x5ac523) before build_comp_object_table (0x82c5f6) runs, so a type test that
+ * asked the object alone gave the fixtures of the season's international competitions type 3, not 1, after
+ * every load: the squad pass 0x76b100 reads types 0 and 1 only, and their sides played with the squad they last
+ * had (Portugal fielded 10 in the Nations League in September 2076, 17 of its 27 players from a B pick). */
+uint32_t season_comps_record_of(const SeasonCompDef *d)
+{
+    int i = def_index(d);
+    if (i < 0 || i >= MAX_DEFS) return 0;
+    if (objects[i]) return rd32(g_mem, objects[i] + 4);
+    if (!season_comps_on() || season_change_is_creating()) return 0;
+    if (!loading_known) {
+        for (int k = 0; k < season_comp_def_count && k < MAX_DEFS; k++) {
+            const SeasonCompDef *e = def_at(k);
+            uint32_t rec = e ? season_comps_record(e->record) : 0;
+            char file[128], host[2048];
+            loading_records[k] = 0;
+            if (!rec) continue;
+            save_file(rec, file, sizeof file);
+            if (win_existing_file(file, host, sizeof host) && !strncmp(host, win_user_dir, strlen(win_user_dir)))
+                loading_records[k] = rec;
+        }
+        loading_known = 1;
+    }
+    return loading_records[i];
 }
 
 uint32_t season_comps_record(const char *name)
