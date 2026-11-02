@@ -36,7 +36,7 @@ FIFA Intercontinental Cup	fifa_intercontinental
 AFC Champions League Two	acl_two
 CONCACAF Champions('|s)? (Cup|League)	concacaf_champions
 AFC Champions League( Elite)?|Asian Club Championship	asia_club_champ
-OFC Club Championship|Oceania Champions Cup|OFC Champions League	oceania_club_champ
+OFC Club Championship|Oceania Champions Cup|OFC (Men's )?Champions League	oceania_club_champ
 FIFA Club World (Cup|Championship)	world_club_champ
 Intercontinental Cup	world_club_cup
 Copa Interamericana	inter_amer_cup
