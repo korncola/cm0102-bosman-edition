@@ -41,7 +41,8 @@ COMPS = [(0, "Aland League", 2, 0, "club"), (1, "Euro Super Cup", 2, -1, "club")
          (12, "Asia Finals", 1, -1, "nation"), (13, "Americas Finals", 3, -1, "nation"),
          (14, "Hatay Cup", 5, -1, "nation"), (15, "Nations Shield", 1, -1, "nation"),
          (16, "Champions Match", 2, -1, "club"), (17, "Qual Zone", 1, -1, "nation"),
-         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club"), (20, "Champions Cup", 2, -1, "club")]
+         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club"), (20, "Champions Cup", 2, -1, "club"),
+         (21, "Club Trophy", 2, -1, "club"), (22, "Friendly", -1, -1, "nation")]
 
 
 def side(n):
@@ -123,7 +124,9 @@ FIXTURES_2039 = [(16, 0, 3, 220), (16, 4, 0, 222), (1, 0, 1, 100), (13, side(6),
                  (15, side(0), side(1), 130), (19, 5, 0, 140)] + \
     [(20, 6 + k, 7 + k, 250 + 7 * k) for k in range(0, 8, 2)]   # Champions Cup 2039/40: 8 Aland clubs, the limit 7
 FIXTURES_2040 = [(16, 0, 5, 150), (16, 3, 0, 250), (1, 0, 3, 100),   # the match of day 250 is after the save date
-                 (19, 4, 0, 140)]
+                 (19, 4, 0, 140),
+                 (21, 0, 6, 200), (22, side(0), side(1), 201)]   # duty clash: Aland City (3 of Aland's) the day before
+                                                                 # a friendly of Aland's senior side (open item 93)
 ENTRANT_FAULTS = {("entrant-count", "World Finals", 2038), ("entrant-host", "World Finals", 2038),
                   ("entrant-route", "Champions Match", 2039), ("entrant-route", "Champions Match", 2040),
                   ("entrant-confed", "Champions Match", 2040), ("entrant-holder", "Euro Super Cup", 2040),
@@ -131,7 +134,8 @@ ENTRANT_FAULTS = {("entrant-count", "World Finals", 2038), ("entrant-host", "Wor
                   ("entrant-confed", "Asia Shield", 2039), ("entrant-count", "Champions Match", 2039),
                   ("entrant-limit", "Champions Cup", 2039),
                   ("entrant-route", "Pacific Bowl", 2039)}
-ENTRANT_FAULTS_PLAIN = {("entrant-dead", "Qual Zone", 2039),       # found with no rules file too; Ruritania
+ENTRANT_FAULTS_PLAIN = {("duty-clash", "Club Trophy", 2040),          # needs no rules file
+                        ("entrant-dead", "Qual Zone", 2039),       # found with no rules file too; Ruritania
                         ("entrant-dead", "Americas Finals", 2039)}  # plays under the name its rename replaced
 TABLE = '{"world", 2037, 2038, 4, 0, 2038, 6, 1, "Carpania/Karpania", "row-1"},\n'
 ACCESS = ("comp\tfrom\tto\tteams\troutes\tsource\nchamp\t2030\tnone\t2\twinner:aland;winner:esc\tmade up\n"
@@ -165,7 +169,8 @@ HEALTH_FAULTS = {("no-youth", "Aland", 2040), ("empty-squad", "Borduria", 2040),
 # - Borduria Sport: YOUNG with staff 59 twice and 28 of Aland's: 8 young remain, no fault.
 # - Durania Stars: 49 of Aland's in 49 slots, not full: no fault.
 YOUNG = [30 + k for k in range(30) if 24 - k % 10 <= 21]
-FULL_SQUADS = {"Carpania FC": list(range(30)) + list(range(20)),
+FULL_SQUADS = {"Aland City": [0, 1, 2],                           # the duty clash of the Club Trophy
+               "Carpania FC": list(range(30)) + list(range(20)),
                "Elbonia Rovers": list(range(29)) + YOUNG,
                "Borduria Sport": list(range(28)) + YOUNG + [59],
                "Durania Stars": list(range(30)) + list(range(19))}
