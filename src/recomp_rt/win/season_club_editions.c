@@ -332,11 +332,19 @@ int season_club_plan_rounds(const char *comp, const SeasonClubEdition *e, int n,
     }
     /* Open item 95: the players of a club are on duty from the day before their side's match to the day after
      * (NationalTeams::get_international_duty_club 0x7757d0), so a match next to a FIFA day loses them. Each round
-     * (both legs) moves on to its first day that meets none, after the round before it and its draw. */
+     * (both legs) takes the nearest day that meets none, at most 21 days either way, the later one first, and never
+     * before the round before it and its draw. With no such day it keeps its day. */
     int after = -1000;
     for (int i = 0; i < count; i++) {
-        int gap = season_club_second_leg(e, &r[i], count), m = r[i].match < after ? after : r[i].match;
-        for (int k = 0; k < 21 && (meets_fifa(e->year, m) || (gap && meets_fifa(e->year, m + gap))); k++) m++;
+        int gap = season_club_second_leg(e, &r[i], count), want = r[i].match < after ? after : r[i].match, m = want;
+        for (int k = 0; k <= 21; k++) {
+            int up = want + k, down = want - k;
+            if (!meets_fifa(e->year, up) && !(gap && meets_fifa(e->year, up + gap))) { m = up; break; }
+            if (k && down >= after && !meets_fifa(e->year, down) && !(gap && meets_fifa(e->year, down + gap))) {
+                m = down;
+                break;
+            }
+        }
         r[i].match = m;
         after = m + gap + 2;                    /* the next round's draw on the day after, its match the day after that */
     }

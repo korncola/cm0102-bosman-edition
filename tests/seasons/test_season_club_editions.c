@@ -158,6 +158,31 @@ int main(int argc, char **argv)
                 end = r[i].match + gap;
             }
         }
+    /* With changing rules off a start season's edition moves to every later year (season_club_cups.c edition()). */
+    for (int c = 0; c < 5; c++)
+        for (int base = 2002; base <= 2027; base++) {
+            SeasonClubEdition b;
+            if (!season_club_edition(all[c], base, &b)) continue;
+            for (int y = base; y <= LAST; y++) {
+                e = b;
+                season_club_edition_move(&e, y - base);
+                SeasonClubRound r[8];
+                int n = e.clubs > 64 ? 64 : e.clubs, count = season_club_plan_rounds(all[c]->comp, &e, n, r);
+                for (int i = 0; i < count; i++) {
+                    int gap = season_club_second_leg(&e, &r[i], count);
+                    for (int leg = 0; leg <= (gap ? 1 : 0); leg++) {
+                        int doy = r[i].match + leg * gap, yy = e.year;
+                        while (doy >= 365 + season_club_is_leap(yy)) doy -= 365 + season_club_is_leap(yy++);
+                        int m, d;
+                        season_from_day_of_year(yy, doy, &m, &d);
+                        checked++;
+                        if (season_fifa_meets(yy, m, d) && bad_days++ < 5)
+                            CHECK(0, "%s of %d moved to %d, round %d: no match on %d.%d.%d", all[c]->comp, base, y, i,
+                                  d, m, yy);
+                    }
+                }
+            }
+        }
     if (bad_days > 5) printf("%d legs on FIFA days in all, of %d\n", bad_days, checked);
     if (bad_days) failures++;
 
