@@ -299,10 +299,21 @@ static int leg_variant(uint32_t fix)
 #define DAY_LIST 0x005ae6a0u            /* fix_man_get_fixture_list_for_date, thiscall (Date *, slice, type) */
 #define TYPE_COUNT 0x00b64738u          /* s8: the fixture types of a day (season_friendly_dates.c) */
 #define LEG_DAYS 60
+/* 1 when year y has a fixture block in memory (the chain +0x112c from the manager, year +0x1130, as foreign.c
+ * year_block): 0x5ae6a0 goes through 0x5abf10, which for a year not in memory saves and frees another block or makes a
+ * new one (0x5aa2d0, 0x5abf5e). A leg dated in the year before (the past-date move 0x5aa729) can ask for such a year. */
+static int year_in_memory(int y)
+{
+    uint32_t b = rd32(g_mem, FIXTURES);
+    for (int n = 0; readable(b) && n < 100; b = rd32(g_mem, b + 0x112cu), n++)
+        if ((int16_t)rd16(g_mem, b + 0x1130u) == y) return 1;
+    return 0;
+}
+
 static int other_leg(uint32_t fix, int y, int d, int forward, int *ld)
 {
     uint32_t manager = rd32(g_mem, FIXTURES);
-    if (!readable(manager)) return 0;
+    if (!readable(manager) || !year_in_memory(y)) return 0;
     int code = (int16_t)rd16(g_mem, fix + FIX_CODE), want = forward ? code + 1 : code - 1;
     uint32_t comp = rd32(g_mem, fix), h = rd32(g_mem, fix + FIX_HOME_CLUB), w = rd32(g_mem, fix + FIX_AWAY_CLUB);
     int types = (int8_t)g_mem[TYPE_COUNT];
