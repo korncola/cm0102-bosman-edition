@@ -297,6 +297,7 @@ extern uint32_t rt_screen_w, rt_screen_h;
 /* The start year of the game (0.6.0 slice 11, src/recomp_rt/win/season.c): 2001 in the base game. The year
  * sites of tools/recomp/seasons.py read it in place of the constants 2001, 2002 and 2003. */
 extern uint32_t rt_season_year;
+uint32_t rt_euro_cfg_year(void);       /* win/season_uefa_seeding.c: 0x9041ec, the season of euro.cfg */
 
 /* The league load's row arrays (win/league_load.c, tools/recomp/league_load.py at 0x68c898): 0 when the read
  * of a row's result array failed only because the array has 0 bytes (a league of one club), else 1. */

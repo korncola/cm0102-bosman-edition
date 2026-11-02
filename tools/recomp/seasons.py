@@ -75,7 +75,8 @@ PATCHES = {
     0x632540: (2001, Y),        # InterAmerCup::select_teams: first edition, champions from the history
     0x63266C: (2001, Y),
     # UEFA seeding in the first season of the game (doc table 6).
-    0x9041EC: (2001, Y),        # UefaSeeding::collect_european_clubs: read euro.cfg of the database
+    0x9041EC: (2001, "rt_euro_cfg_year()"),  # UefaSeeding::collect_european_clubs: read euro.cfg of the database,
+                                # when it is the start season's (0.6.2 open item 100, win/season_uefa_seeding.c)
     0x903B6F: (2001, Y),        # UefaSeeding::roll_coefficients: the coefficients of the database as they are
     0x9038AF: (2001, Y),        # UefaSeeding::pick_english_intertoto_club: no volunteer list yet
     0x9059B2: (2001, Y),        # uefa_check_registration_deadlines: no 1 February deadline in the run-up
