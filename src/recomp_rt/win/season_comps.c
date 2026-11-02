@@ -151,12 +151,14 @@ static const SeasonCompDef *def_at(int i)
 static uint32_t objects[MAX_DEFS];      /* the object of each def, 0 when not made */
 
 static uint32_t loading_records[MAX_DEFS];   /* season_comps_record_of before the objects of a load exist */
-static int loading_known;
+static int loading_known;                    /* loading_records is filled */
+static int objects_made;                     /* season_comps_before_comp_table has run for this game */
 
 static void reset(void)
 {
     memset(objects, 0, sizeof objects);
     loading_known = 0;
+    objects_made = 0;
 }
 
 int season_comps_on(void)
@@ -246,38 +248,6 @@ uint32_t season_comps_object(const SeasonCompDef *d)
 {
     int i = def_index(d);
     return i < 0 ? 0 : objects[i];
-}
-
-static void save_file(uint32_t rec, char *out, size_t room);
-
-/* The record of a def's competition in this game: its object's record (+4), or, before the objects of a load
- * exist, the record of a def whose saved file the load extracted to the user folder, the test that
- * season_comps_before_comp_table makes before it makes the object (0.6.2 open item 91). The load files every
- * fixture of the save (load_fixtures 0x5ac3b0, from the FIXTURE_MANAGER constructor at 0x82c548) and works out its
- * type with 0x669ae0 (0x48dd70 at 0x5ac523) before build_comp_object_table (0x82c5f6) runs, so a type test that
- * asked the object alone gave the fixtures of the season's international competitions type 3, not 1, after
- * every load: the squad pass 0x76b100 reads types 0 and 1 only, and their sides played with the squad they last
- * had (Portugal fielded 10 in the Nations League in September 2076, 17 of its 27 players from a B pick). */
-uint32_t season_comps_record_of(const SeasonCompDef *d)
-{
-    int i = def_index(d);
-    if (i < 0 || i >= MAX_DEFS) return 0;
-    if (objects[i]) return rd32(g_mem, objects[i] + 4);
-    if (!season_comps_on() || season_change_is_creating()) return 0;
-    if (!loading_known) {
-        for (int k = 0; k < season_comp_def_count && k < MAX_DEFS; k++) {
-            const SeasonCompDef *e = def_at(k);
-            uint32_t rec = e ? season_comps_record(e->record) : 0;
-            char file[128], host[2048];
-            loading_records[k] = 0;
-            if (!rec) continue;
-            save_file(rec, file, sizeof file);
-            if (win_existing_file(file, host, sizeof host) && !strncmp(host, win_user_dir, strlen(win_user_dir)))
-                loading_records[k] = rec;
-        }
-        loading_known = 1;
-    }
-    return loading_records[i];
 }
 
 uint32_t season_comps_record(const char *name)
@@ -524,6 +494,44 @@ static void save_file(uint32_t rec, char *out, size_t room)
     snprintf(out, room, "%s_%d.tmp", name, (int)rd32(g_mem, rec));
 }
 
+/* 1 when the load extracted the saved file of the competition of record rec to the user folder (a stale file of
+ * the game folder, which win_existing_file gives too, is not this game's). Inference: the temp files are in the
+ * user folder, as the game's own *.tmp files of a run are. */
+static int saved_in_user_folder(uint32_t rec)
+{
+    char file[128], host[2048];
+    save_file(rec, file, sizeof file);
+    return win_existing_file(file, host, sizeof host) && !strncmp(host, win_user_dir, strlen(win_user_dir));
+}
+
+/* The record of a def's competition in this game: its object's record (+4), or, at a load before
+ * season_comps_before_comp_table has made the objects, the record of a def whose saved file the load extracted
+ * (0.6.2 open item 91). The load files every fixture of the save under a type: the FIXTURE_MANAGER constructor
+ * 0x5a9cf0 (called at 0x82c548) calls 0x5ac3b0 at 0x5a9ffb, which works out the type with 0x48dd70 (0x5ac523),
+ * which asks 0x669ae0 (0x48deb6); build_comp_object_table runs only later (0x82c5f6). A type test that asked the
+ * objects alone gave the fixtures of the season's international competitions type 3, not 1, after every load:
+ * the squad pass 0x76b100 reads types 0 and 1 only, and their sides played with the squad they last had
+ * (Portugal fielded 10 in the Nations League in September 2076, 17 of its 27 players picked for a B
+ * international). No entry_in_game test here, unlike the load's own: the entry of a continental competition
+ * needs objects that key_nation_create_all_comps (0x82c5aa) makes after the fixtures. No answer is kept while the
+ * record table is empty (the load frees it at 0x82abea and reads it again before 0x82c548). */
+uint32_t season_comps_record_of(const SeasonCompDef *d)
+{
+    int i = def_index(d);
+    if (i < 0 || i >= MAX_DEFS) return 0;
+    if (objects[i] || objects_made) return objects[i] ? rd32(g_mem, objects[i] + 4) : 0;
+    if (!season_comps_on() || season_change_is_creating() || !rd32(g_mem, COMP_RECORDS)) return 0;
+    if (!loading_known) {
+        for (int k = 0; k < season_comp_def_count && k < MAX_DEFS; k++) {
+            const SeasonCompDef *e = def_at(k);
+            uint32_t rec = e ? season_comps_record(e->record) : 0;
+            loading_records[k] = rec && saved_in_user_folder(rec) ? rec : 0;
+        }
+        loading_known = 1;
+    }
+    return loading_records[i];
+}
+
 /* build_comp_object_table, cdecl, called by create_game (0x829640) and the load (0x82c5f6). Its one wrap is in
  * season_names.c (slices 15 and 26 both need it); it calls this before the original. At a load the
  * creators made only the original's objects (key_nation_create_all_comps 0x669180 at 0x82c5aa), so each def
@@ -540,15 +548,11 @@ void season_comps_before_comp_table(void)
             if (!d || !entry_in_game(d->entry)) continue;
             uint32_t rec = season_comps_record(d->record);
             if (!rec) continue;
-            char file[128], host[2048];
-            save_file(rec, file, sizeof file);
-            /* Only the file of the user folder, where the load extracts the save's *.tmp files: a stale file of
-             * the game folder (win_existing_file gives that form too) is not this game's. */
-            if (win_existing_file(file, host, sizeof host) && !strncmp(host, win_user_dir, strlen(win_user_dir)))
-                make(d, i, year, 1);
+            if (saved_in_user_folder(rec)) make(d, i, year, 1);
             if (rt_unwinding) return;
         }
     }
+    objects_made = 1;
 }
 
 /* ---- New records (docs/research/2026-10-18-new-comp-records.md) ----

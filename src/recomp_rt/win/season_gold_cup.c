@@ -522,7 +522,7 @@ int season_gold_cup_record(uint32_t rec)
 {
     if (!rec) return 0;
     uint32_t g = season_comps_record_of(&season_gold_cup_comp), f = season_comps_record_of(&season_finalissima_comp);
-    return (g && g == rec) || (f && f == rec) || (making_rec && making_rec == rec);
+    return g == rec || f == rec || making_rec == rec;
 }
 
 /* The winner (place 0) of the latest edition of the competition of a key id (0x57a58e..0x57a5a8), else the
