@@ -241,7 +241,9 @@ GAP_FINALS = ("FIFA World Cup", "European Football Championship")
 # The same for one database only (0.6.2 slice 21): October 2026 holds no Africa Cup of Nations 2025 row. The research
 # of this competition ends in 2006 with one row of 2025, so the rule is not opened to the other databases, whose rows
 # of 2008 to 2023 the research does not hold.
-GAP_FINALS_OF = {"October 2026": ("African Cup of Nations",)}
+# October 2026 holds no row of the Argentine Apertura 2026 either (Belgrano, 24 May 2026, before the start; open
+# item 98). A club competition takes the labels of the club shift.
+GAP_FINALS_OF = {"October 2026": ("African Cup of Nations", "Argentine Premier Division")}
 
 
 def gap_databases(dbroot):
@@ -337,11 +339,11 @@ def gap_rows(name, start, folder, rows, ref, alias, plan, report, shift, nshift)
                                    "differ"] + [v for p in places for v in p]))
             added += 1
             differ += 1
-    have = collections.defaultdict(set)         # the labels of each nation competition after its shift
+    have = collections.defaultdict(set)         # the labels of each competition after its shift
     for cid, y, *_ in d.history():
         c = d.comp(cid)
-        if c and c[0] == "nation":
-            have[c[1]].add(y + own.get(cid, ns))
+        if c:
+            have[c[1]].add(y + (own.get(cid, ns) if c[0] == "nation" else shift))
     for comp in GAP_FINALS + GAP_FINALS_OF.get(name, ()):
         if comp not in comps:
             continue
