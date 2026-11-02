@@ -114,7 +114,7 @@ entrant-route	Intercontinental Cup	2003	open item 47: the data row of the 2002 L
 no-host	OFC Men's Nations Cup	2008	not a fault: the 2008 OFC Nations Cup was played home and away with no host (int-continental-87)
 gap	Leinster Senior Cup	2010	real history: no edition from 2002/03 to 2008/09 (rules rows wal-nir-irl-46 to -196 not held; en.wikipedia.org "Leinster Senior Cup (association football)", read 1 November 2026: no competition between 2001 and 2009)
 gap	Leinster Senior Cup	2023	real history: 2019/20 abandoned, 2020/21 and 2021/22 not held for COVID-19 (the same source; rules rows wal-nir-irl-471 to -521 not held)
-gap	OFC Champions League	2005	real calendar: no OFC club championship from 2002 to 2004 (first pass of the run set, 1 November 2026)
+gap	OFC*Champions League	2005	real calendar: no OFC club championship from 2002 to 2004 (first pass of the run set, 1 November 2026)
 gap	Serie C girone C	2015	by design: without the Serie C2 extra division the game makes group C only from 2014/15 (season_divisions_ita.c:159); its 2005 and 2006 rows are the data's
 gap	President of Ireland's Cup	2013	by design: the rules table holds the cup from 2013/14 (wal-nir-irl-323); before it only the rows of the data
 gap	K League Super Cup	2026	real calendar: not held from 2007 to 2025 (aus-jap-kor-402), again from 2025/26
