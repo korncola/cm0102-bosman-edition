@@ -41,7 +41,8 @@ COMPS = [(0, "Aland League", 2, 0, "club"), (1, "Euro Super Cup", 2, -1, "club")
          (12, "Asia Finals", 1, -1, "nation"), (13, "Americas Finals", 3, -1, "nation"),
          (14, "Hatay Cup", 5, -1, "nation"), (15, "Nations Shield", 1, -1, "nation"),
          (16, "Champions Match", 2, -1, "club"), (17, "Qual Zone", 1, -1, "nation"),
-         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club"), (20, "Champions Cup", 2, -1, "club")]
+         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club"), (20, "Champions Cup", 2, -1, "club"),
+         (21, "Holders Cup", 2, -1, "club"), (22, "Holders Final", 2, -1, "club")]
 
 
 def side(n):
@@ -57,6 +58,8 @@ def history():
         rows.append((1, y, 2 + y % 2, 0 + y % 2, -1, -1))
     for y in (2026, 2027, 2028):
         rows.append((1, y, 0, 3, -1, -1))
+    rows.append((21, 2039, 6, 7, -1, -1))                             # Holders Cup: Aland Club 0 holds the title
+    rows.append((22, 2039, 6, 7, -1, -1))                             # Holders Final: the same holder
     want.add(("same-final", "Euro Super Cup", 2028))
     for y in range(2029, 2041):
         rows.append((1, y, y % 3, 3, -1, -1))
@@ -123,20 +126,26 @@ FIXTURES_2039 = [(16, 0, 3, 220), (16, 4, 0, 222), (1, 0, 1, 100), (13, side(6),
                  (15, side(0), side(1), 130), (19, 5, 0, 140)] + \
     [(20, 6 + k, 7 + k, 250 + 7 * k) for k in range(0, 8, 2)]   # Champions Cup 2039/40: 8 Aland clubs, the limit 7
 FIXTURES_2040 = [(16, 0, 5, 150), (16, 3, 0, 250), (1, 0, 3, 100),   # the match of day 250 is after the save date
-                 (19, 4, 0, 140)]
+                 (19, 4, 0, 140),
+                 (21, 8, 9, 187), (21, 10, 11, 187),   # Holders Cup 2040: a qualifying day 2 days before the save date,
+                                                      # still running (open item 70): its holder enters later, no fault
+                 (22, 8, 9, 180), (22, 10, 11, 180), (22, 8, 10, 186)]   # Holders Final 2040: a final (one match) 3 days
+                                                                       # before the save date has ended: its holder fault
 ENTRANT_FAULTS = {("entrant-count", "World Finals", 2038), ("entrant-host", "World Finals", 2038),
                   ("entrant-route", "Champions Match", 2039), ("entrant-route", "Champions Match", 2040),
                   ("entrant-confed", "Champions Match", 2040), ("entrant-holder", "Euro Super Cup", 2040),
                   ("entrant-host", "Americas Finals", 2039), ("entrant-dead", "Qual Zone", 2039),
                   ("entrant-confed", "Asia Shield", 2039), ("entrant-count", "Champions Match", 2039),
                   ("entrant-limit", "Champions Cup", 2039),
-                  ("entrant-route", "Pacific Bowl", 2039)}
+                  ("entrant-route", "Pacific Bowl", 2039), ("entrant-holder", "Holders Final", 2040)}
 ENTRANT_FAULTS_PLAIN = {("entrant-dead", "Qual Zone", 2039),       # found with no rules file too; Ruritania
                         ("entrant-dead", "Americas Finals", 2039)}  # plays under the name its rename replaced
 TABLE = '{"world", 2037, 2038, 4, 0, 2038, 6, 1, "Carpania/Karpania", "row-1"},\n'
 ACCESS = ("comp\tfrom\tto\tteams\troutes\tsource\nchamp\t2030\tnone\t2\twinner:aland;winner:esc\tmade up\n"
           "pacific\t2030\tnone\t2\twinner:durania_cup;winner:aland\tmade up\n"
-          "esc\t2030\tnone\t\tholder\tmade up\n")
+          "esc\t2030\tnone\t\tholder\tmade up\n"
+          "holders\t2030\tnone\t\tholder\tmade up\n"
+          "holders_final\t2030\tnone\t\tholder\tmade up\n")
 
 
 def fixture_part(fixtures):
@@ -362,6 +371,35 @@ def uefa_missing_rule():
         got = history_check.uefa_missing(game, access, changes, year, first, entered)
         if got != want:
             bad.append(f"entrant-missing of {year}: {got}, not {want}")
+    # open item 76: after the table (no host in access) the hosts come from the save: the host row of HostCountry.tmp
+    # (fixed: every nation of its six fields; drawn: its pair; not decided: none) and a UEFA nation that played the
+    # finals without the qualifying (an automatic place: a host, as a season game has no holder)
+    for year, first, entered, extra, want in ((2037, 2036, {"Borduria", "Kosovo"}, {"Aland"}, []),
+                                              (2037, 2036, {"Kosovo"}, {"Aland", "Borduria"}, []),
+                                              (2037, 2036, {"Kosovo"}, {"Aland"}, ["Borduria"])):
+        got = history_check.uefa_missing(game, access, changes, year, first, entered, extra)
+        if got != want:
+            bad.append(f"entrant-missing of {year} with the hosts {sorted(extra)}: {got}, not {want}")
+    for finals, entered, host, want in (({"Aland", "Borduria", "Kosovo"}, {"Kosovo"}, "Aland", {"Aland", "Borduria"}),
+                                        ({"Aland", "Kosovo"}, {"Kosovo"}, "Borduria", set()),   # host not among them
+                                        ({"Aland", "Borduria", "Russia"}, set(), "Aland", set()),  # more than a pair
+                                        ({"Aland"}, set(), "", set())):                        # no history host
+        got = history_check.finals_hosts(finals, entered, host)
+        if got != want:
+            bad.append(f"finals_hosts of {sorted(finals)} less {sorted(entered)}, host {host}: {sorted(got)}, "
+                       f"not {sorted(want)}")
+    game.host_rows = [(7, 2038, [0, 1, -1, -1, -1, -1], 0xfd), (7, 2042, [3, -1, 0, 1, 1, -1], 1),
+                      (7, 2046, [0, -1, 1, -1, 3, -1], 0xfe), (8, 2038, [4, -1, -1, -1, -1, -1], 0xfd),
+                      (7, 2050, [0, 5, -1, -1, -1, -1], 0xfd), (7, 2054, [3, 99, -1, -1, -1, -1], 0xfd),
+                      (7, 2054, [0, 1, -1, -1, -1, -1], 0xfd), (7, 2058, [0, 1, 3, -1, -1, -1], 3)]
+    # 2054: the first row of a competition and year wins (row_find), an id outside the nation table is left out;
+    # 2058: a choice of 3 is neither a pair nor fixed
+    for comp, year, want in ((7, 2038, {"Aland", "Borduria"}), (7, 2042, {"Aland", "Borduria"}), (7, 2046, set()),
+                             (7, 2050, {"Aland", "Dead Land"}), (7, 2054, {"Kosovo"}), (7, 2058, set()),
+                             (7, 2062, set())):
+        got = history_check.save_hosts(game, comp, year)
+        if got != want:
+            bad.append(f"save_hosts of competition {comp} in {year}: {sorted(got)}, not {sorted(want)}")
     return bad
 
 
@@ -426,13 +464,15 @@ def main():
                 "uefa_cl\tChampions Cup\tclub_continental\tUEFA\t0\t1\t2041\tnone\n"
                 "wc_qual_zone\tQual Zone\tintl_qual\tAFC\t0\t4\t2041\tnone\n"
                 "durania_cup\tDurania Cup\tdomestic_cup\tDurania\t0\t1\t2031\t2030\n"
-                "pacific\tPacific Bowl\tsuper_cup\tAFC|UEFA\t0\t1\t2041\tnone\n")
+                "pacific\tPacific Bowl\tsuper_cup\tAFC|UEFA\t0\t1\t2041\tnone\n"
+                "holders\tHolders Cup\tclub_continental\tUEFA\t0\t1\t2041\tnone\n"
+                "holders_final\tHolders Final\tclub_continental\tUEFA\t0\t1\t2041\tnone\n")
     names = os.path.join(work, "names.tsv")
     with open(names, "w", encoding="utf-8") as f:
         f.write("# a note line\npattern\tcomp\nAmericas Finals\tamericas\n(The )?World Finals\tworld\n"
                 "Euro Super Cup\tesc\nNations Shield\tshield\nAsia Shield\tasia_shield\n"
                 "Champions Match\tchamp\nAland League\taland\nQual Zone\twc_qual_zone\n"
-                "Durania Cup\tdurania_cup\nPacific Bowl\tpacific\nChampions Cup\tuefa_cl\n")
+                "Durania Cup\tdurania_cup\nPacific Bowl\tpacific\nChampions Cup\tuefa_cl\nHolders Cup\tholders\nHolders Final\tholders_final\n")
     known = os.path.join(work, "known.tsv")
     with open(known, "w", encoding="utf-8") as f:
         f.write("check\tcompetition\tyear\tnote\nduplicate\tEuro Finals\t*\tplanted\n")
@@ -529,6 +569,16 @@ def main():
     got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
     if got != [(2039, 4), (2040, 4)]:
         bad.append(f"editions of a July to May cup: {got}, not [(2039, 4), (2040, 4)]")
+    # A knockout that pauses (open item 70, the Copa Libertadores of 2041 in a run set game): quarter-finals of 4
+    # matches, then single-match days on 5, 9 and 15 June and, after a break of 25 days, on 10, 17 and 24 July. One
+    # edition.
+    o = datetime.date(2041, 1, 1).toordinal() - 1
+    ko = [(o + 142, 0, 1), (o + 142, 2, 3), (o + 142, 4, 5), (o + 142, 6, 7), (o + 149, 1, 0), (o + 149, 3, 2),
+          (o + 149, 5, 4), (o + 149, 7, 6), (o + 156, 0, 2), (o + 160, 4, 6), (o + 166, 2, 0), (o + 191, 6, 4),
+          (o + 198, 0, 4), (o + 205, 4, 0)]
+    got = [(y, len(t)) for y, _, _, t in history_check.editions_of(ko)]
+    if got != [(2041, 8)]:
+        bad.append(f"editions of a knockout that pauses: {got}, not [(2041, 8)]")
 
     # Open item 70: a group stage that ends on a December day with one match, then the knockout rounds in February
     # (group clubs only), the final in May, and the next season's first qualifying round in June (clubs that played

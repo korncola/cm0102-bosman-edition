@@ -50,6 +50,76 @@ static int injured(uint32_t player)
     return (r & 0xff) == 2;
 }
 
+/* A player joins or leaves a national squad as NationalTeams::select_squad 0x76c120 does it, not only in the squad
+ * slots +0xd7 (0.6.2 open item 89). A player that only the slot linked stayed out of the squad for every reader of
+ * staff +0x24: the history checker found the under-21 side of Senegal with 20 squad slots and no player in July
+ * 2004 (2001 start, Tier A), and the international duty of a club (get_international_duty_club 0x7757d0) did not
+ * see him.
+ * - Joining (0x76d0b3, then 0x76d318..0x76d33a): the slot; the squad flag 4 in +0x5e (0x540980, which keeps bits 0
+ *   and 1 and ors the flag; select_squad passes 4 for the senior and under-21 picks, 0x76c279); the side at +0x24;
+ *   the job +0x28 Player (11), or 12 for a job of 5 or 12.
+ * - Who may join (can_join, as 0x76cbf2..0x76cc0a): a player with no side at +0x24, or with job 11 and a side of
+ *   this nation. So the original's move from another side (0x76d0ba..0x76d1ea) only meets a side of the nation,
+ *   and the fill already keeps out every player in another national squad's slots (called_up).
+ * - Leaving: the stored selections of the side drop him (0x896c60 on [0xde1d08], (side, staff, 1, 1) and (side,
+ *   staff, 0, 1), as NationalTeams::release_overage_u21_players 0x76d880 does at 0x76d8db..0x76d8f9), then the slot.
+ *   The original then clears +0x24 and +0x5e and sets the job to 5 if it was 12, else 0 (0x76c675..0x76c696). The
+ *   fill's own rule: only when +0x24 is this side; a player still in the slots of another side (the under-21 squad
+ *   loses the senior squad's players) is linked to that side instead. */
+#define STORE 0xde1d08u              /* the stored selections, as picker.c names it */
+#define REMOVE_SELECTION 0x896c60u   /* thiscall STORE (side, staff, flag, 1) */
+
+static int in_squad(uint32_t club, uint32_t sp);
+
+static int can_join(uint32_t sp, uint32_t nation)
+{
+    uint32_t side = rd32(g_mem, sp + 0x24);
+    return !side || (g_mem[sp + 0x28] == 11 && rd32(g_mem, side + CLUB_NATION) == nation);
+}
+
+static void join_squad(uint32_t side, uint32_t j, uint32_t sp)
+{
+    wr32(g_mem, side + CLUB_SQUAD + 4 * j, sp);
+    g_mem[sp + 0x5e] = (uint8_t)((g_mem[sp + 0x5e] & 3) | 4);
+    wr32(g_mem, sp + 0x24, side);
+    uint8_t job = g_mem[sp + 0x28];
+    g_mem[sp + 0x28] = job == 5 || job == 12 ? 12 : 11;
+}
+
+/* The national side other than except whose squad slots hold sp, or 0. */
+static uint32_t side_holding(uint32_t sp, uint32_t except)
+{
+    int clubs = (int)rd32(g_mem, CLUB_COUNT), nations = (int)rd32(g_mem, NATION_COUNT);
+    uint32_t base = rd32(g_mem, CLUBS);
+    for (int i = clubs - 2 * nations; i >= 0 && i < clubs; i++) {
+        uint32_t c = base + (uint32_t)i * CLUB_SIZE;
+        if (c != except && in_squad(c, sp)) return c;
+    }
+    return 0;
+}
+
+static void leave_squad(uint32_t side, uint32_t j, uint32_t sp)
+{
+    Cpu saved = cpu;
+    for (uint32_t k = 0; k < 2 && !rt_unwinding; k++) {
+        uint32_t a[4] = {side, sp, 1 - k, 1};
+        cpu.ecx = rd32(g_mem, STORE);
+        rt_callback(REMOVE_SELECTION, 4, a);
+    }
+    if (rt_unwinding) return;
+    cpu = saved;
+    wr32(g_mem, side + CLUB_SQUAD + 4 * j, 0);
+    if (rd32(g_mem, sp + 0x24) != side) return;
+    uint32_t other = side_holding(sp, side);
+    if (other) {
+        wr32(g_mem, sp + 0x24, other);
+        return;
+    }
+    wr32(g_mem, sp + 0x24, 0);
+    g_mem[sp + 0x28] = g_mem[sp + 0x28] == 12 ? 5 : 0;
+    g_mem[sp + 0x5e] &= 3;
+}
+
 static int by_address(const void *a, const void *b)
 {
     uint32_t x = *(const uint32_t *)a, y = *(const uint32_t *)b;
@@ -107,7 +177,7 @@ static void fill_side(uint32_t club)
             if (!readable(pr) || (rd32(g_mem, sp + 0x1a) != nation && rd32(g_mem, sp + 0x1e) != nation)) continue;
             if (u21 && (int16_t)rd16(g_mem, sp + 0x12) < born_from) continue;
             int ca = (int16_t)rd16(g_mem, pr + 5);
-            if (ca <= best_ca) continue;
+            if (ca <= best_ca || !can_join(sp, nation)) continue;
             int in = 0;
             for (uint32_t j = 0; j < SQUAD && !in; j++) in = rd32(g_mem, club + CLUB_SQUAD + 4 * j) == sp;
             if (in || bsearch(&sp, busy, (size_t)nbusy, sizeof *busy, by_address) || injured(sp)) continue;
@@ -117,7 +187,7 @@ static void fill_side(uint32_t club)
         uint32_t j = 0;
         while (j < SQUAD && rd32(g_mem, club + CLUB_SQUAD + 4 * j)) j++;
         if (j == SQUAD) break;
-        wr32(g_mem, club + CLUB_SQUAD + 4 * j, best);
+        join_squad(club, j, best);
         n++;
     }
     char name[52];
@@ -172,7 +242,7 @@ static int u21_short(uint32_t club, int *have)
     for (uint32_t i = 0; n < FILL_TO && readable(staff) && i < count; i++) {
         uint32_t sp = staff + i * STAFF_SIZE;
         if (!readable(rd32(g_mem, sp + 0x61)) || (rd32(g_mem, sp + 0x1a) != nation && rd32(g_mem, sp + 0x1e) != nation)) continue;
-        if ((int16_t)rd16(g_mem, sp + 0x12) < born_from || in_squad(club, sp)) continue;
+        if ((int16_t)rd16(g_mem, sp + 0x12) < born_from || in_squad(club, sp) || !can_join(sp, nation)) continue;
         n += !bsearch(&sp, busy, (size_t)nbusy, sizeof *busy, by_address);
     }
     free(busy);
@@ -328,7 +398,8 @@ static void u21_without_seniors(uint32_t nation)
         uint32_t sp = rd32(g_mem, u21 + CLUB_SQUAD + 4 * j);
         if (!sp) continue;
         if (in_squad(senior, sp) || bsearch(&sp, busy, (size_t)nbusy, sizeof *busy, by_address)) {
-            wr32(g_mem, u21 + CLUB_SQUAD + 4 * j, 0);
+            leave_squad(u21, j, sp);
+            if (rt_unwinding) break;
             if (in_squad(senior, sp)) out++;
             else out_other++;
         } else if (!injured(sp))
@@ -351,7 +422,7 @@ static void u21_without_seniors(uint32_t nation)
             if (!readable(pr) || (rd32(g_mem, sp + 0x1a) != nation && rd32(g_mem, sp + 0x1e) != nation)) continue;
             if ((int16_t)rd16(g_mem, sp + 0x12) < born_from) continue;
             int ca = (int16_t)rd16(g_mem, pr + 5);
-            if (ca <= best_ca || in_squad(u21, sp)) continue;
+            if (ca <= best_ca || in_squad(u21, sp) || !can_join(sp, nation)) continue;
             if (bsearch(&sp, busy, (size_t)nbusy, sizeof *busy, by_address) || injured(sp)) continue;
             best = sp, best_ca = ca;
         }
@@ -359,7 +430,7 @@ static void u21_without_seniors(uint32_t nation)
         uint32_t j = 0;
         while (j < SQUAD && rd32(g_mem, u21 + CLUB_SQUAD + 4 * j)) j++;
         if (j == SQUAD) break;
-        wr32(g_mem, u21 + CLUB_SQUAD + 4 * j, best);
+        join_squad(u21, j, best);
         in++;
     }
     free(busy);
