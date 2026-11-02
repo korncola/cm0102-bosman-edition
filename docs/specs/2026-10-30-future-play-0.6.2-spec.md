@@ -302,7 +302,7 @@ Merge danger: one-way door if it changes the save format. Blast radius: every sa
 
 ### 19. Nation names, Kazakhstan and the Netherlands Antilles
 Blocked by: none
-Delivers: the national sides of a renamed nation take the nation's name, in a new game, at each season point and at the load of an older save. Kazakhstan moves from the AFC to UEFA from the 2002/03 season. The dead Netherlands Antilles plays no competition beside Curaçao (fault 51, already fixed on main). Every UEFA member plays the World Cup qualifying of 2006 to 2022, apart from the hosts (fault 57). Faults 42, 43, 51 and 57.
+Delivers: the national sides of a renamed nation take the nation's name, in a new game, at each season point and at the load of an older save. Kazakhstan moves from the AFC to UEFA from the 2002/03 season. The dead Netherlands Antilles plays no competition beside Curaçao (fault 51, already fixed on main). Every UEFA member plays the World Cup qualifying of 2006 to 2022, apart from the hosts (fault 57). A qualifier that moves to a FIFA day keeps the other matchday of its window 3 days away and no club tie of its players within a day (fault 93). Faults 42, 43, 51, 57 and 93.
 Merge danger: two-way door. The load of a 0.6.1 save gives its old side names the nation's names, and that changes only names. Blast radius: the names that the fixtures, results and history screens show for six national sides, and the international competitions of 2001 and 2002 starts, where Kazakhstan now plays the UEFA qualifiers and no longer the AFC ones, and the European World Cup qualifying of 2006 to 2022, whose groups now hold 5 or 6 nations.
 - [x] The checker finds no side-name and no nation-confed fault in a 2001 start with changing rules on, played past the 2002 season point, and in a 2025 start on the December 2025 data.
 - [x] The checker finds no entrant-dead fault in the CONCACAF Nations League of a 2022 start played to November 2023. Fault 51 is not on main: only saves of builds before 29b9dc82 show it, so this slice changes no code for it.
@@ -310,6 +310,8 @@ Merge danger: two-way door. The load of a 0.6.1 save gives its old side names th
 - [x] Same-save set PASS.
 - [x] Fault 57: a 2001 game has 51 European nations in the 2006 qualifying, a 2013 start 52 in 2018 (all of its data less Russia, the host) and a 2017 start 55 in 2022. The checker finds no entrant-missing fault there. history_check_test.py tests the rule.
 - [x] Fault 57: same-save set against main 99bf45fb: start, prematch, new game, yeovil and match equal main (ref-build). Yeovil fails only original-faults-keep, as main does (open item 72).
+- [x] Fault 93: the two qualifiers of a FIFA window lie 3 days apart or more, inside the window, with no club tie of their players within a day. Run set game a2013s3 played again from its July 2023 save: main stops with the box match_eng.cpp 612 on 22 November 2029 (West Bromwich Albion fields 9); the fix plays the 2030 UEFA qualifying on 22/25 March, 7/10 June, 27/30 September, 6/9 October and 15/18 November 2029 and its leg to 2034 with no box. The 2098 date jump (normal game) holds the 2102 UEFA qualifying in its windows. The checker's duty-clash finds main's clashes of 22 November 2029 and none on the fix; history_check_test.py plants one and three cases that are not faults.
+- [ ] Fault 93: same-save set against main 1901ffa5.
 
 ### 20. A youth pool for every nation
 Blocked by: none
