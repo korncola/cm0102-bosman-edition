@@ -1316,6 +1316,41 @@ static void fix_offsets(uint32_t cls, uint32_t self)
     }
 }
 
+/* A draw that lies before today (open item 19). Each class's update_for_date draws on the day that equals its draw
+ * date, the day word and the year offset from +0x40 (the World Cup at 0x92f1b4..0x92f1ce, with its update flag and +0xb1
+ * at 0, 0x92f1fe..0x92f20a; the note above), so a draw date in the past never comes, the finals are never drawn and the
+ * class waits for good. The table moves the draw with the finals (date_shift): in a 2002/03 game the OFC Nations Cup
+ * of 5 July 2002 moves its first group day from 10 November by -128 days, and its draw (OceaniaNations::set_up_rules
+ * 0x799690: Date::Date with day 5, month 2 from 0, so 5 March, at 0x7996b3..0x799712) with it, to 28 October 2001.
+ * The game is made on 1 January 2002 (the log of the test: today day 0 of 2002), so the draw never came and the class
+ * waited to 2016 (run set pass 2, a2002s1). Inference: the finals of 5 July come in the run to the start date
+ * (game_run_to_start_date 0x5cc850 plays the days from the game's day to the start date), as they did in the test. So
+ * when a builder of the new game (create_game, season_change_is_creating) leaves a draw date before today and the
+ * finals' first day after tomorrow, the draw comes tomorrow. A draw on time is not touched, the Gold Cup object (its own
+ * dates) is left out, and so are the builders of a later season and of a load (the repair of old saves, slice 4b, takes
+ * the first edition whose draw is still to come; a World Cup or Euro seeded there would miss its running qualifying). */
+static void late_draw(uint32_t cls, uint32_t self)
+{
+    if (!season_intl_on() || !season_change_is_creating() || (cls == INTL_COPA && season_gold_cup_of(self))) return;
+    int year = (int16_t)rd16(g_mem, self + 0x40u), ty = (int16_t)rd16(g_mem, GAME_DATE + 2),
+        td = (int16_t)rd16(g_mem, GAME_DATE);
+    long today = season_intl_abs_day(ty, td), first;
+    if (ty < 1900 || !season_intl_finals_first_day(cls, year, &first) || first <= today + 1) return;
+    for (size_t i = 0; i < sizeof offset_pairs / sizeof offset_pairs[0]; i++) {
+        if (offset_pairs[i].cls != INTL_CLASSES && offset_pairs[i].cls != cls) continue;
+        int day = (int16_t)rd16(g_mem, self + offset_pairs[i].day), off = (int16_t)rd16(g_mem, self + offset_pairs[i].offset);
+        if (day < 0 || day > 365 || season_intl_abs_day(year + off, day) >= today) continue;
+        int ny = ty, nd = td + 1;
+        if (nd >= (int)(season_intl_abs_day(ty + 1, 0) - season_intl_abs_day(ty, 0))) nd = 0, ny++;
+        wr16(g_mem, self + offset_pairs[i].day, (uint16_t)nd);
+        wr16(g_mem, self + offset_pairs[i].offset, (uint16_t)(ny - year));
+        if (logging())
+            fprintf(stderr, "recomp: season intl: %s %d: the date at +0x%x (day %d of %d) lies before today, it comes "
+                            "tomorrow (day %d of %d)\n", season_intl_class_file(cls), year, offset_pairs[i].day, day,
+                    year + off, nd, ny);
+    }
+}
+
 static void stage_builder(uint32_t cls, void (*original)(void), int builder)
 {
     uint32_t self = cpu.ecx;
@@ -1333,6 +1368,7 @@ static void stage_builder(uint32_t cls, void (*original)(void), int builder)
     original();
     if (!--depth) {
         if (in_builder && date_shift) fix_offsets(cls, self);
+        if (in_builder && !rt_unwinding) late_draw(cls, self);
         in_builder = 0;
     }
     date_shift = saved;

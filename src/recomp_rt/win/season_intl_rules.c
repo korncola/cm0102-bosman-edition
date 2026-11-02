@@ -463,6 +463,14 @@ static int finals_days(uint32_t cls, int year, long *from, long *to)
     return 1;
 }
 
+int season_intl_finals_first_day(uint32_t cls, int year, long *day)
+{
+    long to;
+    return cls < INTL_CLASSES && finals_days(cls, year, day, &to);
+}
+
+long season_intl_abs_day(int y, int doy) { return days_from_civil(y, 1, 1) + doy; }
+
 int season_intl_finals_busy(int conf, int y, int doy)
 {
     if (!season_intl_on() || conf < 0 || conf >= SEASON_CONFS) return 0;
