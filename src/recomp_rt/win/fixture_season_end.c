@@ -58,6 +58,18 @@
  * fixture dated before today (0x5aa729). With the first fix the replay still had two round 5 ties of the Club World
  * Cup clubs made after their day 356, moved to day 363, past round 6 on day 360 (final on day 12 of 2010). Other
  * fixtures keep that call's original move.
+ * The two legs of a tie stay in order (item 90). In a 2006 game (run set pass 2, a2006s2, day 169 of 2055) the
+ * Segunda División play-off final was drawn on day 162 with its first leg on day 165 and its second on day 169, the day
+ * before the league's update day 170. Cup::create_tie_fixtures adds the first leg, then the second. The first met a
+ * clash, and the rule put it on day 169, the last free day before day 170, while the second leg was not yet stored; the
+ * second, added next, met a clash too and the rule kept its old day 169. With both legs on one day Cup::process_fixture
+ * took one as the first leg (its leg count, tie +0x32 plus +0x33, 0x51a3ce..0x51a3e5), found no second leg from the next
+ * day (find_next_fixture 0x5ac920 at 0x51a610) and stopped at the box "Cup..cpp 1278" (0x51a672). Whether the box comes
+ * depends on the order of the day's matches; the same save played as a normal game puts both legs on day 169 too. So
+ * for a leg (the round code's digit 3 or 4, comp_util_get_round_variant 0x4b0850): a first leg's move is bounded by
+ * its second leg when that is stored, and a second leg never keeps a day on or before its first leg; it then takes the
+ * move of 0x5ab510, which lies after its old date, as the original would. The legs are found as process_fixture finds a
+ * second leg (other_leg). A leg's past-date move (0x5aa729) is covered too.
  * The other 7 calls of 0x5ab510, the base game and RECOMP_SEASON_CODE=off keep the original (Q152).
  *
  * Test switch RECOMP_TEST_FIXTURE_HOLD (season games only): "log" prints each covered move; "1" also takes the new
@@ -87,6 +99,7 @@
 #define FIX_DAY 0x2au
 #define FIX_PRIORITY 0x3au
 #define FIX_SLICE 0x3fu
+#define FIX_CODE 0x30u          /* the round code (comp_util_get_round_variant 0x4b0850) */
 
 /* The moves of a fixture that the rule covers: the return addresses of the call of 0x5ab510, of the add_fixture that
  * follows it and of the queue_fixture_moved_news after that (0 for none). */
@@ -263,6 +276,78 @@ static void log_clash(uint32_t manager, uint32_t fix)
             readable(wn) ? win_str(wn + 4u) : "?");
 }
 
+/* The leg digit of the fixture's round code (+0x30): comp_util_get_round_variant 0x4b0850 gives code % 10 below 1000,
+ * 3 for a first leg and 4 for a second (find_new_fixture_date adds its leg check only for these, 0x5ab657..0x5ab677). */
+static int leg_variant(uint32_t fix)
+{
+    int code = (int16_t)rd16(g_mem, fix + FIX_CODE);
+    return code >= 0 && code < 1000 ? code % 10 : 0;
+}
+
+/* The other leg of the tie of a leg on day d of year y (item 90): a stored fixture of the same competition (+0) and
+ * clubs whose round code is the leg's code + 1 (the second leg of a first leg) or - 1 (the first leg of a second leg).
+ * A league's two meetings share one code, so they never match. The search reads the store's own lists of each day
+ * (fix_man_get_fixture_list_for_date 0x5ae6a0, slices 0 to 2, every fixture type, as season_friendly_dates.c side_busy
+ * does) node by node and touches no list cursor: FIXTURE_MANAGER::find_next_fixture 0x5ac920 sets the cursor of each
+ * list it reads to its head (0x5ac9c6), and MATCH_DAY 0x6b3c10 walks today's list with that cursor while a postponed
+ * match is added again (item 84). It looks LEG_DAYS days ahead (from the next day) for a second leg, and back to its
+ * own day for a first leg, within year y. The fixture of the move is not in the store then (removed before the call-up
+ * move, a copy or not yet added at the clash moves), so it cannot find itself. 1 and the date in *ld when found. */
+#define FIX_HOME_CLUB 0x1cu
+#define FIX_AWAY_CLUB 0x20u
+#define FIXTURES 0x00ae2a58u            /* the fixture manager */
+#define DAY_LIST 0x005ae6a0u            /* fix_man_get_fixture_list_for_date, thiscall (Date *, slice, type) */
+#define TYPE_COUNT 0x00b64738u          /* s8: the fixture types of a day (season_friendly_dates.c) */
+#define LEG_DAYS 60
+/* 1 when year y has a fixture block in memory (the chain +0x112c from the manager, year +0x1130, as foreign.c
+ * year_block): 0x5ae6a0 goes through 0x5abf10, which for a year not in memory saves and frees another block or makes a
+ * new one (0x5aa2d0, 0x5abf5e). A leg dated in the year before (the past-date move 0x5aa729) can ask for such a year. */
+static int year_in_memory(int y)
+{
+    uint32_t b = rd32(g_mem, FIXTURES);
+    for (int n = 0; readable(b) && n < 100; b = rd32(g_mem, b + 0x112cu), n++)
+        if ((int16_t)rd16(g_mem, b + 0x1130u) == y) return 1;
+    return 0;
+}
+
+static int other_leg(uint32_t fix, int y, int d, int forward, int *ld)
+{
+    uint32_t manager = rd32(g_mem, FIXTURES);
+    if (!readable(manager) || !year_in_memory(y)) return 0;
+    int code = (int16_t)rd16(g_mem, fix + FIX_CODE), want = forward ? code + 1 : code - 1;
+    uint32_t comp = rd32(g_mem, fix), h = rd32(g_mem, fix + FIX_HOME_CLUB), w = rd32(g_mem, fix + FIX_AWAY_CLUB);
+    int types = (int8_t)g_mem[TYPE_COUNT];
+    if (types < 2 || types > 40) types = 2;
+    for (int k = forward ? 1 : 0; k <= LEG_DAYS && !rt_unwinding; k++) {
+        int day = forward ? d + k : d - k;
+        if (day < 0 || day >= days_in(y)) break;
+        for (int slice = 0; slice < 3 && !rt_unwinding; slice++)
+            for (int type = 0; type < types && !rt_unwinding; type++) {
+                uint32_t esp = cpu.esp;
+                cpu.esp -= 16;
+                uint32_t date = cpu.esp;
+                wr16(g_mem, date, (uint16_t)day);
+                wr16(g_mem, date + 2, (uint16_t)y);
+                wr32(g_mem, date + 4, 0);
+                uint32_t a[3] = {date, (uint32_t)slice, (uint32_t)type};
+                uint32_t list = call_this(DAY_LIST, manager, 3, a);
+                if (rt_unwinding) return 0;
+                cpu.esp = esp;
+                for (uint32_t node = readable(list) ? rd32(g_mem, list + 2) : 0, n = 0; readable(node) && n < 4000;
+                     node = rd32(g_mem, node + 6), n++) {
+                    uint32_t f = rd32(g_mem, node);
+                    if (!readable(f) || rd32(g_mem, f) != comp || (int16_t)rd16(g_mem, f + FIX_CODE) != want) continue;
+                    uint32_t fh = rd32(g_mem, f + FIX_HOME_CLUB), fw = rd32(g_mem, f + FIX_AWAY_CLUB);
+                    if ((fh == h && fw == w) || (fh == w && fw == h)) {
+                        *ld = day;
+                        return 1;
+                    }
+                }
+            }
+    }
+    return 0;
+}
+
 void o_005ab510(void);
 
 RT_WRAP(005ab510, fixture_new_date)
@@ -299,7 +384,23 @@ RT_WRAP(005ab510, fixture_new_date)
         last_year = round_year, last = round_day;
     else
         cup_tie = 0;
-    if (SITES[site].cup_only && !cup_tie) return;
+    /* A leg stays before the other leg of its tie (item 90; the bounds above are later days). */
+    int variant = leg_variant(fix);                         /* 3 a first leg, 4 a second leg */
+    int leg_year = year, leg_day, leg = variant == 3 && other_leg(fix, year, day, 1, &leg_day) && !rt_unwinding;
+    int prev_year = year, prev_day, prev = variant == 4 && !rt_unwinding && other_leg(fix, year, day, 0, &prev_day);
+    if (rt_unwinding) return;
+    if (test_mode())
+        fprintf(stderr, "recomp: fixtures: test: other leg %d (day %d of %d), previous leg %d (day %d of %d); comp %d "
+                        "code %d clubs %d %d\n", leg, leg ? leg_day : -1, leg ? leg_year : -1, prev, prev ? prev_day : -1,
+                prev ? prev_year : -1, (int32_t)rd32(g_mem, fix), (int16_t)rd16(g_mem, fix + FIX_CODE),
+                (int32_t)rd32(g_mem, fix + 0x10u), (int32_t)rd32(g_mem, fix + 0xcu));
+    if (SITES[site].cup_only && !cup_tie && !leg) return;
+    if (leg && (last < 0 || before(leg_year, leg_day, last_year, last) || (leg_year == last_year && leg_day == last))) {
+        last_year = leg_year, last = leg_day;
+        cup_tie = 0;            /* the other leg bounds it: no fallback past it */
+    } else {
+        leg = 0;
+    }
     if (last < 0) return;
     uint8_t new_slice = g_mem[fix + FIX_SLICE];
     if (before(new_year, new_day, last_year, last)) return;
@@ -314,7 +415,8 @@ RT_WRAP(005ab510, fixture_new_date)
         if (free_day(manager, fix, y, d)) {
             fprintf(stderr, "recomp: fixtures: a match of %.40s moves from day %d of %d to day %d of %d, before its "
                             "%s on day %d (the %s move gave day %d of %d)\n",
-                    name, day, year, d, y, cup_tie ? "next round" : "season change", last, SITES[site].what,
+                    name, day, year, d, y, leg ? "other leg" : cup_tie ? "next round" : "season change", last,
+                    SITES[site].what,
                     new_day, new_year);
             return;
         }
@@ -333,9 +435,21 @@ RT_WRAP(005ab510, fixture_new_date)
         wr16(g_mem, fix + FIX_YEAR, (uint16_t)new_year);
         wr16(g_mem, fix + FIX_DAY, (uint16_t)new_day);
         g_mem[fix + FIX_SLICE] = new_slice;
-        fprintf(stderr, "recomp: fixtures: a match of %.40s goes to day %d of %d after its season change on day %d "
+        fprintf(stderr, "recomp: fixtures: a match of %.40s goes to day %d of %d after its %s on day %d "
                         "(no free day before it, the old day %d of %d is not in the future)\n",
-                name, new_day, new_year, last, day, year);
+                name, new_day, new_year, leg ? "other leg" : "season change", last, day, year);
+        return;
+    }
+    /* A kept date on or before the previous leg of its tie would put the legs out of order (item 90): the first
+     * leg was moved to this day while this second leg was not yet stored. The match then takes the move of 0x5ab510,
+     * which lies after its old date, as the original would. */
+    if (prev && !before(prev_year, prev_day, year, day)) {
+        wr16(g_mem, fix + FIX_YEAR, (uint16_t)new_year);
+        wr16(g_mem, fix + FIX_DAY, (uint16_t)new_day);
+        g_mem[fix + FIX_SLICE] = new_slice;
+        fprintf(stderr, "recomp: fixtures: a match of %.40s goes to day %d of %d after its %s on day %d (its first leg "
+                        "is on day %d of %d, its old day %d of %d)\n",
+                name, new_day, new_year, leg ? "other leg" : "season change", last, prev_day, prev_year, day, year);
         return;
     }
     wr16(g_mem, fix + FIX_YEAR, (uint16_t)year);
@@ -348,9 +462,9 @@ RT_WRAP(005ab510, fixture_new_date)
     }
     kept = fix;
     kept_site = site;
-    fprintf(stderr, "recomp: fixtures: a match of %.40s stays on day %d of %d (no free day before its season change "
+    fprintf(stderr, "recomp: fixtures: a match of %.40s stays on day %d of %d (no free day before its %s "
                     "on day %d; the %s move gave day %d of %d)\n",
-            name, day, year, last, SITES[site].what, new_day, new_year);
+            name, day, year, leg ? "other leg" : "season change", last, SITES[site].what, new_day, new_year);
 }
 
 /* The moves by one day that set the date with no call of 0x5ab510 (den-stall-2, the maintainer under O259):
