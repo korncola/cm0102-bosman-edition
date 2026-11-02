@@ -1,6 +1,7 @@
 /* The editions of the club cups of the rules table (0.6.2 slice 9a): season_club_editions.h. The date reader and the
  * edition of a row come from season_club_cups.c (0.6.0 part 26c), unchanged. */
 #include "season_club_editions.h"
+#include "season_uefa_days.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -270,6 +271,76 @@ const SeasonRule *season_club_world_row(const char *file, int s)
     if (s <= last->season) return r;                    /* inside the table: its own row */
     const SeasonRule *held = latest_row(file, last->season, 1);
     return held && (s - held->season) % SEASON_CWC_CYCLE == 0 ? held : r;
+}
+
+/* ---- The rounds (from season_club_cups.c, 0.6.0 part 26c; the FIFA days from 0.6.2 open item 95) ---- */
+
+int season_club_plan_knockout(const SeasonClubEdition *e, int n, SeasonClubRound *r)
+{
+    int count = 0;
+    int last = e->last + (e->last_year > e->year ? 365 + season_club_is_leap(e->year) : 0);
+    int p = 1;
+    while (p * 2 <= n) p *= 2;
+    int teams = p;
+    if (n > p) r[count++] = (SeasonClubRound){0x14, 2 * (n - p), n - p, 2 * (n - p), 0, e->legs, 0};
+    for (; teams >= 2; teams /= 2) {
+        int fresh = count == 0 ? teams : (n > p && count == 1 ? 2 * p - n : 0);
+        int first = count == 1 && n > p ? 2 * (n - p) : 0;
+        int id = teams == 2 ? 0x96 : teams == 4 ? 0x82 : teams == 8 ? 0x78 : 0x14;
+        r[count++] = (SeasonClubRound){id, teams, teams / 2, fresh, first, teams == 2 ? e->final_legs : e->legs, 0};
+    }
+    /* Days: the final (its first leg) on the last day, or 7 days before for two legs; the rounds before it from
+     * the first day, evenly. */
+    int final_day = last - (r[count - 1].legs == 2 ? 7 : 0);
+    for (int i = 0; i < count; i++)
+        r[i].match = count == 1 ? e->first : i == count - 1 ? final_day : e->first + i * (final_day - e->first) / (count - 1);
+    if (count == 1 && r[0].legs == 2 && last > e->first) r[0].match = e->first;
+    return count;
+}
+
+int season_club_second_leg(const SeasonClubEdition *e, const SeasonClubRound *r, int count)
+{
+    if (r->legs != 2) return 0;
+    return count == 1 && e->last > e->first ? e->last - e->first : 7;
+}
+
+/* 1 when day doy of year y (it may lie before or after the year) meets a FIFA day. */
+static int meets_fifa(int y, int doy)
+{
+    while (doy < 0) doy += 365 + season_club_is_leap(--y);
+    while (doy >= 365 + season_club_is_leap(y)) doy -= 365 + season_club_is_leap(y++);
+    int m, d;
+    season_from_day_of_year(y, doy, &m, &d);
+    return season_fifa_meets(y, m, d);
+}
+
+int season_club_plan_rounds(const char *comp, const SeasonClubEdition *e, int n, SeasonClubRound *r)
+{
+    int count = 0;
+    int last = e->last + (e->last_year > e->year ? 365 + season_club_is_leap(e->year) : 0);
+    if (!strcmp(comp, "fifa_intercontinental_cup") && n == 6) {
+        /* Club list: OFC, AFC, CAF, CONMEBOL, CONCACAF, UEFA (pick_intercontinental). The play-off of OFC and AFC,
+         * then the African-Asian-Pacific Cup and the Derby of the Americas with CAF, CONMEBOL and CONCACAF new
+         * (the play-off winner takes the empty slot), the Challenger Cup, the final with UEFA new. */
+        int span = last - e->first;
+        r[count++] = (SeasonClubRound){0x14, 2, 1, 2, 0, 1, e->first};
+        r[count++] = (SeasonClubRound){0x78, 4, 2, 3, 2, 1, e->first + span / 3};
+        r[count++] = (SeasonClubRound){0x82, 2, 1, 0, 0, 1, e->first + 2 * span / 3};
+        r[count++] = (SeasonClubRound){0x96, 2, 1, 1, 5, 1, last};
+    } else {
+        count = season_club_plan_knockout(e, n, r);
+    }
+    /* Open item 95: the players of a club are on duty from the day before their side's match to the day after
+     * (NationalTeams::get_international_duty_club 0x7757d0), so a match next to a FIFA day loses them. Each round
+     * (both legs) moves on to its first day that meets none, after the round before it and its draw. */
+    int after = -1000;
+    for (int i = 0; i < count; i++) {
+        int gap = season_club_second_leg(e, &r[i], count), m = r[i].match < after ? after : r[i].match;
+        for (int k = 0; k < 21 && (meets_fifa(e->year, m) || (gap && meets_fifa(e->year, m + gap))); k++) m++;
+        r[i].match = m;
+        after = m + gap + 2;                    /* the next round's draw on the day after, its match the day after that */
+    }
+    return count;
 }
 
 /* ---- The Libertadores places ---- */
