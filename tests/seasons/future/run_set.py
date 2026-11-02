@@ -90,7 +90,6 @@ SETS = {"release": {"release", "nightly"}, "nightly": {"nightly"}, "quick": {"qu
 GAME_CODE = ["src", "tools/recomp", "tools/seasons", "docs/research/rules-0.6.0"]
 FOUR_GB = 4 << 30
 DAYS = 365.25
-RESULT_CHECKS = {"same-final"}               # checks that depend on real results, not on Tier A's instant results
 SAVE_NAME = "samesave.sav"                    # the save of a leg (smoke_run.SAVE_NAME)
 SWITCHES = ("RECOMP_TIER_A", "RECOMP_DATE_JUMP", "RECOMP_TEST_EXTRA")
 SAVE_ON = 200                                 # every leg saves on day 200 (from 0, about 20 July) after its last season
@@ -193,7 +192,7 @@ class Checker:
             faults += sick
         faults += [("save-part", n, game.date[0], "the size does not fit its count, not read") for n in game.unread]
         if tier == "A":             # a check of real results counts only in Tier B (spec, Decisions: test switches)
-            faults = [f for f in faults if f[0] not in RESULT_CHECKS]
+            faults = hc.tier_a_faults(faults)
         return game, faults, summary, rows
 
 

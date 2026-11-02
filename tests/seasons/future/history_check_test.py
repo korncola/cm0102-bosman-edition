@@ -504,6 +504,12 @@ def main():
         bad.append(f"known run: exit code {code} with only known faults\n{out}")
 
     # Changing rules off: only the nation changes up to the start season are due.
+    # --tier-a: the same save as a Tier A game has no same-final fault (a check of real results), and the rest stays.
+    run([sav, "--out", work, "--label", "tier-a", "--known", empty, "--nations", nations, "--tier-a"])
+    plain_faults, tier_a = set(faults(work, "plain")), set(faults(work, "tier-a"))
+    if not any(f[0] == "same-final" for f in plain_faults) or tier_a != {f for f in plain_faults if f[0] != "same-final"}:
+        bad.append(f"--tier-a: faults {sorted(tier_a ^ {f for f in plain_faults if f[0] != 'same-final'})} differ")
+
     off = os.path.join(work, "off.sav")
     write_sav(off, records(changing=0)[0])
     # The association limit of the season rules: a fault with changing rules on, none in the base game (lead, 1 Nov).
