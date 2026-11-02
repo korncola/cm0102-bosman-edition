@@ -17,7 +17,8 @@ CALLBACK_FILES = ("picker.c", "assistant.c", "commentary.c", "holiday_next.c", "
                   "season_change.c", "season_kind_club_world.c", "season_comps.c", "season_bra_states.c",
                   "season_super_cups.c", "season_new_cups.c", "season_cup_groups.c",
                   "season_club_cups.c", "season_playoffs.c", "season_nl.c", "season_nl_euro.c", "season_nl_wc.c",
-                  "season_gold_cup.c", "season_divisions.c", "season_tur_groups.c", "screen_sweep.c")
+                  "season_gold_cup.c", "season_divisions.c", "season_tur_groups.c", "screen_sweep.c",
+                  "season_national_fill.c")
                                 # in src/recomp_rt/win
 
 # address: (bytes of the first eight, name)
@@ -31,6 +32,8 @@ CALLBACKS = {
     0x68D280: ("8b4102568b742408", "LLIST::remove_node (node), ret 4"),
     # O260 A15 (call_up_news.c): the repeats of the national squads before the call-up news.
     0x76C060: ("51535532c0565788", "national_teams_remove_duplicate_squad_entries (nation), ret 4"),
+    # Open item 89 (season_national_fill.c): a player leaves a national squad as the original drops him.
+    0x896C60: ("81ec0c020000538b", "drop a player from the stored selections (side, staff, flag, 1)"),
     # Slice 21c (season_super_cups.c): the clubs and rounds of the super cups.
     0x521E60: ("8b4c24148b442418", "cup_set_round_draw_date (table, round, day, month, year+, weekday, year), cdecl"),
     0x521EB0: ("8b4c24148b442418", "cup_set_round_match_date (table, round, day, month, year+, weekday, slot, year, venue)"),
