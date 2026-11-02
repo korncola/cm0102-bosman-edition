@@ -152,7 +152,9 @@ int main(int argc, char **argv)
                         CHECK(0, "%s %d round %d: no match on %d.%d.%d (a FIFA day or the day beside it)",
                               all[c]->comp, y, i, d, m, yy);
                 }
-                if (r[i].match <= end && bad_days++ < 5) CHECK(0, "%s %d round %d after the round before", all[c]->comp, y, i);
+                /* round_table draws a round on the day after the last leg before it, so its match comes 2 days on */
+                if (r[i].match < end + 2 && bad_days++ < 5)
+                    CHECK(0, "%s %d round %d at least 2 days after the round before", all[c]->comp, y, i);
                 end = r[i].match + gap;
             }
         }
