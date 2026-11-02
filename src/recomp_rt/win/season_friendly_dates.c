@@ -343,10 +343,12 @@ static int finals_busy(uint32_t a, uint32_t b, int y, int doy)
     return 0;
 }
 
-/* 1 when every day from d + 1 to c is a FIFA day (doys): c lies in the window that holds d or starts the day after
- * it. The last matchday of a stage is its last match day (end_day), so the stage bound alone kept matchday 10 of the
- * 2030 UEFA groups from 16 November 2029 off 18 to 20 November, the rest of its window, when side_near refused 16
- * and 17 (matchday 9 on 15 November): the search went back to 12 June, before matchday 5. */
+/* 1 when every day from e + 1 to c is a FIFA day (doys): c lies in the window that holds day e, its stage's last
+ * match day, or starts the day after it. The stage bound alone sent qualifiers of a stage's last window back to an
+ * earlier window: matchday 10 of the 2030 UEFA groups (16 November 2029, the stage's last day) could not take 18 to
+ * 20 November when side_near refused 16 and 17 (matchday 9 on 15 November), and in a 2098 date jump matchday 9 of
+ * the 2102 qualifying (12 November 2101) could not take the window of 17 November, the day after its stage's last
+ * day; both went back to June, before matchday 5. */
 static int window_from(const int *doys, int n, int d, int c)
 {
     for (int day = d + 1; day <= c; day++) {
@@ -363,9 +365,9 @@ static int duty_ties(uint32_t n, uint32_t m, int y, int d);
  * year, 2 or more days after today, with no other match of the two sides within CLASH_DAYS of it (side_near; self:
  * the fixture that moves, when it is stored) and no continental club tie within a day of it whose club holds more
  * than two of the nations' players (duty_ties: the duty of 0x7757d0 reaches the day before and after), not after
- * day ey/ed (its stage's last match day; ey 0: none) unless in the FIFA window of d (window_from), and not in the
- * days of a final of either side's confederation; d when it is on such a day already. With no such FIFA day, and d
- * in a final's days: the nearest such day that is not a FIFA day (open item 55). -1 when none is free. */
+ * day ey/ed (its stage's last match day; ey 0: none) unless in the FIFA window of that day (window_from), and not
+ * in the days of a final of either side's confederation; d when it is on such a day already. With no such FIFA
+ * day, and d in a final's days: the nearest such day that is not a FIFA day (open item 55). -1 when none is free. */
 static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, int ed, uint32_t self)
 {
     int doys[FIFA_DOYS_MAX], n = fifa_doys(y, doys, FIFA_DOYS_MAX);
@@ -379,8 +381,8 @@ static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, in
         for (int sign = -1; sign <= 1; sign += 2) {
             int c = d + sign * dist, ok = 0;
             if (c < 0 || c >= days_in(y) || (y == today_year && c < today + 2) || y < today_year) continue;
-            /* past its stage's last day: only within the FIFA window that holds d or starts the day after it */
-            if (ey && (y > ey || (y == ey && c > ed)) && c > d && !window_from(doys, n, d, c)) continue;
+            /* past its stage's last day: only within the FIFA window that holds that day or starts the day after */
+            if (ey && (y > ey || (y == ey && c > ed)) && c > d && !(y == ey && window_from(doys, n, ed, c))) continue;
             for (int k = 0; k < n; k++) ok |= doys[k] == c;
             if (!ok || finals_busy(home, away, y, c) || side_busy(home, away, y, c) ||
                 side_near(home, away, y, c, self) || duty_ties(na, nb, y, c))
@@ -465,7 +467,8 @@ static void stay_info(uint32_t rec, uint32_t home, uint32_t away, int d, int y, 
     for (int k = 0; k < n && !rt_unwinding; k++) {
         int c = doys[k];
         if (c == d || (y == today_year && c < today + 2) || y < today_year) continue;
-        if (end_year && (y > end_year || (y == end_year && c > end_day)) && c > d && !window_from(doys, n, d, c))
+        if (end_year && (y > end_year || (y == end_year && c > end_day)) && c > d &&
+            !(y == end_year && window_from(doys, n, end_day, c)))
             continue;
         reach++;
         busy_why[0] = 0;
