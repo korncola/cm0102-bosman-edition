@@ -236,11 +236,14 @@ class Game:
             r = nat[i * NATION:(i + 1) * NATION]
             self.nations[s32(r, 0)] = (text(r, 4), self.continents.get(s32(r, 0x71), ""))
         self.clubs, self.sides, self.side_names = {}, set(), []
+        self.divisions = {}                       # club id: (division, last division, European mark, last place)
         for part in ("club.dat", "nat_club.dat"):
             data = sav.read(part)
             for i in range(len(data) // CLUB):
                 r = data[i * CLUB:(i + 1) * CLUB]
                 self.clubs[s32(r, 0)] = (text(r, 4), s32(r, 0x53))
+                if part == "club.dat" and len(r) >= 0x1df:
+                    self.divisions[s32(r, 0)] = (s32(r, 0x57), s32(r, 0x5b), s32(r, 0x1db), r[0x5f])
                 if part == "nat_club.dat":
                     self.sides.add(s32(r, 0))
                     self.side_names.append((text(r, 4), s32(r, 0x53)))
@@ -252,7 +255,8 @@ class Game:
                 name = text(r, 4)
                 if name:
                     self.comps[s32(r, 0)] = {"kind": kind, "name": name, "short": text(r, 0x38, 26),
-                                             "continent": s32(r, 0x59), "nation": s32(r, 0x5d)}
+                                             "continent": s32(r, 0x59), "nation": s32(r, 0x5d),
+                                             "level": struct.unpack_from("<h", r, 0x69)[0]}
         self.rows = []
         for part in ("club_comp_history.dat", "nation_comp_history.dat"):
             data = sav.read(part)
@@ -504,7 +508,48 @@ def check(game, rules=None, changes=()):
         elif edition and edition != ENDED_YEAR and cyc and edition > save_year + cyc + 1:
             faults.append(("next-edition", name, edition, f"next edition {edition}, the save is in {save_year}, "
                                                           f"cycle {cyc}"))
+    faults += euro_places(game, rules)
     return sorted(faults, key=lambda f: (f[1], f[0], f[2]))
+
+
+EURO_PLACE_MAX = 6      # the lowest league place with a Champions League place (5 in England 2025/26, one more for a
+                        # European Performance Spot); a title holder's place is not counted
+
+
+def euro_places(game, rules=None):
+    """[(check, competition, year, detail)]: euro-place, a club with a Champions League place whose division of the
+    last season is not its nation's top division, or whose last place there is below EURO_PLACE_MAX (the places come from the last season's table: Uefa_Seeding's
+    collect_european_clubs 0x904040 reads club +0x5b and +0x5f), unless it won a UEFA competition in the year of the
+    save (a Champions League or Europa League title holder's place). Read from 21 June (day 172, the day after the
+    places, Uefa_Seeding on the UEFA cups' update day 171) to the end of August of the save's year (open item 94: a Spanish season change held for the Segunda's play-off came after the places,
+    and the Champions League took Segunda clubs and the bottom of the Primera)."""
+    rules = rules or Rules()
+    if not game.divisions or not 172 <= game.date[1] <= 243:
+        return []
+    year = game.date[0]
+    cl = {cid for cid, c in game.comps.items() if c["kind"] == "club" and rules.key(c["name"]) == "uefa_cl"}
+    holders = {a for cid, y, a, *_ in game.rows if y == year and rules.key(game.comps[cid]["name"]) in
+               ("uefa_cl", "uefa_el")}
+    top = {}                                  # nation id: the highest level of its divisions that hold clubs
+    for div, last, mark, place in game.divisions.values():
+        c = game.comps.get(div)
+        if c and c["kind"] == "club" and c["nation"] >= 0:
+            top[c["nation"]] = max(top.get(c["nation"], -1), c["level"])
+    faults = []
+    for club, (div, last, mark, place) in sorted(game.divisions.items()):
+        name, nation = game.clubs.get(club, ("", -1))
+        c = game.comps.get(last)
+        if mark not in cl or club in holders or not c or c["nation"] not in top:
+            continue
+        nname = game.nations.get(nation, ('', ''))[0]
+        if c["level"] < top[c["nation"]]:
+            faults.append(("euro-place", game.comps[mark]["name"], year,
+                           f"{name} ({nname}): a place from the last division {c['name']}, not the nation's top "
+                           f"division"))
+        elif place > EURO_PLACE_MAX:
+            faults.append(("euro-place", game.comps[mark]["name"], year,
+                           f"{name} ({nname}): a place from position {place} of {c['name']}"))
+    return faults
 
 
 def read_nations(path):

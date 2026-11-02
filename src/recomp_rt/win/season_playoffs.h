@@ -29,4 +29,16 @@ void season_playoffs_rules(uint32_t obj);
 int season_playoffs_hold(void);
 void season_playoffs_release(int held);
 
+/* Before the European places (collect_european_clubs 0x904040, season_uefa_seeding.c), open item 94: Uefa_Seeding
+ * reads each club's division and place of the last season (club +0x5b, +0x5f), which the season change writes
+ * (League::record_final_positions 0x68aa30, vtable +0xa4, from the chain 0x689c20 or a class's own, SpaFirst
+ * 0x850700). An entry that waits for a play-off past its update day (above) changes its season after the places:
+ * in a 2021 game the European places came on day 171 of 2022 and Spain's change on day 176, so the Champions League
+ * took the Segunda's top clubs and the bottom of the Primera. For each waiting entry whose top league has not changed
+ * its season and whose table is complete (check_complete, vtable +0x10), this writes the final places of that league
+ * and of each division below it along +0x20, as the chain 0x689c20 does (SpaFirst 0x850700 also writes its Segunda B
+ * groups, which no European place reads). Only a play-off stage is left; the chain writes the same values again at the
+ * change. Only in a season game with changes. */
+void season_playoffs_final_places(void);
+
 #endif
