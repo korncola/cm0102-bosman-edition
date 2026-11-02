@@ -119,6 +119,12 @@ const SeasonNlGoldCup *season_intl_gold_edition(int year);
  * has a Gold Cup object (season_gold_cup_busy). */
 int season_intl_gold_busy(int y, int doy);
 
+/* The first group day of the finals of class cls in edition year `year` that the game plays (the days of
+ * season_intl_finals_busy), as days from 1 January 1970 in *day; 0 when the class plays no finals that year. */
+int season_intl_finals_first_day(uint32_t cls, int year, long *day);
+/* Day doy (0 is 1 January) of year y as days from 1 January 1970. */
+long season_intl_abs_day(int y, int doy);
+
 /* The source file of a class of the code sites ("?" for none). */
 const char *season_intl_class_file(uint32_t cls);
 
