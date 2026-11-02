@@ -65,7 +65,8 @@ days, or after a final: a day of one match and then 25 days or more with none; i
 match). The list gives each team's route in: title holder (the winner of
 the edition before), host, the winner of a route competition, a winner or place 2 or 3 in the history of the
 edition's year or the year before, else "qualifier". Checks, for the editions whose last match is before the
-save date (a confederation check for every edition):
+save date and that no longer run (the last edition of a competition with a match in the 14 days before the save date
+may go on: the July qualifying of a Champions League, open item 70; a confederation check for every edition):
     entrant-confed entrants from another confederation than the rules give (also the short name's); in the World
                   Cup qualifying up to 2 teams of each other confederation pass (the play-off between
                   confederations); a nation with a due move to a confederation of the competition passes, and so
@@ -150,6 +151,7 @@ PART = re.compile(r"^(.*)_(\d+)\.tmp$")
 SEASON = re.compile(r"^\d{4}(-\d{2})? ")
 FIXTURES = re.compile(r"^fixtures_\d+\.tmp$")
 FIXTURE = 0x4F
+RUNNING = 14                                  # days: an edition with a match this close to the save date may go on
 GAP = 150                                     # days between two editions, at the least (the Champions League has
                                               # a winter break of 69 days, 105 in the World Cup year 2022)
 FINAL_GAP = 25                                # days with no match after a final, at the least
@@ -719,8 +721,10 @@ def entrants(game, rules, access, changes=()):
         if short and short.get("key") != key and short.get("confs"):
             confs.append((comp["short"], short["confs"]))
         eds = editions_of(fx)
-        for year, first, last, teams in eds:
-            done = last <= save_day
+        for n, (year, first, last, teams) in enumerate(eds):
+            # the last edition with a match in the RUNNING days before the save date may still run: the qualifying
+            # of a Champions League in July, which the title holder enters later in the group stage (open item 70)
+            done = last <= save_day and not (n == len(eds) - 1 and save_day - last < RUNNING)
             want, host_names, routes = access.rule(key, year) if key else (None, [], [])
             won = {r: winners(r, year) for r in routes if r != "holder"}
             holder = "holder" in routes

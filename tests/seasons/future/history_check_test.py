@@ -41,7 +41,8 @@ COMPS = [(0, "Aland League", 2, 0, "club"), (1, "Euro Super Cup", 2, -1, "club")
          (12, "Asia Finals", 1, -1, "nation"), (13, "Americas Finals", 3, -1, "nation"),
          (14, "Hatay Cup", 5, -1, "nation"), (15, "Nations Shield", 1, -1, "nation"),
          (16, "Champions Match", 2, -1, "club"), (17, "Qual Zone", 1, -1, "nation"),
-         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club"), (20, "Champions Cup", 2, -1, "club")]
+         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club"), (20, "Champions Cup", 2, -1, "club"),
+         (21, "Holders Cup", 2, -1, "club")]
 
 
 def side(n):
@@ -57,6 +58,7 @@ def history():
         rows.append((1, y, 2 + y % 2, 0 + y % 2, -1, -1))
     for y in (2026, 2027, 2028):
         rows.append((1, y, 0, 3, -1, -1))
+    rows.append((21, 2039, 6, 7, -1, -1))                             # Holders Cup: Aland Club 0 holds the title
     want.add(("same-final", "Euro Super Cup", 2028))
     for y in range(2029, 2041):
         rows.append((1, y, y % 3, 3, -1, -1))
@@ -123,7 +125,8 @@ FIXTURES_2039 = [(16, 0, 3, 220), (16, 4, 0, 222), (1, 0, 1, 100), (13, side(6),
                  (15, side(0), side(1), 130), (19, 5, 0, 140)] + \
     [(20, 6 + k, 7 + k, 250 + 7 * k) for k in range(0, 8, 2)]   # Champions Cup 2039/40: 8 Aland clubs, the limit 7
 FIXTURES_2040 = [(16, 0, 5, 150), (16, 3, 0, 250), (1, 0, 3, 100),   # the match of day 250 is after the save date
-                 (19, 4, 0, 140)]
+                 (19, 4, 0, 140),
+                 (21, 8, 9, 187)]   # Holders Cup 2040 still runs (open item 70): its holder enters later, no fault
 ENTRANT_FAULTS = {("entrant-count", "World Finals", 2038), ("entrant-host", "World Finals", 2038),
                   ("entrant-route", "Champions Match", 2039), ("entrant-route", "Champions Match", 2040),
                   ("entrant-confed", "Champions Match", 2040), ("entrant-holder", "Euro Super Cup", 2040),
@@ -136,7 +139,8 @@ ENTRANT_FAULTS_PLAIN = {("entrant-dead", "Qual Zone", 2039),       # found with 
 TABLE = '{"world", 2037, 2038, 4, 0, 2038, 6, 1, "Carpania/Karpania", "row-1"},\n'
 ACCESS = ("comp\tfrom\tto\tteams\troutes\tsource\nchamp\t2030\tnone\t2\twinner:aland;winner:esc\tmade up\n"
           "pacific\t2030\tnone\t2\twinner:durania_cup;winner:aland\tmade up\n"
-          "esc\t2030\tnone\t\tholder\tmade up\n")
+          "esc\t2030\tnone\t\tholder\tmade up\n"
+          "holders\t2030\tnone\t\tholder\tmade up\n")
 
 
 def fixture_part(fixtures):
@@ -426,13 +430,14 @@ def main():
                 "uefa_cl\tChampions Cup\tclub_continental\tUEFA\t0\t1\t2041\tnone\n"
                 "wc_qual_zone\tQual Zone\tintl_qual\tAFC\t0\t4\t2041\tnone\n"
                 "durania_cup\tDurania Cup\tdomestic_cup\tDurania\t0\t1\t2031\t2030\n"
-                "pacific\tPacific Bowl\tsuper_cup\tAFC|UEFA\t0\t1\t2041\tnone\n")
+                "pacific\tPacific Bowl\tsuper_cup\tAFC|UEFA\t0\t1\t2041\tnone\n"
+                "holders\tHolders Cup\tclub_continental\tUEFA\t0\t1\t2041\tnone\n")
     names = os.path.join(work, "names.tsv")
     with open(names, "w", encoding="utf-8") as f:
         f.write("# a note line\npattern\tcomp\nAmericas Finals\tamericas\n(The )?World Finals\tworld\n"
                 "Euro Super Cup\tesc\nNations Shield\tshield\nAsia Shield\tasia_shield\n"
                 "Champions Match\tchamp\nAland League\taland\nQual Zone\twc_qual_zone\n"
-                "Durania Cup\tdurania_cup\nPacific Bowl\tpacific\nChampions Cup\tuefa_cl\n")
+                "Durania Cup\tdurania_cup\nPacific Bowl\tpacific\nChampions Cup\tuefa_cl\nHolders Cup\tholders\n")
     known = os.path.join(work, "known.tsv")
     with open(known, "w", encoding="utf-8") as f:
         f.write("check\tcompetition\tyear\tnote\nduplicate\tEuro Finals\t*\tplanted\n")
