@@ -150,9 +150,18 @@ void season_intl_euro_fill(uint32_t self);
  * drawn (0.6.2 slice 5: the rows after the table are drawn 5 years before the finals). */
 int season_intl_host_ids(uint32_t key, int year, int ids[6]);
 
-/* The original's host rows (count rows of 0x22 bytes at rows, season_intl_rows.c): host fields 3 to 6 of each
+/* A host row (season_intl.c): 0x22 bytes, six host fields (nation ids) from +6, the choice at +0x1e (0xfd fixed).
+ * The constructor HostCountry 0x5f97c0 makes 57 rows (0x5f98bd) before init_default_table 0x5f9970 fills them. */
+#define SEASON_INTL_ROW_SIZE 0x22u
+#define SEASON_INTL_ROW_PAIRS 0x6u
+#define SEASON_INTL_ROW_CHOICE 0x1eu
+#define SEASON_INTL_CHOICE_FIXED 0xfdu
+#define SEASON_INTL_ORIGINAL_ROWS 57
+
+/* The original's host rows (count rows at rows, season_intl_rows.c): the host fields after the first two of each
  * fixed row become -1, as HostCountry::init_default_table 0x5f9970 leaves them unset (0.6.2 open item 103). Gives
- * the count of rows changed. Only for rows that are all the original's: a row of the table may hold more hosts. */
+ * the count of rows changed. Only for the original's own table: a fixed row of the table (row_write) may hold
+ * more hosts. */
 int season_intl_rows_clean(uint8_t *rows, int count);
 
 /* ---- Hosts after the table (0.6.2 slice 5, decisions Q4, Q5, Q6, Q32; season_intl_rules.c) ---- */

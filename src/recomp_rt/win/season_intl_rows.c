@@ -12,18 +12,13 @@
 
 #include <string.h>
 
-#define ROW_SIZE 0x22
-#define ROW_PAIRS 0x6
-#define ROW_CHOICE 0x1e
-#define CHOICE_FIXED 0xfd
-
 int season_intl_rows_clean(uint8_t *rows, int count)
 {
     int changed = 0;
     for (int i = 0; i < count; i++) {
-        uint8_t *row = rows + (size_t)i * ROW_SIZE;
-        if (row[ROW_CHOICE] != CHOICE_FIXED) continue;
-        uint8_t *rest = row + ROW_PAIRS + 2 * 4, none[4 * 4];
+        uint8_t *row = rows + (size_t)i * SEASON_INTL_ROW_SIZE;
+        if (row[SEASON_INTL_ROW_CHOICE] != SEASON_INTL_CHOICE_FIXED) continue;
+        uint8_t *rest = row + SEASON_INTL_ROW_PAIRS + 2 * 4, none[4 * 4];
         memset(none, 0xff, sizeof none);
         if (!memcmp(rest, none, sizeof none)) continue;
         memcpy(rest, none, sizeof none);
