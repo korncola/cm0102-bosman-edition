@@ -169,7 +169,7 @@ HEALTH_FAULTS = {("no-youth", "Aland", 2040), ("empty-squad", "Borduria", 2040),
 # - Borduria Sport: YOUNG with staff 59 twice and 28 of Aland's: 8 young remain, no fault.
 # - Durania Stars: 49 of Aland's in 49 slots, not full: no fault.
 YOUNG = [30 + k for k in range(30) if 24 - k % 10 <= 21]
-FULL_SQUADS = {"Aland City": [0, 1, 2],                           # the duty clash of the Club Trophy
+FULL_SQUADS = {"Aland City": [1, 3, 5],                           # duty clash: 3 in Aland's squad (odd ids)
                "Carpania FC": list(range(30)) + list(range(20)),
                "Elbonia Rovers": list(range(29)) + YOUNG,
                "Borduria Sport": list(range(28)) + YOUNG + [59],

@@ -810,62 +810,56 @@ def entrants(game, rules, access, changes=()):
     return listing, faults + duty_clashes(game)
 
 
-DUTY_MIN = 3                                  # players of one nation at a club that make a duty clash (0x776fc0)
+DUTY_MIN = 3                                  # players of one club in the squad of a side that plays a day apart
 
 
 def duty_clashes(game):
     """[(check, competition, year, detail)]: duty-clash, a continental club match within one day of a match of a
-    senior national side whose nation has DUTY_MIN or more players in the squad of one of the two clubs (open item
-    93 of 0.6.2). The player is then on duty for his nation (NationalTeams::get_international_duty_club 0x7757d0
-    takes the side's fixtures from the day before to the day after, 0x77583d..0x775850), and a club with many of them
-    fields fewer than 11 (box match_eng.cpp 612 or 652). A continental club match: a competition with no nation and
-    two clubs, not a friendly. Squads: club.dat +0xd7, 50 staff ids (-1 for none); a player's nation staff.dat +0x1a. The senior side
-    of nation n is row n of nat_club.dat. The fixtures of the save are those still to be played, and of a 2001 game
-    with changing rules off none counts (the base game). One fault per competition and year, with the first case."""
-    if game.start == 2001 and not game.changing:
-        return []
+    national side that holds DUTY_MIN or more players of one of the two clubs in its squad (open item 93 of 0.6.2).
+    The player is then on duty for his side (NationalTeams::get_international_duty_club 0x7757d0 searches the
+    side's fixtures from the day before to the day after, 0x775842..0x7758a8), and a club with many of them fields
+    fewer than 11 (box match_eng.cpp 612 or 652). A continental club match: a competition with no nation and two
+    clubs, not a friendly. Squads: club.dat +0xd7, SLOTS staff ids (-1 for none); the national side of a player's
+    squad staff.dat +0x24 (the squads of the save date). Only fixtures still to be played, and none in the start
+    season of a 2001 game, which keeps the original's dates (season_friendly_dates.c keeps_original). One fault per
+    competition and year, with its first case."""
     sav = game.sav
     staff = sav.read("staff.dat") if "staff.dat" in sav.members else b""
-    nation_of = {s32(staff, o): s32(staff, o + 0x1a) for o in range(0, len(staff) - STAFF + 1, STAFF)}
+    side_of = {s32(staff, o): s32(staff, o + 0x24) for o in range(0, len(staff) - STAFF + 1, STAFF)}
     clubs = sav.read("club.dat")
-    squads = {}
+    called = {}                                   # club id: Counter of national side ids of its squad
     for o in range(0, len(clubs) - CLUB + 1, CLUB):
-        count = collections.Counter(nation_of.get(x) for x in struct.unpack_from("<50i", clubs, o + 0xD7) if x >= 0)
-        squads[s32(clubs, o)] = count
-    sides = sav.read("nat_club.dat")
-    senior = {}                                   # senior side id: nation id
-    for i, o in enumerate(range(0, len(sides) - CLUB + 1, CLUB)):
-        if i < len(game.nations):
-            senior[s32(sides, o)] = s32(sides, o + 0x53)
-    national = collections.defaultdict(list)      # day: [(side, nation)]
+        ids = struct.unpack_from(f"<{SLOTS}i", clubs, o + 0xD7)
+        called[s32(clubs, o)] = collections.Counter(side_of.get(x, -1) for x in ids if x >= 0)
+    first = datetime.date(game.start + 1, 7, 1).toordinal() if game.start == 2001 else 0
+    today = max(first, datetime.date(game.date[0], 1, 1).toordinal() + game.date[1] if game.date[0] > 1900 else 0)
+    national = collections.defaultdict(set)       # day: national side ids that play
     club_matches = []
-    today = datetime.date(game.date[0], 1, 1).toordinal() + game.date[1] if game.date[0] > 1900 else 0
     for cid, fx in fixtures(game).items():
         comp = game.comps.get(cid, {})
         for day, home, away in fx:
             if day < today:                       # played: its squads were others
                 continue
             for t in (home, away):
-                if t in senior:
-                    national[day].append((t, senior[t]))
-            if comp.get("nation", -1) < 0 and not FRIENDLY.match(comp.get("name", "")) and home in squads and \
-                    away in squads:
+                if t in game.sides:
+                    national[day].add(t)
+            if comp.get("nation", -1) < 0 and not FRIENDLY.match(comp.get("name", "")) and home in called and \
+                    away in called:
                 club_matches.append((day, cid, home, away))
     faults, seen = [], set()
     for day, cid, home, away in sorted(club_matches):
-        year = datetime.date.fromordinal(day).year
         name = game.comps[cid]["name"]
+        year = datetime.date.fromordinal(day).year
         if (name, year) in seen:
             continue
-        for d in (day - 1, day, day + 1):
-            hit = next(((c, game.club(side)[0], squads[c][n]) for side, n in national.get(d, ())
-                        for c in (home, away) if squads[c][n] >= DUTY_MIN), None)
-            if hit:
-                seen.add((name, year))
-                faults.append(("duty-clash", name, year, f"{game.club(hit[0])[0]} on "
-                                                         f"{datetime.date.fromordinal(day)} holds {hit[2]} players of "
-                                                         f"{hit[1]}, which plays on {datetime.date.fromordinal(d)}"))
-                break
+        hit = next(((c, side, d) for d in (day - 1, day, day + 1) for side in sorted(national.get(d, ()))
+                    for c in (home, away) if called[c][side] >= DUTY_MIN), None)
+        if hit:
+            c, side, d = hit
+            seen.add((name, year))
+            faults.append(("duty-clash", name, year, f"{game.club(c)[0]} on {datetime.date.fromordinal(day)} has "
+                                                     f"{called[c][side]} players in the squad of {game.club(side)[0]}, "
+                                                     f"which plays on {datetime.date.fromordinal(d)}"))
     return faults
 
 

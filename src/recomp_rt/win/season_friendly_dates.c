@@ -206,6 +206,26 @@ static int fifa_doys(int y, int *out, int max)
     return n;
 }
 
+/* The store's own list of the fixtures of day doy of year y, slice 0 to 2, fixture type (F_DAY_LIST, not a copy).
+ * The Date lies on the game stack for the call. */
+static uint32_t day_list(int y, int doy, int slice, int type)
+{
+    uint32_t saved_esp = cpu.esp;
+    cpu.esp -= 16;
+    uint32_t date = cpu.esp;
+    wr16(g_mem, date, (uint16_t)doy);
+    wr16(g_mem, date + 2, (uint16_t)y);
+    wr32(g_mem, date + 4, 0);
+    Cpu saved = cpu;
+    cpu.ecx = rd32(g_mem, FIXTURES);
+    uint32_t args[3] = {date, (uint32_t)slice, (uint32_t)type};
+    uint32_t list = rt_callback(F_DAY_LIST, 3, args);
+    if (rt_unwinding) return 0;
+    cpu = saved;
+    cpu.esp = saved_esp;
+    return list;
+}
+
 static int national_side(uint32_t club)
 {
     uint32_t clubs = rd32(g_mem, CLUBS);
@@ -231,19 +251,8 @@ static int side_busy(uint32_t a, uint32_t b, int y, int doy)
     if (types < 2 || types > 40) types = 2;
     for (int slice = 0; slice < 3 && !busy && !rt_unwinding; slice++)
         for (int type = 0; type < types && !busy && !rt_unwinding; type++) {
-            uint32_t saved_esp = cpu.esp;
-            cpu.esp -= 16;
-            uint32_t date = cpu.esp;
-            wr16(g_mem, date, (uint16_t)doy);
-            wr16(g_mem, date + 2, (uint16_t)y);
-            wr32(g_mem, date + 4, 0);
-            Cpu saved = cpu;
-            cpu.ecx = rd32(g_mem, FIXTURES);
-            uint32_t args[3] = {date, (uint32_t)slice, (uint32_t)type};
-            uint32_t list = rt_callback(F_DAY_LIST, 3, args);
+            uint32_t list = day_list(y, doy, slice, type);
             if (rt_unwinding) return 1;
-            cpu = saved;
-            cpu.esp = saved_esp;
             for (uint32_t node = readable(list) ? rd32(g_mem, list + 2) : 0, k = 0; readable(node) && k < 4000;
                  node = rd32(g_mem, node + 6), k++) {
                 uint32_t f = rd32(g_mem, node);
@@ -268,10 +277,12 @@ static int side_busy(uint32_t a, uint32_t b, int y, int doy)
 
 /* 1 when club a or club b has a match within CLASH_DAYS days of day doy of year y (not on doy itself), other than
  * the fixture self (route M moves a stored fixture, which still lies on its old day). The store treats a second
- * match of a club close to a stored one as a clash: its clash search takes the clubs' fixtures on the day itself
- * and the days 1 before and after (collect_day_clashes 0x5adba0 at 0x5adad5, 0x5adaf6, 0x5adb11), and 2 before and
- * after under a flag (0x5adab4, 0x5adb37), and add_fixture 0x5aa680 then moves the weaker match
- * (resolve_same_day_clash 0x5ae380, called at 0x5aa8c5) to a weekday off the FIFA days. The snap moved the two
+ * match of a club close to a stored one as a clash: add_fixture 0x5aa680 calls find_fixture_clashes 0x5ad780 with
+ * its flag 0 (0x5aa820, 0x5aa894), which takes the clubs' fixtures on the day itself, the day after and, below
+ * priority 0x17, the day before (collect_day_clashes 0x5adba0 at 0x5adb11, 0x5adaf6, 0x5adad5; 0x5ada79..0x5ada8d),
+ * and then moves the weaker match (resolve_same_day_clash 0x5ae380, called at 0x5aa8c5) to a weekday off the FIFA
+ * days. CLASH_DAYS 2 is wider than the store's day, so the two matchdays of a window lie 3 days apart or more, as the
+ * real ones do (Thursday and Sunday, Saturday and Tuesday). The snap moved the two
  * qualifiers of a window on their own to the nearest FIFA day: the 2030 UEFA qualifying took 15 November 2029 for
  * matchday 9 (13 November) and kept 16 November for matchday 10, a FIFA day; the store moved matchday 10 to
  * 21 November, the day before the Europa League's Thursday, and West Bromwich Albion fielded 9 there, its
@@ -290,19 +301,8 @@ static int side_near(uint32_t a, uint32_t b, int y, int doy, uint32_t self)
         else if (dd >= days_in(yy)) dd -= days_in(yy++);
         for (int slice = 0; slice < 3 && !rt_unwinding; slice++)
             for (int type = 0; type < types && !rt_unwinding; type++) {
-                uint32_t saved_esp = cpu.esp;
-                cpu.esp -= 16;
-                uint32_t date = cpu.esp;
-                wr16(g_mem, date, (uint16_t)dd);
-                wr16(g_mem, date + 2, (uint16_t)yy);
-                wr32(g_mem, date + 4, 0);
-                Cpu saved = cpu;
-                cpu.ecx = rd32(g_mem, FIXTURES);
-                uint32_t args[3] = {date, (uint32_t)slice, (uint32_t)type};
-                uint32_t list = rt_callback(F_DAY_LIST, 3, args);
+                uint32_t list = day_list(yy, dd, slice, type);
                 if (rt_unwinding) return 1;
-                cpu = saved;
-                cpu.esp = saved_esp;
                 for (uint32_t node = readable(list) ? rd32(g_mem, list + 2) : 0, k = 0; readable(node) && k < 4000;
                      node = rd32(g_mem, node + 6), k++) {
                     uint32_t f = rd32(g_mem, node);
@@ -343,12 +343,6 @@ static int finals_busy(uint32_t a, uint32_t b, int y, int doy)
     return 0;
 }
 
-/* The day a qualifier of club home v club away on day d of year y moves to: the nearest free FIFA day of the same
- * year with no other match of the two sides within CLASH_DAYS of it (side_near; self: the fixture that moves, when
- * it is stored), 2 or more days after today, not after day ey/ed (its stage's last match day; ey 0: none) unless in
- * the FIFA window of d (window_from), and not in the days of a final of either side's confederation; d when it is on
- * such a day already. With no such FIFA day, and
- * d in a final's days: the nearest such day that is not a FIFA day (open item 55). -1 when none is free. */
 /* 1 when every day from d + 1 to c is a FIFA day (doys): c lies in the window that holds d or starts the day after
  * it. The last matchday of a stage is its last match day (end_day), so the stage bound alone kept matchday 10 of the
  * 2030 UEFA groups from 16 November 2029 off 18 to 20 November, the rest of its window, when side_near refused 16
@@ -363,11 +357,22 @@ static int window_from(const int *doys, int n, int d, int c)
     return 1;
 }
 
+static int duty_ties(uint32_t n, uint32_t m, int y, int d);
+
+/* The day a qualifier of club home v club away on day d of year y moves to: the nearest free FIFA day of the same
+ * year, 2 or more days after today, with no other match of the two sides within CLASH_DAYS of it (side_near; self:
+ * the fixture that moves, when it is stored) and no continental club tie within a day of it whose club holds more
+ * than two of the nations' players (duty_ties: the duty of 0x7757d0 reaches the day before and after), not after
+ * day ey/ed (its stage's last match day; ey 0: none) unless in the FIFA window of d (window_from), and not in the
+ * days of a final of either side's confederation; d when it is on such a day already. With no such FIFA day, and d
+ * in a final's days: the nearest such day that is not a FIFA day (open item 55). -1 when none is free. */
 static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, int ed, uint32_t self)
 {
     int doys[FIFA_DOYS_MAX], n = fifa_doys(y, doys, FIFA_DOYS_MAX);
+    uint32_t na = rd32(g_mem, home + 0x53), nb = rd32(g_mem, away + 0x53);
     for (int k = 0; k < n; k++)                                           /* on a free FIFA day already */
-        if (doys[k] == d && !finals_busy(home, away, y, d) && !side_near(home, away, y, d, self))
+        if (doys[k] == d && !finals_busy(home, away, y, d) && !side_near(home, away, y, d, self) &&
+            !duty_ties(na, nb, y, d))
             return rt_unwinding ? -1 : d;
     int today_year = (int16_t)rd16(g_mem, GAME_DATE + 2), today = (int16_t)rd16(g_mem, GAME_DATE);
     for (int dist = 1; dist <= SNAP_DAYS && !rt_unwinding; dist++)
@@ -378,7 +383,7 @@ static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, in
             if (ey && (y > ey || (y == ey && c > ed)) && c > d && !window_from(doys, n, d, c)) continue;
             for (int k = 0; k < n; k++) ok |= doys[k] == c;
             if (!ok || finals_busy(home, away, y, c) || side_busy(home, away, y, c) ||
-                side_near(home, away, y, c, self))
+                side_near(home, away, y, c, self) || duty_ties(na, nb, y, c))
                 continue;
             return rt_unwinding ? -1 : c;
         }
@@ -431,19 +436,8 @@ static int duty_ties(uint32_t n, uint32_t m, int y, int d)
     for (int dd = d - 1; dd <= d + 1 && !rt_unwinding; dd++)
         for (int slice = 0; slice < 3 && !rt_unwinding; slice++)
             for (int type = 0; type < types && !rt_unwinding; type++) {
-                uint32_t saved_esp = cpu.esp;
-                cpu.esp -= 16;
-                uint32_t date = cpu.esp;
-                wr16(g_mem, date, (uint16_t)dd);
-                wr16(g_mem, date + 2, (uint16_t)y);
-                wr32(g_mem, date + 4, 0);
-                Cpu saved = cpu;
-                cpu.ecx = rd32(g_mem, FIXTURES);
-                uint32_t args[3] = {date, (uint32_t)slice, (uint32_t)type};
-                uint32_t list = rt_callback(F_DAY_LIST, 3, args);
+                uint32_t list = day_list(y, dd, slice, type);
                 if (rt_unwinding) return count;
-                cpu = saved;
-                cpu.esp = saved_esp;
                 for (uint32_t node = readable(list) ? rd32(g_mem, list + 2) : 0, k = 0; readable(node) && k < 4000;
                      node = rd32(g_mem, node + 6), k++) {
                     uint32_t f = rd32(g_mem, node), rec = readable(f) ? rd32(g_mem, f + 0x14) : 0;
@@ -531,19 +525,8 @@ static uint32_t find_pending(const Pending *p)
     uint32_t clubs = rd32(g_mem, CLUBS);
     for (int slice = 0; slice < 3 && !rt_unwinding; slice++)
         for (int type = 0; type < 2 && !rt_unwinding; type++) {
-            uint32_t saved_esp = cpu.esp;
-            cpu.esp -= 16;
-            uint32_t date = cpu.esp;
-            wr16(g_mem, date, (uint16_t)p->day);
-            wr16(g_mem, date + 2, (uint16_t)p->year);
-            wr32(g_mem, date + 4, 0);
-            Cpu saved = cpu;
-            cpu.ecx = rd32(g_mem, FIXTURES);
-            uint32_t args[3] = {date, (uint32_t)slice, (uint32_t)type};
-            uint32_t list = rt_callback(F_DAY_LIST, 3, args);
+            uint32_t list = day_list(p->year, p->day, slice, type);
             if (rt_unwinding) return 0;
-            cpu = saved;
-            cpu.esp = saved_esp;
             for (uint32_t node = readable(list) ? rd32(g_mem, list + 2) : 0, k = 0; readable(node) && k < 4000;
                  node = rd32(g_mem, node + 6), k++) {
                 uint32_t f = rd32(g_mem, node), rec = readable(f) ? rd32(g_mem, f + 0x14) : 0;
