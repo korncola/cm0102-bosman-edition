@@ -82,7 +82,11 @@ save date (a confederation check for every edition):
                   edition of at least 30 teams that began in the game: every member enters, less the European
                   hosts of its World Cup, less Russia from 2026 and less a nation that joins UEFA later (open item
                   57). Only where the season code builds the whole pool (uefa_all): not the 2002 campaign, not a
-                  2001 game with changing rules off, from 2026 only with changing rules on or a 2025 start
+                  2001 game with changing rules off, from 2026 only with changing rules on or a 2025 start.
+                  The hosts: the finals table (access.tsv), the save's host table (HostCountry.tmp), and after
+                  the table (open item 76) a pair at most of UEFA nations that played the finals without the
+                  qualifying, one of them the history row's host (finals_hosts; the pool leaves the hosts out:
+                  season_wcq26.c europe_nations, the original 0x919ee3)
     entrant-holder the title holder is not an entrant (access.tsv "holder": the Champions League from 2006, the
                   Libertadores), when the edition before is at most one cycle and one year before; not for an
                   edition of the start year or before (it began before the game, the holder may be out)
@@ -140,6 +144,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools", "save"))
 import savfile  # noqa: E402
 
 CLUB, NATION, COMP, CONT, HIST = 0x245, 0x122, 0x6B, 0xC6, 0x1A
+HOST_ROW, HOST_FIXED = 0x22, 0xFD                # the host table's rows (HostCountry.tmp) and a fixed row's choice
 SLOTS = 50                  # club squad slots, +0xd7 (VIRTUAL_STAFF 0x90d8f0 counts 0x32)
 FIRST_TEAM = 14             # players the reserve pick 0x6dbc50 keeps for the first team
 PLAYER = 0x46               # player.dat row
@@ -258,6 +263,17 @@ class Game:
             part = sav.read("bosman_season.dat")
             if len(part) >= 16:
                 self.start, self.changing = struct.unpack_from("<ii", part, 8)
+        # the host table (HostCountry.tmp: a u16 count, then rows of 0x22 bytes; HostCountry save 0x5fb320, load
+        # 0x5fb160; row: +0 the competition's key id value (its record id), +4 s16 year, +6 six s32 nation ids, the
+        # three host pairs, +0x1e the choice: 0 to 2 the drawn pair, 0xfd fixed, 0xfe not decided; season_intl.c)
+        self.host_rows = []
+        if sav.has("HostCountry.tmp"):
+            part = sav.read("HostCountry.tmp")
+            count = struct.unpack_from("<H", part, 0)[0] if len(part) >= 2 else 0
+            for i in range(min(count, (len(part) - 2) // HOST_ROW)):
+                o = 2 + i * HOST_ROW
+                comp, year = struct.unpack_from("<ih", part, o)
+                self.host_rows.append((comp, year, list(struct.unpack_from("<6i", part, o + 6)), part[o + 0x1e]))
         self.fixture_list, self.unread = None, []
         self.sav, self.fixture_parts = sav, sorted(n for n in sav.names() if FIXTURES.match(n))
         self.editions, self.parts = {}, set()
@@ -706,6 +722,18 @@ def entrants(game, rules, access, changes=()):
 
     save_day = datetime.date(game.date[0], 1, 1).toordinal() + game.date[1] if game.date[0] > 1900 else 0
     live = {n for n, conf in game.nations.values() if conf}
+    # open item 76: the World Cup finals for the hosts after the table: its competition id (the key of its host
+    # rows) and the nations of each edition's entrants
+    wc_cid, wc_nations = None, {}
+    host_keys = {c for c, _, _, _ in game.host_rows}
+    for cid, fx in fxs.items():
+        if rules.get(game.comps[cid]["name"]).get("key") == "world_cup":
+            if wc_cid is None or (cid in host_keys and wc_cid not in host_keys):   # the record of the host rows
+                wc_cid = cid
+            for y, _, _, teams in editions_of(fx):
+                wc_nations.setdefault(y, set()).update(game.club(t)[1] for t in teams if game.club(t)[2] == "UEFA")
+    wc_rows = access.table.get("world_cup") or []
+    wc_last = wc_rows[-1][0] if wc_rows else 9999
     listing, faults = [], []
     for cid, fx in sorted(fxs.items()):
         comp = game.comps[cid]
@@ -734,6 +762,8 @@ def entrants(game, rules, access, changes=()):
             host = hosts.get((cid, year), -1)
             host_nations = [game.clubs.get(host, ("", -1))[1]] if host >= 0 else []
             host_alias = {x for h in host_names for x in h.split("/")}
+            if key == "world_cup":                        # a co-host after the table (open item 76)
+                host_alias |= save_hosts(game, cid, year)
             for t in sorted(teams, key=lambda t: game.club(t)):
                 tname, nation, conf = game.club(t)
                 route = []
@@ -798,8 +828,14 @@ def entrants(game, rules, access, changes=()):
                         faults.append(("entrant-host", name, year, f"the host {h} is not an entrant"))
             if key == "wc_qual_uefa" and done and len(teams) >= MISSING_MIN and \
                     first >= datetime.date(game.start, 7, 1).toordinal() and uefa_all(game, year):
-                missing = uefa_missing(game, access, changes, year, datetime.date.fromordinal(first).year,
-                                       {game.club(t)[1] for t in teams})
+                entered = {game.club(t)[1] for t in teams}
+                wc = year + (2 - year % 4) % 4
+                more = save_hosts(game, wc_cid, wc) if wc_cid is not None else set()
+                if wc > wc_last:
+                    h = hosts.get((wc_cid, wc), -1)
+                    more |= finals_hosts(wc_nations.get(wc, set()), entered, game.club(h)[1] if h >= 0 else "")
+                missing = uefa_missing(game, access, changes, year, datetime.date.fromordinal(first).year, entered,
+                                       more)
                 if missing:
                     faults.append(("entrant-missing", name, year, f"{len(missing)} live UEFA nations do not play: "
                                                                   f"{', '.join(missing[:6])}"
@@ -821,13 +857,42 @@ def uefa_all(game, year):
     return 2006 <= wc <= 2022 or (wc >= 2026 and (game.changing or game.start >= 2025))
 
 
-def uefa_missing(game, access, changes, year, first_year, entered):
+def finals_hosts(finals, entered, history_host):
+    """The UEFA nations of a World Cup's finals (`finals`) that did not play its qualifying (`entered`), taken as its
+    hosts (open item 76): a season game has no holder place after 2006 (rt_intl_wc_holder), so such a nation came by
+    a host place. Only for a World Cup after the finals table, whose host row the save no longer holds (the row moves
+    on once its finals are past, HostCountry::daily_update 0x5faafa); only when the history row's host is among them
+    and they are at most a pair. Else none, so a nation that a section fault put in the finals stays a fault."""
+    out = set(finals) - set(entered)
+    return out if history_host in out and len(out) <= 2 else set()
+
+
+def save_hosts(game, comp, year):
+    """The hosts in the save's host table of competition id `comp` in `year`, as season_intl_host_ids reads them
+    (season_intl.c): the first row of that competition and year; a fixed row gives the nations of its six fields, a
+    drawn row its pair, a row not decided none. Ids outside the nation table are left out."""
+    for c, y, ids, choice in game.host_rows:
+        if c != comp or y != year:
+            continue
+        if choice == HOST_FIXED:
+            pick = ids
+        elif 0 <= choice <= 2:
+            pick = ids[2 * choice:2 * choice + 2]
+        else:
+            pick = []
+        return {game.nations[i][0] for i in pick if i in game.nations}
+    return set()
+
+
+def uefa_missing(game, access, changes, year, first_year, entered, more_hosts=()):
     """The live UEFA nations with a national side that are not entrants of a European World Cup qualifying edition
     (open item 57 of 0.6.2): every UEFA member enters, less the European hosts of its World Cup (the first World
     Cup year from the edition's year), less Russia from the 2026 cycle (Q29) and less a nation that joins UEFA
-    after the edition's first year (nations.tsv: Kosovo from 2016)."""
+    after the edition's first year (nations.tsv: Kosovo from 2016). The hosts are those of the finals table
+    (access.tsv) and more_hosts: after the table (open item 76) the caller gives the hosts of the save's host table
+    and the nations that played the finals without the qualifying."""
     wc = year + (2 - year % 4) % 4
-    hosts = {x for h in access.rule("world_cup", wc)[1] for x in h.split("/")}
+    hosts = {x for h in access.rule("world_cup", wc)[1] for x in h.split("/")} | set(more_hosts)
     later = {c["nation"] for c in changes if c["kind"] == "confed" and c["to"] == "UEFA" and c["season"] > first_year}
     sides = {nid for _, nid in game.side_names}
     out = []

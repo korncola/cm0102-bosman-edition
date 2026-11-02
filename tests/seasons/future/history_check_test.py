@@ -362,6 +362,35 @@ def uefa_missing_rule():
         got = history_check.uefa_missing(game, access, changes, year, first, entered)
         if got != want:
             bad.append(f"entrant-missing of {year}: {got}, not {want}")
+    # open item 76: after the table (no host in access) the hosts come from the save: the host row of HostCountry.tmp
+    # (fixed: every nation of its six fields; drawn: its pair; not decided: none) and a UEFA nation that played the
+    # finals without the qualifying (an automatic place: a host, as a season game has no holder)
+    for year, first, entered, extra, want in ((2037, 2036, {"Borduria", "Kosovo"}, {"Aland"}, []),
+                                              (2037, 2036, {"Kosovo"}, {"Aland", "Borduria"}, []),
+                                              (2037, 2036, {"Kosovo"}, {"Aland"}, ["Borduria"])):
+        got = history_check.uefa_missing(game, access, changes, year, first, entered, extra)
+        if got != want:
+            bad.append(f"entrant-missing of {year} with the hosts {sorted(extra)}: {got}, not {want}")
+    for finals, entered, host, want in (({"Aland", "Borduria", "Kosovo"}, {"Kosovo"}, "Aland", {"Aland", "Borduria"}),
+                                        ({"Aland", "Kosovo"}, {"Kosovo"}, "Borduria", set()),   # host not among them
+                                        ({"Aland", "Borduria", "Russia"}, set(), "Aland", set()),  # more than a pair
+                                        ({"Aland"}, set(), "", set())):                        # no history host
+        got = history_check.finals_hosts(finals, entered, host)
+        if got != want:
+            bad.append(f"finals_hosts of {sorted(finals)} less {sorted(entered)}, host {host}: {sorted(got)}, "
+                       f"not {sorted(want)}")
+    game.host_rows = [(7, 2038, [0, 1, -1, -1, -1, -1], 0xfd), (7, 2042, [3, -1, 0, 1, 1, -1], 1),
+                      (7, 2046, [0, -1, 1, -1, 3, -1], 0xfe), (8, 2038, [4, -1, -1, -1, -1, -1], 0xfd),
+                      (7, 2050, [0, 5, -1, -1, -1, -1], 0xfd), (7, 2054, [3, 99, -1, -1, -1, -1], 0xfd),
+                      (7, 2054, [0, 1, -1, -1, -1, -1], 0xfd), (7, 2058, [0, 1, 3, -1, -1, -1], 3)]
+    # 2054: the first row of a competition and year wins (row_find), an id outside the nation table is left out;
+    # 2058: a choice of 3 is neither a pair nor fixed
+    for comp, year, want in ((7, 2038, {"Aland", "Borduria"}), (7, 2042, {"Aland", "Borduria"}), (7, 2046, set()),
+                             (7, 2050, {"Aland", "Dead Land"}), (7, 2054, {"Kosovo"}), (7, 2058, set()),
+                             (7, 2062, set())):
+        got = history_check.save_hosts(game, comp, year)
+        if got != want:
+            bad.append(f"save_hosts of competition {comp} in {year}: {sorted(got)}, not {sorted(want)}")
     return bad
 
 
