@@ -241,8 +241,9 @@ GAP_FINALS = ("FIFA World Cup", "European Football Championship")
 # The same for one database only (0.6.2 slice 21): October 2026 holds no Africa Cup of Nations 2025 row. The research
 # of this competition ends in 2006 with one row of 2025, so the rule is not opened to the other databases, whose rows
 # of 2008 to 2023 the research does not hold.
-# October 2026 holds no row of the Argentine Apertura 2026 either (Belgrano, 24 May 2026, before the start; open
-# item 98). A club competition takes the labels of the club shift.
+# October 2026 holds no row of the Argentine Apertura 2026 either (Belgrano, 24 May 2026, before the start). This is
+# open item 98. The years of a club competition get the club shift (comp_history), the years of a nation competition
+# the nation shift.
 GAP_FINALS_OF = {"October 2026": ("African Cup of Nations", "Argentine Premier Division")}
 
 
