@@ -311,7 +311,7 @@ Merge danger: two-way door. The load of a 0.6.1 save gives its old side names th
 - [x] Fault 57: a 2001 game has 51 European nations in the 2006 qualifying, a 2013 start 52 in 2018 (all of its data less Russia, the host) and a 2017 start 55 in 2022. The checker finds no entrant-missing fault there. history_check_test.py tests the rule.
 - [x] Fault 57: same-save set against main 99bf45fb: start, prematch, new game, yeovil and match equal main (ref-build). Yeovil fails only original-faults-keep, as main does (open item 72).
 - [x] Fault 93: the two qualifiers of a FIFA window lie 3 days apart or more, inside the window, with no club tie of their players within a day. Run set game a2013s3 played again from its July 2023 save: main stops with the box match_eng.cpp 612 on 22 November 2029 (West Bromwich Albion fields 9); the fix plays the 2030 UEFA qualifying on 22/25 March, 7/10 June, 27/30 September, 6/9 October and 15/18 November 2029 and its leg to 2034 with no box. The 2098 date jump (normal game) holds the 2102 UEFA qualifying in its windows. The checker's duty-clash finds main's clashes of 22 November 2029 and none on the fix; history_check_test.py plants one and three cases that are not faults.
-- [ ] Fault 93: same-save set against main 1901ffa5.
+- [x] Fault 93: same-save set against main 1901ffa5: start, prematch, new game and yeovil PASS; the match check PASS for normal, again, host-loops-off and ref-build (its first pass lost host-loops-off to a wait timeout under load, so those runs ran again at a load under 16).
 
 ### 20. A youth pool for every nation
 Blocked by: none
