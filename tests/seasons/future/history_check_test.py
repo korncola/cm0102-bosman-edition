@@ -356,6 +356,20 @@ def uefa_missing_rule():
     access = history_check.Access({"world_cup": [(2006, 32, ["Borduria"]), (2026, 48, [])]})
     changes = [{"kind": "confed", "season": 2016, "nation": "Kosovo", "to": "UEFA"}]
     bad = []
+    # entrant-count: in a base game the OFC Nations Cup keeps the original's 6 (open item 45), in the table, after it
+    # and in a year between; another class keeps the table's count; the hosts stay
+    ofc = history_check.Access({"oceania_nations": [(2002, 8, ["New Zealand"]), (2008, 4, [])],
+                                "world_cup": [(2006, 32, ["Borduria"])]})
+    for key, year, base, want in (("oceania_nations", 2002, False, (8, ["New Zealand"], [])),
+                                  ("oceania_nations", 2002, True, (6, ["New Zealand"], [])),
+                                  ("oceania_nations", 2004, False, (None, [], [])),
+                                  ("oceania_nations", 2004, True, (6, [], [])),
+                                  ("oceania_nations", 2030, False, (4, [], [])),
+                                  ("oceania_nations", 2030, True, (6, [], [])),
+                                  ("world_cup", 2006, True, (32, ["Borduria"], []))):
+        got = ofc.rule(key, year, base)
+        if got != want:
+            bad.append(f"access rule of {key} {year} (base game {base}): {got}, not {want}")
     for start, changing, year, want in ((2001, 0, 2005, 0), (2001, 1, 2001, 0), (2001, 1, 2005, 1),
                                         (2013, 0, 2017, 1), (2013, 0, 2025, 0), (2013, 1, 2025, 1),
                                         (2025, 0, 2029, 1)):

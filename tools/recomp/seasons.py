@@ -248,6 +248,17 @@ PATCHES = {
     0x5E172E: (0xC, "(4u * rt_intl_copa_groups(esi, 3u))"),         # group builder 0x5e16b0: step in +0xee
     0x5E1735: (-0xC, "(0u - 4u * rt_intl_copa_groups(esi, 3u))"),   # group builder: the same step back
 
+    # OFC Nations Cup of 8 teams (0.6.2 open item 45, win/season_intl_ofc.c). OceaniaNations (ctor 0x7988b0) is the
+    # League of group A and stage[0] group B, each of 3 teams; with 8 teams each has 4. Group A takes the teams 0 to
+    # size - 1 of +0xee, group B the next size. rt_intl_ofc_group gives the size: 3 unless the draw holds 8 teams,
+    # so the original's value in the base game and for an edition of another count. this in esi.
+    0x7995A9: (0xB1, "(0x3bu * rt_intl_ofc_group(esi, 3u))"),       # create_group_table 0x7995a0: malloc of the rows
+    0x7995AE: (0x3, "rt_intl_ofc_group(esi, 3u)"),                  # create_group_table: the row count +0x3e
+    0x799A80: (0xC, "(4u * rt_intl_ofc_group(esi, 3u))"),           # create_group_stage 0x799a60: malloc of its teams
+    0x799AC2: (0xC, "(4u * rt_intl_ofc_group(esi, 3u))"),           # create_group_stage: group B's start in +0xee
+    0x799ACB: (0x3, "rt_intl_ofc_group(esi, 3u)"),                  # create_group_stage: the teams it copies
+    0x799B74: (0x3, "rt_intl_ofc_group(esi, 3u)"),                  # create_group_stage: League_Stage team count
+
     # World Cup qualifying 2006 to 2022 (0.6.0 slice 27, win/season_intl_qual.c). C1: the CONCACAF final group
     # (0x917830, this in esi from 0x91784e) gives its 4th the play-off place: the second byte of its rules
     # array (0x917878, 0 in the original; inference: the count of play-off places) becomes 1 in a season game.
