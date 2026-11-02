@@ -225,53 +225,7 @@ static uint32_t original_table(uint32_t obj)
     return rt_unwinding ? 0 : t;
 }
 
-typedef struct { int id, teams, ties, fresh, first, legs, match; } Round;
-
-static int plan_knockout(const Edition *e, int n, Round *r);
-
-/* The rounds of an edition of n clubs: a knockout with the byes in the first round, or the stepladder. Returns the
- * count. match: the day of the first leg, a day of the year of e->year (it may pass 365). */
-static int plan_rounds(const ClubCup *k, const Edition *e, int n, Round *r)
-{
-    int count = 0;
-    int last = e->last + (e->last_year > e->year ? 365 + is_leap(e->year) : 0);
-    if (!strcmp(k->def->comp, "fifa_intercontinental_cup") && n == 6) {
-        /* Club list: OFC, AFC, CAF, CONMEBOL, CONCACAF, UEFA (pick_intercontinental). The play-off of OFC and AFC,
-         * then the African-Asian-Pacific Cup and the Derby of the Americas with CAF, CONMEBOL and CONCACAF new
-         * (the play-off winner takes the empty slot), the Challenger Cup, the final with UEFA new. */
-        int span = last - e->first;
-        r[count++] = (Round){0x14, 2, 1, 2, 0, 1, e->first};
-        r[count++] = (Round){0x78, 4, 2, 3, 2, 1, e->first + span / 3};
-        r[count++] = (Round){0x82, 2, 1, 0, 0, 1, e->first + 2 * span / 3};
-        r[count++] = (Round){0x96, 2, 1, 1, 5, 1, last};
-        return count;
-    }
-    return plan_knockout(e, n, r);
-}
-
-/* A knockout of n clubs with the byes in the first round: the rounds and their days (see plan_rounds). */
-static int plan_knockout(const Edition *e, int n, Round *r)
-{
-    int count = 0;
-    int last = e->last + (e->last_year > e->year ? 365 + is_leap(e->year) : 0);
-    int p = 1;
-    while (p * 2 <= n) p *= 2;
-    int teams = p;
-    if (n > p) r[count++] = (Round){0x14, 2 * (n - p), n - p, 2 * (n - p), 0, e->legs, 0};
-    for (; teams >= 2; teams /= 2) {
-        int fresh = count == 0 ? teams : (n > p && count == 1 ? 2 * p - n : 0);
-        int first = count == 1 && n > p ? 2 * (n - p) : 0;
-        int id = teams == 2 ? 0x96 : teams == 4 ? 0x82 : teams == 8 ? 0x78 : 0x14;
-        r[count++] = (Round){id, teams, teams / 2, fresh, first, teams == 2 ? e->final_legs : e->legs, 0};
-    }
-    /* Days: the final (its first leg) on the last day, or 7 days before for two legs; the rounds before it from
-     * the first day, evenly. */
-    int final_day = last - (r[count - 1].legs == 2 ? 7 : 0);
-    for (int i = 0; i < count; i++)
-        r[i].match = count == 1 ? e->first : i == count - 1 ? final_day : e->first + i * (final_day - e->first) / (count - 1);
-    if (count == 1 && r[0].legs == 2 && last > e->first) r[0].match = e->first;
-    return count;
-}
+typedef SeasonClubRound Round;
 
 /* The round table of the edition for an object with n clubs (the picker ran first), from the original's round as
  * the template. Returns it (the game's heap) and the round count, or 0. */
@@ -281,13 +235,12 @@ static uint32_t round_table(const ClubCup *k, uint32_t obj, int *rounds)
     Edition e;
     if (!edition(k, year, &e) || n < 2) return 0;
     Round r[8];
-    int count = plan_rounds(k, &e, n, r);
+    int count = season_club_plan_rounds(k->def->comp, &e, n, r);
     uint32_t tmpl = original_table(obj);
     if (!tmpl) return 0;
     uint32_t table = game_new((uint32_t)count * ROUND_SIZE);
     if (!table) { game_free(tmpl); return 0; }
     int base = year;                                            /* the year offsets count from +0x40 */
-    int first_two = r[0].legs == 2 && count == 1 && e.last > e.first ? e.last - e.first : 7;
     for (int i = 0; i < count; i++) {
         uint32_t t = table + (uint32_t)i * ROUND_SIZE;
         memcpy(g_mem + t, g_mem + tmpl, ROUND_SIZE);
@@ -313,7 +266,7 @@ static uint32_t round_table(const ClubCup *k, uint32_t obj, int *rounds)
             wr16(g_mem, t + 0x0d, 4);
             wr16(g_mem, t + 0x0f, 1);
             g_mem[t + 0x21] = 2;
-            g_mem[t + 0x22] = (uint8_t)(count == 1 ? first_two : 7);
+            g_mem[t + 0x22] = (uint8_t)season_club_second_leg(&e, &r[i], count);
         } else {
             wr16(g_mem, t + 0x0d, 3);                           /* extra time, penalties (0x92b857..0x92b886) */
             g_mem[t + 0x21] = 1;
@@ -875,7 +828,7 @@ RT_WRAP(004c0f00, con_champ_rounds)
     /* The knockout of n clubs (one leg a round): plan_rounds gives teams, ties and byes. */
     Edition e = {0, 60, 0, 0, n, 1, 1};
     Round r[8];
-    int count = plan_knockout(&e, n, r);
+    int count = season_club_plan_knockout(&e, n, r);
     uint32_t table = game_new((uint32_t)count * ROUND_SIZE);
     if (rt_unwinding || !table) return;
     int first = (int16_t)rd16(g_mem, tmpl + 0x03), draw0 = (int16_t)rd16(g_mem, tmpl + 0x00);

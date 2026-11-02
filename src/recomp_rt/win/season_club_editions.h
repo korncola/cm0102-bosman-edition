@@ -65,6 +65,23 @@ void season_club_edition_move(SeasonClubEdition *e, int years);
  * the latest row up to s. */
 const SeasonRule *season_club_world_row(const char *file, int s);
 
+/* A round of a club cup: its id (0x14, 0x78, 0x82, 0x96), teams, ties, new clubs, the first list index of the new
+ * clubs, legs (1 or 2) and the day of its first leg (a day of the year of e->year; it may pass 365). */
+typedef struct { int id, teams, ties, fresh, first, legs, match; } SeasonClubRound;
+
+/* A knockout of n clubs with the byes in the first round: the rounds and their days, evenly from the first day to
+ * the final on the last day (7 days before it for two legs). Returns the count. */
+int season_club_plan_knockout(const SeasonClubEdition *e, int n, SeasonClubRound *r);
+
+/* The rounds of an edition of comp with n clubs: the stepladder of the FIFA Intercontinental Cup, or a knockout.
+ * No match day (each leg) meets a FIFA day (season_fifa_meets: the day before to the day after, or a window), as the
+ * UEFA league phase keeps its days off them (season_uefa_days.c): a round moves on to the first free day, at most 21
+ * days, and stays after the round before it (open item 95). Returns the count. */
+int season_club_plan_rounds(const char *comp, const SeasonClubEdition *e, int n, SeasonClubRound *r);
+
+/* The day of the second leg after the first: 7, or for one round of two legs the days of the edition. */
+int season_club_second_leg(const SeasonClubEdition *e, const SeasonClubRound *r, int count);
+
 /* The row of comp in season s with a "places:" text: the latest such row up to s, NULL when none. */
 const SeasonRule *season_club_places_row(const char *comp, int s);
 

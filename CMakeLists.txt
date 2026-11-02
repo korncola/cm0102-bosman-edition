@@ -337,7 +337,8 @@ if(NOT WIN32)
     set_tests_properties(season_subs PROPERTIES FIXTURES_REQUIRED rules_table)
     # The club cup editions after the rules table (0.6.2 slice 9a): every year to 2301, the Club World Cup every 4.
     add_executable(season_club_editions_test tests/seasons/test_season_club_editions.c
-        src/recomp_rt/win/season_club_editions.c src/recomp_rt/win/season_rules.c src/recomp_rt/host/posix.c)
+        src/recomp_rt/win/season_club_editions.c src/recomp_rt/win/season_rules.c src/recomp_rt/host/posix.c
+        src/recomp_rt/win/season_uefa_days.c src/recomp_rt/win/season_fifa_days_table.c)
     target_include_directories(season_club_editions_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_club_editions COMMAND season_club_editions_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv")
     set_tests_properties(season_club_editions PROPERTIES FIXTURES_REQUIRED rules_table)
