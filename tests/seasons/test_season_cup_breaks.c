@@ -58,7 +58,11 @@ int main(int argc, char **argv)
           "the Korean League Cup never comes back after 2011");
     CHECK(season_cups_next("kor_super_cup", 2007) == 2026, "the next K League Super Cup from 2007 is 2026, got %d",
           season_cups_next("kor_super_cup", 2007));
-    CHECK(season_cups_next("jap_emp_cup", 2026) == 2027, "the next Emperor's Cup from 2026 is 2027");
+    /* Open item 97: edition 2026 is the 106th Emperor's Cup, 19 August 2026 to the final on 1 January 2027 (row of
+     * 2025/26, real season 2026). The game's edition E has its final on 1 January E + 1. */
+    CHECK(season_cups_held("jap_emp_cup", 2026) == 1 && season_cups_next("jap_emp_cup", 2026) == 2026,
+          "the Emperor's Cup is held in 2026 (the 106th edition)");
+    CHECK(season_cups_held("jap_emp_cup", 2027) == 1, "the Emperor's Cup is held in 2027 (the 107th edition)");
     CHECK(season_cups_held("jap_emp_cup", 2025) == 1, "the Emperor's Cup is held in 2025");
     /* A cup that the table always holds, and a file with no row. */
     CHECK(season_cups_next("eng_fa_cup", 2010) == 2010, "the FA Cup is held in 2010");
