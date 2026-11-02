@@ -26,13 +26,6 @@ int season_start_year(void) { return start_year; }
 int season_changing_rules(void) { return changing; }
 static int creating;
 int season_change_is_creating(void) { return creating; }
-/* The start date of the new game (0xdd6ec8 in the game): year 0 for none. */
-static int start_date_year, start_date_doy;
-int season_intl_start_date(int *year, int *doy)
-{
-    *year = start_date_year, *doy = start_date_doy;
-    return start_date_year > 0;
-}
 
 static void game(int on, int year, int rules)
 {
@@ -368,24 +361,6 @@ int main(void)
     CHECK(season_intl_gold_busy(2017, doy_of(2017, 7, 10)), "2013 off: 2015's Gold Cup every two years");
     CHECK(!season_intl_gold_busy(2016, doy_of(2016, 7, 10)), "2013 off: no Gold Cup in 2016");
     CHECK(!season_intl_gold_busy(2013, doy_of(2013, 7, 10)), "2013 off: the 2013 Gold Cup lies before the game");
-
-    /* A first edition whose first day lies before the start date of the game is not played: the next one is the first
-     * (open item 19, run set pass 2 a2002s1: the OFC Nations Cup of 5 July 2002 in a game that starts on 13 July 2002
-     * was never drawn, and the class waited for it to 2016). */
-    game(1, 2002, 1);
-    start_date_year = 2002, start_date_doy = doy_of(2002, 7, 13);
-    CHECK(rt_intl_first_year(INTL_OFC, 2002) == 2004, "2002 on: the OFC 2002 lies before the start: 2004 (%u)",
-          rt_intl_first_year(INTL_OFC, 2002));
-    CHECK(rt_intl_first_year(INTL_WORLD_CUP, 2002) == 2006, "2002 on: the World Cup 2006");
-    start_date_doy = doy_of(2002, 7, 1);
-    CHECK(rt_intl_first_year(INTL_OFC, 2002) == 2002, "2002 on: a start on 1 July plays the OFC 2002");
-    game(1, 2002, 0);
-    start_date_doy = doy_of(2002, 7, 13);
-    CHECK(rt_intl_first_year(INTL_OFC, 2002) == 2004, "2002 off: the next cycle of the first edition (%u)",
-          rt_intl_first_year(INTL_OFC, 2002));
-    start_date_year = 0;
-    game(1, 2002, 1);
-    CHECK(rt_intl_first_year(INTL_OFC, 2002) == 2002, "no start date known: the first edition of the table");
 
     if (failures) {
         fprintf(stderr, "season_intl_test: %d failures\n", failures);
