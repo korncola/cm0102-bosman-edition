@@ -112,7 +112,8 @@ static int skip(int nargs, uint32_t from)
                                         of its time at 45 or more. Down to 45, 405 clubs had 45 or more in July
                                         2108, the normal game 153: 5 / 13 = 0.38 = 153 / 405, so N = 37 */
 #define SIGN_BELOW 15                /* open item 92: a club with fewer players in its squad slots runs its market
-                                        (the top-up 0x90dae0 gives a club below 15 virtual players for its matches) */
+                                        (the top-up of match squads 0x90d2f0 fills a club below 15 with virtual
+                                        players, 0x90d45f..0x90d469) */
 #define LISTS_EVERY 30               /* the original rebuilds the position lists on each day of the year that 30
                                         divides (0x5cda25..0x5cda36 before the call at 0x5cda46) */
 #define CONTRACTS 0xae1050u          /* CONTRACT_MANAGER, the this of 0x4cf6d0 and 0x4cf5f0 (0x83d8cd, 0x83d901) */
@@ -130,8 +131,8 @@ static uint32_t call_this(uint32_t fn, uint32_t self, int n, uint32_t *args)
 /* Not original code: a Tier A step (0.6.2 open item 92), the other side of release_surplus. Tier A has no AI
  * signings, so a club whose players' contracts ended or who retired was never refilled, while the normal game's
  * market refills it. The MLS All-Star game takes at least 30 free players of each conference from the first rows of
- * the MLS groups (0x90a980: the players of the club slots +0xd7 that are not injured, 0x62c400, and not on
- * international duty, 0x7757d0, counted at 0x90ab41 and 0x90ad3a; fewer than 30 stop at usa_mls_all_stars.cpp 476,
+ * the MLS groups (0x90a980: the players of the club slots +0xd7 that are not injured, 0x62c400, not on international
+ * duty, 0x7757d0, and at that club, +0x39 at 0x90ab3c, counted at 0x90ab41 and 0x90ad3a; fewer than 30 stop at usa_mls_all_stars.cpp 476,
  * 0x90abe4, or 545, 0x90addd). In a Tier A game from 2001 the MLS clubs held 1 to 48 players in July 2068 (Kansas
  * City 1, NYNJ 3, Dallas 4) and the game stopped at line 545. The normal game from the same save of July 2061 had
  * 16 to 41 a year later, where Tier A had 6 to 44. So an AI club of a played league with fewer than SIGN_BELOW
@@ -161,8 +162,8 @@ static int ai_club(uint32_t club)
 }
 
 /* 1 when the club's division is a league that the game plays: its record id (+0x57 points at the record, the id at
- * +0) has an object in g_comp_object_table [0xadadfc], below its slot count [0xadadf8] (the reading of
- * League::process_promotion_relegation_chain 0x689c42). The clubs of a nation whose leagues the game did not load
+ * +0, as the day loop reads it at 0x5cdd46..0x5cdd4d) has an object in g_comp_object_table [0xadadfc] (as
+ * League::process_promotion_relegation_chain reads it at 0x689c42), below the table's slot count [0xadadf8]. The clubs of a nation whose leagues the game did not load
  * (most of the world: 5,294 of 8,139 AI clubs held fewer than 5 players in the normal game of July 2062) have none. */
 static int plays_league(uint32_t club)
 {
@@ -263,21 +264,23 @@ RT_WRAP(008c5880, tier_a_transfer_daily_update)
 /* update_club_shortlist and make_club_bids, thiscall (club), ret 4: only for a short club (short_club). */
 RT_WRAP(0083a730, tier_a_update_club_shortlist)
 {
-    if (tier_a_in_play() && short_club(rt_arg(0))) o_0083a730();
-    else if (!skip(1, 0)) o_0083a730();
+    int run = tier_a_in_play() && short_club(rt_arg(0));
+    if (rt_unwinding) return;
+    if (run || !skip(1, 0)) o_0083a730();
 }
 
 RT_WRAP(0084a020, tier_a_make_club_bids)
 {
-    if (tier_a_in_play() && short_club(rt_arg(0))) o_0084a020();
-    else if (!skip(1, 0)) o_0084a020();
+    int run = tier_a_in_play() && short_club(rt_arg(0));
+    if (rt_unwinding) return;
+    if (run || !skip(1, 0)) o_0084a020();
 }
 
 /* The position lists of the day loop, only while a club is short. The build of 0x5cda46 keeps its days. The sort of
  * 0x5cda56 runs only on the day of a build: it first builds the lists when they are older than LISTS_EVERY days
- * (none since the load, or no club was short on the day of a build). A short club so reads lists at most
- * LISTS_EVERY days old, as in the normal game, and the daily sort of the whole world (most of the market's time,
- * run-logs/future-3/profile.md) runs once in LISTS_EVERY days. */
+ * (none in this program, a load of an earlier save, or no club was short on the day of a build). A short club so
+ * reads lists at most LISTS_EVERY days old, as in the normal game, and the daily sort of the whole world (most of
+ * the market's time, run-logs/future-3/profile.md) runs once in LISTS_EVERY days. */
 RT_WRAP(00839e60, tier_a_build_position_lists)
 {
     if (tier_a_in_play() && short_clubs && rd32(g_mem, cpu.esp) == 0x5cda4bu) lists_day = game_day();
@@ -288,7 +291,8 @@ RT_WRAP(00839e60, tier_a_build_position_lists)
 RT_WRAP(0083a780, tier_a_sort_position_lists)
 {
     if (tier_a_in_play() && short_clubs && rd32(g_mem, cpu.esp) == 0x5cda5bu) {
-        if (lists_day < 0 || game_day() - lists_day >= LISTS_EVERY) {
+        int age = game_day() - lists_day;              /* below 0 after a load of an earlier save in this program */
+        if (lists_day < 0 || age < 0 || age >= LISTS_EVERY) {
             Cpu saved = cpu;
             uint32_t a[1] = {0};
             cpu.ecx = rd32(g_mem, rd32(g_mem, TRANSFERS) + 0x856);   /* the this of 0x5cda38..0x5cda40 */
