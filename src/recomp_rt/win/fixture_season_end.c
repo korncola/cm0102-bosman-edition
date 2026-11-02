@@ -263,6 +263,38 @@ static void log_clash(uint32_t manager, uint32_t fix)
             readable(wn) ? win_str(wn + 4u) : "?");
 }
 
+/* The other leg of a two-legged tie that comes after day d of year y (item 90): the next fixture of the same
+ * competition, round and clubs from the day after, as Cup::process_fixture 0x51a150 looks for a second leg
+ * (find_next_fixture 0x5ac920 at 0x51a610, with the arguments of 0x51a5c2..0x51a605: the cursor year and day, the
+ * slice, forward 1, the competition id fixture +0, the round +0x34, the clubs +0x10 and +0xc, then -1 three times).
+ * 1 and its date in *ly, *ld when there is one. The fixture of the move is not in the store then (removed before the
+ * call-up move, not yet added at add_fixture's moves), so it cannot find itself. */
+#define FIX_ROUND 0x34u
+#define FIND_NEXT 0x005ac920u           /* FIXTURE_MANAGER::find_next_fixture, thiscall, ret 0x2c */
+#define FIXTURES 0x00ae2a58u            /* the fixture manager that process_fixture searches (0x51a605) */
+static int other_leg(uint32_t fix, int y, int d, int forward, int *ly, int *ld)
+{
+    uint32_t manager = rd32(g_mem, FIXTURES);
+    if (!readable(manager)) return 0;
+    int ny = y, nd = d + 1;                 /* forward from the next day; backward from it too, so that its own day is in */
+    if (nd >= days_in(ny)) nd -= days_in(ny), ny++;
+    uint32_t esp = cpu.esp;
+    cpu.esp -= 0x20u;
+    uint32_t yp = cpu.esp + 0x10u, dp = cpu.esp + 0x14u, sp = cpu.esp + 0x18u;
+    wr16(g_mem, yp, (uint16_t)ny);
+    wr16(g_mem, dp, (uint16_t)nd);
+    g_mem[sp] = 0;
+    uint32_t a[11] = {yp, dp, sp, (uint32_t)forward, rd32(g_mem, fix), (uint32_t)(int32_t)(int16_t)rd16(g_mem, fix + FIX_ROUND),
+                      rd32(g_mem, fix + 0x10u), rd32(g_mem, fix + 0xcu), 0xffffffffu, 0xffffffffu, 0xffffffffu};
+    uint32_t found = call_this(FIND_NEXT, manager, 11, a);
+    if (rt_unwinding) return 0;
+    cpu.esp = esp;
+    if (!readable(found)) return 0;
+    *ly = (int16_t)rd16(g_mem, found + FIX_YEAR);
+    *ld = (int16_t)rd16(g_mem, found + FIX_DAY);
+    return forward ? before(y, d, *ly, *ld) : !before(y, d, *ly, *ld);
+}
+
 void o_005ab510(void);
 
 RT_WRAP(005ab510, fixture_new_date)
@@ -299,7 +331,22 @@ RT_WRAP(005ab510, fixture_new_date)
         last_year = round_year, last = round_day;
     else
         cup_tie = 0;
-    if (SITES[site].cup_only && !cup_tie) return;
+    /* A leg stays before the other leg of its tie (item 90; the bounds above are later days). */
+    int leg_year, leg_day, leg = other_leg(fix, year, day, 1, &leg_year, &leg_day) && !rt_unwinding;
+    int prev_year, prev_day, prev = !rt_unwinding && other_leg(fix, year, day, 0, &prev_year, &prev_day);
+    if (rt_unwinding) return;
+    if (test_mode())
+        fprintf(stderr, "recomp: fixtures: test: other leg %d (day %d of %d), previous leg %d (day %d of %d); comp %d "
+                        "round %d clubs %d %d\n", leg, leg ? leg_day : -1, leg ? leg_year : -1, prev, prev ? prev_day : -1,
+                prev ? prev_year : -1, (int32_t)rd32(g_mem, fix), (int16_t)rd16(g_mem, fix + FIX_ROUND),
+                (int32_t)rd32(g_mem, fix + 0x10u), (int32_t)rd32(g_mem, fix + 0xcu));
+    if (SITES[site].cup_only && !cup_tie && !leg) return;
+    if (leg && (last < 0 || before(leg_year, leg_day, last_year, last) || (leg_year == last_year && leg_day == last))) {
+        last_year = leg_year, last = leg_day;
+        cup_tie = 0;            /* the other leg bounds it: no fallback past it */
+    } else {
+        leg = 0;
+    }
     if (last < 0) return;
     uint8_t new_slice = g_mem[fix + FIX_SLICE];
     if (before(new_year, new_day, last_year, last)) return;
@@ -314,7 +361,8 @@ RT_WRAP(005ab510, fixture_new_date)
         if (free_day(manager, fix, y, d)) {
             fprintf(stderr, "recomp: fixtures: a match of %.40s moves from day %d of %d to day %d of %d, before its "
                             "%s on day %d (the %s move gave day %d of %d)\n",
-                    name, day, year, d, y, cup_tie ? "next round" : "season change", last, SITES[site].what,
+                    name, day, year, d, y, leg ? "other leg" : cup_tie ? "next round" : "season change", last,
+                    SITES[site].what,
                     new_day, new_year);
             return;
         }
@@ -338,6 +386,18 @@ RT_WRAP(005ab510, fixture_new_date)
                 name, new_day, new_year, last, day, year);
         return;
     }
+    /* A kept date on or before the previous leg of its tie would put the legs out of order (item 90): the first
+     * leg was moved to this day while this second leg was not yet stored. The match then takes the move of 0x5ab510,
+     * which lies after its old date, as the original would. */
+    if (prev && !before(prev_year, prev_day, year, day)) {
+        wr16(g_mem, fix + FIX_YEAR, (uint16_t)new_year);
+        wr16(g_mem, fix + FIX_DAY, (uint16_t)new_day);
+        g_mem[fix + FIX_SLICE] = new_slice;
+        fprintf(stderr, "recomp: fixtures: a match of %.40s goes to day %d of %d after its %s on day %d (its first leg "
+                        "is on day %d of %d, its old day %d of %d)\n",
+                name, new_day, new_year, leg ? "other leg" : "season change", last, prev_day, prev_year, day, year);
+        return;
+    }
     wr16(g_mem, fix + FIX_YEAR, (uint16_t)year);
     wr16(g_mem, fix + FIX_DAY, (uint16_t)day);
     g_mem[fix + FIX_SLICE] = slice;
@@ -348,9 +408,9 @@ RT_WRAP(005ab510, fixture_new_date)
     }
     kept = fix;
     kept_site = site;
-    fprintf(stderr, "recomp: fixtures: a match of %.40s stays on day %d of %d (no free day before its season change "
+    fprintf(stderr, "recomp: fixtures: a match of %.40s stays on day %d of %d (no free day before its %s "
                     "on day %d; the %s move gave day %d of %d)\n",
-            name, day, year, last, SITES[site].what, new_day, new_year);
+            name, day, year, leg ? "other leg" : "season change", last, SITES[site].what, new_day, new_year);
 }
 
 /* The moves by one day that set the date with no call of 0x5ab510 (den-stall-2, the maintainer under O259):
