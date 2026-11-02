@@ -409,6 +409,24 @@ static void cascade(char comp, const int *p, int n, const int *target, uint32_t 
 
 /* ---- The wraps ---- */
 
+/* 0.6.2 open item 100. UefaSeeding::collect_european_clubs 0x904040 sorts the European clubs and, when the year of
+ * the seeding (+0x439) is 2001, calls apply_euro_cfg_order 0x9059e0 (0x9041ec..0x9041fc), which moves the clubs
+ * that Data/euro.cfg lists to the front of their nation's block in file order, so they take the nation's places.
+ * The year site of seasons.py made that the start year, so every start read euro.cfg in its first season. The
+ * season zips up to 0.6.1 held no euro.cfg of their database (September 2005 and the others), and the file data
+ * set swap (files.c) then gave the game's own Data/euro.cfg: the 2001/02 entrants. So a 2005/06 start
+ * put Leeds United, fourth in that file and in the second tier in 2005/06, into the Champions League. euro.cfg
+ * belongs to its data: a database's own file to the database's season (the start year), the game's own file to
+ * 2001/02. Otherwise the seeding year never matches, and the clubs keep the order of 0x905ce0: division, then
+ * last league place, then reputation. The season zips now carry the database's own euro.cfg (make_season_zips.py,
+ * seasons_db.c unpack_zip); this test covers a folder unpacked from an older zip. */
+uint32_t rt_euro_cfg_year(void)
+{
+    if (!season_code_on() || rt_season_year == SEASON_FIRST_YEAR || win_data_set_has("euro.cfg"))
+        return rt_season_year;
+    return 0;
+}
+
 void o_00904210(void);
 void o_00904580(void);
 void o_00904e30(void);

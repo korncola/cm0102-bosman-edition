@@ -94,6 +94,7 @@ void win_read_settings(void);
 /* The option database changed: the next file open finds the data set folder again (files.c). */
 void win_data_set_changed(void);
 const char *win_data_set_dir(void);     /* the host folder of the data set, "" for the game's own Data */
+int win_data_set_has(const char *name); /* 1 when the data set folder holds its own copy of Data/<name> */
 const char *win_databases_root(void);   /* the folder that holds Databases: the save folder */
 void net_lobby_install(void);           /* net_lobby.c: online games in the game list, at the first WSAStartup */
 const char *net_lobby_host_line(char *out, unsigned room);   /* this host's place in the lobby, or NULL (slice 7) */

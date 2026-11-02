@@ -406,6 +406,17 @@ const char *win_data_set_dir(void)
     return data_dir;
 }
 
+/* 1 when the data set folder holds its own copy of the Data file name (0.6.2 open item 100: euro.cfg). */
+int win_data_set_has(const char *name)
+{
+    if (!data_dir_known) data_dir_find();
+    if (!data_dir[0]) return 0;
+    char found[256], path[2048];
+    ci_lookup(data_dir, name, found, sizeof found);
+    snprintf(path, sizeof path, "%s/%s", data_dir, found[0] ? found : name);
+    return exists(path);
+}
+
 static void data_dir_swap(char *h, size_t room)
 {
     if (!data_dir_known) data_dir_find();

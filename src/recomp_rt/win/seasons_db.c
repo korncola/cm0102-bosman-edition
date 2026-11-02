@@ -432,6 +432,19 @@ static int unpack_zip(const char *zip, const char *tmp, const SeasonKnownDb *row
         }
         int k;
         for (k = 0; k < FILE_COUNT; k++) if (!strcasecmp(base, data_files[k])) break;
+        /* euro.cfg, the first season's European entrants of the database (UefaSeeding::apply_euro_cfg_order
+         * 0x9059e0), is unpacked when the zip has it; without it the game would read the 2001/02 file of its own
+         * Data (0.6.2 open item 100, season_uefa_seeding.c rt_euro_cfg_year). */
+        if (k == FILE_COUNT && !strcasecmp(base, "euro.cfg")) {
+            char out[1400], hex[65];
+            snprintf(out, sizeof out, "%s/euro.cfg", tmp);
+            if (seasons_zip_extract(&z, i, out, hex, err, sizeof err)) {
+                say(r, "Could not unpack %s: %s.", row->name, err);
+                seasons_zip_close(&z);
+                return -1;
+            }
+            continue;
+        }
         if (k == FILE_COUNT) continue;              /* a readme or a picture: not part of a database */
         if (seen[k]) {
             say(r, "The file for %s holds %s twice.", row->name, data_files[k]);
