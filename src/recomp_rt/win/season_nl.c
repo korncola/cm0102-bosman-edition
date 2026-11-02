@@ -1237,9 +1237,9 @@ uint32_t rt_nl_group_stages(uint32_t self, uint32_t original)
 
 int season_nl_international(uint32_t rec)
 {
+    if (!rec) return 0;
     for (int i = 0; i < CONFS; i++) {
-        uint32_t o = season_comps_object(confs[i].def);
-        if (o && rec == rd32(g_mem, o + F_RECORD)) return 1;
+        if (rec == season_comps_record_of(confs[i].def)) return 1;     /* also at a load (open item 91) */
     }
     return season_gold_cup_record(rec);
 }
