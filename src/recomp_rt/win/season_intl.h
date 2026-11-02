@@ -150,6 +150,11 @@ void season_intl_euro_fill(uint32_t self);
  * drawn (0.6.2 slice 5: the rows after the table are drawn 5 years before the finals). */
 int season_intl_host_ids(uint32_t key, int year, int ids[6]);
 
+/* The original's host rows (count rows of 0x22 bytes at rows, season_intl_rows.c): host fields 3 to 6 of each
+ * fixed row become -1, as HostCountry::init_default_table 0x5f9970 leaves them unset (0.6.2 open item 103). Gives
+ * the count of rows changed. Only for rows that are all the original's: a row of the table may hold more hosts. */
+int season_intl_rows_clean(uint8_t *rows, int count);
+
 /* ---- Hosts after the table (0.6.2 slice 5, decisions Q4, Q5, Q6, Q32; season_intl_rules.c) ---- */
 
 /* The hosts announced for an edition after the table (Q5), or NULL: the World Cup of 2034, the Euro of 2032, the
