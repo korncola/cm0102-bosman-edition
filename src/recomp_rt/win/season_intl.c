@@ -1275,7 +1275,8 @@ uint32_t rt_intl_euro_no_host(void)
  * (vtable +0x3c), whose round dates go through League_Stage 0x68a160 and the Cup round functions 0x521e60 and
  * 0x521eb0, which make Date::Date too. While a builder runs for an edition of the table with a first day, every
  * Date::Date moves by the days between the class's fixed first group day and the table's
- * (season_intl_date_shift). The original's weekday flag (the fourth argument) stays. */
+ * (season_intl_date_shift; an edition of another year's date moves up to 3 days more, to the first group day's
+ * weekday code). The original's weekday flag (the fourth argument) stays. */
 static int date_shift;
 
 void season_intl_shift_more(int days) { date_shift += days; }
