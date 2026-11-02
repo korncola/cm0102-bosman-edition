@@ -5,7 +5,10 @@ history rows of every competition out, then the checks of those rows.
 Usage:
     python3 -I tests/seasons/future/history_check.py <save.sav> [<save.sav> ...] [--out <folder>]
         [--rules <competitions.tsv>] [--known <known.tsv>] [--label <name>] [--nations <nations.tsv>]
-        [--access <access.tsv>] [--table <season_intl_table.c>] [--health]
+        [--access <access.tsv>] [--table <season_intl_table.c>] [--health] [--tier-a]
+
+--tier-a: the save is of a Tier A game (RECOMP_TIER_A=1; a save does not record it): the checks of real results
+(same-final) are skipped, as run_set.py skips them for a Tier A row.
 
 --out writes <label>.history.tsv, <label>.faults.tsv, <label>.entrants.tsv and with --health <label>.health.tsv.
 
@@ -1156,6 +1159,16 @@ def write(game, label, out, faults, known):
             w.writerow([c, name, y, "known" if is_known(known, c, name, y) else "new", d])
 
 
+RESULT_CHECKS = {"same-final"}               # checks of real results: Tier A's results come from reputation
+
+
+def tier_a_faults(faults):
+    """The faults that count in a Tier A game: none of RESULT_CHECKS (spec, Decisions: checks that depend on real
+    results count only in Tier B). A save does not record the Tier A switch (tier_a.c reads it from the
+    environment), so the caller says so: run_set.py by the row's tier, the command line by --tier-a."""
+    return [f for f in faults if f[0] not in RESULT_CHECKS]
+
+
 def write_entrants(listing, path):
     with open(path, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f, delimiter="\t", lineterminator="\n")
@@ -1167,8 +1180,8 @@ def write_entrants(listing, path):
 
 def main(argv):
     args = [a for a in argv[1:]]
-    opts = {"--health": 1} if "--health" in args else {}
-    args = [a for a in args if a != "--health"]
+    opts = {k: 1 for k in ("--health", "--tier-a") if k in args}
+    args = [a for a in args if a not in ("--health", "--tier-a")]
     for k in ("--out", "--rules", "--names", "--known", "--label", "--nations", "--access", "--table"):
         if k in args:
             i = args.index(k)
@@ -1194,6 +1207,8 @@ def main(argv):
         sick += [("save-part", n, game.date[0], "the size does not fit its count, not read") for n in game.unread]
         faults = sorted(check(game, rules, nations) + check_nations(game, nations) + sorted(set(entry)) + sick,
                         key=lambda f: (f[1], f[0], f[2]))
+        if "--tier-a" in opts:
+            faults = tier_a_faults(faults)
         if "--out" in opts:
             write(game, label, opts["--out"], faults, known)
             write_entrants(listing, os.path.join(opts["--out"], label + ".entrants.tsv"))

@@ -115,6 +115,12 @@ LEAGUE_INTS = ["matches", "up", "playoff_up", "playoff_down", "down", "above", "
 RECORD = 0x6b
 NATION_ROWS = ["Argentina", "Australia", "Belgium", "Brazil", "Croatia", "Denmark", "England", "Finland", "France",
                "Germany", "Greece", "Holland", "Italy", "Japan", "Northern Ireland", "Norway"]
+# The 10 nations below Norway in the list of the base data (3.9.68): the list shows 16 rows, so a click on one of
+# these comes after 10 clicks on the list's down arrow (768 517), which put Greece on the top row (run set pass 2,
+# a2001esb: screenshots in run-logs/runset-pass2/esb).
+NATION_ROWS_BELOW = ["Poland", "Portugal", "Republic of Ireland", "Russia", "Scotland", "South Korea", "Spain", "Sweden",
+                     "Turkey", "United States"]
+DOWN_ARROW, SCROLL = "768 517", 10
 EXTRA = {"conference": 320, "regional": 385, "c2": 451}     # y of the row; the extra division is at x 675
 ENV_EXTRA = {"spain", "portugal"}                           # slice 20: set by RECOMP_TEST_EXTRA, not by a click
 
@@ -732,18 +738,20 @@ def league_steps(nations, extra):
     steps = smoke_run.without_intro_click([s for s in smoke_run.STEPS if "dump" not in s and "quit" not in s])
     if nations == ["England"] and not [e for e in extra if e in EXTRA]:
         return steps
-    points = []                                                     # a step's time counts from the last wait
+    points, below = [], []                                          # a step's time counts from the last wait
+    clicks = nations[1:] if nations[0] == "all" else [n for n in nations if n != "England"]
     if nations[0] == "all":
-        points.append("592 155")                                    # Select All
-        for n in nations[1:]:                                       # then a click takes a nation out again
+        points.append("592 155")                                    # Select All, then a click takes a nation out
+    for n in clicks:
+        if n in NATION_ROWS_BELOW:
+            below.append(f"390 {188 + 22 * (len(NATION_ROWS) + NATION_ROWS_BELOW.index(n) - SCROLL)}")
+        else:
             points.append(f"390 {188 + 22 * NATION_ROWS.index(n)}")
-    else:
-        for n in nations:
-            if n != "England":
-                points.append(f"390 {188 + 22 * NATION_ROWS.index(n)}")
     for e in extra:
         if e in EXTRA:
-            points.append(f"675 {EXTRA[e]}")
+            points.append(f"675 {EXTRA[e]}")                        # the extra rows lie in the first view
+    if below:
+        points += [DOWN_ARROW] * SCROLL + below
     picks = [f"{2000 + 1500 * i} click {p}" for i, p in enumerate(points)]
     many = nations != ["England"]
     out = []
