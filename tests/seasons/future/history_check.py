@@ -65,8 +65,9 @@ days, or after a final: a day of one match and then 25 days or more with none; i
 match). The list gives each team's route in: title holder (the winner of
 the edition before), host, the winner of a route competition, a winner or place 2 or 3 in the history of the
 edition's year or the year before, else "qualifier". Checks, for the editions whose last match is before the
-save date and that no longer run (the last edition of a competition with a match in the 14 days before the save date
-may go on: the July qualifying of a Champions League, open item 70; a confederation check for every edition):
+save date and that no longer run (the last edition of a competition with a match fewer than 14 days before the save
+date and more than one match on its last day may go on: the July qualifying of a Champions League, open item 70).
+A confederation check for every edition:
     entrant-confed entrants from another confederation than the rules give (also the short name's); in the World
                   Cup qualifying up to 2 teams of each other confederation pass (the play-off between
                   confederations); a nation with a due move to a confederation of the competition passes, and so
@@ -589,7 +590,10 @@ def editions_of(fx):
     edition. A day with one match that ends a group stage is no final (open item 70: the knockout rounds of
     February after a group stage whose last day in December had one match). It counts as the end of a group stage
     when the match day before it had more than two matches (a semi-final day has one or two) and every team of the
-    next day played in the RECENT days before the break."""
+    next day played in the RECENT days before the break. Nor is it a final when the next day has one match too and
+    its teams played in the RECENT days before: a knockout round that goes on after a break (the Copa Libertadores
+    of 2041, single-match days on 5, 9 and 15 June, then 10, 17 and 24 July). A new edition starts with a draw of
+    more ties."""
     per_day = collections.defaultdict(list)
     for day, home, away in fx:
         per_day[day].append((home, away))
@@ -597,9 +601,10 @@ def editions_of(fx):
     for day in sorted(per_day):
         teams = {t for pair in per_day[day] for t in pair if t >= 0}
         last = out[-1][2] if out else None
-        group_end = before is not None and len(per_day[before]) > 2 and teams and \
-            all(last - seen.get(t, last - RECENT - 1) <= RECENT for t in teams)
-        if not out or day - last > GAP or (day - last >= FINAL_GAP and len(per_day[last]) == 1 and not group_end):
+        recent = last is not None and teams and all(last - seen.get(t, last - RECENT - 1) <= RECENT for t in teams)
+        group_end = before is not None and len(per_day[before]) > 2 and recent
+        paused = len(per_day[day]) == 1 and recent         # a knockout round that goes on after a break
+        if not out or day - last > GAP or (day - last >= FINAL_GAP and len(per_day[last]) == 1 and not group_end and not paused):
             out.append([0, day, day, set()])
             seen, last = {}, None
         out[-1][2] = day
@@ -722,9 +727,11 @@ def entrants(game, rules, access, changes=()):
             confs.append((comp["short"], short["confs"]))
         eds = editions_of(fx)
         for n, (year, first, last, teams) in enumerate(eds):
-            # the last edition with a match in the RUNNING days before the save date may still run: the qualifying
-            # of a Champions League in July, which the title holder enters later in the group stage (open item 70)
-            done = last <= save_day and not (n == len(eds) - 1 and save_day - last < RUNNING)
+            # the last edition with a match fewer than RUNNING days before the save date may still run: the July
+            # qualifying of a Champions League, which the title holder enters later in the group stage (open item
+            # 70). A last day of one match is a final: the edition has ended (the World Cup final in mid July).
+            final = sum(1 for d, h, a in fx if d == last) == 1
+            done = last <= save_day and not (n == len(eds) - 1 and save_day - last < RUNNING and not final)
             want, host_names, routes = access.rule(key, year) if key else (None, [], [])
             won = {r: winners(r, year) for r in routes if r != "holder"}
             holder = "holder" in routes
