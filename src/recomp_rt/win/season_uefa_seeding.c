@@ -418,7 +418,8 @@ static void cascade(char comp, const int *p, int n, const int *target, uint32_t 
  * put Leeds United, fourth in that file and in the second tier in 2005/06, into the Champions League. euro.cfg
  * belongs to its data: a database's own file to the database's season (the start year), the game's own file to
  * 2001/02. Otherwise the seeding year never matches, and the clubs keep the order of 0x905ce0: division, then
- * league position. */
+ * last league place, then reputation. The season zips now carry the database's own euro.cfg (make_season_zips.py,
+ * seasons_db.c unpack_zip); this test covers a folder unpacked from an older zip. */
 uint32_t rt_euro_cfg_year(void)
 {
     if (!season_code_on() || rt_season_year == SEASON_FIRST_YEAR || win_data_set_has("euro.cfg"))

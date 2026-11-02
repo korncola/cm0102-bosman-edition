@@ -14,7 +14,8 @@ unpacks Summer 2002, and a copy of the 3.9.68 data in Databases is no version of
 
 The run makes two season zips with tools/release/make_season_zips.py (October 2003 and September 2012) in a
 new folder, and checks:
-  1. the zips equal a second run (same bytes), and hold only the 20 data files in the folder "<name>"
+  1. the zips equal a second run (same bytes), and hold only the 20 data files and the source's euro.cfg (0.6.2
+     open item 100: the first season's European entrants) in the folder "<name>"
   2. scan: the two seasons are "in the download", the others have the status the table gives
   3. prepare unpacks one zip into Databases/<name>, the folder equals the signature (identify)
   4. a second prepare uses the unpacked copy: nothing is unpacked, no file changes
@@ -117,7 +118,8 @@ def main(argv):
             check(os.path.exists(a) and sha(a) == sha(b), f"{n}.zip is the same on a second run")
             with zipfile.ZipFile(a) as z:
                 names = sorted(z.namelist())
-            check(names == sorted(f"{n}/{f}" for f in FILES), f"{n}.zip holds the 20 data files in the folder {n}")
+            check(names == sorted(f"{n}/{f}" for f in FILES + ["euro.cfg"]),
+                  f"{n}.zip holds the 20 data files and euro.cfg in the folder {n}")
 
         # The tool stops on a zip that does not match the signatures table, and leaves no zip.
         src_zip = os.path.join(out1, "October 2003.zip")
@@ -155,7 +157,8 @@ def main(argv):
         status, name, unpacked, err = prepare(tool, game, save, 2003)
         folder = os.path.join(save, "Databases", "October 2003")
         check(status == PREPARE["OK"] and name == "October 2003" and unpacked == 1, f"prepare 2003: unpacked once ({status} {name!r} {err})")
-        check(sorted(os.listdir(folder)) == sorted(FILES), "the unpacked folder holds the 20 data files and nothing else")
+        check(sorted(os.listdir(folder)) == sorted(FILES + ["euro.cfg"]),
+              "the unpacked folder holds the 20 data files and euro.cfg, and nothing else")
         # Keep club.dat and staff.dat "changed a moment ago" for the cache check below, also on a slow machine: a time a
         # little ahead of now is never 2 seconds older than the hash (under load the hash can start 2 seconds after
         # the unpack, and the cache then keeps the folder, as it should).
@@ -287,8 +290,9 @@ def main(argv):
               "a retry with the good zip works, removes the stale temporary folder and the empty parent")
         out, _ = run(tool, "identify", os.path.join(save, "Databases", "September 2012"))
         check(out == "September 2012", "the retry gives September 2012")
-        check(prepare(tool, game, save, 2001)[0] == PREPARE["OFFICIAL"] and prepare(tool, game, save, 2026)[0] == PREPARE["NO_DATABASE"],
-              "prepare 2001 is official, prepare 2026 has no database")
+        # 2027: no database (October 2026 is the season database of 2026/27, seasons_table.c)
+        check(prepare(tool, game, save, 2001)[0] == PREPARE["OFFICIAL"] and prepare(tool, game, save, 2027)[0] == PREPARE["NO_DATABASE"],
+              "prepare 2001 is official, prepare 2027 has no database")
         os.unlink(os.path.join(game, "Seasons", "October 2003.zip"))
         status, name, unpacked, err = prepare(tool, game, save, 2003)
         check(status == PREPARE["OK"] and unpacked == 0, "an unpacked season starts without its zip")
