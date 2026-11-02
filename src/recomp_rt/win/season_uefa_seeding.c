@@ -57,6 +57,7 @@
 #include "season.h"
 #include "season_uefa.h"
 #include "season_nation.h"
+#include "season_playoffs.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -647,4 +648,17 @@ RT_WRAP(00904e30, uefa_assign_uic)
     wr32(g_mem, self + 0x43b, 0);
     g_mem[self + 0x43f] = 0;
     rt_ret_stdcall(0, 2);
+}
+
+void o_00904040(void);
+
+/* collect_european_clubs 0x904040, thiscall (records out) ret 4: the 12-byte record of each European club with its
+ * division of the last season and its place there (club +0x5b at 0x904174, division +0x69 at 0x90417d, club +0x5f
+ * at 0x904185), sorted by nation, division and place (0x905ce0). First, open item 94: the final places of a league
+ * whose season change waits for a play-off (season_playoffs_final_places). */
+RT_WRAP(00904040, uefa_collect)
+{
+    season_playoffs_final_places();
+    if (rt_unwinding) return;
+    o_00904040();
 }

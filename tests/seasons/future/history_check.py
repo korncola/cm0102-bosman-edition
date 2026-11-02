@@ -498,17 +498,17 @@ def euro_places(game, rules=None):
     """[(check, competition, year, detail)]: euro-place, a club with a Champions League place whose division of the
     last season is not its nation's top division, or whose last place there is below EURO_PLACE_MAX (the places come from the last season's table: Uefa_Seeding's
     collect_european_clubs 0x904040 reads club +0x5b and +0x5f), unless it won a UEFA competition in the year of the
-    save (a title holder's place). Read from 1 June to the end of August of the save's year, when the places of the
-    season are set (open item 94: a Spanish season change held for the Segunda's play-off came after the places,
+    save (a Champions League or Europa League title holder's place). Read from 21 June (day 172, the day after the
+    places, Uefa_Seeding on the UEFA cups' update day 171) to the end of August of the save's year (open item 94: a Spanish season change held for the Segunda's play-off came after the places,
     and the Champions League took Segunda clubs and the bottom of the Primera)."""
     rules = rules or Rules()
-    if not game.divisions or not 151 <= game.date[1] <= 243:
+    if not game.divisions or not 172 <= game.date[1] <= 243:
         return []
     year = game.date[0]
     cl = {cid for cid, c in game.comps.items() if c["kind"] == "club" and rules.key(c["name"]) == "uefa_cl"}
     holders = {a for cid, y, a, *_ in game.rows if y == year and rules.key(game.comps[cid]["name"]) in
-               ("uefa_cl", "uefa_el", "uefa_ecl")}
-    top = {}                                  # nation id: the highest level of a division that holds clubs
+               ("uefa_cl", "uefa_el")}
+    top = {}                                  # nation id: the highest level of its divisions that hold clubs
     for div, last, mark, place in game.divisions.values():
         c = game.comps.get(div)
         if c and c["kind"] == "club" and c["nation"] >= 0:
@@ -516,15 +516,15 @@ def euro_places(game, rules=None):
     faults = []
     for club, (div, last, mark, place) in sorted(game.divisions.items()):
         name, nation = game.clubs.get(club, ("", -1))
-        if mark not in cl or club in holders or nation not in top or last < 0:
-            continue
         c = game.comps.get(last)
+        if mark not in cl or club in holders or not c or c["nation"] not in top:
+            continue
         nname = game.nations.get(nation, ('', ''))[0]
-        if c and c["level"] < top[nation]:
+        if c["level"] < top[c["nation"]]:
             faults.append(("euro-place", game.comps[mark]["name"], year,
                            f"{name} ({nname}): a place from the last division {c['name']}, not the nation's top "
                            f"division"))
-        elif c and place > EURO_PLACE_MAX:
+        elif place > EURO_PLACE_MAX:
             faults.append(("euro-place", game.comps[mark]["name"], year,
                            f"{name} ({nname}): a place from position {place} of {c['name']}"))
     return faults

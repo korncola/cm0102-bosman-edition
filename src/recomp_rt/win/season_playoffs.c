@@ -734,6 +734,51 @@ void season_playoffs_release(int any)
         }
 }
 
+/* ---- The final places of a waiting entry before the European places (open item 94) ---- */
+
+#define COMP_UPPER 0x1cu                /* s32 record id of the division above, -1 at the top (0x689c24) */
+#define COMP_LOWER 0x20u                /* s32 record id of the division below, -1 at the bottom (0x689c35) */
+#define COMP_OBJECTS 0x00adadfcu        /* the competition object of each record id */
+
+static int league_class(uint32_t obj)
+{
+    uint32_t vt = readable(obj) ? rd32(g_mem, obj) : 0;
+    for (int i = 0; vt && i < season_comp_class_count; i++)
+        if (season_comp_classes[i].vtable == vt) return season_comp_classes[i].kind == SEASON_KIND_LEAGUE;
+    return 0;
+}
+
+void season_playoffs_final_places(void)
+{
+    if (!season_game_changes()) return;
+    int today = (int16_t)rd16(g_mem, GAME_DATE), year = (int16_t)rd16(g_mem, GAME_DATE + 2);
+    uint32_t objects = rd32(g_mem, COMP_OBJECTS);
+    for (int e = 0; e < ENTRY_COUNT && !rt_unwinding; e++) {
+        int upd = held[e] ? held_day[e] : (int16_t)rd16(g_mem, ENTRIES + (uint32_t)e * ENTRY_SIZE + ENTRY_UPDATE_DAY);
+        if (upd < 0 || upd >= LATE_DAY || today <= upd || today - upd > WAIT_DAYS) continue;
+        uint32_t buf[COMPS_MAX];
+        int n = season_change_entry_comps(e, buf, COMPS_MAX);
+        for (int i = 0; i < n && !rt_unwinding; i++) {
+            uint32_t top = buf[i];
+            if (!league_class(top) || (int32_t)rd32(g_mem, top + COMP_UPPER) >= 0 ||
+                (int16_t)rd16(g_mem, top + COMP_YEAR) >= year)
+                continue;
+            /* Only a finished top table: an entry that waits through the net (entry_unfinished) has matches left. */
+            uint32_t args[2] = {1, 1};
+            if (!(call_this(rd32(g_mem, rd32(g_mem, top) + 0x10), top, 2, args) & 0xff)) continue;   /* check_complete */
+            int k = 0;
+            for (uint32_t obj = top; readable(obj) && k < 16 && !rt_unwinding; k++) {
+                call_this(rd32(g_mem, rd32(g_mem, obj) + 0xa4), obj, 0, NULL);   /* record_final_positions */
+                int32_t lower = (int32_t)rd32(g_mem, obj + COMP_LOWER);
+                obj = lower >= 0 && readable(objects) ? rd32(g_mem, objects + 4u * (uint32_t)lower) : 0;
+            }
+            fprintf(stderr, "recomp: playoffs: entry %d waits for its season change (update day %d): the final places "
+                            "of %s and %d divisions below it come before the European places\n", e, upd,
+                    season_change_file(top), k - 1);
+        }
+    }
+}
+
 /* ---- Rule kind "playoffs": the news ---- */
 
 static void playoffs_after(const SeasonChange *c)
