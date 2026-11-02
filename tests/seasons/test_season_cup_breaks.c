@@ -64,6 +64,9 @@ int main(int argc, char **argv)
           "the Emperor's Cup is held in 2026 (the 106th edition), got held %d, next %d",
           season_cups_held("jap_emp_cup", 2026), season_cups_next("jap_emp_cup", 2026));
     CHECK(season_cups_held("jap_emp_cup", 2027) == 1, "the Emperor's Cup is held in 2027 (the 107th edition)");
+    CHECK(season_cups_held("jap_j_cup", 2026) == 1 && season_cups_held("jap_j_cup", 2027) == 1,
+          "the J.League Cup is held in 2026 (the 34th edition, from 2 September 2026) and 2027, got %d and %d",
+          season_cups_held("jap_j_cup", 2026), season_cups_held("jap_j_cup", 2027));
     CHECK(season_cups_held("jap_emp_cup", 2025) == 1, "the Emperor's Cup is held in 2025");
     /* A cup that the table always holds, and a file with no row. */
     CHECK(season_cups_next("eng_fa_cup", 2010) == 2010, "the FA Cup is held in 2010");
