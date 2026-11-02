@@ -11,6 +11,7 @@
 #include "season_intl.h"
 
 #include <stdio.h>
+#include <time.h>
 #include <string.h>
 #include <strings.h>
 
@@ -231,6 +232,40 @@ int main(void)
         CHECK(waits == 0, "no class waits after its table, only the Confederations Cup ends");
     }
 
+    /* Open item 96: after its table an edition takes the first day of the table's last edition in another year, so
+     * the day falls on any weekday, and Date::Date then moves each template date up to 3 days to its weekday code
+     * (0x54a2d0). The template codes of neighbouring rounds differ by a day in places (the knockout of 48 at 8 days
+     * from the original's), so in some years one date moved 3 days forward and the next 3 days back: the World Cup
+     * of 2066 met its groups with its round of 32, and the game moved matches a week at a time to 28 July. The shift
+     * of such an edition keeps the first group day on the template's weekday code (0 Monday to 6 Sunday: World Cup
+     * 4 at 0x92c335, Euro 6 at 0x57ac35, Copa America 3 at 0x5e09a5, ACN 6 at 0x401385, Asian Cup 4 at 0x40eba5, OFC
+     * 4 in November at 0x798c23 and 0 in June at 0x798f7e, Olympics 2 at 0x79f875). */
+    {
+        static const struct { uint32_t cls; int day, month0, code; } first[] = {
+            {INTL_WORLD_CUP, 12, 5, 4}, {INTL_EURO, 9, 5, 6}, {INTL_COPA, 6, 6, 3}, {INTL_ACN, 8, 1, 6},
+            {INTL_ASIAN, 13, 9, 4}, {INTL_OLYMPICS, 13, 8, 2},
+        };
+        int off = 0, n = 0;
+        for (int rules = 0; rules <= 1; rules++) {
+            game(1, 2030, rules);
+            for (size_t c = 0; c < sizeof first / sizeof first[0]; c++)
+                for (int y = 2031; y <= 2301; y++) {
+                    if (!season_intl_edition(season_intl_class_file(first[c].cls), y)) continue;
+                    int d = first[c].day, m0 = first[c].month0, yy = y;
+                    season_intl_shift_date(season_intl_date_shift(first[c].cls, y), &d, &m0, &yy);
+                    struct tm t = {0};
+                    t.tm_year = yy - 1900, t.tm_mon = m0, t.tm_mday = d, t.tm_hour = 12;
+                    time_t when = timegm(&t);
+                    int wd = (gmtime(&when)->tm_wday + 6) % 7;      /* 0 Monday */
+                    n++;
+                    off += wd != first[c].code;
+                }
+        }
+        char text[120];
+        snprintf(text, sizeof text, "after the table: the first group day on its weekday code (%d of %d off)", off, n);
+        CHECK(n > 300 && off == 0, text);
+    }
+
     /* Finals dates. */
     game(1, 2001, 0);
     CHECK(season_intl_date_shift(INTL_ACN, 2019) == 0, "base game: no date shift");
@@ -254,7 +289,9 @@ int main(void)
     creating = 0;
     game(1, 2010, 0);
     CHECK(season_intl_rule_edition("euro_champ", 2016)->teams == 16, "2010 off: Euro 2016 keeps 16 teams (Q232)");
-    CHECK(season_intl_date_shift(INTL_WORLD_CUP, 2022) == 0, "2010 off: World Cup 2022 in June, as 2014 (the first edition from 2010)");
+    CHECK(season_intl_date_shift(INTL_WORLD_CUP, 2022) == -2,
+          "2010 off: World Cup 2022 in June, as 2014 (the first edition from 2010), on Friday 10 June (item 96)");
+    CHECK(season_intl_date_shift(INTL_WORLD_CUP, 2014) == 0, "2010 off: World Cup 2014 on its table day");
     game(1, 2015, 0);
     CHECK(season_intl_rule_edition("euro_champ", 2020)->teams == 24, "2015 off: Euro 2020 with 24 teams");
     game(1, 2010, 1);
