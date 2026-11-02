@@ -343,16 +343,19 @@ uint32_t rt_intl_wc_holder_slot(uint32_t year)
 
 /* The first group day of each class in its template function (vtable +0x3c), the first call of
  * League_Stage date 0x68a160 there: day, then the month from 0 (read at each address). */
-static const struct { int day, month0; } class_first[INTL_CLASSES] = {
-    {12, 5},    /* World Cup 12 June: 0x92c335 */
-    {9, 5},     /* European Championship 9 June: 0x57ac35 */
-    {29, 6},    /* Confederations Cup 29 July: 0x58b601 */
-    {6, 6},     /* Copa America 6 July: 0x5e09a5 */
-    {8, 1},     /* African Cup of Nations 8 February: 0x401385 */
-    {13, 9},    /* Asian Cup 13 October: 0x40eba5 */
-    {10, 10},   /* Oceania Nations Cup 10 November when the year % 4 is 2 (0x798b70, 0x798c23), else 19 June */
-    {13, 8},    /* Olympics 13 September: 0x79f875 */
+static const struct { int day, month0, code; } class_first[INTL_CLASSES] = {
+    {12, 5, 4},     /* World Cup 12 June: 0x92c335 */
+    {9, 5, 6},      /* European Championship 9 June: 0x57ac35 */
+    {29, 6, 5},     /* Confederations Cup 29 July: 0x58b601 */
+    {6, 6, 3},      /* Copa America 6 July: 0x5e09a5 */
+    {8, 1, 6},      /* African Cup of Nations 8 February: 0x401385 */
+    {13, 9, 4},     /* Asian Cup 13 October: 0x40eba5 */
+    {10, 10, 4},    /* Oceania Nations Cup 10 November when the year % 4 is 2 (0x798b70, 0x798c23), else 19 June with
+                       code 0 (0x798f7e) */
+    {13, 8, 2},     /* Olympics 13 September: 0x79f875 */
 };
+/* code: the weekday code of that first group day (0 Monday to 6 Sunday, the sixth argument of League_Stage's date
+ * 0x68a160), to which Date::Date moves the day (0x54a2d0: up to 3 days either way, season_uefa_days.h). */
 
 static long days_from_civil(long y, int m, int d)    /* m 1 to 12; days from 1 January 1970 */
 {
@@ -396,13 +399,26 @@ int season_intl_date_shift(uint32_t cls, int year)
      * Cup 2002, the African Cup of Nations 2002, the Confederations Cup 2003, Euro 2004 and the others of a 2001
      * game with changing rules on play as in the base game). */
     if (start_edition_2001(cls, year)) return 0;
-    int day = class_first[cls].day, month0 = class_first[cls].month0;
+    int day = class_first[cls].day, month0 = class_first[cls].month0, code = class_first[cls].code;
     if (cls == INTL_OFC && year % 4 != 2) {
         day = 19;
         month0 = 5;
+        code = 0;
     }
     long from = days_from_civil(year, month0 + 1, day);
     long to = days_from_civil(year + (e->start_year - e->year), e->month, e->day > 0 ? e->day : 1);
+    /* An edition of another year's date (after the table: the copy of the last table edition; changing rules off:
+     * the start season's edition) gets that day in its own year, on any weekday. Date::Date moves every template date
+     * up to 3 days to its weekday code, and the codes of neighbouring rounds differ by a day in places (the
+     * knockout of 48, season_wc48.c, keeps the original's codes 8 days later), so in some years one date moved 3
+     * days forward and the next 3 back. The World Cup of 2066 (a 2006 game of run set pass 2) then met its groups
+     * with its round of 32, and the game moved matches a week at a time to 4 August, into the UEFA club qualifiers
+     * (0.6.2 open item 96). Such an edition moves up to 3 days more, so its first group day is on the template's code
+     * and every date stays within a day of its own. */
+    if (e->year != year || !season_intl_table_edition(class_files[cls], year)) {
+        int wd = (int)(((to + 3) % 7 + 7) % 7), k = ((code - wd) % 7 + 7) % 7;   /* 1 January 1970: a Thursday */
+        to += k > 3 ? k - 7 : k;
+    }
     return (int)(to - from);
 }
 

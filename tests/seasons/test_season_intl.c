@@ -11,6 +11,7 @@
 #include "season_intl.h"
 
 #include <stdio.h>
+#include <time.h>
 #include <string.h>
 #include <strings.h>
 
@@ -48,6 +49,23 @@ static int doy_of(int y, int m, int d)
     static const int before[12] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
     int leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
     return before[m - 1] + (m > 2 && leap) + d - 1;
+}
+
+static long days_from_civil(int y, int m, int d)    /* days from 1 January 1970 */
+{
+    long n = 0;
+    for (int k = 1970; k < y; k++) n += 365 + ((k % 4 == 0 && k % 100 != 0) || k % 400 == 0);
+    for (int k = y; k < 1970; k++) n -= 365 + ((k % 4 == 0 && k % 100 != 0) || k % 400 == 0);
+    return n + doy_of(y, m, d);
+}
+
+/* A template date (month from 0) moved by shift days, then to its weekday code (0 Monday) as Date::Date does
+ * (0x54a2d0: the nearest day of the code, up to 3 days either way; season_weekday_date). */
+static long snapped(int y, int day, int month0, int shift, int code)
+{
+    long t = days_from_civil(y, month0 + 1, day) + shift;
+    int k = (int)((((t + 3) % 7 + 7) % 7 - code + 7) % 7);     /* 1 January 1970: a Thursday */
+    return t - (k > 3 ? k - 7 : k);
 }
 
 static int rename_row(const char *old)
@@ -231,6 +249,76 @@ int main(void)
         CHECK(waits == 0, "no class waits after its table, only the Confederations Cup ends");
     }
 
+    /* Open item 96: after its table an edition takes the first day of the table's last edition in another year, so
+     * the day falls on any weekday, and Date::Date then moves each template date up to 3 days to its weekday code
+     * (0x54a2d0). The template codes of neighbouring rounds differ by a day in places (the knockout of 48 at 8 days
+     * from the original's), so in some years one date moved 3 days forward and the next 3 days back: the World Cup
+     * of 2066 met its groups with its round of 32, and the game moved matches a week at a time to 4 August. The shift
+     * of such an edition keeps the first group day on the template's weekday code (0 Monday to 6 Sunday: World Cup
+     * 4 at 0x92c335, Euro 6 at 0x57ac35, Copa America 3 at 0x5e09a5, ACN 6 at 0x401385, Asian Cup 4 at 0x40eba5, OFC
+     * 4 in November at 0x798c23 and 0 in June at 0x798f7e, Confederations Cup 5 at 0x58b601, Olympics 2 at
+     * 0x79f875). */
+    {
+        static const struct { uint32_t cls; int day, month0, code; } first[] = {
+            {INTL_WORLD_CUP, 12, 5, 4}, {INTL_EURO, 9, 5, 6}, {INTL_COPA, 6, 6, 3}, {INTL_ACN, 8, 1, 6},
+            {INTL_ASIAN, 13, 9, 4}, {INTL_OLYMPICS, 13, 8, 2}, {INTL_OFC, 10, 10, 4}, {INTL_OFC, 19, 5, 0},
+            {INTL_CONFED, 29, 6, 5},
+        };
+        int off = 0, n = 0;
+        for (int rules = 0; rules <= 1; rules++) {
+            game(1, 2030, rules);
+            for (size_t c = 0; c < sizeof first / sizeof first[0]; c++)
+                for (int y = 2031; y <= 2301; y++) {
+                    if (!season_intl_edition(season_intl_class_file(first[c].cls), y)) continue;
+                    if (first[c].cls == INTL_OFC && (y % 4 == 2) != (first[c].month0 == 10)) continue;
+                    int d = first[c].day, m0 = first[c].month0, yy = y;
+                    season_intl_shift_date(season_intl_date_shift(first[c].cls, y), &d, &m0, &yy);
+                    struct tm t = {0};
+                    t.tm_year = yy - 1900, t.tm_mon = m0, t.tm_mday = d, t.tm_hour = 12;
+                    time_t when = timegm(&t);
+                    int wd = (gmtime(&when)->tm_wday + 6) % 7;      /* 0 Monday */
+                    n++;
+                    off += wd != first[c].code;
+                }
+        }
+        char text[120];
+        snprintf(text, sizeof text, "after the table: the first group day on its weekday code (%d of %d off)", off, n);
+        CHECK(n > 300 && off == 0, "%s", text);
+
+        /* The fault itself: the World Cup of 48 with each date moved to its code as Date::Date does (0x54a2d0, as
+         * season_weekday_date). The first and last days of each knockout round (day, month from 0, code:
+         * season_wc48.c knockout_template) must keep their order, each round's first day before its last. With 8
+         * June on a Tuesday (2038, 2066, 2094) the round of 32 got 26 June as its first and its last day, and the
+         * game moved its 16 matches a week at a time. Groups I to L end 2 days after the third matchday of A to D
+         * (24 June, code 2). */
+        static const int ko[6][2][3] = {
+            {{27, 5, 5}, {3, 6, 5}}, {{4, 6, 4}, {8, 6, 1}}, {{9, 6, 2}, {12, 6, 5}},
+            {{13, 6, 6}, {16, 6, 2}}, {{17, 6, 3}, {18, 6, 4}}, {{18, 6, 4}, {19, 6, 5}},
+        };
+        int bad = 0, worst = 0, bad_year = 0;
+        for (int rules = 0; rules <= 1; rules++) {
+            game(1, 2030, rules);
+            for (int y = 2031; y <= 2301; y++) {
+                if (!season_intl_edition(season_intl_class_file(INTL_WORLD_CUP), y)) continue;
+                int s = season_intl_date_shift(INTL_WORLD_CUP, y), wrong = 0;
+                long before = snapped(y, 24, 5, s, 2) + 2;
+                for (int r = 0; r < 6; r++) {
+                    long a = snapped(y, ko[r][0][0], ko[r][0][1], s, ko[r][0][2]);
+                    long b = snapped(y, ko[r][1][0], ko[r][1][1], s, ko[r][1][2]);
+                    wrong += a >= b || a <= before;
+                    before = a;     /* the template's round of 32 ends after the round of 16 begins, in the table too */
+                    int july = (int)(b - days_from_civil(y, 7, 1) + 1);
+                    if (r == 5 && july > worst) worst = july;
+                }
+                if (wrong && !bad_year) bad_year = y;
+                bad += wrong != 0;
+            }
+        }
+        snprintf(text, sizeof text, "after the table: World Cup rounds in order (%d bad, the first %d), final by "
+                 "21 July (latest %d July)", bad, bad_year, worst);
+        CHECK(bad == 0 && worst <= 21, "%s", text);
+    }
+
     /* Finals dates. */
     game(1, 2001, 0);
     CHECK(season_intl_date_shift(INTL_ACN, 2019) == 0, "base game: no date shift");
@@ -254,7 +342,9 @@ int main(void)
     creating = 0;
     game(1, 2010, 0);
     CHECK(season_intl_rule_edition("euro_champ", 2016)->teams == 16, "2010 off: Euro 2016 keeps 16 teams (Q232)");
-    CHECK(season_intl_date_shift(INTL_WORLD_CUP, 2022) == 0, "2010 off: World Cup 2022 in June, as 2014 (the first edition from 2010)");
+    CHECK(season_intl_date_shift(INTL_WORLD_CUP, 2022) == -2,
+          "2010 off: World Cup 2022 in June, as 2014 (the first edition from 2010), on Friday 10 June (item 96)");
+    CHECK(season_intl_date_shift(INTL_WORLD_CUP, 2014) == 0, "2010 off: World Cup 2014 on its table day");
     game(1, 2015, 0);
     CHECK(season_intl_rule_edition("euro_champ", 2020)->teams == 24, "2015 off: Euro 2020 with 24 teams");
     game(1, 2010, 1);
