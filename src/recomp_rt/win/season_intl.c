@@ -112,6 +112,15 @@ static uint32_t call_cdecl(uint32_t fn, int nargs, const uint32_t *args)
     return r;
 }
 
+#define START_DAY 0xdd6ec8u              /* s16 day of the year of the chosen start date (game_run_to_start_date) */
+#define START_YEAR 0xdd6ecau             /* s16 its year */
+
+int season_intl_start_date(int *year, int *doy)
+{
+    *year = (int16_t)rd16(g_mem, START_YEAR), *doy = (int16_t)rd16(g_mem, START_DAY);
+    return *year > 1900 && *doy >= 0 && *doy < 366;
+}
+
 /* ---- Nations ---- */
 
 static int nation_count(void) { return (int)rd32(g_mem, NATION_COUNT); }

@@ -44,6 +44,10 @@ const SeasonIntlEdition *season_intl_table_edition(const char *file, int year);
 /* The first edition of a class whose season is the start season or later, after the table too, or NULL. */
 const SeasonIntlEdition *season_intl_first(const char *file, int start_season);
 
+/* The start date of the new game: the year and the day of the year (0 is 1 January) that game_run_to_start_date
+ * 0x5cc850 plays to (0xdd6eca, 0xdd6ec8; read at 0x5cc8b5..0x5cc8e1). 0 when none is set (season_intl.c). */
+int season_intl_start_date(int *year, int *doy);
+
 /* The next edition of a class after the edition year, after the table too, or NULL. */
 const SeasonIntlEdition *season_intl_next(const char *file, int year);
 

@@ -264,11 +264,36 @@ const char *season_intl_class_file(uint32_t cls) { return class_file(cls); }
 /* The constructor of a class: the original rounds the game year up to its cycle. A game that starts in
  * another season takes the first edition of the table from its start season. The base game and a 2001 start
  * keep the original's year (the table holds the same editions for 2001/02). */
+static int finals_days(uint32_t cls, int year, long *from, long *to);
+static long days_from_civil(long y, int m, int d);
+static const int class_step[INTL_CLASSES];
+
+/* 1 when the finals of class cls in edition year `year` begin before the start date of the new game (open item 19):
+ * a 2002/03 game starts on 13 July 2002, and the OFC Nations Cup of 5 July 2002 (its draw moved to 2001 with it) was
+ * never drawn, so the class waited for it to 2016 (run set pass 2, a2002s1). */
+static int before_start(uint32_t cls, int year)
+{
+    int sy, sd;
+    long from, to;
+    if (!season_intl_start_date(&sy, &sd) || !finals_days(cls, year, &from, &to)) return 0;
+    return from < days_from_civil(sy, 1, 1) + sd;
+}
+
 uint32_t rt_intl_first_year(uint32_t cls, uint32_t year)
 {
     if (!season_intl_on() || season_start_year() == SEASON_FIRST_YEAR) return year;
     const SeasonIntlEdition *e = season_intl_first(class_file(cls), season_start_year());
     uint32_t now = e ? (uint32_t)e->year : NEVER_YEAR;
+    /* The first edition that begins after the start date: with changing rules on the next of the table, with it off
+     * the next cycle of the first edition (rt_intl_next_year). */
+    for (int k = 0; e && cls < INTL_CLASSES && k < 8 && before_start(cls, (int)now); k++) {
+        if (season_changing_rules()) {
+            e = season_intl_next(class_file(cls), (int)now);
+            now = e ? (uint32_t)e->year : NEVER_YEAR;
+        } else {
+            now += (uint32_t)class_step[cls];
+        }
+    }
     if (logging())
         fprintf(stderr, "recomp: season intl: %s first edition %u (the original %u)\n", class_file(cls), now,
                 year & 0xffffu);
