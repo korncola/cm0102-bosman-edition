@@ -6,7 +6,7 @@ Usage:
 
 The run makes a 2002/03 game (the own database Summer 2002, all nations, seed 1, changing rules on, Tier A) and plays
 40 days from its start date (13 July 2002). The OFC Nations Cup of 2002 plays from 5 July 2002; the table moves the
-class's first group day (10 November) by -128 days and its draw (5 February) with it, into September 2001, before the
+class's first group day (10 November) by -128 days and its draw (5 March) with it, to 28 October 2001, before the
 game is made. The class's update draws on the exact day of its draw date, so the draw never came, the cup never ended
 and the next edition came in 2016 (run set pass 2, a2002s1). The database: own-dbs/Summer 2002.zip, unpacked in the
 keep folder.
@@ -38,7 +38,7 @@ def rows(save, name):
     ids = set()
     for i in range(len(comps) // 0x6b):
         rec = comps[i * 0x6b:(i + 1) * 0x6b]
-        if rec[4:4 + 51].split(b"\0")[0].decode("latin-1").startswith(name):
+        if rec[4:4 + 51].split(b"\0")[0].decode("latin-1").startswith(name):     # the data's name or the renamed one
             ids.add(struct.unpack_from("<i", rec, 0)[0])
     data = sav.read_member("nation_comp_history.dat")
     out = []
@@ -73,7 +73,7 @@ def main(argv):
     if not os.path.exists(save):
         fails.append("no save after the days")
     else:
-        got = [r for r in rows(save, "OFC") if r[0] == 2002]
+        got = [r for r in rows(save, "OFC") + rows(save, "Oceania Nations") if r[0] == 2002]
         if not got:
             fails.append("the save has no 2002 row of the OFC Nations Cup (its draw never came)")
         elif min(got[0][1:]) < 0:
