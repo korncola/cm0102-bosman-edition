@@ -25,6 +25,9 @@ season's rules). The runs:
             game saves 50 days after the start (August 2005); Leeds United, fourth of England in the game's own
             Data/euro.cfg (the 2001/02 entrants) and in the second tier in 2005/06, is no Champions League entrant
             (the history checker's entrants)
+    2005own September 2005 with its own euro.cfg: England's Champions League entrants are the first four of the
+            file (Chelsea, Arsenal, Manchester United, Liverpool: the original's format of 2005/06 gives England
+            four places; without the file Newcastle United, third in the database's last table, takes one)
     repeat  September 2009, twice: the saves 60 days after the start (September 2009, after the qualifying
             rounds) are equal byte for byte; each run ends after 600 s (the same World Cup box in December 2009)
 The checks of the season runs: the jump ends with code 0 and shows no message box of the game; the log of
@@ -182,13 +185,14 @@ LABELS_2009 = [("european_cup", 220, "Play-off Round"), ("uefa_cup", 220, "Play-
                ("uefa_cup", 270, "Third Qualifying Round")]
 LABELS_2018 = LABELS_2009 + [("european_cup", 240, "Preliminary Round"), ("european_cup", 230, "Preliminary Round Final"),
                              ("uefa_cup", 240, "Preliminary Round")]
-def run_2005(program, game, work):
+def run_2005(program, game, work, own=False):
     """Open item 100: a season database with no euro.cfg of its own does not take the 2001/02 euro.cfg of the
-    game's Data (UefaSeeding::collect_european_clubs 0x904040, apply_euro_cfg_order 0x9059e0 at 0x9041ec)."""
+    game's Data (UefaSeeding::collect_european_clubs 0x904040, apply_euro_cfg_order 0x9059e0 at 0x9041ec). own:
+    the database keeps its euro.cfg, and the game takes its entrants."""
     import smoke_run
     db = os.path.join(work, "db", "September 2005")
     shutil.copytree(os.path.join(DB, "September 2005 Helvete"), db,
-                    ignore=lambda d, names: [n for n in names if n.lower() == "euro.cfg"])
+                    ignore=lambda d, names: [] if own else [n for n in names if n.lower() == "euro.cfg"])
     code, _ = rrc.run(program, game, 2005, 2005, db, ["England"], [], work, 7200, None,
                       {"RECOMP_SAVE_AFTER_DAYS": "50"})
     save = os.path.join(work, "user", smoke_run.SAVE_NAME)
@@ -206,6 +210,9 @@ def run_2005(program, game, work):
     fails = [] if cl else [f"2005: no English Champions League entrant in the save ({work})"]
     if any(r[6] == "Leeds United" for r in cl):
         fails.append("2005: Leeds United is a Champions League entrant (the 2001/02 euro.cfg of the game's Data)")
+    want = {"Chelsea", "Arsenal", "Manchester United", "Liverpool"}
+    if own and {r[6] for r in cl} != want:
+        fails.append(f"2005own: England's entrants {sorted({r[6] for r in cl})}, not those of euro.cfg {sorted(want)}")
     return fails
 
 
@@ -217,6 +224,7 @@ RUNS = {
     "2013": run_2013,
     "repeat": run_repeat,
     "2005": run_2005,
+    "2005own": lambda program, game, work: run_2005(program, game, work, own=True),
 }
 
 

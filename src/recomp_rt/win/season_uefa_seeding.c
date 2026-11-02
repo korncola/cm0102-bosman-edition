@@ -412,9 +412,9 @@ static void cascade(char comp, const int *p, int n, const int *target, uint32_t 
 /* 0.6.2 open item 100. UefaSeeding::collect_european_clubs 0x904040 sorts the European clubs and, when the year of
  * the seeding (+0x439) is 2001, calls apply_euro_cfg_order 0x9059e0 (0x9041ec..0x9041fc), which moves the clubs
  * that Data/euro.cfg lists to the front of their nation's block in file order, so they take the nation's places.
- * The year site of seasons.py made that the start year, so every start read euro.cfg in its first season. A
- * database of a later season (September 2005 and the other season databases) has no euro.cfg of its own, and the
- * file data set swap (files.c) then gives the game's own Data/euro.cfg: the 2001/02 entrants. So a 2005/06 start
+ * The year site of seasons.py made that the start year, so every start read euro.cfg in its first season. The
+ * season zips up to 0.6.1 held no euro.cfg of their database (September 2005 and the others), and the file data
+ * set swap (files.c) then gave the game's own Data/euro.cfg: the 2001/02 entrants. So a 2005/06 start
  * put Leeds United, fourth in that file and in the second tier in 2005/06, into the Champions League. euro.cfg
  * belongs to its data: a database's own file to the database's season (the start year), the game's own file to
  * 2001/02. Otherwise the seeding year never matches, and the clubs keep the order of 0x905ce0: division, then

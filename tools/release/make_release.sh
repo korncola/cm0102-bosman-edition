@@ -14,7 +14,7 @@
 #                  the option database finds them (src/recomp_rt/win/files.c).
 #   --season-dbs   the folder with the zips of the Update Team databases (test-fixtures/databases/zips). The
 #                  script makes the 25 season database zips of the season database table from it
-#                  (tools/release/make_season_zips.py): each holds only the 20 data files, in a folder with
+#                  (tools/release/make_season_zips.py): each holds only the 20 data files and the source's euro.cfg, in a folder with
 #                  the neutral name of docs/research/rules-0.6.0/databases-signatures.tsv. It checks each
 #                  zip against that table and stops on a mismatch. The zips go in Seasons/ of the game
 #                  folder of each download (src/recomp_rt/win/seasons_db.h unpacks them on the first pick).
