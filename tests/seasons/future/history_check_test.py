@@ -41,7 +41,14 @@ COMPS = [(0, "Aland League", 2, 0, "club"), (1, "Euro Super Cup", 2, -1, "club")
          (12, "Asia Finals", 1, -1, "nation"), (13, "Americas Finals", 3, -1, "nation"),
          (14, "Hatay Cup", 5, -1, "nation"), (15, "Nations Shield", 1, -1, "nation"),
          (16, "Champions Match", 2, -1, "club"), (17, "Qual Zone", 1, -1, "nation"),
-         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club"), (20, "Champions Cup", 2, -1, "club")]
+         (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club"), (20, "Champions Cup", 2, -1, "club"),
+         (21, "Aland Second", 2, 0, "club")]
+LEVELS = {0: 20, 21: 10}                     # the level of a division (+0x69), higher is better
+# The places of the Champions Cup in the save (euro-place, open item 94): club id: (division, last division, last
+# place). Aland City from 1st place passes; Aland Club 0 from the second division and Aland Club 1 from 9th place
+# are faults. Every other club has no mark.
+EURO_MARKS = {0: (0, 0, 1), 6: (0, 21, 2), 7: (0, 0, 9)}
+EURO_FAULTS = {("euro-place", "Champions Cup", 2040)}
 
 
 def side(n):
@@ -224,6 +231,13 @@ def records(changing=1):
     def club(cid, name, nation, manager=-1, squad=()):
         r = bytearray(0x245)
         struct.pack_into("<i", r, 0, cid)
+        struct.pack_into("<i", r, 0x5b, -1)                          # no last division
+        struct.pack_into("<i", r, 0x1db, -1)                         # no European place
+        if cid in EURO_MARKS:
+            div, last, place = EURO_MARKS[cid]
+            struct.pack_into("<ii", r, 0x57, div, last)
+            struct.pack_into("<i", r, 0x1db, 20)
+            r[0x5f] = place
         for j in range(50):                                          # squad slots, -1 when empty
             struct.pack_into("<i", r, 0xD7 + 4 * j, squad[j] if j < len(squad) else -1)
         r[4:4 + len(name)] = name.encode()
@@ -240,6 +254,7 @@ def records(changing=1):
         struct.pack_into("<i", r, 0, cid)
         r[4:4 + len(name)] = name.encode()
         struct.pack_into("<ii", r, 0x59, c, n)
+        struct.pack_into("<h", r, 0x69, LEVELS.get(cid, 0))
         short = SHORT_NAMES.get(cid, "").encode()
         r[0x38:0x38 + len(short)] = short
         comp[part] += r
@@ -448,9 +463,13 @@ def main():
     want2 = (want - {("missing", "World Finals", 2038), ("same-final", "Euro Super Cup", 2028),
                      ("confederation", "Nations Shield", 2032)}) | \
         {("comp-continent", "Nations Shield", 2040), ("comp-name", "Nations Shield", 2040),
-         ("confederation", "Asia Shield", 2032)} | ENTRANT_FAULTS
+         ("confederation", "Asia Shield", 2032)} | ENTRANT_FAULTS | EURO_FAULTS
     if set(got) != want2:
         bad.append(f"rules run: missed {sorted(want2 - set(got))}, extra {sorted(set(got) - want2)}")
+    with open(os.path.join(work, "rules.faults.tsv"), encoding="utf-8") as f:
+        euro = sorted(l.split("\t")[4].split(" (")[0] for l in f if l.startswith("euro-place\t"))
+    if euro != ["Aland Club 0", "Aland Club 1"]:
+        bad.append(f"rules run: euro-place faults of {euro}, not Aland Club 0 and Aland Club 1")
     if got.get(("duplicate", "Euro Finals", 2028)) != "known":
         bad.append("rules run: the known Euro Finals duplicate is not marked known")
 
