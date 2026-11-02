@@ -20,6 +20,8 @@
  *   writes no fixture, table or history row, only player stats of clubs with no loaded league.
  * - Not original code, for the AI sales that Tier A lacks: a full AI club lets its weakest players over 21 go
  *   (release_surplus, open item 78).
+ * - The other way, for the AI signings that Tier A lacks: an AI club with fewer than SIGN_BELOW players in its squad
+ *   slots runs its own market, the original's shortlist and bids (short_club, open item 92).
  * Contracts stay. A skip of the contract pass 0x4c7ac0 (contract ends, called at 0x5cd406) and of the daily staff
  * pass 0x5ce2d0 (the AI contract offers, 0x4cda70 at 0x5d19d7 and five more) left each player at his club after his
  * contract ended, and such a player cannot play (an England game from 2025: Aston Villa had 50 players and 4 who
@@ -109,6 +111,11 @@ static int skip(int nargs, uint32_t from)
 #define RELEASE_TO 37                /* a club that reaches 50 slots and goes down to N spends about 5 / (50 - N)
                                         of its time at 45 or more. Down to 45, 405 clubs had 45 or more in July
                                         2108, the normal game 153: 5 / 13 = 0.38 = 153 / 405, so N = 37 */
+#define SIGN_BELOW 15                /* open item 92: a club with fewer players in its squad slots runs its market
+                                        (the top-up of match squads 0x90d2f0 fills a club below 15 with virtual
+                                        players, 0x90d45f..0x90d469) */
+#define LISTS_EVERY 30               /* the original rebuilds the position lists on each day of the year that 30
+                                        divides (0x5cda25..0x5cda36 before the call at 0x5cda46) */
 #define CONTRACTS 0xae1050u          /* CONTRACT_MANAGER, the this of 0x4cf6d0 and 0x4cf5f0 (0x83d8cd, 0x83d901) */
 #define CLUB_TABLE 0xae23b4u         /* the club rows (0x245 bytes each), national sides in the last 2 x nations */
 #define CLUB_COUNT 0xae235cu
@@ -119,6 +126,64 @@ static uint32_t call_this(uint32_t fn, uint32_t self, int n, uint32_t *args)
 {
     cpu.ecx = self;
     return rt_callback(fn, n, args);
+}
+
+/* Not original code: a Tier A step (0.6.2 open item 92), the other side of release_surplus. Tier A has no AI
+ * signings, so a club whose players' contracts ended or who retired was never refilled, while the normal game's
+ * market refills it. The MLS All-Star game takes at least 30 free players of each conference from the first rows of
+ * the MLS groups (0x90a980: the players of the club slots +0xd7 that are not injured, 0x62c400, not on international
+ * duty, 0x7757d0, and at that club, +0x39 at 0x90ab3c, counted at 0x90ab41 and 0x90ad3a; fewer than 30 stop at usa_mls_all_stars.cpp 476,
+ * 0x90abe4, or 545, 0x90addd). In a Tier A game from 2001 the MLS clubs held 1 to 48 players in July 2068 (Kansas
+ * City 1, NYNJ 3, Dallas 4) and the game stopped at line 545. The normal game from the same save of July 2061 had
+ * 16 to 41 a year later, where Tier A had 6 to 44. So an AI club of a played league with fewer than SIGN_BELOW
+ * players runs the original's market for itself: update_club_shortlist 0x83a730 (the day loop's random call at
+ * 0x5cdd15) and make_club_bids 0x84a020 (0x5cdd6d), with the position lists they read, 0x839e60 and 0x83a780. The
+ * transfers then go through TRANSFER_MANAGER::daily_update 0x8c5880 as in the normal game. From the save of July
+ * 2061: 440 such clubs below 15 then, about 20 from 2063 on; the MLS clubs held 14 to 46 in July 2068 and the game
+ * played on to 2072 with no box. A Tier A year took about a fifth longer (2062 to 2068: 3,078 s against 2,253 s,
+ * both at once on one machine); with a floor of 20 (about 80 clubs) it took two fifths longer. */
+static int short_clubs;              /* AI clubs below SIGN_BELOW at the last daily update */
+static int lists_day = -1;           /* the game day of the last position lists, -1 none in this program */
+
+static int squad_size(uint32_t club)
+{
+    int n = 0;
+    for (uint32_t j = 0; j < SLOTS; j++) n += rd32(g_mem, club + 0xd7 + 4 * j) != 0;
+    return n;
+}
+
+/* An AI club of a nation, as release_surplus picks it: not a national side (0x53b900), not a human's (0x600a50). */
+static int ai_club(uint32_t club)
+{
+    if (!rd32(g_mem, club + 0x53)) return 0;                          /* as 0x83cbd4: a club with a nation */
+    uint32_t a1c[1] = {club}, a5[5] = {club, 0, 1, 0, 0};
+    if (rt_callback(0x53b900u, 1, a1c) || rt_unwinding) return 0;
+    return !rt_callback(0x600a50u, 5, a5) && !rt_unwinding;
+}
+
+/* 1 when the club's division is a league that the game plays: its record id (+0x57 points at the record, the id at
+ * +0, as the day loop reads it at 0x5cdd46..0x5cdd4d) has an object in g_comp_object_table [0xadadfc] (as
+ * League::process_promotion_relegation_chain reads it at 0x689c42), below the table's slot count [0xadadf8]. The clubs of a nation whose leagues the game did not load
+ * (most of the world: 5,294 of 8,139 AI clubs held fewer than 5 players in the normal game of July 2062) have none. */
+static int plays_league(uint32_t club)
+{
+    uint32_t div = rd32(g_mem, club + 0x57), table = rd32(g_mem, 0xadadfcu);
+    if (div < 0x10000u || table < 0x10000u) return 0;
+    int32_t id = (int32_t)rd32(g_mem, div);
+    return id >= 0 && id < (int32_t)rd32(g_mem, 0xadadf8u) && rd32(g_mem, table + 4u * (uint32_t)id) != 0;
+}
+
+static int short_club(uint32_t club)
+{
+    Cpu saved = cpu;
+    int is = squad_size(club) < SIGN_BELOW && plays_league(club) && ai_club(club);
+    if (!rt_unwinding) cpu = saved;
+    return is;
+}
+
+static int game_day(void)
+{
+    return (int16_t)rd16(g_mem, 0xae2c92u) * 366 + (int16_t)rd16(g_mem, 0xae2c90u);   /* year and day of the year */
 }
 
 /* Not original code: a Tier A step (0.6.2 open item 78). Tier A has no AI sales, so squads only grew: new players
@@ -142,10 +207,7 @@ static void release_surplus(uint32_t club)
         uint32_t s = rd32(g_mem, club + 0xd7 + 4 * j);
         if (s) sp[n++] = s;
     }
-    if (n < SLOTS || !rd32(g_mem, club + 0x53)) return;               /* as 0x83cbd4: a club with a nation */
-    uint32_t a1c[1] = {club}, a5[5] = {club, 0, 1, 0, 0};
-    if (rt_callback(0x53b900u, 1, a1c) || rt_unwinding) return;      /* a national side (as 0x83cbc8) */
-    if (rt_callback(0x600a50u, 5, a5) || rt_unwinding) return;      /* a human club (as 0x83cbdf) */
+    if (n < SLOTS || !ai_club(club)) return;                          /* as 0x83cbd4, 0x83cbc8 and 0x83cbdf */
     uint32_t tm = rd32(g_mem, TRANSFERS), contracts = rd32(g_mem, CONTRACTS);
     int left = n, queued = 0;
     while (left > RELEASE_TO && n > 0 && !rt_unwinding) {
@@ -187,30 +249,63 @@ RT_WRAP(008c5880, tier_a_transfer_daily_update)
         Cpu saved = cpu;
         uint32_t base = rd32(g_mem, CLUB_TABLE);
         int clubs = (int)rd32(g_mem, CLUB_COUNT) - 2 * (int)rd32(g_mem, NATION_COUNT);  /* national sides last */
-        for (int i = 0; i < clubs && !rt_unwinding; i++) release_surplus(base + (uint32_t)i * CLUB_SIZE);
+        short_clubs = 0;
+        for (int i = 0; i < clubs && !rt_unwinding; i++) {
+            uint32_t club = base + (uint32_t)i * CLUB_SIZE;
+            release_surplus(club);
+            if (!rt_unwinding && squad_size(club) < SIGN_BELOW && plays_league(club) && ai_club(club)) short_clubs++;
+        }
         if (rt_unwinding) return;
         cpu = saved;
     }
     o_008c5880();
 }
 
+/* update_club_shortlist and make_club_bids, thiscall (club), ret 4: only for a short club (short_club). */
 RT_WRAP(0083a730, tier_a_update_club_shortlist)
 {
-    if (!skip(1, 0)) o_0083a730();
+    int run = tier_a_in_play() && short_club(rt_arg(0));
+    if (rt_unwinding) return;
+    if (run || !skip(1, 0)) o_0083a730();
 }
 
 RT_WRAP(0084a020, tier_a_make_club_bids)
 {
-    if (!skip(1, 0)) o_0084a020();
+    int run = tier_a_in_play() && short_club(rt_arg(0));
+    if (rt_unwinding) return;
+    if (run || !skip(1, 0)) o_0084a020();
 }
 
+/* The position lists of the day loop, only while a club is short. The build of 0x5cda46 keeps its days. The sort of
+ * 0x5cda56 runs only on the day of a build: it first builds the lists when they are older than LISTS_EVERY days
+ * (none in this program, a load of an earlier save, or no club was short on the day of a build). A short club so
+ * reads lists at most LISTS_EVERY days old, as in the normal game, and the daily sort of the whole world (most of
+ * the market's time, run-logs/future-3/profile.md) runs once in LISTS_EVERY days. */
 RT_WRAP(00839e60, tier_a_build_position_lists)
 {
-    if (!skip(1, 0x5cda4b)) o_00839e60();
+    if (tier_a_in_play() && short_clubs && rd32(g_mem, cpu.esp) == 0x5cda4bu) lists_day = game_day();
+    else if (skip(1, 0x5cda4b)) return;
+    o_00839e60();
 }
 
 RT_WRAP(0083a780, tier_a_sort_position_lists)
 {
+    if (tier_a_in_play() && short_clubs && rd32(g_mem, cpu.esp) == 0x5cda5bu) {
+        int age = game_day() - lists_day;              /* below 0 after a load of an earlier save in this program */
+        if (lists_day < 0 || age < 0 || age >= LISTS_EVERY) {
+            Cpu saved = cpu;
+            uint32_t a[1] = {0};
+            cpu.ecx = rd32(g_mem, rd32(g_mem, TRANSFERS) + 0x856);   /* the this of 0x5cda38..0x5cda40 */
+            rt_callback(0x839e60u, 1, a);
+            if (rt_unwinding) return;
+            cpu = saved;
+            lists_day = game_day();
+        }
+        if (lists_day == game_day()) {
+            o_0083a780();
+            return;
+        }
+    }
     if (!skip(0, 0x5cda5b)) o_0083a780();
 }
 
