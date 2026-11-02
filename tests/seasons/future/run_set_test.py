@@ -44,6 +44,20 @@ def main():
                 and os.path.isfile(os.path.join(db, "index.dat"))):
             bad.append(f"run set: {r['name']} does not play the October 2026 data (the folder of its index.dat): {db}")
 
+    # The new game steps of every row (soak_run's leg 0 uses rules_report_check.league_steps). a2001esb picks Spain,
+    # below the 16 rows of Select League(s): pass 2 stopped in the runner with a ValueError. Spain is the 13th row
+    # after 10 clicks on the list's down arrow (screenshots in run-logs/runset-pass2/esb).
+    import rules_report_check as rrc
+    for r in rows:
+        try:
+            rrc.league_steps(r["nations"].split(","), [])
+        except ValueError as e:
+            bad.append(f"league steps of {r['name']} ({r['nations']}): {e}")
+    esb = [s.split(" ", 1)[1] for s in rrc.league_steps(["England", "Spain", "Brazil"], []) if " click " in s]
+    esb = esb[esb.index("click 390 254"):] if "click 390 254" in esb else esb      # from the Brazil row
+    if esb[:13] != ["click 390 254"] + ["click 768 517"] * 10 + ["click 390 452", "click 705 572"]:
+        bad.append(f"league steps of England, Spain and Brazil: {esb[:13]}")
+
     legs = run_set.legs_of({"start": 2001, "last": 2100, "leg_years": 10})
     if len(legs) != 10 or legs[0] != (2001, 2010) or legs[-1] != (2091, 2100):
         bad.append(f"legs of 2001 to 2100 by 10: {legs[:2]} ... {legs[-1:]}")
