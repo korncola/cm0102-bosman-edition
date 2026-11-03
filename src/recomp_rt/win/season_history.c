@@ -17,6 +17,7 @@
 #include "season_history.h"
 #include "season_change.h"
 #include "season_comps.h"
+#include "season_titles.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -640,4 +641,69 @@ void season_history_log_turn(void)
     if (done) return;
     done = 1;
     log_rows("turn");
+}
+
+/* 0.6.2 item 108: the title holder of a start season that began before a ruling took the title away
+ * (season_titles.c). comp_util_get_latest_placed_club 0x4afd80, cdecl (competition record, char k): it sorts the
+ * history rows by competition and by year down (0x945333, compare 0x540780: 0xffff matches any year,
+ * 0x5407bc..0x5407c5), finds the competition (0x946464), walks back to its first row, the newest (0x4afde5..0x4afe02),
+ * and returns +0x0a, +0x0e or +0x12 for k 0, 1 or 2 (0x4afe07..0x4afe2c). Its callers are the holder reads: the super
+ * cups (ItaSuper::init_team_list 0x65fa60), the UEFA places of the cup winners (assign_uefa_cup_places 0x904580,
+ * season_uefa_seeding.c) and others. In the start season to 30 June of the next year, when the newest row's winner is
+ * the name of the table, it returns the club of that time with that name and nation. The base game (2001 start)
+ * and RECOMP_SEASON_CODE=off have no row. */
+void o_004afd80(void);
+
+static uint32_t club_named(const char *want, const char *nation)
+{
+    uint32_t base = rd32(g_mem, CLUBS_PTR), n = rd32(g_mem, CLUB_COUNT);
+    char name[64], nat[64];
+    for (uint32_t i = 0; base && i < n && i < 200000u; i++) {
+        uint32_t c = base + i * CLUB_SIZE, np;
+        text_at(c + 4, name, sizeof name);
+        if (strcmp(name, want)) continue;
+        np = rd32(g_mem, c + 0x53);             /* a pointer after the id pass 0x5315de, an id before */
+        text_at(np >= 0x10000u ? np + 4 : 0, nat, sizeof nat);
+        if (!strcmp(nat, nation)) return c;
+    }
+    return 0;
+}
+
+RT_WRAP(004afd80, comp_util_get_latest_placed_club)
+{
+    static int inside;
+    uint32_t rec = rt_arg(0);
+    int k = (int8_t)rt_arg(1), S = season_start_year(), year = (int)rd16(g_mem, GAME_YEAR);
+    int day = (int16_t)rd16(g_mem, GAME_DAY);
+    o_004afd80();
+    if (rt_unwinding || inside || !season_code_on() || !rec || k < 0 || k > 1) return;
+    if (!(year == S || (year == S + 1 && day < 181))) return;
+    char comp[64], row[64];
+    text_at(rec + 4, comp, sizeof comp);
+    if (!season_title_has(comp, S)) return;
+    uint32_t result = cpu.eax, winner = result;
+    if (k) {                                    /* the newest row's winner */
+        uint32_t a[2] = {rec, 0};
+        Cpu saved = cpu;
+        inside = 1;
+        winner = rt_callback(0x004afd80u, 2, a);
+        inside = 0;
+        if (rt_unwinding) return;
+        cpu = saved;
+    }
+    if (!winner) return;
+    text_at(winner + 4, row, sizeof row);
+    const char *nation = NULL, *then = season_title_then(comp, S, row, k, &nation);
+    uint32_t club = then ? club_named(then, nation) : 0;
+    if (!club || club == result) return;
+    static uint32_t logged[8][2];
+    for (int i = 0; i < 8; i++)
+        if (!logged[i][k] || logged[i][k] == rec) {
+            if (!logged[i][k])
+                fprintf(stderr, "recomp: history: %s %d, place %d: %s (the holder of that time; the newest row: %s)\n",
+                        comp, S, k + 1, then, row);
+            logged[i][k] = rec;
+            break;
+        }
+    cpu.eax = club;
 }

@@ -260,6 +260,10 @@ if(NOT WIN32)
     target_include_directories(season_cups_more_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_cups_more COMMAND season_cups_more_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv")
     set_tests_properties(season_cups_more PROPERTIES FIXTURES_REQUIRED rules_table)
+    # Titles taken away after the season (0.6.2 item 108): the holder of a start season before the ruling.
+    add_executable(season_titles_test tests/seasons/test_season_titles.c src/recomp_rt/win/season_titles.c)
+    target_include_directories(season_titles_test PRIVATE src/recomp_rt/win)
+    add_test(NAME season_titles COMMAND season_titles_test)
     # The new competitions module (slice 21c review): the defs that may need a new record fit MAX_NEW.
     add_test(NAME season_comps_new_records COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/comps_new_records_check.py"
         "${CMAKE_SOURCE_DIR}/src/recomp_rt/win")
