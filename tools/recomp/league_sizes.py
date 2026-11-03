@@ -149,12 +149,14 @@ FLOORS = {"eng_conf", "eng_first", "eng_prm", "eng_second", "eng_third", "wel_fi
 # after 2001, 0x7cad4f), else its largest count.
 FLOOR_COUNT = {f: (18 if f == "pol_second" else CAPS[f]) for f in FLOORS}
 
-# Fixed rows that a class of another division reads in the table of a class here (open item 113). The count of the
-# file must stay above the row, in every season. BelThird::create_promotion_playoff_stage 0x423880 puts the club of
-# row 15 (+0x375, rows of 0x3b) of the Belgian Second Division into its play-off (0x423a6a..0x423a80), through
-# BelThird +0x1c, the key of the division above. BelThird::advance_stage 0x423640 calls it when the Second Division
-# is complete (0x4236bf..0x4236f1). BelSecond::create_table 0x41fd70 makes a table of 18 rows (0x426 bytes,
-# 0x41fd7b..0x41fd94), so the floor of 18 keeps row 15 inside it.
+# Fixed rows that a class of another division reads in the table of a class here (open item 113): file: (count, why).
+# The count of the file (+0x3e, the store of CLASSES) must reach the count here in every season, or the row holds no
+# club. BelThird::create_promotion_playoff_stage 0x423880 puts the club of row 15 (+0x375, rows of 0x3b) of the
+# Belgian Second Division into its play-off (0x423a6a..0x423a80), through BelThird +0x1c, the key of the division
+# above. BelThird::advance_stage 0x423640 calls it once the Second Division is complete and BelThird's own stage
+# counter +0x30 reaches 7 (0x4236bf..0x4236f1). BelSecond::create_table 0x41fd70 always makes 18 rows (0x426 bytes at
+# 0x41fd7b) and stores the count at 0x41fd82, so its count must be at least 16. tools/seasons/make_size_wraps.py checks
+# the floor of this table (FLOOR_COUNT); the season code's floor_of (season_sizes.c) reads the same values.
 ROW_READS = {"bel_second": (16, "BelThird::create_promotion_playoff_stage 0x423880 reads row 15 (0x423a6a..0x423a80)")}
 
 CUP_INSNS = {

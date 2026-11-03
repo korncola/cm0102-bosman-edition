@@ -13,7 +13,8 @@ and then season_sizes_rules(this), which sets the places of the season in a seas
 
 The file is committed, because the recompiler reads the RT_WRAP lines of src/recomp_rt/win/*.c. --check
 writes nothing and exits with code 1 when the committed file differs from what the tool makes (ctest
-season_size_wraps). RT_WRAP stops the build when an address is not a translated function.
+season_size_wraps). Both modes stop when a floor is under a fixed row that another class reads (league_sizes.py
+ROW_READS, open item 113). RT_WRAP stops the build when an address is not a translated function.
 """
 import argparse
 import os
@@ -81,13 +82,16 @@ def main(argv):
     ap.add_argument("--check", action="store_true")
     a = ap.parse_args(argv)
     text = make()
+    faults = row_read_faults()
+    # The check itself: one count under each row must give a fault.
+    faults += [f"{f}: the row check finds no fault with a floor of {need - 1}" for f, (need, _w) in ROW_READS.items()
+               if not row_read_faults({**FLOOR_COUNT, f: need - 1})]
+    for line in faults:
+        print(f"make_size_wraps.py: {line}")
+    if faults:
+        return 1
     if a.check:
         have = open(a.out, encoding="utf-8").read() if os.path.exists(a.out) else ""
-        faults = row_read_faults()
-        for line in faults:
-            print(f"make_size_wraps.py: {line}")
-        if faults:
-            return 1
         if have != text:
             print(f"make_size_wraps.py: {a.out} differs from the class table: run the tool again")
             return 1
