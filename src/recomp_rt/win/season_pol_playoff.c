@@ -21,7 +21,8 @@
  * In the base data the spring stage ends about a week before the I liga's last round (day 136 against day 143 in 2200),
  * so the test of the groups alone was enough. In the date jump to 2198 (run set pass 2, jump2198, 2199/00) an
  * Ekstraklasa match of the spring stage came after the I liga's last round on day 143: the play-off was made that day
- * with the spring stage rows 13 727d0fd9 (status 255, still open) and 14 (status 2), so its fourth slot was 0, and its
+ * while the spring stage's row in place 13 still had status 255 (open) and only the row in place 14 had status 2, so its
+ * fourth slot was 0, and its
  * draw moved from day 144 to day 200 and on. Whether a spring match comes late depends on the order of the days'
  * matches: the same leg loaded on day 120 played its spring stage to the end on day 141.
  *
@@ -34,12 +35,7 @@
  * goes to tomorrow (Cup::create_tie_fixtures 0x51cb90). A game where the spring stage ends first is not changed: the
  * test passes on the same day as the original's. The base game and RECOMP_SEASON_CODE=off keep the original (Q152). */
 #include "win.h"
-#include "../rt.h"
-#include "../rt_host.h"
 #include "season_names.h"
-
-#include <stdio.h>
-#include <stdint.h>
 
 #define COMP_OBJECTS 0x00adadfcu        /* g_comp_object_table */
 #define COMP_SLOTS 0x00adadf8u
@@ -65,9 +61,9 @@ static int league_complete(uint32_t lg)
     return 1;
 }
 
-/* The stage part of check_complete(1, ...) (0x689bb6..0x689be8): every built stage (0 to +0x30) complete, and the
- * last stage (+0x2c - 1) built. */
-int season_pol_first_done(uint32_t lg)
+/* The stage part of check_complete(1, ...) (0x689bb6..0x689be8, run for a parent league, +0x44 0xff, as the Ekstraklasa
+ * is): every built stage (0 to +0x30) complete, and the last stage (+0x2c - 1) built. */
+static int pol_first_done(uint32_t lg)
 {
     if (!league_complete(lg)) return 0;
     int32_t built = (int32_t)rd32(g_mem, lg + 0x30u), count = (int32_t)rd32(g_mem, lg + 0x2cu);
@@ -80,6 +76,8 @@ int season_pol_first_done(uint32_t lg)
 
 void o_007cc1c0(void);
 
+static int waiting_edition = -1;        /* the I liga edition whose play-off waits (log lines only, not in the save) */
+
 /* PolSecond::advance_stage, thiscall, no arguments. */
 RT_WRAP(007cc1c0, pol_second_advance)
 {
@@ -87,17 +85,24 @@ RT_WRAP(007cc1c0, pol_second_advance)
     uint32_t first = readable(table) && id < rd32(g_mem, COMP_SLOTS) ? rd32(g_mem, table + 4u * id) : 0;
     /* Only the step that makes the play-off (+0x30 from -1 to 0, 0x7cc276..0x7cc281) waits. */
     if (season_game_changes() && (int32_t)rd32(g_mem, self + 0x30u) == -1 && readable(first) &&
-        league_complete(first) && !season_pol_first_done(first)) {
-        static int logged = -1;                     /* the edition of the last line: one line an edition */
+        league_complete(first) && !pol_first_done(first)) {
         int edition = (int16_t)rd16(g_mem, self + 0x40u);
-        if (logged != edition) {
+        if (waiting_edition != edition) {
             fprintf(stderr, "recomp: playoffs: pol_second %d: the play-off waits for the end of the Ekstraklasa's "
                             "last stage (day %d of %d)\n", edition, (int16_t)rd16(g_mem, TODAY),
                     (int16_t)rd16(g_mem, TODAY + 2u));
-            logged = edition;
+            waiting_edition = edition;
         }
         rt_ret_stdcall(cpu.eax, 0);
         return;
     }
+    int waited = waiting_edition == (int16_t)rd16(g_mem, self + 0x40u) && (int32_t)rd32(g_mem, self + 0x30u) == -1;
     o_007cc1c0();
+    if (waited && !rt_unwinding && (int32_t)rd32(g_mem, self + 0x30u) == 0) {
+        /* A play-off made after the wait: its draw date may have passed (it comes at the next update). A play-off that
+         * ends after the Polish update day would hold the season change again, so the line gives the day. */
+        fprintf(stderr, "recomp: playoffs: pol_second %d: the play-off is made on day %d of %d, after the wait\n",
+                waiting_edition, (int16_t)rd16(g_mem, TODAY), (int16_t)rd16(g_mem, TODAY + 2u));
+        waiting_edition = -1;
+    }
 }

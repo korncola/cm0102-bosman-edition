@@ -13,7 +13,7 @@ the two relegation play-off places was still open, the play-off's draw never cam
 edition 2199 through 2200/01 (league-stall). The save: RECOMP_POL_PLAYOFF_SAVE, else
 test-fixtures/pol-playoff-2200.sav; the database: test-fixtures/databases/December 2025*.
 
-The checks: no message box; the log has the line of the play-off that waits; at the start report of 2200/01 the
+The checks: no message box; the log has the lines of the play-off that waits and of its making after the wait; at the start report of 2200/01 the
 Ekstraklasa (pol_first) and the I liga (pol_second) hold edition 2200.
 """
 import os
@@ -30,6 +30,7 @@ import rules_report_check as rrc  # noqa: E402
 
 FIXTURES = "/Users/max/Projects/cm0102/test-fixtures"
 WAIT = "recomp: playoffs: pol_second 2199: the play-off waits for the end of the Ekstraklasa's last stage"
+MADE = "recomp: playoffs: pol_second 2199: the play-off is made on day "
 TIMEOUT = 3600
 
 
@@ -57,6 +58,25 @@ def main(argv):
     report, log = os.path.join(work, "report.tsv"), os.path.join(work, "stderr.txt")
     env = soak_run.leg_env(os.path.abspath(argv[1]), os.path.abspath(argv[2]), user, home, shots, steps, 2201, report,
                            {"RECOMP_DATE_JUMP": "1"})
+    try:
+        return play(argv, env, user, report, log)
+    finally:
+        tidy(user)
+
+
+def tidy(user):
+    """The loaded copy, the database copy and the *.tmp work files go; the log and the report stay."""
+    path = os.path.join(user, "soak.sav")
+    if os.path.exists(path):
+        os.remove(path)
+    shutil.rmtree(os.path.join(user, "Databases"), ignore_errors=True)
+    for n in os.listdir(user):
+        if n.endswith(".tmp"):
+            os.remove(os.path.join(user, n))
+
+
+def play(argv, env, user, report, log):
+    work = os.path.dirname(log)
     start, box, reached = time.time(), None, False
     with open(log, "w") as out:
         p = subprocess.Popen([os.path.abspath(argv[1]), "--game", os.path.abspath(argv[2]), "-seed", "1"], env=env,
@@ -79,22 +99,17 @@ def main(argv):
     if not reached:
         fails.append(f"no start report of 2200/01 after {time.time() - start:.0f} s")
     with open(log, encoding="latin-1") as f:
-        if WAIT not in f.read():
-            fails.append("no line of the play-off that waits for the Ekstraklasa")
+        text = f.read()
+    if WAIT not in text:
+        fails.append("no line of the play-off that waits for the Ekstraklasa")
+    elif MADE not in text:
+        fails.append("no line of the play-off made after the wait")
     if reached:
         _, comps = rrc.read_report(report)
         for file in ("pol_first", "pol_second"):
             years = {c["year"] for c in comps if c["file"] == file and c["season"] == 2200 and c["phase"] == "start"}
             if years != {2200}:
                 fails.append(f"{file} holds edition {sorted(years)} at the start of 2200/01, not 2200")
-    for name in ("soak.sav",):
-        path = os.path.join(user, name)
-        if os.path.exists(path):
-            os.remove(path)
-    shutil.rmtree(os.path.join(user, "Databases"), ignore_errors=True)
-    for n in os.listdir(user):
-        if n.endswith(".tmp"):
-            os.remove(os.path.join(user, n))
     for f in fails:
         print(f"FAIL  {f}")
     print("PASS" if not fails else f"FAILED: {len(fails)} ({work})")
