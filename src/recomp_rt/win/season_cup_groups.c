@@ -36,6 +36,7 @@
 #include "season.h"
 #include "season_change.h"
 #include "season_cups.h"
+#include "season_intl.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -788,6 +789,7 @@ RT_WRAP(0056c010, groups_auto_rank)
  * the knockout stage's. */
 RT_WRAP(00595160, groups_stage_honours)
 {
+    if (season_intl_ofc_honours(cpu.ecx)) return;   /* the OFC Nations Cup of one group (season_intl_ofc.c) */
     uint32_t self = cpu.ecx, ko = season_cup_groups_ko(self);
     if (!ko) {
         o_00595160();

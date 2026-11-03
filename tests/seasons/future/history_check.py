@@ -162,6 +162,8 @@ GAP = 150                                     # days between two editions, at th
                                               # a winter break of 69 days, 105 in the World Cup year 2022)
 FINAL_GAP = 25                                # days with no match after a final, at the least
 RECENT = 60                                   # a team of the round after a break played this many days before it
+PAUSE = 300                                   # days: the longest pause of a home-and-away group (the OFC Nations Cup
+                                              # of 2008 from 21 November 2007 to 14 June 2008, 206 days)
 # continent ids of the data (Africa, Asia, Europe, North America, Oceania, South America in every database)
 CONF_IDS = ["CAF", "AFC", "UEFA", "CONCACAF", "OFC", "CONMEBOL"]
 
@@ -609,23 +611,30 @@ def editions_of(fx):
     next day played in the RECENT days before the break. Nor is it a final when the next day has one match too and
     its teams played in the RECENT days before: a knockout round that goes on after a break (the Copa Libertadores
     of 2041, single-match days on 5, 9 and 15 June, then 10, 17 and 24 July). A new edition starts with a draw of
-    more ties."""
+    more ties. Nor is a gap of more than GAP days (up to PAUSE) a new edition when a home-and-away group pauses: the
+    day before it had two matches or more, and the next day's matches are of teams of the edition only, each a home
+    team against an away team that it has not met at home in the edition (the OFC Nations Cup of 2008, 0.6.2 open
+    item 45)."""
     per_day = collections.defaultdict(list)
     for day, home, away in fx:
         per_day[day].append((home, away))
-    out, seen, before = [], {}, None
+    out, seen, before, met = [], {}, None, set()
     for day in sorted(per_day):
         teams = {t for pair in per_day[day] for t in pair if t >= 0}
         last = out[-1][2] if out else None
         recent = last is not None and teams and all(last - seen.get(t, last - RECENT - 1) <= RECENT for t in teams)
         group_end = before is not None and len(per_day[before]) > 2 and recent
         paused = len(per_day[day]) == 1 and recent         # a knockout round that goes on after a break
-        if not out or day - last > GAP or (day - last >= FINAL_GAP and len(per_day[last]) == 1 and not group_end and not paused):
+        group_paused = (last is not None and GAP < day - last <= PAUSE and len(per_day[last]) >= 2 and
+                        all(p[0] in out[-1][3] and p[1] in out[-1][3] and p not in met for p in per_day[day]))
+        if not out or (day - last > GAP and not group_paused) or \
+                (day - last >= FINAL_GAP and len(per_day[last]) == 1 and not group_end and not paused):
             out.append([0, day, day, set()])
-            seen, last = {}, None
+            seen, last, met = {}, None, set()
         out[-1][2] = day
         out[-1][3].update(teams)
         seen.update((t, day) for t in teams)
+        met.update(per_day[day])
         before = last
     return [(datetime.date.fromordinal(e[2]).year, e[1], e[2], e[3]) for e in out]
 

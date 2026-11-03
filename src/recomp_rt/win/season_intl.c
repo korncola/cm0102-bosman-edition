@@ -1394,7 +1394,18 @@ RT_WRAP(0058bdb0, confed_stages) { stage_builder(INTL_CONFED, o_0058bdb0, 1); }
 RT_WRAP(005e12d0, copa_stages) { stage_builder(INTL_COPA, o_005e12d0, 1); }
 RT_WRAP(00401ab0, acn_stages) { stage_builder(INTL_ACN, o_00401ab0, 1); }
 RT_WRAP(0040f4c0, asian_stages) { stage_builder(INTL_ASIAN, o_0040f4c0, 1); }
-RT_WRAP(00799690, ofc_stages) { stage_builder(INTL_OFC, o_00799690, 1); }
+/* The OFC Nations Cup's edition of one group (2008) takes its stage count and draw date before the late draw. */
+static void ofc_stages_body(void)
+{
+    uint32_t self = cpu.ecx;
+    o_00799690();
+    if (!rt_unwinding) {
+        uint32_t eax = cpu.eax;
+        season_intl_ofc_rules(self);
+        cpu.eax = eax;
+    }
+}
+RT_WRAP(00799690, ofc_stages) { stage_builder(INTL_OFC, ofc_stages_body, 1); }
 RT_WRAP(007a0230, olympics_stages) { stage_builder(INTL_OLYMPICS, o_007a0230, 1); }
 
 /* The template functions (vtable +0x3c: 0x92c290, 0x57ab90, 0x58b560, 0x5e0900, 0x4012e0, 0x40eb00, 0x798b60,
