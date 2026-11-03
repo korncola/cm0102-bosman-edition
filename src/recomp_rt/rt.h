@@ -308,6 +308,9 @@ uint32_t rt_discipline_ban_entry(uint32_t discipline, uint32_t staff);
 /* 1 when a senior national team gets a manager vacancy that the original refuses (0.6.2 slice 11, Q23; win/original_faults.c,
  * tools/recomp/original_faults.py at 0x69bb02, 0x7ab158, 0x68fe65, 0x69d0a5, 0x69b6d8: site 0 to 4). */
 uint32_t rt_national_vacancy(uint32_t club, uint32_t site);
+/* 1 when the Olympic pick leaves a player in an AI senior squad whose window runs (open item 102; win/original_faults.c,
+ * tools/recomp/original_faults.py at 0x76ce1c). */
+uint32_t rt_olympic_keeps_senior(uint32_t player, uint32_t nation, uint32_t slot, uint32_t fixture);
 /* Money above 2,147,483,647 (0.6.2 slice 11, Q24; win/original_faults.c, tools/recomp/original_faults.py). */
 uint32_t rt_budget_hi(uint32_t lo, uint32_t hi);          /* get_transfer_budget: the high word in place of cdq */
 uint32_t rt_budget_floor(uint32_t finance, uint32_t less); /* the balance less 10m or 15m (0x599135, 0x599185) */
