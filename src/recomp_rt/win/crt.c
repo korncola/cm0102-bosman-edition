@@ -104,6 +104,8 @@ RT_WRAP(00945333, qsort)
  * lists that grow by one row and are sorted again each time, as 0x7c6a30 does. Gives the exit code: 0
  * when all are equal. */
 int hot_loops_self_test(void);
+int ftol_self_test(void);
+int rt_call_cache_self_test(void);
 
 static uint32_t test_seed = 12345;
 
@@ -169,5 +171,114 @@ int qsort6_self_test(void)
     qsort_mode = -1;
     fprintf(stderr, "qsort test: %d sorts, %d differ\n", sorts, test_fails);
     int hot = hot_loops_self_test();                 /* hot_loops.c */
-    return test_fails || hot ? 1 : 0;
+    int ftol = ftol_self_test();                     /* below */
+    int calls = rt_call_cache_self_test();           /* rt.c */
+    return test_fails || hot || ftol || calls ? 1 : 0;
+}
+
+/* _ftol 0x945640, the MSVC 6 float to integer call (0.6.2 item 110). It takes ST(0), pops it and gives the
+ * value cut toward zero as a 64-bit integer in edx:eax. The code: push ebp; mov ebp, esp; add esp, -0xc;
+ * fnstcw [ebp-2]; mov ax, [ebp-2]; or ah, 0xc; mov [ebp-4], ax; fldcw [ebp-4]; fistp qword [ebp-0xc];
+ * fldcw [ebp-2]; mov eax, [ebp-0xc]; mov edx, [ebp-8]; leave; ret. The game calls it millions of times a
+ * day (a profile of a game day: 5.7 % of the main thread, most of it the cost of the call itself). The host
+ * version below does the same: the same bytes below esp (ebp, the control word, the changed control word,
+ * the integer), the same eax, edx, ebp and esp, and the x87 state with ST(0) popped and the control word
+ * as before. The game reads stack bytes that earlier calls left (open item 85), so the stack writes stay.
+ * RECOMP_FTOL=original runs the recompiled code; RECOMP_FTOL=check runs both on each call and stops the
+ * program at the first difference. The self-test (RECOMP_QSORT_TEST) checks a list of values. */
+#define FTOL_BELOW 16u              /* the bytes it writes below esp at entry */
+
+void o_00945640(void);
+
+static int ftol_mode = -1;          /* 0 host, 1 check, 2 original, 3 the self-test */
+static unsigned long long ftol_checked;
+static int ftol_fails;
+
+static void ftol_host(void)
+{
+    uint32_t e = cpu.esp;
+    uint16_t cw = fpu.cw, cut = (uint16_t)(cw | 0x0c00u);
+    wr32(g_mem, e - 4, cpu.ebp);                     /* push ebp */
+    wr16(g_mem, e - 6, cw);                          /* fnstcw [ebp-2] */
+    wr16(g_mem, e - 8, cut);                         /* mov [ebp-4], ax */
+    fpu.cw = cut;
+    int64_t v = fist64(ST(0));                       /* fistp qword [ebp-0xc], rounded by the control word */
+    fpop();
+    fpu.cw = cw;                                     /* fldcw [ebp-2] */
+    wr64(g_mem, e - 16, (uint64_t)v);
+    cpu.eax = (uint32_t)(uint64_t)v;
+    cpu.edx = (uint32_t)((uint64_t)v >> 32);
+    cpu.esp = e + 4;                                 /* leave; ret */
+}
+
+static void print_ftol_checked(void) { fprintf(stderr, "recomp: ftol check: %llu calls equal\n", ftol_checked); }
+
+/* Both versions from the same state; the original's result stays. 0 when all is equal. */
+static int ftol_check(void)
+{
+    Cpu c0 = cpu;
+    Fpu f0 = fpu;
+    uint32_t low = cpu.esp - FTOL_BELOW;
+    uint8_t before[FTOL_BELOW + 4], host[FTOL_BELOW + 4];
+    memcpy(before, g_mem + low, sizeof before);
+    ftol_host();
+    Cpu c1 = cpu;
+    Fpu f1 = fpu;
+    memcpy(host, g_mem + low, sizeof host);
+    cpu = c0;
+    fpu = f0;
+    memcpy(g_mem + low, before, sizeof before);
+    o_00945640();
+    int bad = memcmp(&c1, &cpu, sizeof cpu) ? 1 : memcmp(&f1, &fpu, sizeof fpu) ? 2 :
+              memcmp(host, g_mem + low, sizeof host) ? 3 : 0;
+    if (bad)
+        fprintf(stderr, "recomp: ftol check: %s differs (value %.17g, control word 0x%x, eax 0x%x host 0x%x, "
+                "edx 0x%x host 0x%x)\n", bad == 1 ? "a register" : bad == 2 ? "the x87 state" : "the stack",
+                f0.st[f0.top & 7], f0.cw, cpu.eax, c1.eax, cpu.edx, c1.edx);
+    return bad;
+}
+
+RT_WRAP(00945640, ftol)
+{
+    if (ftol_mode < 0) {
+        const char *v = getenv("RECOMP_FTOL");
+        ftol_mode = !v ? 0 : !strcmp(v, "check") ? 1 : !strcmp(v, "original") ? 2 : 0;
+    }
+    if (ftol_mode == 0) { ftol_host(); return; }
+    if (ftol_mode == 2) { o_00945640(); return; }
+    if (ftol_check()) {
+        if (ftol_mode == 1) abort();
+        ftol_fails++;
+    }
+    if (ftol_mode == 1 && !ftol_checked++) atexit(print_ftol_checked);
+}
+
+/* The self-test: values around the integer steps, halves, the 64-bit limits, infinities and NaN, each with
+ * the four rounding modes in the control word before the call. Gives the count of values that differ. */
+int ftol_self_test(void)
+{
+    static const double base[] = {0.0, -0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.5, 3.49999, 99.99, 1e9, 2147483647.5,
+                                  2147483648.0, 4294967295.9, 4294967296.0, 9.2233720368547748e18,
+                                  9.2233720368547758e18, 1e19, 1e300, INFINITY, NAN, 4503599627370495.5,
+                                  0.1, 1.0 / 3.0, 65535.5, 1e-310};
+    uint32_t stack = rt_alloc(4096) + 2048, n = 0;
+    ftol_mode = 3;
+    ftol_fails = 0;
+    for (size_t i = 0; i < sizeof base / sizeof *base; i++)
+        for (int sign = 0; sign < 2; sign++)
+            for (uint16_t rc = 0; rc < 4; rc++) {
+                Cpu saved = cpu;
+                fpu.cw = (uint16_t)(0x027fu | (rc << 10));
+                fpush(sign ? -base[i] : base[i]);
+                cpu.esp = stack;
+                cpu.ebp = 0x12345678u;
+                cpu.eax = 0xa5a5a5a5u;
+                rt_callback(0x945640u, 0, NULL);
+                cpu = saved;
+                n++;
+            }
+    fpu_init();
+    ftol_mode = -1;
+    fprintf(stderr, "ftol test: %u values, %d differ\n", n, ftol_fails);
+    return ftol_fails;
 }
