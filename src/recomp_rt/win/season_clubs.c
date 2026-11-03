@@ -3,6 +3,7 @@
 #include "win.h"
 #include "season.h"
 #include "season_clubs.h"
+#include "season_nor_second.h"
 #include "season_tur_groups.h"
 #include "season_arg_zones.h"
 #include "season_names.h"
@@ -345,7 +346,7 @@ static int word_prefix(const char *a, const char *b)
 
 /* 1 for the name of a reserve or B side: a last word B, II, 2 or Reserves, a word such as U21, Jong at the
  * start, or "(reserve team)" (the research form). */
-static int reserve_name(const char *name)
+int season_clubs_reserve_name(const char *name)
 {
     char plain[128];
     plain_name(name, plain, sizeof plain);
@@ -372,9 +373,10 @@ static int fill_takes(const Club *c, const Division *div, int ncomps, uint32_t c
                       uint32_t spare1, uint32_t spare2, uint32_t cup_pool_nation)
 {
     if (c->kept || c->national || c->nation != d->nation || c->div == d->at) return 0;
+    if (season_nor_barred(c->at, d->at)) return 0;      /* open item 111: no Norwegian second team in the top tiers */
     if (season_tur_groups_tagged(c->at)) return 0;      /* Summer 2002: the first season places it in its group */
     int t = c->db_div >= comps ? (int)((c->db_div - comps) / COMP_SIZE) : -1;
-    int reserve_ok = !reserve_name(win_str(c->at + CLUB_NAME)) || d->missing_reserve;
+    int reserve_ok = !season_clubs_reserve_name(win_str(c->at + CLUB_NAME)) || d->missing_reserve;
     if (group == 0)                     /* a club that left a division of a higher rank */
         return !c->div && t >= 0 && t < ncomps && div[t].rank > d->rank && reserve_ok;
     if (group == 4)                     /* a club that left a lower division with a list */
@@ -541,7 +543,8 @@ static void move_clubs(int season)
         if (k < 0) {
             unmatched++;
             div[t].missing++;
-            if (reserve_name(rows[r].real) || reserve_name(rows[r].club)) div[t].missing_reserve++;
+            if (season_clubs_reserve_name(rows[r].real) || season_clubs_reserve_name(rows[r].club))
+                div[t].missing_reserve++;
             if (log) fprintf(stderr, "recomp: club moves: missing: %d/%02d\t%s\ttier %d\t%s\n", season,
                              (season + 1) % 100, rows[r].division, div[t].tier, rows[r].real);
             continue;
@@ -643,6 +646,7 @@ static void move_clubs(int season)
         for (int i = 0; i < count && now < d->want; i++) {
             Club *c = &club[i];
             if (c->kept || c->national || c->nation != d->nation || c->div || c->db_div != d->at) continue;
+            if (season_nor_barred(c->at, d->at)) continue;      /* open item 111 */
             /* Summer 2002: a club that the data tags for a Category B group (club +0x60) plays there; a database
              * place of another division does not keep it (two such clubs in Category A left two groups short). */
             if (season_tur_groups_tagged(c->at)) continue;

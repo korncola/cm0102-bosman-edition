@@ -46,4 +46,8 @@
 int season_clubs_init(const char *game_dir);
 int season_clubs_load(const char *path);
 
+/* 1 for the name of a reserve or B side (a last word B, II, 2 or Reserves, a word such as U21, Jong at the start,
+ * or "(reserve team)"). Also used for the Norwegian second teams (season_nor_second.c, open item 111). */
+int season_clubs_reserve_name(const char *name);
+
 #endif
