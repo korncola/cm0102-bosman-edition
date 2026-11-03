@@ -47,6 +47,7 @@
 #include "season_names.h"
 #include "season_rules.h"
 #include "season_playoffs.h"
+#include "season_pol_playoff.h"
 #include "season_cup_third_place.h"
 
 #include <stdio.h>
@@ -691,6 +692,14 @@ int season_playoffs_hold(void)
         if (upd < 0 || upd >= LATE_DAY || today < upd || today - upd > WAIT_DAYS) continue;
         const char *file = "";
         int p = playoffs_on() ? entry_playoffs(e, year, &file) : 0;
+        /* Item 104: the I liga's play-off, made late after the Ekstraklasa's spring stage (season_pol_playoff.c). It is
+         * the original's play-off, not one of this kind, so RECOMP_PLAYOFFS=off does not turn it off. */
+        if (p != 2) {
+            const char *f3 = "";
+            int q = season_pol_playoff_unfinished(e, year, &f3);
+            if (q == 2) p = 2, file = f3;
+            else if (q && !p) p = 1;
+        }
         /* The net only for an entry with a plain league that is not complete on its update day itself. */
         const char *f2 = "";
         int u = today == upd || held_net[e] ? entry_unfinished(e, year, &f2) : 0;

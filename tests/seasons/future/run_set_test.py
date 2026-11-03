@@ -111,6 +111,22 @@ def main():
             bad.append(f"Greek Super League 2 ({name}): {got}, not one fault in {want}")
     if run_set.greek_second(gre(2025, 2025, 2025)):
         bad.append("Greek Super League 2: two groups in 2025/26 are a fault")
+    # Open item 104: a leg that loads a save writes its first start lines under the game's start season
+    # (season_report_turn), with the state at the load. jump2198 has one group, slot t144: leg 0 writes 2198 at the
+    # start of 2198/99, legs 1 and 2 write 2199 and 2200 under 2198 again. Only the first line of a slot counts.
+    def slot(season, year, clubs=14, name="t144"):
+        return {"season": season, "phase": "start", "file": "gre_second", "year": year, "clubs": clubs,
+                "slot": name, "name": "Super League 2"}
+    jump = [slot(2198, 2198), slot(2198, 2199), slot(2199, 2199), slot(2198, 2200), slot(2200, 2200)]
+    if run_set.greek_second(jump):
+        bad.append(f"Greek Super League 2: the loaded legs of a date jump give faults: {run_set.greek_second(jump)}")
+    loaded = [slot(2026, 2026), slot(2026, 2998, 10, "t145"), slot(2027, 2027), slot(2027, 2998, 10, "t145"),
+              slot(2026, 2027), slot(2026, 2998, 10, "t145")]
+    if run_set.greek_second(loaded):
+        bad.append(f"Greek Super League 2: a leg loaded in 2027 gives faults in 2026: {run_set.greek_second(loaded)}")
+    if [s_ for s_, _ in run_set.greek_second([slot(2026, 2026), slot(2026, 2026, 10, "t145"),
+                                             slot(2026, 2027), slot(2026, 2998, 10, "t145")])] != [2026]:
+        bad.append("Greek Super League 2: a later loaded leg hides two groups at the start of 2026/27")
 
     # A passed leg: a kept leg keeps its save and the gzipped log, another leg the log only.
     work = tempfile.mkdtemp(prefix="run-set-")
