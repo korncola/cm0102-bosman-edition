@@ -92,9 +92,11 @@ A confederation check for every edition:
                   the table (open item 76) a pair at most of UEFA nations that played the finals without the
                   qualifying, one of them the history row's host (finals_hosts; the pool leaves the hosts out:
                   season_wcq26.c europe_nations, the original 0x919ee3)
-    duty-clash    a continental club match within one day of a match of a senior national side whose nation has 3
-                  or more players at one of the clubs (they are on duty, 0x7757d0; open item 93). Fixtures still to be
-                  played; not in a 2001 game with changing rules off
+    duty-clash    a continental club match within one day of a match of a national side that holds 3 or more
+                  players of one of the clubs (they are on duty, 0x7757d0; open item 93). For an Olympic match of the
+                  under-21 sides the fault is only a club that keeps fewer than 11 players it can field: not on duty,
+                  at the club, not injured (open item 107). Fixtures still to be played; not in a 2001 game with
+                  changing rules off
     entrant-holder the title holder is not an entrant (access.tsv "holder": the Champions League from 2006, the
                   Libertadores), when the edition before is at most one cycle and one year before; not for an
                   edition of the start year or before (it began before the game, the holder may be out)
@@ -276,6 +278,9 @@ class Game:
             part = sav.read("bosman_season.dat")
             if len(part) >= 16:
                 self.start, self.changing = struct.unpack_from("<ii", part, 8)
+            self.data_names = data_names(sav, part)
+        else:
+            self.data_names = {}
         # the host table (HostCountry.tmp: a u16 count, then rows of 0x22 bytes; HostCountry save 0x5fb320, load
         # 0x5fb160; row: +0 the competition's key id value (its record id), +4 s16 year, +6 six s32 nation ids, the
         # three host pairs, +0x1e the choice: 0 to 2 the drawn pair, 0xfd fixed, 0xfe not decided; season_intl.c)
@@ -394,6 +399,28 @@ def titles_allowed(name, year, start, most, several):
     SEVERAL_TITLES format from that format's first year, or the count of TITLES_OF_YEAR. TITLES_OF_YEAR counts only
     before the start year: those rows come from the database, and a game writes its own rows with its own format."""
     return max(most, several[0] if year >= several[1] else 1, TITLES_OF_YEAR.get((name, year), 1) if year < start else 1)
+
+
+def data_names(sav, part):
+    """{competition id: its name in the data} of each record that the season code renamed, from bosman_season.dat
+    (season.c, season_change_part_write): 16 bytes, the news (s32 count; per text s32 season, s32 posted, s32
+    length and the text), then the names (s32 count; per name s32 index into the club comp records, then the
+    nation comp records, and 51 bytes). {} for a part of 16 bytes (no names) or one that does not read."""
+    try:
+        at = 20
+        for _ in range(s32(part, 16)):
+            at += 12 + s32(part, at + 8)
+        count, at = s32(part, at), at + 4
+        ids = [s32(d, o) for d in (sav.read("club_comp.dat"), sav.read("nation_comp.dat"))
+               for o in range(0, len(d) - COMP + 1, COMP)]
+        out = {}
+        for _ in range(count):
+            out[ids[s32(part, at)]] = part[at + 4:at + 55].split(b"\0")[0].decode("cp1252")
+            at += 55
+        return out
+    except (struct.error, IndexError, ValueError):
+        return {}
+
 
 FRIENDLY = re.compile(r"^(Friendly|Reserve|'B' International|Under 21 International)")
 
@@ -915,6 +942,19 @@ def entrants(game, rules, access, changes=()):
 
 
 DUTY_MIN = 3                                  # players of one club in the squad of a side that plays a day apart
+SIDE_MIN = 11                                 # players a club needs to field a side (box match_eng.cpp 612 or 652)
+OLYMPIC_NAMES = ("football tournament of the olympic games", "olympic games")   # set the key 0x9cf7a0
+FITNESS = 0x1F                                # injury.dat: a fitness record per staff id (Injury::load 0x62ab00)
+
+
+def olympics(game):
+    """The competition ids of the Olympics: the records whose name in the data sets the key 0x9cf7a0. set_key_ids
+    0x601a40 compares each record's long name with fixed names (match_club_comp_key_id 0x60efd0, _stricmp); the
+    two names of that key are at 0x9db0d0 and 0x9db0c0 (src/cm3/key_ids_table.c, global 0x9cf7a0). A record that
+    the season code renamed keeps its name in the data in bosman_season.dat (game.data_names), as the wrap of
+    0x60efd0 gives it at a load (season_change.c)."""
+    return {cid for cid, c in game.comps.items()
+            if game.data_names.get(cid, c["name"]).lower() in OLYMPIC_NAMES}
 
 
 def duty_clashes(game):
@@ -923,21 +963,49 @@ def duty_clashes(game):
     The player is then on duty for his side (NationalTeams::get_international_duty_club 0x7757d0 searches the
     side's fixtures from the day before to the day after, 0x775842..0x7758a8), and a club with many of them fields
     fewer than 11 (box match_eng.cpp 612 or 652). A continental club match: a competition with no nation and two
-    clubs, not a friendly. Squads: club.dat +0xd7, SLOTS staff ids (-1 for none); the national side of a player's
-    squad staff.dat +0x24 (the squads of the save date). Only fixtures still to be played, and none in the start
-    season of a 2001 game, which keeps the original's dates (season_friendly_dates.c keeps_original). One fault per
-    competition and year, with its first case."""
+    clubs, not a friendly.
+    The Olympics (open item 107) play the under-21 sides (the last rows of nat_club.dat: club id at least the count
+    [0xae235c] minus [0xae2350], 0x540a2a..0x540a40), which carry the nation's name. Their squad is the
+    under-21 pick (NationalTeams::select_squad 0x76c120, slot 2 with flag 4: 0x76c26d calls 0x53b4f0, 0x76c279;
+    players aged 23 or under, 0x76cee3), so the players' +0x24 is the under-21 side. The Olympics are fixture type 1
+    (0x669ae0), so 0x7757d0 holds them, as the original does. The real tournament overlaps the UEFA qualifiers too
+    (2024: 24 July to 9 August, second qualifying round 23/24 and 30/31 July), and clubs need not release players
+    for it (it is not on the FIFA international match calendar). So an Olympic match (olympics(), by its key) is a
+    fault only when a club with a player in an Olympic side that plays within a day keeps fewer than SIDE_MIN
+    players it can field, as VIRTUAL_STAFF::count_available_players 0x90d8f0 counts them: in its squad slots, not on
+    duty for any side that plays within a day (0x7757d0), at the club (staff +0x39, the test after it) and with no
+    injury (the fitness record's injury +0xe is -1, 0x62c49c; a player who recovers, status 1 of 0x62c400, counts
+    as injured here, so the count errs toward a fault). Not counted: bans (0x55d270, the ruling bodies' tables of
+    discipline.dat, not read) and the European squad list (EUROPE_RULES::get_ineligibility_code 0x5832e0: staff
+    +0x6d 2 for a player aged 20 or more in the original's four cups, except some rounds; a July save holds almost
+    no registration yet). So the count can be above the match's: item 93's club keeps 12 registered players at the
+    October 2029 save and fielded 9 on 22 November. Squads: club.dat +0xd7, SLOTS staff ids (-1 for none); the
+    national side of a player's squad staff.dat +0x24 (the squads of the save date). Only fixtures still to be
+    played, and none in the start season of a 2001 game, which keeps the original's dates (season_friendly_dates.c
+    keeps_original). One fault per competition and year, with its first case."""
     sav = game.sav
-    staff = sav.read("staff.dat") if "staff.dat" in sav.members else b""
-    side_of = {s32(staff, o): s32(staff, o + 0x24) for o in range(0, len(staff) - STAFF + 1, STAFF)}
+    staff = sav.read("staff.dat") if sav.has("staff.dat") else b""
+    injury = sav.read("injury.dat") if sav.has("injury.dat") else b""
+    people = {s32(staff, o): o for o in range(0, len(staff) - STAFF + 1, STAFF)}
+
+    def hurt(x):
+        o = FITNESS * x + 0xE
+        return 0 <= o <= len(injury) - 4 and s32(injury, o) != -1
+
     clubs = sav.read("club.dat")
     called = {}                                   # club id: Counter of national side ids of its squad
+    able = {}                                     # club id: [the national side id, or -1, of each player it can field]
     for o in range(0, len(clubs) - CLUB + 1, CLUB):
-        ids = struct.unpack_from(f"<{SLOTS}i", clubs, o + 0xD7)
-        called[s32(clubs, o)] = collections.Counter(side_of.get(x, -1) for x in ids if x >= 0)
+        cid = s32(clubs, o)
+        ids = [x for x in struct.unpack_from(f"<{SLOTS}i", clubs, o + 0xD7) if x >= 0 and x in people]
+        called[cid] = collections.Counter(s32(staff, people[x] + 0x24) for x in ids)
+        able[cid] = [s32(staff, people[x] + 0x24) for x in ids
+                     if s32(staff, people[x] + 0x39) == cid and not hurt(x)]
     first = datetime.date(game.start + 1, 7, 1).toordinal() if game.start == 2001 else 0
     today = max(first, datetime.date(game.date[0], 1, 1).toordinal() + game.date[1] if game.date[0] > 1900 else 0)
-    national = collections.defaultdict(set)       # day: national side ids that play
+    games = olympics(game)
+    national = collections.defaultdict(set)       # day: national side ids that play a match that is not the Olympics
+    olympic = collections.defaultdict(set)        # day: national side ids that play an Olympic match
     club_matches = []
     for cid, fx in fixtures(game).items():
         comp = game.comps.get(cid, {})
@@ -946,7 +1014,7 @@ def duty_clashes(game):
                 continue
             for t in (home, away):
                 if t in game.sides:
-                    national[day].add(t)
+                    (olympic if cid in games else national)[day].add(t)
             if comp.get("nation", -1) < 0 and not FRIENDLY.match(comp.get("name", "")) and home in called and \
                     away in called:
                 club_matches.append((day, cid, home, away))
@@ -956,14 +1024,28 @@ def duty_clashes(game):
         year = datetime.date.fromordinal(day).year
         if (name, year) in seen:
             continue
-        hit = next(((c, side, d) for d in (day - 1, day, day + 1) for side in sorted(national.get(d, ()))
+        near = (day - 1, day, day + 1)
+        hit = next(((c, side, d) for d in near for side in sorted(national.get(d, ()))
                     for c in (home, away) if called[c][side] >= DUTY_MIN), None)
+        when = datetime.date.fromordinal(day)
         if hit:
             c, side, d = hit
             seen.add((name, year))
-            faults.append(("duty-clash", name, year, f"{game.club(c)[0]} on {datetime.date.fromordinal(day)} has "
+            faults.append(("duty-clash", name, year, f"{game.club(c)[0]} on {when} has "
                                                      f"{called[c][side]} players in the squad of {game.club(side)[0]}, "
                                                      f"which plays on {datetime.date.fromordinal(d)}"))
+            continue
+        busy = set().union(*(national.get(d, set()) | olympic.get(d, set()) for d in near))
+        games_near = set().union(*(olympic.get(d, set()) for d in near))
+        for c in (home, away):
+            away_now = sorted(s for s in games_near if called[c][s])
+            keeps = sum(1 for s in able[c] if s not in busy)
+            if away_now and keeps < SIDE_MIN:
+                seen.add((name, year))
+                squads = ", ".join(f"{called[c][s]} of {game.club(s)[0]}" for s in away_now)
+                faults.append(("duty-clash", name, year, f"{game.club(c)[0]} on {when} keeps {keeps} players it can "
+                                                         f"field, with players in the Olympic squads ({squads})"))
+                break
     return faults
 
 
