@@ -12,7 +12,9 @@
  *   (season_super_four_pick: a place that a club already holds goes to the next league club, O342) and the round
  *   table two rounds: semi-finals (code 130, flag 0x200, so the ties are the
  *   list's pairs, map_fixture_tree 0x519279) and the final (code 150), one match each, on the dates of the row;
- * - an object of a new super cup (season_comps.c, its own vtable copy): the picker takes the clubs of its nation.
+ * - an object of a new super cup (season_comps.c, its own vtable copy): the picker takes the clubs of its nation;
+ * - the start season's edition whose champion in the history row lost the title before the cup (item 108,
+ *   official_two): the two clubs are picked again with the official champion.
  * The table is made only at a season start or a new game; a save keeps the list and the table (Cup::save_cup_to_disk
  * 0x5210f0, Cup::load_from_disk 0x51fc00), so a load changes nothing. The base game (2001/02, changing rules off)
  * and RECOMP_SEASON_CODE=off get none of it (Q152, Q342): the rules table has no four-club row before 2019 and the
@@ -169,6 +171,42 @@ static int league_order(uint32_t key_global, uint32_t *out)
     return n;
 }
 
+/* Item 108: the super cup of the start season takes its champion from the history row of the database season
+ * before. Where that row keeps the result on the pitch (Q355) and the title went to another club before the super
+ * cup (season_super_official_champion), the two clubs are picked again with that club as the champion, by the
+ * original's rule (0x65fb55..0x65fbee): a 2006 start played Juventus (in Serie B) v Internazionale in place of
+ * Internazionale v Roma. The official champion is the club of that name whose last division (+0x5b) is the league.
+ * Only the start season: a later edition takes the champion of a season the game played. Returns 1 when it set the
+ * list. */
+static int official_two(uint32_t cup, const char *file, const SuperCup *k)
+{
+    int year = (int16_t)rd16(g_mem, cup + CUP_YEAR);
+    if (year != season_start_year()) return 0;
+    uint32_t pitch = placed(k->league, 0);
+    if (rt_unwinding || !pitch) return 0;
+    const char *name = season_super_official_champion(file, year, win_str(pitch + 4));
+    if (!name) return 0;
+    int32_t key = (int32_t)rd32(g_mem, k->league);
+    uint32_t base = rd32(g_mem, CLUBS), champion = 0;
+    int32_t clubs = (int32_t)rd32(g_mem, CLUB_COUNT) - 2 * (int32_t)rd32(g_mem, CLUB_COUNT_LESS);
+    for (int32_t i = 0; readable(base) && i < clubs && i < 200000 && !champion; i++) {
+        uint32_t club = base + (uint32_t)i * CLUB_SIZE, rec = rd32(g_mem, club + CLUB_LAST_DIVISION);
+        if (readable(rec) && (int32_t)rd32(g_mem, rec) == key && !strcmp(win_str(club + 4), name)) champion = club;
+    }
+    uint32_t cw = placed(k->cup, 0), cru = placed(k->cup, 1), out[2];
+    if (rt_unwinding) return 0;
+    if (!season_super_two_pick(champion, cw, cru, out)) {
+        fprintf(stderr, "recomp: super cups: %s %d: %s not found, the history row's champion plays\n", file, year,
+                name);
+        return 0;
+    }
+    put_list(cup, out, 2);
+    if (rt_unwinding) return 0;
+    fprintf(stderr, "recomp: super cups: %s %d: %.30s v %.30s (the title of the season before went to %s)\n", file,
+            year, win_str(out[0] + 4), win_str(out[1] + 4), name);
+    return 1;
+}
+
 /* After the picker of a super cup (it returned 1 with two clubs in the list). */
 static void teams_made(uint32_t cup)
 {
@@ -177,6 +215,12 @@ static void teams_made(uint32_t cup)
     const SuperCup *k = cup_of(file);
     int season = cup_season(cup);
     const SeasonSuperFour *four = k ? season_super_four(file, season) : NULL;
+    if (k && !four) {
+        Cpu saved = cpu;
+        official_two(cup, file, k);
+        if (!rt_unwinding) cpu = saved;
+        return;
+    }
     if (!four) return;
     Cpu saved = cpu;
     uint32_t league[LEAGUE_MAX];

@@ -106,6 +106,37 @@ int season_super_four_pick(const uint32_t *league, int count, uint32_t cw, uint3
     return 1;
 }
 
+/* The titles given to another club after the season (Q355 keeps the result on the pitch in the history rows of
+ * docs/research/history-0.6.0). Serie A 2005/06: Juventus first on the pitch; on 26 July 2006 the FIGC gave the title
+ * to Internazionale, and the Supercoppa of 26 August 2006 was Internazionale v Roma (Internazionale also won the
+ * Coppa Italia, Roma was the cup runner-up): en.wikipedia.org/wiki/2006_Supercoppa_Italiana and
+ * it.wikipedia.org/wiki/Supercoppa_italiana_2006, read 3 November 2026. Serie A 2004/05 (Juventus, title revoked
+ * and not given) needs no row: the Supercoppa of August 2005 was played before the ruling, Juventus v Internazionale. */
+static const struct {
+    const char *file;
+    int season;              /* the super cup's season: the history row of the season before */
+    const char *pitch, *official;
+} official_titles[] = {
+    {"ita_super", 2006, "Juventus", "Internazionale"},
+};
+
+const char *season_super_official_champion(const char *file, int season, const char *pitch)
+{
+    for (size_t i = 0; file && pitch && i < sizeof official_titles / sizeof official_titles[0]; i++)
+        if (!strcmp(official_titles[i].file, file) && official_titles[i].season == season &&
+            !strcmp(official_titles[i].pitch, pitch))
+            return official_titles[i].official;
+    return NULL;
+}
+
+int season_super_two_pick(uint32_t champion, uint32_t cw, uint32_t cru, uint32_t out[2])
+{
+    uint32_t other = cw == champion ? cru : cw;
+    if (!champion || !other || other == champion) return 0;
+    out[0] = champion, out[1] = other;
+    return 1;
+}
+
 /* ---- New cups ----
  * The formats (rules table rows, columns format and notes; dates marked "inference" are not in the row):
  * - Turkish Super Cup (rus-tur.tsv): one match at a neutral venue from 2006/07, cancelled in 2011/12; the game plays it
