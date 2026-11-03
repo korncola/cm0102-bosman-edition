@@ -234,6 +234,19 @@ def main(argv):
         check(status == PREPARE["OK"] and open(cfg, "rb").read() == zip_cfg and
               sorted(os.listdir(folder)) == sorted(FILES + ["euro.cfg"]), "with the good zip back the folder gets euro.cfg")
 
+        # A euro.cfg.*.tmp that an earlier stop left (an hour old) goes at the next prepare; a fresh one stays.
+        old_part = os.path.join(folder, "euro.cfg.123-456.tmp")
+        new_part = os.path.join(folder, "euro.cfg.789-012.tmp")
+        for part in (old_part, new_part):
+            with open(part, "wb") as f:
+                f.write(b"half")
+        long_ago = time.time() - 7200
+        os.utime(old_part, (long_ago, long_ago))
+        status, _, _, _ = prepare(tool, game, save, 2003)
+        check(status == PREPARE["OK"] and not os.path.exists(old_part) and os.path.exists(new_part),
+              "prepare removes a stale euro.cfg.*.tmp and keeps a fresh one")
+        os.unlink(new_part)
+
         # The recognition cache: a file counts only when it is 2 seconds older than the last change, so age it.
         cache = os.path.join(save, "Databases", ".identify-cache")
         check(not os.path.exists(cache), "fresh files (changed a moment ago) are not kept in the cache")

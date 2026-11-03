@@ -479,6 +479,30 @@ static int unpack_zip(const char *zip, const char *tmp, const SeasonKnownDb *row
     return 0;
 }
 
+/* Removes the euro.cfg.*.tmp files of a copy that stopped (a crash between the extract and the rename) when
+ * nobody changed them for an hour. A fresh one may belong to a run that is writing it now. */
+static void remove_stale_euro_cfg_parts(const char *folder)
+{
+    char names[8][260];
+    int n = 0;
+    HostDir *d = host_opendir(folder);
+    if (!d) return;
+    const char *e;
+    while ((e = host_readdir(d)) && n < 8) {
+        size_t len = strlen(e);
+        if (len > 14 && !strncasecmp(e, "euro.cfg.", 9) && !strcasecmp(e + len - 4, ".tmp"))
+            snprintf(names[n++], sizeof names[0], "%s", e);
+    }
+    host_closedir(d);
+    int64_t now = (int64_t)(host_unix_time_us() / 1000000u);
+    for (int i = 0; i < n; i++) {
+        char p[1400];
+        HostStat st;
+        snprintf(p, sizeof p, "%s/%s", folder, names[i]);
+        if (!host_stat(p, &st) && !st.is_dir && st.mtime < now - 3600) host_unlink(p);
+    }
+}
+
 /* A folder that a player unpacked from a 0.6.0 or 0.6.1 zip has no euro.cfg (0.6.2 open item 100). When the folder
  * lacks the file and the zip of the season has it, copies it in. A file that is there is never replaced. The file
  * is written under a temporary name and renamed, so a stop leaves no half file under the real name. A failure
@@ -487,6 +511,7 @@ static void add_missing_euro_cfg(const char *game_dir, const SeasonKnownDb *row,
 {
     char cfg[1300], zip[1100];
     HostStat st;
+    remove_stale_euro_cfg_parts(folder);
     if (find_file(folder, "euro.cfg", cfg, sizeof cfg)) return;      /* any case of the name counts as there */
     snprintf(cfg, sizeof cfg, "%s/euro.cfg", folder);
     if (!zip_path(game_dir, row, zip, sizeof zip) || host_stat(zip, &st) || st.is_dir) return;
