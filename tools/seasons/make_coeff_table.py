@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Makes src/recomp_rt/win/season_coeffs_table.c, the missing UEFA season coefficients of some season databases
-(0.6.2 open item 106).
+"""Makes src/recomp_rt/win/season_coeffs_table.c, the real UEFA season coefficients of the season databases whose
+values are missing or one season off (0.6.2 open item 106).
 
 Usage:
     python3 -I tools/seasons/make_coeff_table.py --measure <folder of database folders>
-        writes docs/research/2026-11-03-database-coefficients.tsv from the databases, and prints for each season
-        database how its six coefficient seasons compare with those of the next season database
+        writes docs/research/2026-11-03-database-coefficients.tsv from the databases and the researched values, and
+        prints the season that each of the six coefficient slots of each season database holds
     python3 -I tools/seasons/make_coeff_table.py            writes the C table from the TSV
     python3 -I tools/seasons/make_coeff_table.py --check    exits 1 when the C table is not the one the TSV gives
 
@@ -16,16 +16,21 @@ the nations by +0xe0 to +0x100 (UefaSeeding::roll_coefficients 0x903b50 makes no
 later season change shifts the six down one place and writes the game's own points to +0x108 (0x903b50). So
 +0x108 is the season before the start, which counts in the five-season totals of the next five seasons.
 
-"2025 Data Update" (December 2025) and "May 2026 Data Update" (May 2026) hold 2019/20 to 2023/24 at +0xe0 to
-+0x100 and 0 at +0x108 for every nation: the 2024/25 season is missing. The October 2026 database holds 2024/25
-at +0x100 (England 29.464, Spain 23.892). Max's decision (3 November 2026): the 2025/26 databases take these
-values. The October 2026 data is used with the Update Team's permission (1 November 2026).
+TARGETS names the season databases and extra versions that get the real values and the slot offset that --measure
+found in each: 0 when the values sit in the right slots and +0x108 is 0 (the season before the start is missing), -1
+when all six are one season old, +1 when they are one season early. Max's decision (3 November 2026, "do whatever
+real life does"): these databases take the real UEFA values of the six seasons. The values come from
+docs/research/2026-11-03-uefa-association-coefficients.tsv (kassiesa.net country rankings 2000 to 2026, read 3
+November 2026; UEFA's own coefficient data agrees from 2006/07 on). --measure checks that most nonzero values of
+each database are the real values at the offset of TARGETS, so the table fixes the fault that was measured.
 
-FILLS names each database that gets +0x108 and the database whose +0x100 gives it. A nation is matched by its
-name among the UEFA nations (continent id 2) of both databases. The TSV keeps the nation id of the database
-that gets the value, its name, the +0x100 value the game must find there (a check that the loaded nation.dat
-is the known one), and the new +0x108 value. The values are written with repr(), which a C compiler reads as the
-same double.
+A row is a nation whose six values are not the real ones: its id in the database, its name, the six values the game
+must find there (a check that the loaded nation.dat is the known one) and the six real values. Yugoslavia in a
+database that also has Serbia (a record of a former nation) keeps its values. Russia takes its real values too: UEFA
+kept Russia in its ranking after the suspension of 28 February 2022 (frozen at 4.333 a season from 2022/23), and the
+game gives a suspended nation no places (season_uefa_seeding.c). The column db_agree counts the changed seasons
+whose real value another season database holds in its right slot. The values are written with repr(), which a C
+compiler reads as the same double.
 """
 import csv
 import os
@@ -38,12 +43,26 @@ import history_gaps as hg  # noqa: E402
 
 ROOT = hg.ROOT
 TSV = os.path.join(ROOT, "docs", "research", "2026-11-03-database-coefficients.tsv")
+REAL = os.path.join(ROOT, "docs", "research", "2026-11-03-uefa-association-coefficients.tsv")
 OUT = os.path.join(ROOT, "src", "recomp_rt", "win", "season_coeffs_table.c")
 NATION_TABLE, UEFA = 4, 2
 CONTINENT_AT, NAME_AT, COEFFS_AT = 0x71, 0x04, 0xe0
-# database that gets +0x108: (database whose +0x100 gives it, the season of the value)
-FILLS = {"December 2025": ("October 2026", "2024/25"), "May 2026": ("October 2026", "2024/25")}
-COLUMNS = ["database", "nation_id", "nation", "season", "check_0x100", "value_0x108", "source"]
+# database: the slot offset of its values (see above)
+TARGETS = {"Summer 2002": -1, "September 2005": -1, "Summer 2006": +1, "September 2008": -1,
+           "September 2011 ODB": -1, "October 2019": -1, "November 2020": -1, "October 2021": +1,
+           "October 2022": 0, "October 2023": 0, "October 2024": 0, "December 2025": 0, "May 2026": 0,
+           "October 2026": 0,
+           # extra versions
+           "December 2008": -1, "March 2009": -1, "June 2010": +1, "March 2012 ODB": -1, "March 2020": -1,
+           "April 2021": -1, "April 2022": +1, "April 2023": -1, "April 2024": 0}
+# the database's name of a nation: the researched name
+REAL_NAME = {"Holland": "Netherlands", "Republic of Ireland": "Ireland", "FYR of Macedonia": "North Macedonia",
+             "Yugoslavia": "Serbia"}
+COLUMNS = ["database", "nation_id", "nation", "seasons", "found", "real", "db_agree", "source"]
+
+
+def season(end):
+    return f"{end - 1}/{end % 100:02d}"
 
 
 def fail(text):
@@ -86,27 +105,84 @@ def uefa_nations(folder):
     return out
 
 
+def real_values():
+    """{(researched name, season end year): (value, source)}."""
+    out = {}
+    for r in hg.read_tsv(REAL):
+        out[(r["nation"], int(r["season"][:4]) + 1)] = (float(r["coefficient"]), r["source"])
+    return out
+
+
+def real_six(real, name, start, where):
+    """The real values of the six seasons (start-6)/(start-5) to (start-1)/start of the database's nation name. A
+    season before the nation's first researched season (before it joined UEFA) is 0; a gap after it fails."""
+    rname = REAL_NAME.get(name, name)
+    seasons = [e for n, e in real if n == rname]
+    if not seasons:
+        fail(f"{where}: no researched values of {name}")
+    out = []
+    for e in range(start - 5, start + 1):
+        if (rname, e) in real:
+            out.append(real[(rname, e)][0])
+        elif e < min(seasons):
+            out.append(0.0)
+        else:
+            fail(f"{where}: no researched value of {name} for {season(e)}")
+    return out
+
+
+def season_slots(dbs):
+    """{(nation, season end year): {value}} of the season databases whose six slots are right (not in TARGETS
+    with a nonzero offset), for the db_agree column."""
+    out = {}
+    for name, (y, role, folder) in dbs.items():
+        if not y or role not in ("season database", "extra version") or TARGETS.get(name):
+            continue
+        for n, (_, v) in uefa_nations(folder).items():
+            for k in range(6):
+                if v[k] or (k < 5):
+                    out.setdefault((n, y - 5 + k), set()).add(v[k])
+    return out
+
+
 def measure(dbroot):
     if not os.path.isdir(dbroot):
         fail(f"{dbroot} is not a folder")
     dbs = known_databases(dbroot)
+    real = real_values()
+    held = season_slots(dbs)
     rows = []
-    for target, (donor, season) in FILLS.items():
-        for name in (target, donor):
-            if name not in dbs:
-                fail(f"no folder of the database {name!r} in {dbroot}")
-        t, s = uefa_nations(dbs[target][2]), uefa_nations(dbs[donor][2])
-        if set(t) != set(s):
-            fail(f"{target} and {donor} have other UEFA nations: {sorted(set(t) ^ set(s))}")
-        for name in sorted(t, key=lambda n: t[n][0]):
-            nid, v = t[name]
-            if v[5] != 0:
-                fail(f"{target}: {name} has {v[5]!r} at +0x108, not 0")
-            if v[4] != s[name][1][3]:
-                fail(f"{target}: {name}: +0x100 {v[4]!r} is not the +0xf8 {s[name][1][3]!r} of {donor}: "
-                     "the seasons do not line up")
-            rows.append({"database": target, "nation_id": str(nid), "nation": name, "season": season,
-                         "check_0x100": repr(v[4]), "value_0x108": repr(s[name][1][4]), "source": f"{donor} +0x100"})
+    for target, offset in TARGETS.items():
+        if target not in dbs:
+            fail(f"no folder of the database {target!r} in {dbroot}")
+        y = dbs[target][0]
+        nations = uefa_nations(dbs[target][2])
+        ends = [y - 5 + k for k in range(6)]
+        lined = total = 0
+        for name in sorted(nations, key=lambda n: nations[n][0]):
+            nid, found = nations[name]
+            if name == "Yugoslavia" and "Serbia" in nations:
+                continue
+            rname = REAL_NAME.get(name, name)
+            want = real_six(real, name, y, target)
+            for k in range(6):
+                if found[k]:
+                    total += 1
+                    lined += found[k] == real.get((rname, ends[k] + offset), (None,))[0]
+            if want == found:
+                continue
+            changed = [k for k in range(6) if want[k] != found[k]]
+            agree = sum(want[k] in held.get((name, ends[k]), ()) for k in changed)
+            pages = sorted({real[(rname, e)][1].rsplit("/", 1)[1] for e in ends if (rname, e) in real})
+            rows.append({"database": target, "nation_id": str(nid), "nation": name,
+                         "seasons": f"{season(ends[0])}..{season(ends[5])}",
+                         "found": " ".join(map(repr, found)), "real": " ".join(map(repr, want)),
+                         "db_agree": f"{agree}/{len(changed)}",
+                         "source": "researched: kassiesa.net " + ", ".join(pages) + " (read 2026-11-03)"})
+        if not total or lined < 0.8 * total:
+            fail(f"{target}: only {lined} of {total} nonzero values are the real ones at the offset {offset}")
+        print(f"{target}: {lined} of {total} nonzero values are the real ones at the offset {offset:+d}; "
+              f"{sum(r['database'] == target for r in rows)} nations change")
     with open(TSV, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, COLUMNS, delimiter="\t", lineterminator="\n")
         w.writeheader()
@@ -164,21 +240,27 @@ def report(dbs):
 
 def table_text():
     rows = hg.read_tsv(TSV)
-    known = {r["database"] for r in hg.read_tsv(hg.SIGS)}
+    starts = {r["database"]: int(r["data_season"][:4]) for r in hg.read_tsv(hg.SIGS) if r["data_season"][:4].isdigit()}
+    real_vals = real_values()
     by_db = {}
     for r in rows:
-        if r["database"] not in known:
+        if r["database"] not in starts:
             fail(f"{r['database']!r} is not in databases-signatures.tsv")
-        nid, chk, val = int(r["nation_id"]), float(r["check_0x100"]), float(r["value_0x108"])
-        if not 0 <= nid < 1000 or not 0 <= val < 100 or not 0 <= chk < 100:
+        nid = int(r["nation_id"])
+        found, real = r["found"].split(), r["real"].split()
+        if len(found) != 6 or len(real) != 6:
+            fail(f"{r['database']} {r['nation']}: not six values")
+        if not 0 <= nid < 1000 or not all(0 <= float(v) < 100 for v in found + real):
             fail(f"{r['database']} {r['nation']}: a value out of range")
-        if repr(val) != r["value_0x108"] or repr(chk) != r["check_0x100"]:
+        if any(repr(float(v)) != v for v in found + real):
             fail(f"{r['database']} {r['nation']}: a value is not in the repr() form")
+        if [float(v) for v in real] != real_six(real_vals, r["nation"], starts[r["database"]], r["database"]):
+            fail(f"{r['database']} {r['nation']}: the real values are not those of {os.path.basename(REAL)}")
         if any(q in r["nation"] for q in '"\\?') or len(r["nation"].encode("latin-1")) > 50:
             fail(f"{r['database']}: the nation name {r['nation']!r} cannot go into the table")
-        by_db.setdefault(r["database"], []).append((nid, r["nation"], r["check_0x100"], r["value_0x108"]))
+        by_db.setdefault(r["database"], []).append((nid, r["nation"], found, real))
     lines = [
-        "/* The missing UEFA season coefficients of some season databases (season_coeffs.h). Made by",
+        "/* The real UEFA season coefficients of some season databases (season_coeffs.h). Made by",
         " * tools/seasons/make_coeff_table.py from docs/research/2026-11-03-database-coefficients.tsv. Do not edit. */",
         '#include "season_coeffs.h"',
         "",
@@ -189,8 +271,9 @@ def table_text():
             fail(f"{db}: {len(items)} rows, more than the undo record of season_coeffs.c holds (256)")
         ident = "".join(c if c.isalnum() else "_" for c in db)
         lines.append(f"static const SeasonCoeff coeffs_{ident}[] = {{")
-        for nid, nation, chk, val in items:
-            lines.append(f'    {{{nid}, "{nation}", {chk}, {val}}},')
+        for nid, nation, found, real in items:
+            lines.append(f'    {{{nid}, "{nation}", {{{", ".join(found)}}},')
+            lines.append(f'        {{{", ".join(real)}}}}},')
         lines.append("};")
         dbs.append((db, ident, len(items)))
     lines += ["", "const SeasonCoeffDb season_coeff_dbs[] = {"]
