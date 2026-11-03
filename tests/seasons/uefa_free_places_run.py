@@ -148,8 +148,10 @@ def main(argv):
         fails += places(game, log)
         out2 = os.path.join(work, "draws", "user", "samesave.sav")
         code, took, box = soak_run.load_leg(o, os.path.join(work, "draws"), out, DAYS_DRAWS)
-        with open(os.path.join(work, "draws", "stderr.txt"), encoding="latin-1") as f:
-            log2 = f.read()
+        log2 = ""
+        if os.path.exists(os.path.join(work, "draws", "stderr.txt")):
+            with open(os.path.join(work, "draws", "stderr.txt"), encoding="latin-1") as f:
+                log2 = f.read()
         if code != 0 or box or not os.path.exists(out2):
             fails.append(f"leg 2 ended with code {code}{', box ' + box if box else ''} and no save ({work})")
         elif hc.Game(out2).date < (2026, 245):

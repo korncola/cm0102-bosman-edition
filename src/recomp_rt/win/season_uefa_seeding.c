@@ -24,7 +24,7 @@
  *   1. the Champions League places of each nation by league position (the p-th club of its records,
  *      0x9050d0 with skip placed 0, as 0x904465), with the entry round of the access list.
  *   2. the Champions League title holder (the history winner of the cup, 0x4afd80 as 0x9042e3) in the group
- *      stage, when it has no place yet. Else its place is free (the cascade fills it).
+ *      stage, when it has no place yet. Else its place is free (the cascade moves a club up into it).
  *   3. the Europa League title holder: from 2015/16 a Champions League place ("X" rows), before a Europa League
  *      group place ("H" rows), when it has no place yet.
  *   4. the Europa League places of each nation: the first the domestic cup winner (the cup of the league
@@ -339,7 +339,7 @@ static void move_down(int i, const int *target)
     placed[i].club = 0;
 }
 
-static const SeasonUefa *cascade_row;   /* the row of assign_all, for the fillers of the cascade */
+static const SeasonUefa *cascade_row;   /* the row of assign_all, for the cascade and balance() */
 
 /* Open item 94: the free places the cascade left empty in this seeding (a round of fewer clubs). */
 static int kept_empty;
@@ -733,10 +733,10 @@ static void assign_all(uint32_t self, uint32_t records, int count, const SeasonU
         }
     fprintf(stderr, "recomp: uefa: England %d/%02d: %d Champions League places, %d in the group stage, %d Europa "
             "League places\n", s, (s + 1) % 100, en_cl, en_g, en_el);
-    /* For the tests (open item 94): each nation's Champions League clubs, its places in the list and its places
-     * from outside the list (title holders and European Performance Spots: the group stage places added before the
-     * association limit). */
-    for (int e = 0; e < entries; e++) {
+    /* For the tests (open item 94), when a free place stayed empty: each nation's Champions League clubs, its
+     * places in the list and its places from outside the list (title holders and European Performance Spots: the
+     * group stage places added before the association limit). */
+    for (int e = 0; kept_empty && e < entries; e++) {
         uint32_t nation = rd32(g_mem, self + 0x12u * (uint32_t)e + 4);
         int clubs = cl_clubs_of(nation), extra = 0;
         for (int i = 0; i < n_placed; i++)
