@@ -11,8 +11,8 @@ qualifying. The finals table gives 4 teams (season_intl_table.c); the original's
 a knockout.
 
 Two new games, Tier A, the 3.9.68 database, seed 1, changing rules on:
-- 2007: all nations, a 2007/08 start, 480 days. The draw comes before the first round (17 November 2007), so the
-  edition plays on the real days.
+- 2007: all nations, a 2007/08 start, 300 days, a save in the pause of the edition (May 2008), then the save loaded
+  and 200 days more. The draw comes before the first round (17 November 2007), so the edition plays on the real days.
 - 2008: England's leagues (the national sides of every nation play), a 2008/09 start, 170 days. The game is made on 1
   January 2008, after the draw day and the two rounds of November 2007, so the edition plays on the days still to
   come (from 14 June to 19 November 2008). A 2008/09 start with all nations stops at "ire_prm..cpp 82" with or without
@@ -39,7 +39,8 @@ D = datetime.date
 # first: the first match day of the edition; last: its last match day, and LATE days more for a match that a clash
 # moves (add_fixture 0x5aa680 moves a clashing fixture by days).
 GAMES = {
-    2007: {"start": 2007, "days": 480, "first": D(2007, 11, 17), "last": D(2008, 9, 10), "nations": ["all"]},
+    2007: {"start": 2007, "days": 300, "load_days": 200, "first": D(2007, 11, 17), "last": D(2008, 9, 10),
+           "nations": ["all"]},
     2008: {"start": 2008, "days": 170, "first": D(2008, 6, 14), "last": D(2008, 11, 19), "nations": ["England"]},
 }
 LATE = 21
@@ -47,14 +48,13 @@ LATE = 21
 
 def edition(save, year):
     """(teams, [(day, home, away)] of the edition, history row or None, nation names of the teams) of the OFC Nations
-    Cup edition whose matches end in the year, in a save. The matches of one edition are those from the first match
-    day on or after 1 July of the year before: the 2008 edition pauses from November 2007 to June 2008, longer than
-    the checker's gap between two editions."""
+    Cup edition of the year as the history checker splits the fixtures into editions, in a save."""
     game = history_check.Game(save)
     ids = {cid for cid, c in game.comps.items() if c["name"].startswith(("OFC", "Oceania Nations"))}
     fx = sorted(f for cid in ids for f in history_check.fixtures(game).get(cid, []))
-    fx = [f for f in fx if D(year - 1, 7, 1).toordinal() <= f[0] <= D(year, 12, 31).toordinal()]
-    teams = {t for _, home, away in fx for t in (home, away) if t >= 0}
+    eds = [(first, last, t) for y, first, last, t in history_check.editions_of(fx) if y == year]
+    fx = [f for f in fx if eds and eds[0][0] <= f[0] <= eds[0][1]]
+    teams = eds[0][2] if eds else set()
     row = next(((a, b) for cid, y, a, b, c, h in game.rows if cid in ids and y == year), None)
     names = {game.nations.get(game.clubs.get(t, ("", -1))[1], ("", ""))[0] for t in teams}
     return teams, fx, row, names
@@ -72,6 +72,15 @@ def run(program, game_folder, keep, year):
     save = os.path.join(work, "user", "samesave.sav")
     if not os.path.exists(save):
         return fails + [f"{year}: no save after the days"]
+    if "load_days" in g:
+        work = os.path.join(keep, f"leg{year}-load")
+        code, more, box = soak_run.load_leg(o, work, save, g["load_days"])
+        took += more
+        if code != 0 or box:
+            fails.append(f"{year}: the loaded run ended with code {code}{', box ' + box if box else ''} ({work})")
+        save = os.path.join(work, "user", "samesave.sav")
+        if not os.path.exists(save):
+            return fails + [f"{year}: no save after the days of the loaded game"]
     teams, fx, row, names = edition(save, 2008)
     pairs = collections.Counter((home, away) for _, home, away in fx)
     first = D.fromordinal(fx[0][0]) if fx else None

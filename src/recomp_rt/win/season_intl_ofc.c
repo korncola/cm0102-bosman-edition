@@ -37,32 +37,40 @@
  * smaller nations, which the game does not play): inference, not a source.
  *
  * The edition of 4 teams (2008, int-continental-87; https://www.rsssf.org/tables/08oc.html, read 3 November 2026): New
- * Zealand, New Caledonia, Fiji and Vanuatu in one group, home and away, no knockout, from 17 October 2007 to 19
- * November 2008. The game plays it so:
+ * Zealand, New Caledonia, Fiji and Vanuatu in one group, home and away, no knockout, 12 matches on 8 days from 17
+ * October 2007 to 19 November 2008. The game plays it so (with changing rules off, in every edition when the start
+ * season's edition is this one, Q232):
  * - set_up_rules 0x799690 (the constructor 0x798994 and start_new_season 0x799951 call it; a load does not, 0x798961):
  *   each pair meets twice (+0x3c, 1 at 0x7996d2; the League scheduler makes rows - 1 rounds that many times,
- *   0x683ac9..0x683ad3), and the stage count +0x2c (2 at 0x798980) becomes 0, so League::update_for_date 0x6847c0 never calls advance_stage
- *   0x7999d0 (it calls it while +0x30 < +0x2c - 1, 0x6849d1..0x6849e0) and ends the edition when the group's table
- *   is complete: the club history 0x442e80 (0x6849fa), the honours (vtable +0x30, 0x684a8f) and the complete flag
- *   +0x4c (0x684a9e). The draw date (+0xb6 day, +0xb8 year offset; 5 March of the edition year at 0x7996b3..0x799712)
- *   becomes 1 October 2007, after the South Pacific Games of 2007 that chose the three other teams (inference: the
- *   sources give no draw). The next set_up_rules gives +0x2c its 2 again, with a new stage array (a load of a save of
- *   the edition of 4 makes the array of the saved count);
+ *   0x683ac9..0x683ad3), and the stage count +0x2c (2 at 0x798980) becomes 0, so League::update_for_date 0x6847c0
+ *   never calls advance_stage 0x7999d0 (it calls it while +0x30 < +0x2c - 1, 0x6849d1..0x6849e0) and ends the
+ *   edition when the group's table is complete: the club history 0x442e80 (0x6849fa), the honours (vtable +0x30,
+ *   0x684a8f) and the complete flag +0x4c (0x684a9e). The draw date (+0xb6 day, +0xb8 year offset; 5 March of the
+ *   edition year at 0x7996b3..0x799739) becomes 1 October 2007, after the South Pacific Games of 2007 that chose the
+ *   three other teams (inference: the sources give no draw). The next set_up_rules gives +0x2c its 2 again, with a
+ *   new stage array (a load of a save of the edition of 4 makes the array of the saved count, none for 0:
+ *   0x688e44..0x688e5b);
  * - the group template (create_schedule 0x798b60, stage -1, kept at +0xba): 6 match days in place of 3 (0x798bc8),
  *   so the League scheduler makes a double round robin of 2 fixtures a day. The days are the real days of the
  *   edition with two matches, or one match on each of two near days: 17 and 21 November 2007, 14 and 21 June, 6 and
  *   10 September 2008; for a game made after them (a 2008/09 start, made on 1 January 2008) the first 6 of these and
  *   15 October and 19 November 2008 that come at least a week after the game's day (15 October: an international
- *   match day of 2008, inference; 19 November: the real last match day);
+ *   match day of 2008, inference; 19 November: the real last match day). With fewer than 6 such days the original's
+ *   template of 3 days stays and each pair meets once. The friendly days of the finals (season_intl_finals_busy)
+ *   still cover the original's 19 June window only (finals_days, season_intl_rules.c): a friendly that clashes with
+ *   a group day is moved by add_fixture 0x5aa680 as any clash;
  * - the draw: New Zealand (key id 0x9cf3f4, one of the original's six) and the three Oceania nations with the
  *   highest nation reputation (the real three came from the South Pacific Games, which the game does not play:
- *   inference); +0xf2 is 4, so create_group_table makes 4 rows and create_group_stage 0x799a60 (group B) is not
- *   called; the predicted places are 1 to 4;
+ *   inference); +0xf2 is 4, so create_group_table makes 4 rows, and the wrap of create_group_stage 0x799a60 (group
+ *   B; the original calls it at 0x79a2c7) skips it; the predicted places are 1 to 4; the progress codes of the group
+ *   (set_club_progress 0x79a490) are the places, as the original passes on the codes of its knockout stage
+ *   (0x79a515..0x79a52b), not the codes of a group that goes on to a knockout (inference);
  * - the honours: slot +0x30 of the class is 0x595160, a jump to stage 1's (the knockout's Cup::record_season_honours
  *   0x519a90). With no stage the class takes League::record_season_honours 0x684640: the group's first is the winner,
  *   the second the runner-up (rows 0 and 1 of +0xb1, 0x68465b..0x68465d). */
 #include "win.h"
 #include "season_intl.h"
+#include "season_uefa_days.h"         /* season_day_of_year */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,8 +107,9 @@
 #define STAGE_COUNT 0x2cu               /* 2 at 0x798980 */
 #define MEETINGS 0x3cu                  /* s16: the times each pair meets (1 at 0x7996d2); the League scheduler
                                          * makes rows - 1 rounds that many times (0x683ac9..0x683ad3) */
-#define DRAW_DAY 0xb6u                  /* s16 day of the year (0x799712) */
-#define DRAW_OFFSET 0xb8u               /* s16 year offset from +0x40 (0x79971e) */
+#define DRAW_DAY 0xb6u                  /* s16 day of the year (0x79971e) */
+#define DRAW_OFFSET 0xb8u               /* s16 year offset from +0x40 (0x799739) */
+#define ROUNDS 0xa9u                    /* s16: the days of group A's template (set_up_rules 0x799740) */
 #define GAME_DATE 0xae2c90u             /* s16 day of the year, s16 year */
 #define KEY_NEW_ZEALAND 0x9cf3f4u       /* key nation id (0x799fc1) */
 #define LEAGUE_HONOURS 0x00684640u      /* League::record_season_honours, thiscall () */
@@ -167,25 +176,8 @@ static int drawn4(uint32_t self) { return is_ofc(self) && (int16_t)rd16(g_mem, s
 static int one_group(uint32_t self)
 {
     if (!season_intl_on() || !is_ofc(self)) return 0;
-    const SeasonIntlEdition *e = season_intl_edition("oceania_nations", year_of(self));
+    const SeasonIntlEdition *e = season_intl_rule_edition("oceania_nations", year_of(self));
     return e && e->teams == ONE_GROUP;
-}
-
-static int leap(int y) { return (y % 4 == 0 && y % 100 != 0) || y % 400 == 0; }
-
-/* The day of the year from 0 (the Date word +0) of a day, month 1 to 12. */
-static int day_of_year(int y, int month, int day)
-{
-    static const int before[12] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
-    return before[month - 1] + (month > 2 && leap(y)) + day - 1;
-}
-
-/* A day number to compare days of different years. */
-static long day_number(int y, int doy)
-{
-    long n = doy;
-    for (int k = 1900; k < y; k++) n += 365 + leap(k);
-    return n;
 }
 
 /* ---- The draw ---- */
@@ -244,7 +236,7 @@ static void draw_one_group(uint32_t self, uint32_t six);
 void season_intl_ofc_draw(uint32_t self)
 {
     if (!season_intl_on() || !is_ofc(self)) return;
-    const SeasonIntlEdition *e = season_intl_edition("oceania_nations", year_of(self));
+    const SeasonIntlEdition *e = season_intl_rule_edition("oceania_nations", year_of(self));
     uint32_t six = rd32(g_mem, self + TEAMS_OF);
     if (e && e->teams == ONE_GROUP && readable(six) && (int16_t)rd16(g_mem, self + TEAM_COUNT) == 6) {
         draw_one_group(self, six);
@@ -322,8 +314,8 @@ void season_intl_ofc_rules(uint32_t self)
     if (one_group(self)) {
         int year = year_of(self);
         wr32(g_mem, self + STAGE_COUNT, 0);
-        wr16(g_mem, self + MEETINGS, 2);
-        wr16(g_mem, self + DRAW_DAY, (uint16_t)day_of_year(year - 1, 10, 1));
+        if ((int16_t)rd16(g_mem, self + ROUNDS) == ONE_GROUP_DAYS) wr16(g_mem, self + MEETINGS, 2);
+        wr16(g_mem, self + DRAW_DAY, (uint16_t)season_day_of_year(year - 1, 10, 1));
         wr16(g_mem, self + DRAW_OFFSET, (uint16_t)-1);
         if (logging()) fprintf(stderr, "recomp: season intl: oceania_nations %d: one group, draw 1 October %d\n", year,
                                year - 1);
@@ -353,14 +345,14 @@ static int one_group_template(uint32_t self)
     int stage = (int8_t)rd8(g_mem, sp + 4u);
     if (stage != -1 || !one_group(self)) return 0;
     int year = year_of(self), ty = (int16_t)rd16(g_mem, GAME_DATE + 2), td = (int16_t)rd16(g_mem, GAME_DATE);
-    int draw = day_of_year(year - 1, 10, 1);
-    long from = day_number(year - 1, draw);
-    if (ty >= 1900 && day_number(ty, td) > from) from = day_number(ty, td);
+    long from = season_intl_abs_day(year - 1, season_day_of_year(year - 1, 10, 1));
+    if (ty >= 1900 && season_intl_abs_day(ty, td) > from) from = season_intl_abs_day(ty, td);
     SeasonNlDate days[ONE_GROUP_DAYS];
     int n = 0;
     for (size_t i = 0; i < sizeof one_group_days / sizeof one_group_days[0] && n < ONE_GROUP_DAYS; i++) {
         SeasonNlDate d = one_group_days[i];
-        if (day_number(year + d.year, day_of_year(year + d.year, d.month, d.day)) >= from + 7) days[n++] = d;
+        int y = year + d.year;
+        if (season_intl_abs_day(y, season_day_of_year(y, d.month, d.day)) >= from + 7) days[n++] = d;
     }
     if (n < ONE_GROUP_DAYS) {
         fprintf(stderr, "recomp: season intl: oceania_nations %d: %d match days to come, the original's template\n",
@@ -407,8 +399,8 @@ int season_intl_ofc_honours(uint32_t self)
 /* ---- Sites of seasons.py ---- */
 
 /* The size of a group: 3 in the original (create_group_table 0x7995a9, 0x7995ae; create_group_stage 0x799a80,
- * 0x799ac2, 0x799acb, 0x799b74), 4 when the draw holds 8 teams or the one group of 4. +0xf2 keeps the count until create_group_stage
- * has run (0x79a2c7, then cleared at 0x79a2e1). */
+ * 0x799ac2, 0x799acb, 0x799b74), 4 when the draw holds 8 teams or the one group of 4. +0xf2 keeps the count until
+ * create_group_stage has run (0x79a2c7, then cleared at 0x79a2e1). */
 uint32_t rt_intl_ofc_group(uint32_t self, uint32_t original)
 {
     return drawn8(self) || drawn4(self) ? (uint32_t)GROUP : original;
@@ -462,6 +454,13 @@ void o_0079a490(void);
 RT_WRAP(0079a490, ofc_progress)
 {
     uint32_t self = cpu.ecx, sp = cpu.esp;
+    /* The edition of one group (+0x2c 0, no knockout): the stage byte 1 takes the original's path of a knockout
+     * stage (0x79a49e..0x79a4a3), so the codes are the group's places. */
+    if (season_intl_on() && is_ofc(self) && rd32(g_mem, self + STAGE_COUNT) == 0 && (int8_t)rd8(g_mem, sp + 8u) < 1) {
+        wr8(g_mem, sp + 8u, 1);
+        o_0079a490();
+        return;
+    }
     if (season_intl_on() && is_ofc(self) && (int16_t)rd16(g_mem, self + GROUP_ROWS) == GROUP &&
         (int8_t)rd8(g_mem, sp + 8u) < 1)
         for (uint32_t at = 0xcu; at <= 0x14u; at += 4u)

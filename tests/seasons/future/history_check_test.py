@@ -637,6 +637,13 @@ def main():
     got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
     if got != [(2007, 4), (2008, 4)]:
         bad.append(f"editions of a group that meets at home again after a pause: {got}, not [(2007, 4), (2008, 4)]")
+    # A single round robin of 4 that ends on a day of two matches, then 200 days later the next edition of the same
+    # teams with the home sides reversed: two editions (the first had played its whole round robin).
+    rr = g[:4] + [((2007, 11, 24), 0, 3), ((2007, 11, 24), 1, 2), ((2008, 6, 14), 1, 0), ((2008, 6, 14), 3, 2)]
+    days = [(datetime.date(*d).toordinal(), h, a) for d, h, a in rr]
+    got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
+    if got != [(2007, 4), (2008, 4)]:
+        bad.append(f"editions of a single round robin and its next edition: {got}, not [(2007, 4), (2008, 4)]")
 
     # Open item 70: the association limit of the Champions League by season.
     def lim(season, nations):

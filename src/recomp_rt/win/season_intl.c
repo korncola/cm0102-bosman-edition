@@ -1399,11 +1399,7 @@ static void ofc_stages_body(void)
 {
     uint32_t self = cpu.ecx;
     o_00799690();
-    if (!rt_unwinding) {
-        uint32_t eax = cpu.eax;
-        season_intl_ofc_rules(self);
-        cpu.eax = eax;
-    }
+    if (!rt_unwinding) season_intl_ofc_rules(self);
 }
 RT_WRAP(00799690, ofc_stages) { stage_builder(INTL_OFC, ofc_stages_body, 1); }
 RT_WRAP(007a0230, olympics_stages) { stage_builder(INTL_OLYMPICS, o_007a0230, 1); }
