@@ -144,6 +144,8 @@ int host_rename(const char *from, const char *to)
     return to_wide(from, a, WPATH) && to_wide(to, b, WPATH) ? _wrename(a, b) : -1;
 }
 
+int host_rename_new(const char *from, const char *to) { return host_rename(from, to); }   /* fails when to exists */
+
 int host_replace(const char *from, const char *to)
 {
     wchar_t a[WPATH], b[WPATH];

@@ -57,6 +57,11 @@ int host_unlink(const char *path) { return unlink(path); }
 int host_rmdir(const char *path) { return rmdir(path); }
 int host_rename(const char *from, const char *to) { return rename(from, to); }
 int host_replace(const char *from, const char *to) { return rename(from, to); }
+int host_rename_new(const char *from, const char *to)
+{
+    if (link(from, to)) return -1;                /* fails with EEXIST: the file there is never replaced */
+    return unlink(from);
+}
 int host_sync(FILE *f) { return fsync(fileno(f)); }
 
 HostDir *host_opendir(const char *path) { return (HostDir *)opendir(path); }
