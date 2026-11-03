@@ -3,7 +3,7 @@
 src/recomp_rt/win/season_pol_playoff.c).
 
 Usage:
-    python3 tests/seasons/pol_playoff_run.py <cm0102_recomp> <game folder> [--keep <folder>]
+    python3 tests/seasons/pol_playoff_run.py <cm0102_recomp> <game folder> [--keep <folder>] [--wait-day <day>]
 
 The run loads a save of day 142 of 2200 (the date jump to 2198 of the run set, jump2198: the December 2025 database,
 all nations, changing rules on, seed 1, played on from its save of August 2199) and plays to the start report of
@@ -13,10 +13,16 @@ the two relegation play-off places was still open, the play-off's draw never cam
 edition 2199 through 2200/01 (league-stall). The save: RECOMP_POL_PLAYOFF_SAVE, else
 test-fixtures/pol-playoff-2200.sav; the database: test-fixtures/databases/December 2025*.
 
+--wait-day <day> (test switch RECOMP_TEST_POL_WAIT): the play-off also waits to that day, as if the spring stage ended
+then. Day 160: both leg dates of the original (31 May and 4 June) have passed. Day 168: the play-off cannot end before
+the Polish update day 170. The run then also checks the play-off's dates after the wait and, for a second leg on or
+after day 170, the season change that waits for it.
+
 The checks: no message box; the log has the lines of the play-off that waits and of its making after the wait; at the start report of 2200/01 the
 Ekstraklasa (pol_first) and the I liga (pol_second) hold edition 2200.
 """
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -31,6 +37,9 @@ import rules_report_check as rrc  # noqa: E402
 FIXTURES = "/Users/max/Projects/cm0102/test-fixtures"
 WAIT = "recomp: playoffs: pol_second 2199: the play-off waits for the end of the Ekstraklasa's last stage"
 MADE = "recomp: playoffs: pol_second 2199: the play-off is made on day "
+HOLD = "recomp: playoffs: entry 25 waits for the play-off of pol_second"
+CHANGED = "recomp: playoffs: entry 25 changes its season on day"
+UPDATE_DAY = 170
 TIMEOUT = 3600
 
 
@@ -56,12 +65,32 @@ def main(argv):
     load = soak_run.smoke_run.without_intro_click(fixtures.LOAD_STEPS)
     steps = [x for x in load if x != "wait first-news"] + [f"{TIMEOUT * 1000} quit"]
     report, log = os.path.join(work, "report.tsv"), os.path.join(work, "stderr.txt")
+    extra = {"RECOMP_DATE_JUMP": "1", "RECOMP_SEASON_CHANGE_LOG": "1"}
+    if "--wait-day" in argv:
+        extra["RECOMP_TEST_POL_WAIT"] = soak_run.arg(argv, "--wait-day")
     env = soak_run.leg_env(os.path.abspath(argv[1]), os.path.abspath(argv[2]), user, home, shots, steps, 2201, report,
-                           {"RECOMP_DATE_JUMP": "1"})
+                           extra)
     try:
         return play(argv, env, user, report, log)
     finally:
         tidy(user)
+
+
+def forced_checks(wait, text):
+    """--wait-day: the play-off's dates follow from the day the wait ends (season_pol_playoff.c dates_after_wait):
+    the draw after that day, the first leg after the draw, the second after the first. A second leg on or after the
+    Polish update day (170) needs the season change to wait for the play-off (season_playoffs_hold)."""
+    m = re.search(r"pol_second 2199: after the wait the play-off draws on day (\d+) of 2200, legs on day (\d+) of "
+                  r"2200 and day (\d+) of 2200", text)
+    if not m:
+        return ["no line of the play-off's dates after the wait"]
+    draw, leg1, leg2 = (int(x) for x in m.groups())
+    fails = []
+    if not wait < draw < leg1 < leg2:
+        fails.append(f"dates after a wait to day {wait}: draw {draw}, legs {leg1} and {leg2}, not in that order after it")
+    if leg2 >= UPDATE_DAY and (HOLD not in text or CHANGED not in text):
+        fails.append(f"second leg on day {leg2}, not before the update day {UPDATE_DAY}, and no hold of entry 25")
+    return fails
 
 
 def tidy(user):
@@ -104,6 +133,8 @@ def play(argv, env, user, report, log):
         fails.append("no line of the play-off that waits for the Ekstraklasa")
     elif MADE not in text:
         fails.append("no line of the play-off made after the wait")
+    if "--wait-day" in argv:
+        fails += forced_checks(int(soak_run.arg(argv, "--wait-day")), text)
     if reached:
         _, comps = rrc.read_report(report)
         for file in ("pol_first", "pol_second"):
