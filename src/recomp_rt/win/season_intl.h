@@ -258,6 +258,13 @@ const char *season_intl_real_tie(int year, int k);
  * record, a continent; 0 when the data has none (season_intl.c). */
 uint32_t season_intl_team_named(const char *names);
 
+/* After the OFC Nations Cup's draw of 6 (the wrap of 0x799e30 in season_intl.c): an edition of 8 teams gets two
+ * more, in groups of 4 (0.6.2 open item 45, season_intl_ofc.c). */
+void season_intl_ofc_draw(uint32_t self);
+/* The OFC Nations Cup's template 0x798b60 (the wrap in season_intl.c, inside its date shift): a group made after a
+ * draw of 8 gets a second kick-off slot on each match day. */
+void season_intl_ofc_template(void (*original)(void));
+
 /* 1 while the Oceania section must not advance from its final to the play-off: the cycle's tie has a CONCACAF
  * partner whose section is not complete (O259 A16; season_intl_qual.c, called by the wrap of 0x91f0d0). */
 int season_intl_oceania_wait(uint32_t self);

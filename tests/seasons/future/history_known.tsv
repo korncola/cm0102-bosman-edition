@@ -103,11 +103,7 @@ entrant-count	AFC Asian Cup	2004	open item 44: the finals of 2004 to 2015 have 1
 entrant-count	AFC Asian Cup	2007	open item 44
 entrant-count	AFC Asian Cup	2011	open item 44
 entrant-count	AFC Asian Cup	2015	open item 44
-entrant-count	OFC*Nations Cup*	2002	open item 45: 6 teams, the table 8 (4 in 2008)
-entrant-count	OFC*Nations Cup*	2008	open item 45
-entrant-count	OFC*Nations Cup*	2012	open item 45
-entrant-count	OFC*Nations Cup*	2016	open item 45
-entrant-count	OFC*Nations Cup*	2024	open item 45
+entrant-count	OFC*Nations Cup*	2008	open item 45: the edition of 4 teams (home and away, no knockout) plays 6; the 8-team editions are fixed
 entrant-host	Africa*Cup of Nations	2002	open item 46: Mali 2002 does not play in a 2001 game (the original row names Egypt; a fix acts at the new game, against Q152: decision for Max)
 entrant-route	Intercontinental Cup	2002	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
 entrant-route	Intercontinental Cup	2003	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)

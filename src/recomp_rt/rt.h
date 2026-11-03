@@ -490,6 +490,8 @@ uint32_t rt_intl_cup_asian_hosts(uint32_t self, uint32_t list, uint32_t count, u
 uint32_t rt_intl_copa_ko(uint32_t self, uint32_t original);
 uint32_t rt_intl_copa_groups(uint32_t self, uint32_t original);
 void rt_intl_copa_stages(uint32_t self);
+/* The OFC Nations Cup of 8 teams (win/season_intl_ofc.c): the size of a group (3), 4 when the draw holds 8 teams. */
+uint32_t rt_intl_ofc_group(uint32_t self, uint32_t original);
 /* Euro qualifying places (win/season_intl_euroq.c): the places and stage indices of the format of the Euro year
  * (Euro 2016: 9 groups, top two, best third, play-off of 8 thirds; Euro 2020 on: 10 groups, top two). Each
  * gives the original's value in the base game and for a Euro of 16 teams. */

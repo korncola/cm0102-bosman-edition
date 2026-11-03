@@ -777,13 +777,14 @@ static void ofc_hosts(uint32_t self);
  * (0x799f9c, 0x799fc1), then the two best Melanesian and the two best Polynesian nations (0x79a03c,
  * 0x79a04d). With Australia in Asia its place goes to the Oceania nation with the highest reputation (nation
  * +0x8e, inference from docs/research/2026-10-17-season-date-shifts.md) that is not in the six (ofc_australia).
- * Then the hosts come in (ofc_hosts). */
+ * An edition of 8 then gets two more (season_intl_ofc_draw). Then the hosts come in (ofc_hosts). */
 RT_WRAP(00799e30, ofc_entrants)
 {
     uint32_t self = cpu.ecx;
     o_00799e30();
     if (rt_unwinding || !cpu.eax) return;
     ofc_australia(self);
+    if (!rt_unwinding) season_intl_ofc_draw(self);       /* open item 45: 8 teams (season_intl_ofc.c) */
     if (!rt_unwinding) ofc_hosts(self);
 }
 
@@ -824,9 +825,9 @@ static void ofc_australia(uint32_t self)
 
 /* 0.6.2 open item 45: the original never calls find_hosts for this cup, so a host plays only when it is one of
  * the six (Papua New Guinea 2016, Vanuatu 2024 did not). In a season game each host of the edition at +0x40
- * (the table hosts, after the table the rotation host) that is not in the six takes the place of the team with
+ * (the table hosts, after the table the rotation host) that is not in the draw takes the place of the team with
  * the lowest reputation (club +0x80, the field of the sort compare 0x4b07d0 at 0x4b07f0) that is not a host. The
- * count stays 6 (+0xf2, 0x799e42). */
+ * count stays (+0xf2: 6 at 0x799e42, 8 after season_intl_ofc_draw). */
 static void ofc_hosts(uint32_t self)
 {
     if (!season_intl_on()) return;
@@ -1440,7 +1441,8 @@ static void acn_template_body(void) { season_intl_cup_template(INTL_ACN, o_00401
 RT_WRAP(004012e0, acn_template) { stage_builder(INTL_ACN, acn_template_body, 0); }
 static void asian_template_body(void) { season_intl_cup_template(INTL_ASIAN, o_0040eb00); }
 RT_WRAP(0040eb00, asian_template) { stage_builder(INTL_ASIAN, asian_template_body, 0); }
-RT_WRAP(00798b60, ofc_template) { stage_builder(INTL_OFC, o_00798b60, 0); }
+static void ofc_template_body(void) { season_intl_ofc_template(o_00798b60); }
+RT_WRAP(00798b60, ofc_template) { stage_builder(INTL_OFC, ofc_template_body, 0); }
 RT_WRAP(0079f7d0, olympics_template) { stage_builder(INTL_OLYMPICS, o_0079f7d0, 0); }
 
 void o_00549f70(void);

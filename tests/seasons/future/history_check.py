@@ -709,6 +709,12 @@ def read_access(path):
     return out
 
 
+# The original's team count of a finals class whose base game plays editions of a year the finals table gives
+# another count: the OFC Nations Cup plays 6 (0x799e42) every two years, the table 8 in 2002, 2012, 2016 and 2024
+# (open item 45). The season code changes the count only in a season game (season_intl_ofc.c).
+BASE_TEAMS = {"oceania_nations": 6}
+
+
 class Access:
     """The access rules: the finals table of the season code and access.tsv."""
 
@@ -716,16 +722,18 @@ class Access:
         self.table = table if table is not None else {}
         self.access = access if access is not None else {}
 
-    def rule(self, key, year):
-        """(teams or None, [host names], [route keys]) of an edition."""
+    def rule(self, key, year, base=False):
+        """(teams or None, [host names], [route keys]) of an edition. base: a base game (2001, changing rules off),
+        where a class of BASE_TEAMS keeps the original's count in every edition (season_intl_on() is 0)."""
         rows = self.table.get(key)
         if rows:
             row = next((r for r in rows if r[0] == year), None)
+            teams = BASE_TEAMS[key] if base and key in BASE_TEAMS else None
             if row:
-                return row[1], row[2], []
+                return teams or row[1], row[2], []
             if year > rows[-1][0]:
-                return rows[-1][1], [], []               # after the table: the count of the last row
-            return None, [], []
+                return teams or rows[-1][1], [], []      # after the table: the count of the last row
+            return teams, [], []
         for start, end, teams, routes in self.access.get(key, ()):
             if start <= year and (end is None or year <= end):
                 return teams, [], routes
@@ -811,7 +819,8 @@ def entrants(game, rules, access, changes=()):
             # 70). A last day of one match is a final: the edition has ended (the World Cup final in mid July).
             final = sum(1 for d, h, a in fx if d == last) == 1
             done = last <= save_day and not (n == len(eds) - 1 and save_day - last < RUNNING and not final)
-            want, host_names, routes = access.rule(key, year) if key else (None, [], [])
+            want, host_names, routes = access.rule(key, year, game.start == 2001 and not game.changing) if key \
+                else (None, [], [])
             won = {r: winners(r, year) for r in routes if r != "holder"}
             holder = "holder" in routes
             # the World Cup qualifying holds the play-off between confederations: 2 teams of other confederations
