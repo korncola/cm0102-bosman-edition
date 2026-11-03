@@ -4,6 +4,7 @@
 #include "season.h"
 #include "season_clubs.h"
 #include "season_nor_second.h"
+#include "season_fin_second.h"
 #include "season_tur_groups.h"
 #include "season_arg_zones.h"
 #include "season_names.h"
@@ -374,6 +375,7 @@ static int fill_takes(const Club *c, const Division *div, int ncomps, uint32_t c
 {
     if (c->kept || c->national || c->nation != d->nation || c->div == d->at) return 0;
     if (season_nor_barred(c->at, d->at)) return 0;      /* open item 111: no Norwegian second team in the top tiers */
+    if (season_fin_barred(c->at, d->at)) return 0;      /* open item 118: no Finnish second team in the Veikkausliiga */
     if (season_tur_groups_tagged(c->at)) return 0;      /* Summer 2002: the first season places it in its group */
     int t = c->db_div >= comps ? (int)((c->db_div - comps) / COMP_SIZE) : -1;
     int reserve_ok = !season_clubs_reserve_name(win_str(c->at + CLUB_NAME)) || d->missing_reserve;
@@ -646,6 +648,7 @@ static void move_clubs(int season)
             Club *c = &club[i];
             if (c->kept || c->national || c->nation != d->nation || c->div || c->db_div != d->at) continue;
             if (season_nor_barred(c->at, d->at)) continue;      /* open item 111 */
+            if (season_fin_barred(c->at, d->at)) continue;      /* open item 118 */
             /* Summer 2002: a club that the data tags for a Category B group (club +0x60) plays there; a database
              * place of another division does not keep it (two such clubs in Category A left two groups short). */
             if (season_tur_groups_tagged(c->at)) continue;

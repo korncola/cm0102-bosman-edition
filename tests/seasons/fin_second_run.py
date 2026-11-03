@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""Finland: second teams stay out of the Veikkausliiga and play below their first team (open item 118, 0.7.0;
+season_fin_second.c).
+
+Usage:
+    python3 tests/seasons/fin_second_run.py <cm0102_recomp> <game folder> [--only on,off,drop,old,late] [--jobs n]
+        [--keep <folder>] [--fix-off]
+
+Each run is a season jump of tests/seasons/rules_report_check.py with Finland on the May 2026 database (changing
+rules off), from the 2026 start. That database has two second teams in the First Division (HJK Klubi 04 Helsinki and
+SJK Seinajoki II), and their first teams play in the Premier Division. The test switch RECOMP_TEST_FIN_SECOND_TOP=1
+puts each second team at the top of its group when the group stage ends (FinFirst::create_play_off_stages
+0x594080), as if it won the group. RECOMP_FIN_SECOND_LOG=1 logs the play-offs, the moves and a census at each
+season change. The runs:
+    on    the shipped code, to 1 June 2027: no second team plays the promotion play-off (the next clubs of the table
+          play it), no second team goes up into the Premier Division, and both stay in the First Division (their
+          first teams stay in the Premier Division)
+    off   RECOMP_FIN_SECOND=off, the original: a second team plays the promotion play-off (proves that the test
+          sees the fault)
+    drop  RECOMP_TEST_FIN_SECOND_DROP=1, to 1 June 2027: the first teams of both second teams go down at the season
+          change, so both second teams go down to the Second Division, the next clubs of the table stay up, and
+          the First Division keeps its size
+    old   an older save, made in memory (no save is written or loaded): RECOMP_TEST_FIN_SECOND_OLD=1 plays as the
+          original until the season change of 2026/27 is done and sends a second team up into the Premier Division.
+          To 1 June 2028: at the next change it goes down, a club of status 3 stays up, and the sizes stay
+    late  RECOMP_TEST_FIN_SECOND_LATE=1, to 1 June 2027, an older save made after the play-off: a second team is the
+          stage-1 finalist when stage 3 is built, and holds stage 1's place (status 5) at the season change. The
+          next club of its group plays stage 3 in its place, the next club of the table takes status 5, and no
+          second team goes up
+--fix-off adds RECOMP_FIN_SECOND=off to every run, as a build without the fix: on, drop and late must then FAIL
+(the test first, item 118). All runs end with code 0 and show no message box of the game.
+"""
+import concurrent.futures
+import os
+import re
+import sys
+import tempfile
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import rules_report_check as rrc  # noqa: E402
+import uefa_formats_run as ufr  # noqa: E402
+
+DB = "/Users/max/Projects/cm0102/test-fixtures/databases"
+ENV = {"RECOMP_TEST_FIN_SECOND_TOP": "1", "RECOMP_FIN_SECOND_LOG": "1"}
+CENSUS = re.compile(r"recomp: fin second: census (before|after): Premier (\d+) clubs, (\d+) second teams; "
+                    r"First Division (\d+) clubs, (\d+) second teams, (\d+) below")
+
+
+FIX_OFF = {}
+
+
+def jump(name, program, game, work, env, last=2026):
+    code, _ = rrc.run(program, game, last, 2026, os.path.join(DB, "May 2026"), ["Finland"], [], work, 7200, None,
+                      dict(ENV, **env, **FIX_OFF))
+    fails = [] if code == 0 else [f"{name}: the jump ended with code {code}"]
+    found, log = ufr.boxes(work)
+    fails += [f"{name}: message box {b}" for b in found]
+    return fails, log
+
+
+def changes(log):
+    """Each Finnish season change: (census before, census after, the lines between)."""
+    out, cur = [], None
+    for line in log.splitlines():
+        m = CENSUS.search(line)
+        if m and m.group(1) == "before":
+            cur = [tuple(map(int, m.groups()[1:])), None, []]
+        elif m and cur:
+            cur[1] = tuple(map(int, m.groups()[1:]))
+            out.append(cur)
+            cur = None
+        elif cur and "recomp: fin second:" in line:
+            cur[2].append(line)
+    return out
+
+
+def playoffs(log):
+    return [l for l in log.splitlines() if "recomp: fin second: promotion play-off:" in l]
+
+
+def common(name, log, n):
+    fails = []
+    seen = changes(log)
+    if len(seen) < n:
+        return fails + [f"{name}: {len(seen)} Finnish season changes seen, want {n}"], seen
+    for before, after, _ in seen[:n]:
+        if before[0] != after[0] or before[2] != after[2]:
+            fails.append(f"{name}: division sizes changed: {before} to {after}")
+    return fails, seen
+
+
+def run_on(program, game, work):
+    fails, log = jump("on", program, game, work, {})
+    more, seen = common("on", log, 1)
+    fails += more
+    po = playoffs(log)
+    if not po:
+        fails.append("on: no promotion play-off seen")
+    if any("(a second team)" in l for l in po):
+        fails.append(f"on: a second team plays the promotion play-off: {po}")
+    if "plays the promotion play-off in place of a second team" not in log:
+        fails.append("on: no club took a second team's place in the play-off (the test sees no case)")
+    if re.search(r"goes up to the (Premier|First) Division \(a second team\)", log):
+        fails.append("on: a second team went up")
+    if seen:
+        before, after, _ = seen[0]
+        print(f"on: change 1: before {before}, after {after}")
+        if after[1] or after[3] < 2:
+            fails.append(f"on: want no second team in the Premier and both in the First Division, got {after}")
+    return fails
+
+
+def run_off(program, game, work):
+    fails, log = jump("off", program, game, work, {"RECOMP_FIN_SECOND": "off"})
+    if not any("(a second team)" in l for l in playoffs(log)):
+        fails.append("off: no second team plays the promotion play-off with the original (the test does not see "
+                     "the fault)")
+    return fails
+
+
+def run_drop(program, game, work):
+    fails, log = jump("drop", program, game, work, {"RECOMP_TEST_FIN_SECOND_DROP": "1"})
+    more, seen = common("drop", log, 1)
+    fails += more
+    if seen:
+        before, after, lines = seen[0]
+        print(f"drop: change 1: before {before}, after {after}")
+        if before[3] < 2:
+            fails.append(f"drop: {before[3]} second teams in the First Division before the change, want 2")
+        if after[3] or after[4]:
+            fails.append(f"drop: second teams still in the First Division after the change: {after}")
+        if sum("goes down from the First Division" in l for l in lines) < 2:
+            fails.append("drop: fewer than 2 second teams went down from the First Division")
+        if not any("stays up in the First Division" in l for l in lines):
+            fails.append("drop: no club of the table stayed up in a second team's place")
+    return fails
+
+
+def run_old(program, game, work):
+    fails, log = jump("old", program, game, work, {"RECOMP_TEST_FIN_SECOND_OLD": "1"}, 2027)
+    more, seen = common("old", log, 2)
+    fails += more
+    if len(seen) >= 2:
+        if not re.search(r"goes up to the Premier Division \(a second team\)", "\n".join(seen[0][2])):
+            fails.append("old: no second team went up as the original in the first change (no old save made)")
+        before, after, lines = seen[1]
+        print(f"old: change 2: before {before}, after {after}")
+        if not before[1]:
+            fails.append("old: no second team in the Premier Division before change 2")
+        if after[1]:
+            fails.append(f"old: {after[1]} second teams still in the Premier Division after change 2")
+        if not any("goes down from the Premier Division" in l for l in lines):
+            fails.append("old: no second team went down from the Premier Division")
+        if not any("stays up in the Premier Division" in l for l in lines):
+            fails.append("old: no club stayed up in the Premier Division in its place")
+        if any("(a second team)" in l and "goes up to the Premier" in l for l in lines):
+            fails.append("old: a second team went up in change 2")
+    return fails
+
+
+def run_late(program, game, work):
+    fails, log = jump("late", program, game, work, {"RECOMP_TEST_FIN_SECOND_LATE": "1"})
+    more, seen = common("late", log, 1)
+    fails += more
+    if "is the stage-1 finalist" not in log:
+        fails.append("late: no second team was made the stage-1 finalist (the test sees no case)")
+    if "plays the Premier play-off in place of a second team" not in log:
+        fails.append("late: no club played stage 3 in a second team's place")
+    if not re.search(r"takes status 5 in place of a second team", log):
+        fails.append("late: no club took stage 1's place from a second team")
+    if re.search(r"goes up to the (Premier|First) Division \(a second team\)", log):
+        fails.append("late: a second team went up")
+    if seen and seen[0][1][1]:
+        fails.append(f"late: a second team is in the Premier Division after the change: {seen[0][1]}")
+    return fails
+
+
+RUNS = {"on": run_on, "off": run_off, "drop": run_drop, "old": run_old, "late": run_late}
+
+
+def main(argv):
+    if len(argv) < 3:
+        print(__doc__)
+        return 2
+    program, game = argv[1], argv[2]
+    only = rrc.arg(argv, "--only", ",".join(RUNS)).split(",")
+    jobs = int(rrc.arg(argv, "--jobs", "1"))
+    keep = rrc.arg(argv, "--keep", None) or tempfile.mkdtemp(prefix="fin-second-")
+    if "--fix-off" in argv:
+        FIX_OFF["RECOMP_FIN_SECOND"] = "off"
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as ex:
+        futures = {n: ex.submit(RUNS[n], program, game, os.path.join(keep, n)) for n in only}
+        fails = []
+        for n in only:
+            got = futures[n].result()
+            print(f"{n}: {'PASS' if not got else 'FAIL'}")
+            fails += got
+    for f in fails:
+        print("  " + f)
+    print("PASS" if not fails else "FAIL")
+    return 0 if not fails else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
