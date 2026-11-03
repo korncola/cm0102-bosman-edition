@@ -48,6 +48,9 @@ int host_mkdir(const char *path);                /* 0 on success */
 int host_unlink(const char *path);               /* 0 on success */
 int host_rmdir(const char *path);                /* removes an empty folder; 0 on success */
 int host_rename(const char *from, const char *to);
+/* Moves from to to and fails when to exists, also when it appears at that moment (link and unlink on POSIX,
+ * the Windows rename). 0 on success. */
+int host_rename_new(const char *from, const char *to);
 /* Moves from over to, and replaces to when it exists (also on Windows). 0 on success. */
 int host_replace(const char *from, const char *to);
 /* Flushes the file to the disk. 0 on success. Call fflush first. */

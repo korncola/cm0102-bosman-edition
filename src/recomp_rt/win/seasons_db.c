@@ -493,17 +493,20 @@ static void add_missing_euro_cfg(const char *game_dir, const SeasonKnownDb *row,
     SeasonsZip z;
     char err[160] = "";
     if (seasons_zip_open(&z, zip, err, sizeof err)) return;
+    int found = -1;
     for (int i = 0; i < z.count; i++) {
         const SeasonsZipEntry *e = &z.e[i];
         const char *base;
         if (e->is_dir || !safe_entry_name(e->name, &base) || strcasecmp(base, "euro.cfg")) continue;
+        found = i;                                   /* the last entry, as unpack_zip keeps it */
+    }
+    if (found >= 0) {
         char part[1400], hex[65];
         snprintf(part, sizeof part, "%s/euro.cfg.%lu-%llu.tmp", folder, (unsigned long)getpid(),
                  (unsigned long long)host_unix_time_us());
-        if (seasons_zip_extract(&z, i, part, hex, err, sizeof err) ||
-            !host_stat(cfg, &st) || host_rename(part, cfg))      /* a file that came meanwhile is kept */
+        if (seasons_zip_extract(&z, found, part, hex, err, sizeof err) ||
+            host_rename_new(part, cfg))                          /* a file that came meanwhile is kept */
             host_unlink(part);
-        break;
     }
     seasons_zip_close(&z);
 }

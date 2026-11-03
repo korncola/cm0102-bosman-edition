@@ -207,8 +207,32 @@ def main(argv):
         status, name, unpacked, err = prepare(tool, game, save, 2003)
         check(status == PREPARE["OK"] and open(cfg, "rb").read() == own_cfg and tree_state(folder) == before,
               "a folder with its own euro.cfg keeps it: no overwrite, no file changed")
-        with open(cfg, "wb") as f:
-            f.write(zip_cfg)
+        # A file of another letter case counts as there (the game's path lookup ignores case).
+        os.rename(cfg, os.path.join(folder, "Euro.CFG"))
+        status, _, _, _ = prepare(tool, game, save, 2003)
+        check(status == PREPARE["OK"] and sorted(os.listdir(folder)) == sorted(FILES + ["Euro.CFG"]),
+              "a folder with Euro.CFG gets no second euro.cfg")
+        os.unlink(os.path.join(folder, "Euro.CFG"))
+        # A zip with no euro.cfg (a 0.6.0 or 0.6.1 zip, or a damaged one): the folder is used as it is.
+        zpath = os.path.join(game, "Seasons", "October 2003.zip")
+        keep_zip = os.path.join(work, "keep-October-2003.zip")
+        shutil.move(zpath, keep_zip)
+        with zipfile.ZipFile(keep_zip) as zin, zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as zout:
+            for info in zin.infolist():
+                if not info.filename.endswith("/euro.cfg"):
+                    zout.writestr(info, zin.read(info))
+        status, _, unpacked, _ = prepare(tool, game, save, 2003)
+        check(status == PREPARE["OK"] and unpacked == 0 and sorted(os.listdir(folder)) == sorted(FILES),
+              "a zip without euro.cfg adds nothing to the old-style folder")
+        with open(zpath, "wb") as f:
+            f.write(open(keep_zip, "rb").read()[:5000])
+        status, _, unpacked, _ = prepare(tool, game, save, 2003)
+        check(status == PREPARE["OK"] and unpacked == 0 and sorted(os.listdir(folder)) == sorted(FILES),
+              "a cut zip adds nothing and leaves no temporary file in the old-style folder")
+        shutil.move(keep_zip, zpath)
+        status, _, _, _ = prepare(tool, game, save, 2003)
+        check(status == PREPARE["OK"] and open(cfg, "rb").read() == zip_cfg and
+              sorted(os.listdir(folder)) == sorted(FILES + ["euro.cfg"]), "with the good zip back the folder gets euro.cfg")
 
         # The recognition cache: a file counts only when it is 2 seconds older than the last change, so age it.
         cache = os.path.join(save, "Databases", ".identify-cache")
