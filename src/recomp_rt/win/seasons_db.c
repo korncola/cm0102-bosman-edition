@@ -479,6 +479,35 @@ static int unpack_zip(const char *zip, const char *tmp, const SeasonKnownDb *row
     return 0;
 }
 
+/* A folder that a player unpacked from a 0.6.0 or 0.6.1 zip has no euro.cfg (0.6.2 open item 100). When the folder
+ * lacks the file and the zip of the season has it, copies it in. A file that is there is never replaced. The file
+ * is written under a temporary name and renamed, so a stop leaves no half file under the real name. A failure
+ * changes nothing: the game then reads the database's own order of clubs, as before. */
+static void add_missing_euro_cfg(const char *game_dir, const SeasonKnownDb *row, const char *folder)
+{
+    char cfg[1300], zip[1100];
+    HostStat st;
+    if (find_file(folder, "euro.cfg", cfg, sizeof cfg)) return;      /* any case of the name counts as there */
+    snprintf(cfg, sizeof cfg, "%s/euro.cfg", folder);
+    if (!zip_path(game_dir, row, zip, sizeof zip) || host_stat(zip, &st) || st.is_dir) return;
+    SeasonsZip z;
+    char err[160] = "";
+    if (seasons_zip_open(&z, zip, err, sizeof err)) return;
+    for (int i = 0; i < z.count; i++) {
+        const SeasonsZipEntry *e = &z.e[i];
+        const char *base;
+        if (e->is_dir || !safe_entry_name(e->name, &base) || strcasecmp(base, "euro.cfg")) continue;
+        char part[1400], hex[65];
+        snprintf(part, sizeof part, "%s/euro.cfg.%lu-%llu.tmp", folder, (unsigned long)getpid(),
+                 (unsigned long long)host_unix_time_us());
+        if (seasons_zip_extract(&z, i, part, hex, err, sizeof err) ||
+            !host_stat(cfg, &st) || host_rename(part, cfg))      /* a file that came meanwhile is kept */
+            host_unlink(part);
+        break;
+    }
+    seasons_zip_close(&z);
+}
+
 SeasonsPrepareStatus seasons_db_prepare_in(const char *game_dir, const char *save_dir, int year, SeasonsPrepare *r)
 {
     void (*progress)(void *, int, int) = r->progress;
@@ -512,6 +541,7 @@ SeasonsPrepareStatus seasons_db_prepare_in(const char *game_dir, const char *sav
     if (pick >= 0) {
         snprintf(r->name, sizeof r->name, "%s", names[pick]);
         dbfolders_path(save_dir, r->name, r->path, sizeof r->path);
+        add_missing_euro_cfg(game_dir, row, r->path);
         return r->status = SEASONS_PREPARE_OK;
     }
 

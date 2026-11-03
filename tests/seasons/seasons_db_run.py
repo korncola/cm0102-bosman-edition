@@ -19,6 +19,8 @@ new folder, and checks:
   2. scan: the two seasons are "in the download", the others have the status the table gives
   3. prepare unpacks one zip into Databases/<name>, the folder equals the signature (identify)
   4. a second prepare uses the unpacked copy: nothing is unpacked, no file changes
+  4b. an old-style folder without euro.cfg (a 0.6.0 or 0.6.1 unpack) gets it from the zip at prepare; a folder
+      with its own euro.cfg keeps it (0.6.2 open item 100, 0.7.0)
   5. a folder under another name counts (recognition by content), and an edited folder is Custom
   6. an edited folder with the name of the season is not replaced: the new copy gets "<name> (2)"
   7. a damaged zip leaves no folder that looks whole and no temporary folder, and a retry works
@@ -185,6 +187,28 @@ def main(argv):
         check(tree_state(folder) == before, "prepare 2003 again: no file changed")
         rows, custom = scan(tool, game, save)
         check(rows["2003/04"][0] == STATUS["UNPACKED"], "scan: 2003/04 shows as unpacked")
+
+        # 4b. A folder that a player unpacked from a 0.6.0 or 0.6.1 zip has no euro.cfg (0.6.2 open item 100, 0.7.0).
+        # prepare copies euro.cfg from the zip into it, only when the file is missing, and changes nothing else.
+        zip_cfg = zipfile.ZipFile(os.path.join(game, "Seasons", "October 2003.zip")).read("October 2003/euro.cfg")
+        cfg = os.path.join(folder, "euro.cfg")
+        os.unlink(cfg)
+        others = {k: v for k, v in tree_state(folder).items()}
+        status, name, unpacked, err = prepare(tool, game, save, 2003)
+        check(status == PREPARE["OK"] and unpacked == 0 and name == "October 2003",
+              f"prepare 2003 on an old-style folder (no euro.cfg): the folder is used, nothing unpacked ({status} {name!r} {err})")
+        check(os.path.exists(cfg) and open(cfg, "rb").read() == zip_cfg, "the old-style folder gets euro.cfg from the zip")
+        check(tree_state(folder) == {**others, "euro.cfg": tree_state(folder).get("euro.cfg")},
+              "no other file of the old-style folder changed, and no temporary file is left in it")
+        own_cfg = b"my own euro.cfg\r\n"
+        with open(cfg, "wb") as f:
+            f.write(own_cfg)
+        before = tree_state(folder)
+        status, name, unpacked, err = prepare(tool, game, save, 2003)
+        check(status == PREPARE["OK"] and open(cfg, "rb").read() == own_cfg and tree_state(folder) == before,
+              "a folder with its own euro.cfg keeps it: no overwrite, no file changed")
+        with open(cfg, "wb") as f:
+            f.write(zip_cfg)
 
         # The recognition cache: a file counts only when it is 2 seconds older than the last change, so age it.
         cache = os.path.join(save, "Databases", ".identify-cache")
