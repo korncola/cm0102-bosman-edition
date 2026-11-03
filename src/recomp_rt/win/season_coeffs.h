@@ -11,7 +11,9 @@
  * 2024/25 season is missing, and a 2025 game counts a zero season in every total until 2029/30. The October 2026
  * database holds 2024/25 (Max, 3 November 2026: the 2025/26 databases take these values). At the database load of
  * a new game (season_dates.c, after the shift and the history fill), the game writes +0x108 of each nation of the
- * table. The database files stay unchanged. A loaded save needs nothing: it holds the nation records.
+ * table, in every start year (also 2001, where no shift runs). A new shift for another year undoes the write
+ * first, as it undoes the history fill. The database files stay unchanged. A loaded save needs nothing: it holds
+ * the nation records, and a save of an older build keeps its zero season.
  *
  * A row is written only when the record of its nation id holds that id, its +0x100 is the value of the known
  * database and its +0x108 is 0 or already the value (a nation.dat that a player changed keeps its own values).
@@ -42,5 +44,11 @@ extern const int season_coeff_dbs_count;
 
 /* After the shift of a database load (season_dates.c): the rows of database `name` (NULL: none). */
 void season_coeffs_fill(const char *name);
+
+/* Before a new shift (season_dates.c): gives back the values of the last fill. */
+void season_coeffs_undo(void);
+
+/* When the loaded data no longer comes from a database load (season_dates_forget): drops the undo record. */
+void season_coeffs_forget(void);
 
 #endif

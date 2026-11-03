@@ -8,6 +8,22 @@
 #define NATIONS_PTR 0xae23a8u
 #define NATION_COUNT 0xae2350u
 #define NATION_SIZE 0x122u
+#define MAX_UNDO 256
+
+/* The +0x108 values that the last fill replaced, to give back before a new shift. */
+static struct { uint32_t at; double old; } undo[MAX_UNDO];
+static int n_undo;
+
+void season_coeffs_undo(void)
+{
+    uint32_t base = rd32(g_mem, NATIONS_PTR), count = rd32(g_mem, NATION_COUNT);
+    for (int i = n_undo - 1; i >= 0; i--)
+        if (base && undo[i].at >= base && undo[i].at + 8 <= base + count * NATION_SIZE)
+            wrf64(g_mem, undo[i].at, undo[i].old);
+    n_undo = 0;
+}
+
+void season_coeffs_forget(void) { n_undo = 0; }
 
 void season_coeffs_fill(const char *name)
 {
@@ -17,26 +33,31 @@ void season_coeffs_fill(const char *name)
     if (!db) return;
     uint32_t base = rd32(g_mem, NATIONS_PTR), count = rd32(g_mem, NATION_COUNT);
     if (!base || !count || count > 10000u) return;
-    int written = 0, kept = 0;
+    int written = 0, kept = 0, held = 0;
     for (int k = 0; k < db->n_rows; k++) {
         const SeasonCoeff *c = &db->rows[k];
         uint32_t rec = base + (uint32_t)c->id * NATION_SIZE;
-        double before, now;
         if (c->id >= count || rd32(g_mem, rec) != c->id) {
             kept++;
             continue;
         }
-        memcpy(&before, g_mem + rec + 0x100, sizeof before);
-        memcpy(&now, g_mem + rec + 0x108, sizeof now);
+        double before = rdf64(g_mem, rec + 0x100), now = rdf64(g_mem, rec + 0x108);
         if (before != c->check_100 || (now != 0 && now != c->value_108)) {
             fprintf(stderr, "recomp: season coeffs: %s: %s keeps its own values (+0x100 %.3f, +0x108 %.3f)\n",
                     db->db, c->nation, before, now);
             kept++;
             continue;
         }
-        memcpy(g_mem + rec + 0x108, &c->value_108, sizeof c->value_108);
-        written++;
+        if (n_undo < MAX_UNDO) {
+            undo[n_undo].at = rec + 0x108;
+            undo[n_undo++].old = now;
+        } else {
+            rt_fatal("season coeffs: the undo record is full");
+        }
+        wrf64(g_mem, rec + 0x108, c->value_108);
+        if (now != 0 && now == c->value_108) held++;      /* no undo before this fill */
+        else written++;
     }
-    fprintf(stderr, "recomp: season coeffs: %s: the season before the start written for %d nations, %d kept\n",
-            db->db, written, kept);
+    fprintf(stderr, "recomp: season coeffs: %s: the season before the start written for %d nations, %d kept%s\n",
+            db->db, written, kept, held ? ", some held it already" : "");
 }

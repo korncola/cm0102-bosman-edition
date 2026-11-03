@@ -8,7 +8,7 @@ Usage:
 before the start, for every nation. At the database load the game writes the 2024/25 values of the October 2026
 database there (src/recomp_rt/win/season_coeffs.c, the table of docs/research/2026-11-03-database-coefficients.tsv).
 
-Each run starts a 2025 game on one database with England (rules_report_check.py), saves one day after the start
+Each run (dec2025, may2026, reshift) starts a 2025 game on one database with England (rules_report_check.py), saves one day after the start
 and ends. The checks: code 0 and no message box; the log line of the fill (56 nations written, none kept); in the
 save, +0x108 of every nation of the table holds its value (England 29.464, Spain 23.892); the two European
 Performance Spots of 2025/26 go to the nations with the best 2024/25 values, England and Spain (as in the real
@@ -33,7 +33,10 @@ import history_check as hc  # noqa: E402
 
 DB = "/Users/max/Projects/cm0102/test-fixtures/databases"
 TSV = os.path.join(HERE, "..", "..", "docs", "research", "2026-11-03-database-coefficients.tsv")
-RUNS = {"dec2025": "December 2025", "may2026": "May 2026"}
+# run: (database, more environment). reshift: the test switch of season_dates.c makes the shift for 2030 and then
+# for 2025 again, so the fill is undone and made again (three fills in the log, the values as after one).
+RUNS = {"dec2025": ("December 2025", {}), "may2026": ("May 2026", {}),
+        "reshift": ("December 2025", {"RECOMP_DATES_RESHIFT": "2030"})}
 EPS_VALUES = {"England": 29.464, "Spain": 23.892}
 
 
@@ -43,21 +46,23 @@ def ranks(nations, first):
     return [name for _, name in rows]
 
 
-def check(name, database, work):
+def check(name, database, env, work):
     import smoke_run
     fails = []
     code, _ = rrc.run(PROGRAM, GAME, 2025, 2025, os.path.join(DB, database), ["England"], [], work, 3600, None,
-                      {"RECOMP_SAVE_AFTER_DAYS": "1"})
+                      dict({"RECOMP_SAVE_AFTER_DAYS": "1"}, **env))
     if code != 0:
         fails.append(f"{name}: the game ended with code {code}")
     found, log = ufr.boxes(work)
     fails += [f"{name}: message box {b}" for b in found]
-    want = [r for r in csv.DictReader(open(TSV, encoding="utf-8"), delimiter="\t") if r["database"] == database]
+    with open(TSV, encoding="utf-8") as f:
+        want = [r for r in csv.DictReader(f, delimiter="\t") if r["database"] == database]
     if not want:
         fails.append(f"{name}: no row of {database} in {TSV}")
     line = f"season coeffs: {database}: the season before the start written for {len(want)} nations, 0 kept"
-    if line not in log:
-        fails.append(f"{name}: no log line {line!r}")
+    fills = 3 if "RECOMP_DATES_RESHIFT" in env else 1
+    if log.count(line) != fills or log.count("season coeffs:") != fills:
+        fails.append(f"{name}: not {fills} log lines {line!r} and no other")
     eps = re.findall(r"European Performance Spot 2025/26: rank (\d+) \(([0-9.]+) at \+0x([0-9a-f]+)\)", log)
     got = sorted((float(v), at) for _, v, at in eps)
     if got != sorted((v, "108") for v in EPS_VALUES.values()):
@@ -95,11 +100,14 @@ def main(argv):
         return 2
     PROGRAM, GAME = os.path.abspath(argv[0]), os.path.abspath(argv[1])
     only = rrc.arg(argv, "--only", "").split(",") if "--only" in argv else list(RUNS)
+    if any(n not in RUNS for n in only):
+        print(f"--only: the runs are {', '.join(RUNS)}")
+        return 2
     keep = rrc.arg(argv, "--keep")
     fails = []
     for name in only:
         work = os.path.join(keep, name) if keep else tempfile.mkdtemp(prefix=f"cm0102-coeffs-{name}-")
-        f = check(name, RUNS[name], work)
+        f = check(name, *RUNS[name], work)
         print(f"{'PASS' if not f else 'FAIL'}  {name} ({work})")
         fails += f
     for f in fails:

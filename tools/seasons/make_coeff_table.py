@@ -87,6 +87,8 @@ def uefa_nations(folder):
 
 
 def measure(dbroot):
+    if not os.path.isdir(dbroot):
+        fail(f"{dbroot} is not a folder")
     dbs = known_databases(dbroot)
     rows = []
     for target, (donor, season) in FILLS.items():
@@ -183,6 +185,8 @@ def table_text():
     ]
     dbs = []
     for db, items in by_db.items():
+        if len(items) > 256:
+            fail(f"{db}: {len(items)} rows, more than the undo record of season_coeffs.c holds (256)")
         ident = "".join(c if c.isalnum() else "_" for c in db)
         lines.append(f"static const SeasonCoeff coeffs_{ident}[] = {{")
         for nid, nation, chk, val in items:
@@ -212,7 +216,7 @@ def main(argv):
     if argv:
         print(__doc__, file=sys.stderr)
         return 2
-    with open(OUT, "w", encoding="latin-1") as f:
+    with open(OUT, "w", encoding="latin-1", newline="\n") as f:
         f.write(want)
     print(f"wrote {OUT}")
     return 0
