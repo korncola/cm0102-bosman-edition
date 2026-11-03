@@ -248,16 +248,18 @@ def greek_second(comps):
     """[(season, detail)]: a season from 2026/27 in which the Greek Super League 2 does not play as one group of
     GRE_CLUBS clubs, the other group waiting at IDLE (open item 68: the rules table holds one group of 16 from
     2026/27; a forum game kept the North and South groups). comps: the comp lines of the rules reports
-    (rules_report_check.read_report). Only the start line of a season counts: a leg that loads a save writes its
-    first lines under the start year, and the end line of the season before with the next year. Only a game with
-    changing rules on and Greece loaded has these lines."""
+    (rules_report_check.read_report), the legs in leg order. Only the start lines of a season count, and of each
+    group (slot) only the first: a leg that loads a save writes its first start lines under the game's start season
+    with the state at the load (season_report_turn), and the end line of the season before with the next year, as
+    league_stalls keeps the first value (open item 104: the date jump to 2198 gave "0 groups play" in 2198/99 from
+    the loaded legs of 2199 and 2200). Only a game with changing rules on and Greece loaded has these lines."""
     out = []
     lines = [c for c in comps if c["file"] == "gre_second" and c["phase"] == "start" and c["season"] >= GRE_ONE_GROUP]
     for season in sorted({c["season"] for c in lines}):
         groups = {}
         for c in lines:
             if c["season"] == season:
-                groups[c.get("slot", len(groups))] = c        # one group a slot
+                groups.setdefault(c.get("slot", len(groups)), c)   # one group a slot, its first line
         playing = [c for c in groups.values() if c["year"] == season]
         waiting = [c for c in groups.values() if c["year"] == IDLE]
         if len(playing) != 1 or len(playing) + len(waiting) != len(groups):
