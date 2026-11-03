@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The free Champions League places of the access list in a game with fewer UEFA nations (0.6.2 open item 94).
+"""The free places of the access lists in a game with fewer UEFA nations (0.6.2 open item 94).
 
 Usage:
     python3 tests/seasons/uefa_free_places_run.py <cm0102_recomp> <game folder> [--keep <folder>]
@@ -12,7 +12,14 @@ src/recomp_rt/win/season_uefa_seeding.c fills each with the next club in league 
 under its association limit. The check: the Champions League clubs of each nation, title holders apart, are the
 first clubs of its top division of the last season, with no club left out (places 1 to n, a title holder's place
 apart). On main ec04eb89 the filler came after the Europa League and Conference League places and took Spain's
-8th, 9th and 10th, past its 5th to 7th. The log must show each free place. A run takes about 3 to 6 minutes.
+8th, 9th and 10th, past its 5th to 7th. The log must show each free place.
+
+Max's decision of 3 November 2026 (open item 94): the free places of one competition go one to each nation down the
+ranking, not all to the best-ranked nation (on e1bc6a34 Spain, rank 1, took all three Champions League free places
+and all five of the Conference League). The check: in each competition (Champions League, Europa League,
+Conference League) no rank takes a second free place, the ranks of the free places rise, the Conference League has
+free places in this game, and each club named by a free place holds that competition's place in the save. A run
+takes about 3 to 6 minutes.
 """
 import os
 import re
@@ -62,6 +69,38 @@ def gaps(game):
     return bad
 
 
+COMPS = {"Champions League": "uefa_cl", "Europa League": "uefa_el", "Conference League": "uefa_ecl"}
+FREE = re.compile(r"recomp: uefa: (Champions League|Europa League|Conference League) 2026/27: a free place "
+                  r"\(entry code \d+\) for (.*) \(rank (\d+)\)")
+
+
+def spread(game, log):
+    """The faults of Max's rule of 3 November 2026: a second free place of one competition for a rank, ranks out
+    of order, no Conference League free place, or a named club without that competition's place in the save."""
+    rules = hc.Rules(os.path.join(HERE, "future", "competitions.tsv"),
+                     os.path.join(HERE, "future", "history_names.tsv"))
+    mark = {}                                  # key: comp ids (the Conference League record is of kind nation)
+    for cid, c in game.comps.items():
+        mark.setdefault(rules.key(c["name"]), set()).add(cid)
+    names = {}
+    for club, (div, last, m, place) in game.divisions.items():
+        names.setdefault(game.clubs[club][0][:50], set()).add(m)
+    ranks, bad = {}, []
+    for comp, club, rank in FREE.findall(log):
+        rank = int(rank)
+        got = ranks.setdefault(comp, [])
+        if rank in got:
+            bad.append(f"{comp}: a second free place for rank {rank} ({club})")
+        elif got and rank < got[-1]:
+            bad.append(f"{comp}: the free place of rank {rank} ({club}) after rank {got[-1]}")
+        got.append(rank)
+        if not names.get(club, set()) & mark.get(COMPS[comp], set()):
+            bad.append(f"{comp}: {club} has no place of the competition in the save")
+    if not ranks.get("Conference League"):
+        bad.append("no log line of a free Conference League place")
+    return bad
+
+
 def main(argv):
     if len(argv) < 3:
         print(__doc__)
@@ -94,6 +133,10 @@ def main(argv):
             fails.append(f"no log line of a free Champions League place ({work}/leg/stderr.txt)")
         for line in lines:
             print(line)
+        for line in FREE.finditer(log):
+            if not line.group(0).startswith("recomp: uefa: Champions League"):
+                print(line.group(0))
+        fails += spread(game, log)
     for f in fails:
         print("FAIL ", f)
     print("PASS" if not fails else f"FAILED: {len(fails)}")
