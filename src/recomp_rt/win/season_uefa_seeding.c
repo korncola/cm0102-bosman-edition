@@ -533,10 +533,10 @@ static void assign_all(uint32_t self, uint32_t records, int count, const SeasonU
     /* Slice 25 (Q540, 2024/25 on): the European Performance Spots. The two nations with the best season
      * coefficient of the season before (nation record +0x108, a double: roll_coefficients 0x903b50 writes the
      * points of that season divided by the clubs entered there, before these places) each get one more league
-     * phase place, for their best-placed club with no place yet. At a new game in a moved season the shift runs
-     * too (0x903b6f tests the year 2001) with no clubs entered, so +0x108 is 0 for every nation (0x903c2a) and
-     * the season before is the database's last value, now at +0x100 (0x903be8..0x903bee). It
-     * comes after the title holders and before the Europa League places, so the clubs below move down one place
+     * phase place, for their best-placed club with no place yet. At a new game the shift does not run (the year
+     * test at 0x903b6f takes the start year, tools/recomp/seasons.py), so +0x108 is the database's value of the
+     * season before. Databases that hold 0 there for every nation fall back to +0x100. The 2025/26 databases get
+     * the real value at the load (season_coeffs.h, open item 106). It comes after the title holders and before the Europa League places, so the clubs below move down one place
      * (CL regulations 2024/25, Art. 3.07 and 3.08). */
     if (r->cl_league && !rt_unwinding) {
         int best[2] = {-1, -1};

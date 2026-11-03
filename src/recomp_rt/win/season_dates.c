@@ -33,6 +33,7 @@
 #include "season_dates.h"
 #include "season_comps.h"
 #include "season_history.h"
+#include "season_coeffs.h"
 #include "season_records.h"
 #include "seasons_db.h"
 #include "../host.h"
@@ -530,8 +531,11 @@ int season_dates_plan(const char *folder, int N, SeasonShiftPlan *out)
     return 1;
 }
 
+static const char *loaded_db_name(void);
+
 static void shift_for(int N)
 {
+    season_coeffs_undo();           /* open item 106 */
     season_history_undo();          /* slice 11c: its rows first, then the shift that they follow */
     restore();
     applied_year = 0;
@@ -546,24 +550,39 @@ static void shift_for(int N)
     /* slice 11c: the history between 2001 and the start; open item 74: with or without a plan (a 2001 game with
      * changing rules on), the past editions of the records that the season code adds */
     season_history_fill(plan ? p.name : NULL, N);
+    /* 0.6.2 open item 106: the season before the start, in every start year (a 2001 start has no plan) */
+    season_coeffs_fill(loaded_db_name());
 }
 
 void season_dates_forget(void)
 {
     season_history_forget();
+    season_coeffs_forget();
     journal_ch_base = journal_ch_end = 0;
     loaded = 0;
     applied_year = 0;
     journal_n = 0;
 }
 
-/* 1 when the loaded data is an official data set (3.9.60, 3.9.65, 3.9.68). */
-static int official_data(void)
+/* The known database of the loaded data, or NULL (a Custom database). */
+static const SeasonKnownDb *loaded_db(void)
 {
     char folder[1100];
     if (loaded_dir[0]) snprintf(folder, sizeof folder, "%s", loaded_dir);
     else snprintf(folder, sizeof folder, "%s/Data", win_game_dir);
-    const SeasonKnownDb *k = seasons_db_identify(folder);
+    return seasons_db_identify(folder);
+}
+
+static const char *loaded_db_name(void)
+{
+    const SeasonKnownDb *k = loaded_db();
+    return k ? k->name : NULL;
+}
+
+/* 1 when the loaded data is an official data set (3.9.60, 3.9.65, 3.9.68). */
+static int official_data(void)
+{
+    const SeasonKnownDb *k = loaded_db();
     return k && (k->role == SEASONS_ROLE_OFFICIAL_BASE || k->role == SEASONS_ROLE_OFFICIAL_VERSION);
 }
 

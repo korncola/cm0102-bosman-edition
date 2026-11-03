@@ -1,0 +1,113 @@
+database	nation_id	nation	season	check_0x100	value_0x108	source
+December 2025	1	Albania	2024/25	2.125	1.25	October 2026 +0x100
+December 2025	4	Kosovo	2024/25	3.0	2.0	October 2026 +0x100
+December 2025	9	Armenia	2024/25	2.25	4.375	October 2026 +0x100
+December 2025	12	Austria	2024/25	4.8	9.65	October 2026 +0x100
+December 2025	13	Azerbaijan	2024/25	5.875	2.875	October 2026 +0x100
+December 2025	18	Belarus	2024/25	1.75	1.875	October 2026 +0x100
+December 2025	19	Belgium	2024/25	14.4	15.65	October 2026 +0x100
+December 2025	25	Bosnia-Herzegovina	2024/25	2.25	4.531	October 2026 +0x100
+December 2025	30	Bulgaria	2024/25	4.375	3.625	October 2026 +0x100
+December 2025	48	Croatia	2024/25	5.875	5.875	October 2026 +0x100
+December 2025	50	Cyprus	2024/25	3.75	10.562	October 2026 +0x100
+December 2025	51	Czech Republic	2024/25	13.5	10.55	October 2026 +0x100
+December 2025	53	Denmark	2024/25	8.5	7.656	October 2026 +0x100
+December 2025	61	England	2024/25	17.375	29.464	October 2026 +0x100
+December 2025	64	Estonia	2024/25	0.125	1.625	October 2026 +0x100
+December 2025	67	Faroe Islands	2024/25	2.75	1.5	October 2026 +0x100
+December 2025	69	Finland	2024/25	1.75	2.25	October 2026 +0x100
+December 2025	70	France	2024/25	16.25	17.928	October 2026 +0x100
+December 2025	73	Georgia	2024/25	1.25	1.25	October 2026 +0x100
+December 2025	74	Germany	2024/25	19.357	18.421	October 2026 +0x100
+December 2025	76	Greece	2024/25	11.4	12.687	October 2026 +0x100
+December 2025	84	Holland	2024/25	10.0	15.25	October 2026 +0x100
+December 2025	87	Hungary	2024/25	4.5	6.625	October 2026 +0x100
+December 2025	88	Iceland	2024/25	3.833	4.562	October 2026 +0x100
+December 2025	93	Republic of Ireland	2024/25	1.5	5.343	October 2026 +0x100
+December 2025	94	Israel	2024/25	8.75	2.875	October 2026 +0x100
+December 2025	95	Italy	2024/25	21.0	21.875	October 2026 +0x100
+December 2025	100	Kazakhstan	2024/25	3.125	3.0	October 2026 +0x100
+December 2025	105	Latvia	2024/25	1.625	3.875	October 2026 +0x100
+December 2025	110	Liechtenstein	2024/25	0.5	0.5	October 2026 +0x100
+December 2025	111	Lithuania	2024/25	1.125	1.375	October 2026 +0x100
+December 2025	112	Luxembourg	2024/25	2.25	1.25	October 2026 +0x100
+December 2025	119	Malta	2024/25	1.5	1.0	October 2026 +0x100
+December 2025	123	Moldova	2024/25	2.0	2.125	October 2026 +0x100
+December 2025	124	Montenegro	2024/25	1.333	2.5	October 2026 +0x100
+December 2025	129	Northern Ireland	2024/25	1.25	1.5	October 2026 +0x100
+December 2025	139	Norway	2024/25	8.0	11.812	October 2026 +0x100
+December 2025	149	Poland	2024/25	6.875	11.75	October 2026 +0x100
+December 2025	150	Portugal	2024/25	11.0	16.25	October 2026 +0x100
+December 2025	154	Romania	2024/25	3.25	7.75	October 2026 +0x100
+December 2025	155	Russia	2024/25	0.0	0.0	October 2026 +0x100
+December 2025	158	Serbia	2024/25	1.4	3.725	October 2026 +0x100
+December 2025	161	Scotland	2024/25	6.4	9.25	October 2026 +0x100
+December 2025	166	Slovakia	2024/25	5.0	4.625	October 2026 +0x100
+December 2025	167	Slovenia	2024/25	3.875	9.093	October 2026 +0x100
+December 2025	172	Spain	2024/25	16.062	23.892	October 2026 +0x100
+December 2025	180	Sweden	2024/25	1.875	11.375	October 2026 +0x100
+December 2025	181	Switzerland	2024/25	5.2	7.05	October 2026 +0x100
+December 2025	192	Turkey	2024/25	12.0	10.3	October 2026 +0x100
+December 2025	200	Ukraine	2024/25	4.1	3.6	October 2026 +0x100
+December 2025	207	Wales	2024/25	0.625	2.0	October 2026 +0x100
+December 2025	209	Yugoslavia	2024/25	0.0	0.0	October 2026 +0x100
+December 2025	215	Andorra	2024/25	1.666	1.0	October 2026 +0x100
+December 2025	216	San Marino	2024/25	0.333	0.666	October 2026 +0x100
+December 2025	218	Gibraltar	2024/25	0.166	1.5	October 2026 +0x100
+December 2025	229	North Macedonia	2024/25	1.5	0.666	October 2026 +0x100
+May 2026	1	Albania	2024/25	2.125	1.25	October 2026 +0x100
+May 2026	4	Kosovo	2024/25	3.0	2.0	October 2026 +0x100
+May 2026	9	Armenia	2024/25	2.25	4.375	October 2026 +0x100
+May 2026	12	Austria	2024/25	4.8	9.65	October 2026 +0x100
+May 2026	13	Azerbaijan	2024/25	5.875	2.875	October 2026 +0x100
+May 2026	18	Belarus	2024/25	1.75	1.875	October 2026 +0x100
+May 2026	19	Belgium	2024/25	14.4	15.65	October 2026 +0x100
+May 2026	25	Bosnia-Herzegovina	2024/25	2.25	4.531	October 2026 +0x100
+May 2026	30	Bulgaria	2024/25	4.375	3.625	October 2026 +0x100
+May 2026	48	Croatia	2024/25	5.875	5.875	October 2026 +0x100
+May 2026	50	Cyprus	2024/25	3.75	10.562	October 2026 +0x100
+May 2026	51	Czech Republic	2024/25	13.5	10.55	October 2026 +0x100
+May 2026	53	Denmark	2024/25	8.5	7.656	October 2026 +0x100
+May 2026	61	England	2024/25	17.375	29.464	October 2026 +0x100
+May 2026	64	Estonia	2024/25	0.125	1.625	October 2026 +0x100
+May 2026	67	Faroe Islands	2024/25	2.75	1.5	October 2026 +0x100
+May 2026	69	Finland	2024/25	1.75	2.25	October 2026 +0x100
+May 2026	70	France	2024/25	16.25	17.928	October 2026 +0x100
+May 2026	73	Georgia	2024/25	1.25	1.25	October 2026 +0x100
+May 2026	74	Germany	2024/25	19.357	18.421	October 2026 +0x100
+May 2026	76	Greece	2024/25	11.4	12.687	October 2026 +0x100
+May 2026	84	Holland	2024/25	10.0	15.25	October 2026 +0x100
+May 2026	87	Hungary	2024/25	4.5	6.625	October 2026 +0x100
+May 2026	88	Iceland	2024/25	3.833	4.562	October 2026 +0x100
+May 2026	93	Republic of Ireland	2024/25	1.5	5.343	October 2026 +0x100
+May 2026	94	Israel	2024/25	8.75	2.875	October 2026 +0x100
+May 2026	95	Italy	2024/25	21.0	21.875	October 2026 +0x100
+May 2026	100	Kazakhstan	2024/25	3.125	3.0	October 2026 +0x100
+May 2026	105	Latvia	2024/25	1.625	3.875	October 2026 +0x100
+May 2026	110	Liechtenstein	2024/25	0.5	0.5	October 2026 +0x100
+May 2026	111	Lithuania	2024/25	1.125	1.375	October 2026 +0x100
+May 2026	112	Luxembourg	2024/25	2.25	1.25	October 2026 +0x100
+May 2026	119	Malta	2024/25	1.5	1.0	October 2026 +0x100
+May 2026	123	Moldova	2024/25	2.0	2.125	October 2026 +0x100
+May 2026	124	Montenegro	2024/25	1.333	2.5	October 2026 +0x100
+May 2026	129	Northern Ireland	2024/25	1.25	1.5	October 2026 +0x100
+May 2026	139	Norway	2024/25	8.0	11.812	October 2026 +0x100
+May 2026	149	Poland	2024/25	6.875	11.75	October 2026 +0x100
+May 2026	150	Portugal	2024/25	11.0	16.25	October 2026 +0x100
+May 2026	154	Romania	2024/25	3.25	7.75	October 2026 +0x100
+May 2026	155	Russia	2024/25	0.0	0.0	October 2026 +0x100
+May 2026	158	Serbia	2024/25	1.4	3.725	October 2026 +0x100
+May 2026	161	Scotland	2024/25	6.4	9.25	October 2026 +0x100
+May 2026	166	Slovakia	2024/25	5.0	4.625	October 2026 +0x100
+May 2026	167	Slovenia	2024/25	3.875	9.093	October 2026 +0x100
+May 2026	172	Spain	2024/25	16.062	23.892	October 2026 +0x100
+May 2026	180	Sweden	2024/25	1.875	11.375	October 2026 +0x100
+May 2026	181	Switzerland	2024/25	5.2	7.05	October 2026 +0x100
+May 2026	192	Turkey	2024/25	12.0	10.3	October 2026 +0x100
+May 2026	200	Ukraine	2024/25	4.1	3.6	October 2026 +0x100
+May 2026	207	Wales	2024/25	0.625	2.0	October 2026 +0x100
+May 2026	209	Yugoslavia	2024/25	0.0	0.0	October 2026 +0x100
+May 2026	215	Andorra	2024/25	1.666	1.0	October 2026 +0x100
+May 2026	216	San Marino	2024/25	0.333	0.666	October 2026 +0x100
+May 2026	218	Gibraltar	2024/25	0.166	1.5	October 2026 +0x100
+May 2026	229	North Macedonia	2024/25	1.5	0.666	October 2026 +0x100

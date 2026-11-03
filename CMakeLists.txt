@@ -445,6 +445,8 @@ set(RECOMP_PYTHON "${RECOMP_PYTHON_DEFAULT}" CACHE FILEPATH "A Python with capst
 # every row is valid. A Python test, so it runs on every platform.
 enable_testing()
 add_test(NAME season_history_table COMMAND "${RECOMP_PYTHON}" -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_history_table.py" --check)
+# 0.6.2 open item 106: the C table of the missing UEFA season coefficients matches its TSV.
+add_test(NAME season_coeffs_table COMMAND "${RECOMP_PYTHON}" -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_coeff_table.py" --check)
 # The .dmg window background shows the logo art alone, with no drawn BOSMAN EDITION line under it (0.6.1
 # item 1). Needs Pillow, so a skip (77) without it.
 add_test(NAME dmg_background COMMAND "${RECOMP_PYTHON}" -I "${CMAKE_SOURCE_DIR}/tests/mac/dmg_background_check.py")
