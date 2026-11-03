@@ -692,7 +692,8 @@ int season_playoffs_hold(void)
         if (upd < 0 || upd >= LATE_DAY || today < upd || today - upd > WAIT_DAYS) continue;
         const char *file = "";
         int p = playoffs_on() ? entry_playoffs(e, year, &file) : 0;
-        /* Item 104: the I liga's play-off, made late after the Ekstraklasa's spring stage (season_pol_playoff.c). */
+        /* Item 104: the I liga's play-off, made late after the Ekstraklasa's spring stage (season_pol_playoff.c). It is
+         * the original's play-off, not one of this kind, so RECOMP_PLAYOFFS=off does not turn it off. */
         if (p != 2) {
             const char *f3 = "";
             int q = season_pol_playoff_unfinished(e, year, &f3);

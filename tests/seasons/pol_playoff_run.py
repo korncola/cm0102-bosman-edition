@@ -77,10 +77,10 @@ def main(argv):
 
 
 def forced_checks(wait, text):
-    """--wait-day: the play-off's dates follow from the day the wait ends (season_pol_playoff.c dates_after_wait):
+    """--wait-day: the play-off's dates follow from the day the wait ends (season_pol_playoff.c dates_from_today):
     the draw after that day, the first leg after the draw, the second after the first. A second leg on or after the
     Polish update day (170) needs the season change to wait for the play-off (season_playoffs_hold)."""
-    m = re.search(r"pol_second 2199: after the wait the play-off draws on day (\d+) of 2200, legs on day (\d+) of "
+    m = re.search(r"pol_second 2199: the play-off draws on day (\d+) of 2200, legs on day (\d+) of "
                   r"2200 and day (\d+) of 2200", text)
     if not m:
         return ["no line of the play-off's dates after the wait"]

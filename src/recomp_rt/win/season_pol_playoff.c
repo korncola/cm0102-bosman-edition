@@ -18,22 +18,22 @@
  * Ekstraklasa's chain test (Comp::all_stages_complete 0x48ce10) fails on the Polish update day (entry 25, day 170) and
  * both leagues keep their edition for a year (league-stall).
  *
- * In the base data the spring stage ends about a week before the I liga's last round (day 136 against day 143 in 2200),
- * so the test of the groups alone was enough. In the date jump to 2198 (run set pass 2, jump2198, 2199/00) an
+ * In the base data the spring stage ends about a week before the I liga's last round (day 136 against day 143 in
+ * 2200), so the test of the groups alone was enough. In the date jump to 2198 (run set pass 2, jump2198, 2199/00) an
  * Ekstraklasa match of the spring stage came after the I liga's last round on day 143: the play-off was made that day
- * while the spring stage's row in place 13 still had status 255 (open) and only the row in place 14 had status 2, so its
- * fourth slot was 0, and its
- * draw moved from day 144 to day 200 and on. Whether a spring match comes late depends on the order of the days'
- * matches: the same leg loaded on day 120 played its spring stage to the end on day 141.
+ * while the spring stage's row in place 13 still had status 255 (open) and only the row in place 14 had status 2, so
+ * its fourth slot was 0, and its draw moved from day 144 to day 200 and on. Whether a spring match comes late depends
+ * on the order of the days' matches: the same leg loaded on day 120 played its spring stage to the end on day 141.
  *
  * So in a season game the I liga's advance_stage waits, one day at a time as update_for_date calls it, until every
  * built stage of the Ekstraklasa is complete and its last stage is built (the test that check_complete(1, ...) makes,
- * read here without its side effects: check_complete sets the complete flag +0xdd and calls vtable +0x94 the first time,
- * 0x689bea..0x689c06). The play-off then takes the final places. Its dates stay those of create_schedule (draw 25 May,
- * first leg 31 May, PolSecond::create_schedule 0x7cbd6a..0x7cbd94): a draw date in the past is drawn on the next update
- * (Cup::update_for_date 0x51f890, draw when the date is today or before, 0x51fa45..0x51fa7d), and a leg date in the past
- * goes to tomorrow (Cup::create_tie_fixtures 0x51cb90). A game where the spring stage ends first is not changed: the
- * test passes on the same day as the original's. The base game and RECOMP_SEASON_CODE=off keep the original (Q152). */
+ * read here without its side effects: check_complete sets the complete flag +0xdd and calls vtable +0x94 the first
+ * time, 0x689bea..0x689c06). The play-off then takes the final places. Its dates follow from the day it is made when
+ * the dates of create_schedule have passed or end on or after the Polish update day (dates_from_today below), and the
+ * Polish season change waits for a play-off that still runs on its update day (season_pol_playoff_unfinished). A game
+ * where the spring stage ends first is not changed: the test passes on the same day as the original's, and the
+ * original's dates (draw about day 144, legs about days 150 and 154) are ahead of that day and before day 170. The
+ * base game and RECOMP_SEASON_CODE=off keep the original (Q152). */
 #include "win.h"
 #include "season_names.h"
 #include "season_pol_playoff.h"
@@ -85,7 +85,9 @@ static int pol_first_done(uint32_t lg)
 #define ENTRY_SIZE 0x48u
 #define ENTRY_COUNT 35
 #define ENTRY_UPDATE_DAY 0x15u          /* the day of the year of the entry's season change (0x5d5bc8) */
-#define DRAW_LEAD 3                     /* days from the draw to the first leg after a wait (the original's: 6) */
+#define DRAW_LEAD 3                     /* days from the draw to the first leg when the dates follow from today: the
+                                           original's 6 (25 to 31 May) would put the second leg of a play-off made on
+                                           day 160 on day 171, after the update day 170 */
 
 static long abs_day(int y, int d) { return 365L * y + (y - 1) / 4 - (y - 1) / 100 + (y - 1) / 400 + d; }
 static void from_abs(long a, int base, int *y, int *d)
@@ -112,21 +114,23 @@ static long update_day_of(uint32_t comp)
     return -1;
 }
 
-/* abs_day: the days from a fixed origin (leap years by the Gregorian rule, as Date::Date 0x549f70). A play-off made
- * after the wait keeps the dates of create_schedule (draw 25 May, first leg 31 May, the second leg
- * the gap +0x22 later, 4 days: PolSecond::create_schedule 0x7cbd6a..0x7cbde0; Cup::create_tie_fixtures 0x51cb90 adds
- * the gap to the round's match date at 0x51d13c..0x51d175). When those dates have passed, the original draws at the
- * next update (Cup::update_for_date 0x51fa45..0x51fa7d) and puts each leg whose date has passed on tomorrow
- * (0x51cf13..0x51cf46 and 0x51d241..0x51d284), so both legs would get one day, the fault of item 90
- * (Cup::process_fixture box "Cup..cpp 1278"). And a play-off that ends on or after the Polish update day leaves the
- * I liga open then, so the Ekstraklasa's chain test 0x48ce10 fails and both leagues stall again. So the round's
- * dates follow from the day the wait ends: the draw tomorrow at the earliest, the first leg DRAW_LEAD days after the
- * draw at the earliest, both no earlier than the original's, and the first leg as late as the gap allows before the
- * update day when the original's would end on or after it. A play-off that still cannot end before the update day
- * (a wait to its last days) holds the Polish season change until it ends (season_pol_playoff_unfinished, called by
- * season_playoffs_hold). The round table: draw day +0 and its s8 year offset +2 from the stage's +0x40, match day +3
- * and its offset +5 (cup_set_round_draw_date 0x521e60, cup_set_round_match_date 0x521eb0). */
-static void dates_after_wait(uint32_t self, uint32_t t)
+/* abs_day: the days from a fixed origin (leap years by the Gregorian rule, as Date::Date 0x549f70).
+ *
+ * The play-off's dates come from create_schedule: draw 25 May, first leg 31 May, the second leg the gap +0x22 later,
+ * 4 days (PolSecond::create_schedule 0x7cbd6a..0x7cbde0; Cup::create_tie_fixtures 0x51cb90 adds the gap to the round's
+ * match date at 0x51d13c..0x51d175). When a play-off is made after those dates, the original draws at the next update
+ * (Cup::update_for_date 0x51fa45..0x51fa7d) and puts each leg whose date has passed on tomorrow (0x51cf13..0x51cf46
+ * and 0x51d241..0x51d284), so both legs get one day, the fault of item 90 (Cup::process_fixture box "Cup..cpp 1278";
+ * a wait forced to day 160 put both on day 161, and only the item 90 rule of fixture_season_end.c moved the second to
+ * day 168). And a play-off that ends on or after the Polish update day leaves the I liga open then, so the
+ * Ekstraklasa's chain test 0x48ce10 fails and both leagues stall again. So the dates follow from the day the play-off
+ * is made: the draw tomorrow at the earliest, the first leg DRAW_LEAD days after the draw at the earliest, both no
+ * earlier than the original's, and the first leg as late as the gap allows before the update day when the second
+ * would come on or after it. A play-off that still cannot end before the update day (one made in its last days) holds
+ * the Polish season change until it ends (season_pol_playoff_unfinished, called by season_playoffs_hold). The round
+ * table: draw day +0 and its s8 year offset +2 from +0x40, match day +3 and its offset +5 (cup_set_round_draw_date
+ * 0x521e60, cup_set_round_match_date 0x521eb0, both with the I liga's +0x40, which the Cup_Stage takes at 0x7cc3b7). */
+static void dates_from_today(uint32_t self, uint32_t t)
 {
     if (!readable(t)) return;
     int base = (int16_t)rd16(g_mem, self + 0x40u), gap = g_mem[t + 0x22u];
@@ -136,27 +140,29 @@ static void dates_after_wait(uint32_t self, uint32_t t)
     long was_draw = draw, was_leg1 = leg1, upd = update_day_of(self);
     if (draw <= today) draw = today + 1;
     if (leg1 < draw + DRAW_LEAD) leg1 = draw + DRAW_LEAD;
+    /* A first leg that would put the second on or after the update day comes earlier, as late as the gap allows and
+     * at least a day after the draw (so the lead can be shorter than DRAW_LEAD). */
     if (upd >= 0 && leg1 + gap >= upd && upd - 1 - gap > draw) leg1 = upd - 1 - gap;
     if (draw == was_draw && leg1 == was_leg1) return;
-    int y, d;
-    from_abs(draw, base, &y, &d);
-    wr16(g_mem, t, (uint16_t)d);
-    g_mem[t + 2u] = (uint8_t)(int8_t)(y - base);
-    from_abs(leg1, base, &y, &d);
-    wr16(g_mem, t + 3u, (uint16_t)d);
-    g_mem[t + 5u] = (uint8_t)(int8_t)(y - base);
     int dy, dd, ly, ld, sy, sd;
     from_abs(draw, base, &dy, &dd);
     from_abs(leg1, base, &ly, &ld);
     from_abs(leg1 + gap, base, &sy, &sd);
-    fprintf(stderr, "recomp: playoffs: pol_second %d: after the wait the play-off draws on day %d of %d, legs on day "
+    wr16(g_mem, t, (uint16_t)dd);
+    g_mem[t + 2u] = (uint8_t)(int8_t)(dy - base);
+    wr16(g_mem, t + 3u, (uint16_t)ld);
+    g_mem[t + 5u] = (uint8_t)(int8_t)(ly - base);
+    fprintf(stderr, "recomp: playoffs: pol_second %d: the play-off draws on day %d of %d, legs on day "
                     "%d of %d and day %d of %d (update day %ld days after today)\n", base, dd, dy, ld, ly, sd, sy,
             upd >= 0 ? upd - today : -1L);
 }
 
-/* season_playoffs_hold: the I liga of entry e whose edition is before the game year. 0: none; 1: its play-off is
- * complete; 2: it is not (*file gets "pol_second"). Complete: its own table, its stage built (+0x30 at +0x2c - 1)
- * and the Cup_Stage complete (Cup::check_complete 0x521e00 reads the byte +0xb1 for a stage). Read only. */
+/* season_playoffs_hold: the I liga of entry e whose edition is before the game year. 0: none, or a play-off that
+ * ended before the update day (so a season change that failed for another cause is not retried here); 1: its play-off
+ * is complete and its second leg was due on or after the update day; 2: it is not complete (*file gets "pol_second").
+ * Complete: its own table, its stage built (+0x30 at +0x2c - 1) and the Cup_Stage complete (Cup::check_complete
+ * 0x521e00 reads the byte +0xb1 for a stage). All of it is in the save, so a load in the hold changes nothing. Read
+ * only. */
 int season_pol_playoff_unfinished(int e, int year, const char **file)
 {
     if (!season_game_changes() || e < 0 || e >= ENTRY_COUNT) return 0;
@@ -172,14 +178,18 @@ int season_pol_playoff_unfinished(int e, int year, const char **file)
             *file = "pol_second";
             return 2;
         }
-        return 1;
+        uint32_t t = readable(st) ? rd32(g_mem, st + 0xa3u) : 0;
+        int upd = (int16_t)rd16(g_mem, at + ENTRY_UPDATE_DAY), base = (int16_t)rd16(g_mem, st + 0x40u);
+        if (!readable(t) || upd < 0) return 0;
+        long leg2 = abs_day(base + (int8_t)g_mem[t + 5u], (int16_t)rd16(g_mem, t + 3u)) + g_mem[t + 0x22u];
+        return leg2 >= abs_day(year, upd) ? 1 : 0;
     }
     return 0;
 }
 
 void o_007cc1c0(void);
 
-static int waiting_edition = -1;        /* the I liga edition whose play-off waits (log lines only, not in the save) */
+static int waiting_edition = -1;        /* the I liga edition whose play-off waits, for the log lines only */
 
 /* Test switch RECOMP_TEST_POL_WAIT=<day> (season games only): the play-off also waits until that day of the year, as if
  * the Ekstraklasa's spring stage ended then (tests/seasons/pol_playoff_run.py: a wait that ends after both leg dates,
@@ -194,20 +204,23 @@ static int test_wait_day(void)
     return day;
 }
 
-static int making_after_wait;           /* 1 while the original makes a play-off that waited */
-
 void o_007cb4a0(void);
+
+#define MAKE_PLAYOFF_RET 0x007cc393u   /* create_play_off_stage's call of vtable +0x3c (0x7cc390) */
 
 /* PolSecond::create_schedule (vtable +0x3c), thiscall (s8 stage, s16 *rounds, s16 *, int *), ret 0x10: the play-off's
  * round table for stage 0 (0x7cbcc2..0x7cbde0), which create_play_off_stage 0x7cc290 calls at 0x7cc390 before the
- * Cup_Stage 0x522e00 takes it and Cup::set_up_round 0x51c800 (0x7cc46d) draws it when its draw date has passed. So
- * the dates after a wait are set here, before that draw. */
+ * Cup_Stage 0x522e00 copies it (0x522f21) and Cup::set_up_round 0x51c800 (0x7cc46d) draws it when its draw date has
+ * passed. So the dates are set here, before that draw, for every play-off made in a season game (by the return
+ * address, so no state that a load loses). They change only when the original's have passed or end on or after the
+ * update day. */
 RT_WRAP(007cb4a0, pol_second_schedule)
 {
-    uint32_t self = cpu.ecx;
+    uint32_t self = cpu.ecx, ret = rd32(g_mem, cpu.esp);
     int stage = (int8_t)g_mem[cpu.esp + 4u];
     o_007cb4a0();
-    if (!rt_unwinding && making_after_wait && stage == 0) dates_after_wait(self, cpu.eax);
+    if (!rt_unwinding && ret == MAKE_PLAYOFF_RET && stage == 0 && season_game_changes())
+        dates_from_today(self, cpu.eax);
 }
 
 /* PolSecond::advance_stage, thiscall, no arguments. */
@@ -229,11 +242,8 @@ RT_WRAP(007cc1c0, pol_second_advance)
         return;
     }
     int waited = waiting_edition == (int16_t)rd16(g_mem, self + 0x40u) && (int32_t)rd32(g_mem, self + 0x30u) == -1;
-    making_after_wait = waited;
     o_007cc1c0();
-    making_after_wait = 0;
     if (waited && !rt_unwinding && (int32_t)rd32(g_mem, self + 0x30u) == 0) {
-        /* A play-off made after the wait: its dates follow from today (dates_after_wait). */
         fprintf(stderr, "recomp: playoffs: pol_second %d: the play-off is made on day %d of %d, after the wait\n",
                 waiting_edition, (int16_t)rd16(g_mem, TODAY), (int16_t)rd16(g_mem, TODAY + 2u));
         waiting_edition = -1;
