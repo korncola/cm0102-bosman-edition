@@ -27,20 +27,22 @@
 static const struct {
     const char *comp;
     int start;                  /* the start season */
-    const char *row;            /* the winner of the newest history row in that start */
+    int label;                  /* the label year of the newest history row in that start */
+    const char *row;            /* its winner */
     const char *then[2];        /* the winner and the runner-up of that time */
     const char *nation;
 } titles[] = {
-    {"Italian Serie A", 2005, "AC Milan", {"Juventus", "AC Milan"}, "Italy"},
-    {"Polish FA Cup", 2005, "KKS Lech Poznan", {"SSA Groclin Dyskobolia", "SSA Zaglebie Lubin"}, "Poland"},
-    {"Chinese First Division A", 2003, "Dalian Shide", {"Shanghai Shenhua", "Shanghai Zhongyuan"}, "China PR"},
+    {"Italian Serie A", 2005, 2004, "AC Milan", {"Juventus", "AC Milan"}, "Italy"},
+    {"Polish FA Cup", 2005, 2004, "KKS Lech Poznan", {"SSA Groclin Dyskobolia", "SSA Zaglebie Lubin"}, "Poland"},
+    {"Chinese First Division A", 2003, 2002, "Dalian Shide", {"Shanghai Shenhua", "Shanghai Zhongyuan"}, "China PR"},
 };
 
-const char *season_title_then(const char *comp, int start, const char *row, int k, const char **nation)
+const char *season_title_then(const char *comp, int start, int label, const char *row, int k, const char **nation)
 {
     if (!comp || !row || k < 0 || k > 1) return NULL;
     for (size_t i = 0; i < sizeof titles / sizeof titles[0]; i++)
-        if (titles[i].start == start && !strcmp(titles[i].comp, comp) && !strcmp(titles[i].row, row)) {
+        if (titles[i].start == start && titles[i].label == label && !strcmp(titles[i].comp, comp) &&
+            !strcmp(titles[i].row, row)) {
             if (nation) *nation = titles[i].nation;
             return titles[i].then[k];
         }

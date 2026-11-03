@@ -6,9 +6,9 @@
 #define SEASON_TITLES_H
 
 /* The name of the club that held the title of competition `comp` in the start season `start`, place k (0 the winner,
- * 1 the runner-up), when the newest history row's winner is `row`. NULL when the history row stands. nation gets the
- * nation name of the clubs. */
-const char *season_title_then(const char *comp, int start, const char *row, int k, const char **nation);
+ * 1 the runner-up), when the newest history row has label year `label` and winner `row`. NULL when the history row
+ * stands. nation gets the nation name of the clubs. */
+const char *season_title_then(const char *comp, int start, int label, const char *row, int k, const char **nation);
 
 /* 1 when the table holds competition `comp` in the start season `start`. */
 int season_title_has(const char *comp, int start);
