@@ -14,12 +14,13 @@ first clubs of its top division of the last season, with no club left out (place
 apart). On main ec04eb89 the filler came after the Europa League and Conference League places and took Spain's
 8th, 9th and 10th, past its 5th to 7th. The log must show each free place.
 
-Max's decision of 3 November 2026 (open item 94): the free places of one competition go one to each nation down the
-ranking, not all to the best-ranked nation (on e1bc6a34 Spain, rank 1, took all three Champions League free places
-and all five of the Conference League). The check: in each competition (Champions League, Europa League,
-Conference League) no rank takes a second free place, the ranks of the free places rise, the Conference League has
-free places in this game, and each club named by a free place holds that competition's place in the save. A run
-takes about 3 to 6 minutes.
+Max's decision of 3 November 2026 (open item 94): the free places of the Conference League go one to each nation
+down the ranking, not all to the best-ranked nation (on e1bc6a34 Spain, rank 1, took all five, its 11th to 15th).
+The Champions League and Europa League fillers do not change. The checks: the Conference League free places of the
+log go to ranks 1, 2, 3 and on, in that order with no rank skipped (no nation of the top ranks is suspended or out
+in this game); each named club holds a Conference League place in the save; and in the save no nation has more
+Conference League clubs from its top division, title holders apart, than the most places one rank has in the
+2026/27 access list (src/recomp_rt/win/season_uefa_table.c) plus one. A run takes about 3 to 6 minutes.
 """
 import os
 import re
@@ -69,35 +70,52 @@ def gaps(game):
     return bad
 
 
-COMPS = {"Champions League": "uefa_cl", "Europa League": "uefa_el", "Conference League": "uefa_ecl"}
-FREE = re.compile(r"recomp: uefa: (Champions League|Europa League|Conference League) 2026/27: a free place "
-                  r"\(entry code \d+\) for (.*) \(rank (\d+)\)")
+FREE = re.compile(r"recomp: uefa: Conference League 2026/27: a free place \(entry code \d+\) for (.*) "
+                  r"\(club id (-?\d+), rank (\d+)\)")
+TABLE = os.path.join(HERE, "..", "..", "src", "recomp_rt", "win", "season_uefa_table.c")
+
+
+def most_ecl_places(season=2026):
+    """The most Conference League places of one rank in the access list of the season."""
+    with open(TABLE, encoding="utf-8") as f:
+        rows = re.findall(r"\{%d, 'k', \d+, \d+, \"([^\"]*)\"\}" % season, f.read())
+    return max((len(r.split()) for r in rows), default=0)
 
 
 def spread(game, log):
-    """The faults of Max's rule of 3 November 2026: a second free place of one competition for a rank, ranks out
-    of order, no Conference League free place, or a named club without that competition's place in the save."""
+    """The faults of Max's rule of 3 November 2026 for the Conference League free places."""
     rules = hc.Rules(os.path.join(HERE, "future", "competitions.tsv"),
                      os.path.join(HERE, "future", "history_names.tsv"))
-    mark = {}                                  # key: comp ids (the Conference League record is of kind nation)
-    for cid, c in game.comps.items():
-        mark.setdefault(rules.key(c["name"]), set()).add(cid)
-    names = {}
-    for club, (div, last, m, place) in game.divisions.items():
-        names.setdefault(game.clubs[club][0][:50], set()).add(m)
-    ranks, bad = {}, []
-    for comp, club, rank in FREE.findall(log):
-        rank = int(rank)
-        got = ranks.setdefault(comp, [])
-        if rank in got:
-            bad.append(f"{comp}: a second free place for rank {rank} ({club})")
-        elif got and rank < got[-1]:
-            bad.append(f"{comp}: the free place of rank {rank} ({club}) after rank {got[-1]}")
-        got.append(rank)
-        if not names.get(club, set()) & mark.get(COMPS[comp], set()):
-            bad.append(f"{comp}: {club} has no place of the competition in the save")
-    if not ranks.get("Conference League"):
-        bad.append("no log line of a free Conference League place")
+    ecl = {cid for cid, c in game.comps.items() if rules.key(c["name"]) == "uefa_ecl"}   # a record of kind nation
+    if not ecl:
+        return ["no Conference League record in the save"]
+    bad = []
+    for k, (club, cid, rank) in enumerate(FREE.findall(log)):
+        if int(rank) != k + 1:
+            bad.append(f"Conference League: free place {k + 1} went to rank {rank} ({club}), not rank {k + 1}")
+        if game.divisions.get(int(cid), (0, 0, -1, 0))[2] not in ecl:
+            bad.append(f"Conference League: {club} has no place of the competition in the save")
+    cap = most_ecl_places() + 1
+    if cap < 2:
+        bad.append(f"no Conference League rows of 2026/27 in {TABLE}")
+    holders = set()
+    for cid, y, a, *_ in game.rows:
+        if rules.key(game.comps[cid]["name"]) in ("uefa_cl", "uefa_el", "uefa_ecl"):
+            holders.add(a)
+    top = {}
+    for div, last, mark, place in game.divisions.values():
+        c = game.comps.get(last)
+        if c and c["kind"] == "club" and c["nation"] >= 0:
+            top[c["nation"]] = max(top.get(c["nation"], -1), c["level"])
+    by = {}
+    for club, (div, last, mark, place) in game.divisions.items():
+        c = game.comps.get(last)
+        if mark in ecl and club not in holders and c and c["nation"] in top and c["level"] == top[c["nation"]]:
+            by.setdefault(c["nation"], []).append(place)
+    for nation, places in sorted(by.items()):
+        if len(places) > cap:
+            bad.append(f"{game.nations.get(nation, ('?',))[0]}: {len(places)} Conference League clubs (places "
+                       f"{', '.join(map(str, sorted(places)))}), more than {cap}")
     return bad
 
 
@@ -134,8 +152,7 @@ def main(argv):
         for line in lines:
             print(line)
         for line in FREE.finditer(log):
-            if not line.group(0).startswith("recomp: uefa: Champions League"):
-                print(line.group(0))
+            print(line.group(0))
         fails += spread(game, log)
     for f in fails:
         print("FAIL ", f)
