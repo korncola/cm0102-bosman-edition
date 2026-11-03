@@ -697,6 +697,10 @@ def q48_rows_ok(base, path, keys):
 # build before slice 5), only in the host fields of history rows that had no host.
 HOST_ROWS = "hosts"
 HOST_ROW_PARTS = ("index.dat", "nation_comp_history.dat")
+# Item 103 (0.6.2, lead decision 3 November 2026): at a new game season_intl_rows_clean sets host fields 3 to 6 of
+# each fixed host row to -1 (the original leaves them uncleared; it reads only the first two). So with changing rules
+# on the bytes of HostCountry.tmp differ from the base game and from a reference build before item 103.
+HOST_TABLE_PART = "HostCountry.tmp"
 
 
 def host_rows_ok(base, path):
@@ -748,8 +752,8 @@ def same_save(program, game, mode, days, save_name=None, search=False, options=F
         steps = [s for s in STEPS if "5-holiday" not in s and "quit" not in s]
         return compare_runs(program, game, mode, q48_runs(new_game_runs(SAME_SAVE_RUNS), True),
                             without_intro_click(steps) + ["400000 quit"], days,
-                            allowed={"rules-on": (RULES_PART,) + RULES_ON_PARTS + HOST_ROW_PARTS,
-                                     "rules-on-q48": HOST_ROW_PARTS, "off": NEW_GAME_LAYOUT_PARTS,
+                            allowed={"rules-on": (RULES_PART,) + RULES_ON_PARTS + HOST_ROW_PARTS + (HOST_TABLE_PART,),
+                                     "rules-on-q48": HOST_ROW_PARTS + (HOST_TABLE_PART,), "off": NEW_GAME_LAYOUT_PARTS,
                                      "foreign-off": NEW_GAME_LAYOUT_PARTS},
                             required={"rules-on": RULES_PART}, rows={"rules-on": HOST_ROWS, "rules-on-q48": HOST_ROWS},
                             text_050=True)
