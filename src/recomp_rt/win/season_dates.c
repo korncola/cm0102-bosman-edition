@@ -33,6 +33,7 @@
 #include "season_dates.h"
 #include "season_comps.h"
 #include "season_history.h"
+#include "season_coeffs.h"
 #include "season_records.h"
 #include "seasons_db.h"
 #include "../host.h"
@@ -546,6 +547,7 @@ static void shift_for(int N)
     /* slice 11c: the history between 2001 and the start; open item 74: with or without a plan (a 2001 game with
      * changing rules on), the past editions of the records that the season code adds */
     season_history_fill(plan ? p.name : NULL, N);
+    season_coeffs_fill(plan ? p.name : NULL);     /* 0.6.2 open item 106: the season before the start */
 }
 
 void season_dates_forget(void)
