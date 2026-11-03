@@ -44,7 +44,8 @@ COMPS = [(0, "Aland League", 2, 0, "club"), (1, "Euro Super Cup", 2, -1, "club")
          (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club"), (20, "Champions Cup", 2, -1, "club"),
          (21, "Holders Cup", 2, -1, "club"), (22, "Holders Final", 2, -1, "club"),
          (23, "Club Trophy", 2, -1, "club"), (24, "Friendly", -1, -1, "nation"), (25, "Club Shield", 2, -1, "club"),
-         (26, "Aland Second", 2, 0, "club")]
+         (26, "Aland Second", 2, 0, "club"), (27, "Olympic Games", -1, -1, "nation"), (28, "Club Bowl", 1, -1, "club"),
+         (29, "Club Plate", 2, -1, "club")]
 LEVELS = {0: 20, 26: 10}                     # the level of a division (+0x69), higher is better
 # The places of the Champions Cup in the save (euro-place, open item 94): club id: (division, last division, last
 # place). Aland City from 1st place passes; Aland Club 0 from the second division and Aland Club 1 from 9th place
@@ -143,7 +144,13 @@ FIXTURES_2040 = [(16, 0, 5, 150), (16, 3, 0, 250), (1, 0, 3, 100),   # the match
                                                                  # a friendly of Aland's senior side (open item 93)
                  (25, 1, 7, 200),                                # no clash: Aland United has 2 in Aland's squad,
                  (25, 0, 8, 203),                                # Aland City 2 days after the friendly,
-                 (25, 0, 9, 188), (24, side(0), side(2), 187)]   # a match before the save date
+                 (25, 0, 9, 188), (24, side(0), side(2), 187),   # a match before the save date
+                 # Olympics (open item 107): clubs need not release players for it, and the real tournament overlaps
+                 # the UEFA qualifiers. Durania Stars v Elbonia Rovers on the day of an Olympic match of Aland's side:
+                 # 24 and 14 of their players are in it, but each keeps 11 or more, no clash. Aland City v Aland
+                 # United on the day of another: both keep fewer than 11, a clash.
+                 (27, side(0), side(2), 210), (28, 4, 5, 210),
+                 (27, side(0), side(3), 212), (29, 0, 1, 212)]
 ENTRANT_FAULTS = {("entrant-count", "World Finals", 2038), ("entrant-host", "World Finals", 2038),
                   ("entrant-route", "Champions Match", 2039), ("entrant-route", "Champions Match", 2040),
                   ("entrant-confed", "Champions Match", 2040), ("entrant-holder", "Euro Super Cup", 2040),
@@ -152,6 +159,7 @@ ENTRANT_FAULTS = {("entrant-count", "World Finals", 2038), ("entrant-host", "Wor
                   ("entrant-limit", "Champions Cup", 2039),
                   ("entrant-route", "Pacific Bowl", 2039), ("entrant-holder", "Holders Final", 2040)}
 ENTRANT_FAULTS_PLAIN = {("duty-clash", "Club Trophy", 2040),          # needs no rules file
+                        ("duty-clash", "Club Plate", 2040),           # Olympics: fewer than 11 remain
                         ("entrant-dead", "Qual Zone", 2039),       # found with no rules file too; Ruritania
                         ("entrant-dead", "Americas Finals", 2039)}  # plays under the name its rename replaced
 TABLE = '{"world", 2037, 2038, 4, 0, 2038, 6, 1, "Carpania/Karpania", "row-1"},\n'

@@ -92,9 +92,10 @@ A confederation check for every edition:
                   the table (open item 76) a pair at most of UEFA nations that played the finals without the
                   qualifying, one of them the history row's host (finals_hosts; the pool leaves the hosts out:
                   season_wcq26.c europe_nations, the original 0x919ee3)
-    duty-clash    a continental club match within one day of a match of a senior national side whose nation has 3
-                  or more players at one of the clubs (they are on duty, 0x7757d0; open item 93). Fixtures still to be
-                  played; not in a 2001 game with changing rules off
+    duty-clash    a continental club match within one day of a match of a national side that holds 3 or more
+                  players of one of the clubs (they are on duty, 0x7757d0; open item 93). For an Olympic match the
+                  fault is only a club left with fewer than 11 players (open item 107). Fixtures still to be played;
+                  not in a 2001 game with changing rules off
     entrant-holder the title holder is not an entrant (access.tsv "holder": the Champions League from 2006, the
                   Libertadores), when the edition before is at most one cycle and one year before; not for an
                   edition of the start year or before (it began before the game, the holder may be out)
@@ -906,6 +907,8 @@ def entrants(game, rules, access, changes=()):
 
 
 DUTY_MIN = 3                                  # players of one club in the squad of a side that plays a day apart
+SIDE_MIN = 11                                 # players a club needs to field a side (box match_eng.cpp 612 or 652)
+OLYMPICS = re.compile(r".*\bOlympic", re.I)   # the names of history_names.tsv: Football at the Summer Olympics, ...
 
 
 def duty_clashes(game):
@@ -914,7 +917,15 @@ def duty_clashes(game):
     The player is then on duty for his side (NationalTeams::get_international_duty_club 0x7757d0 searches the
     side's fixtures from the day before to the day after, 0x775842..0x7758a8), and a club with many of them fields
     fewer than 11 (box match_eng.cpp 612 or 652). A continental club match: a competition with no nation and two
-    clubs, not a friendly. Squads: club.dat +0xd7, SLOTS staff ids (-1 for none); the national side of a player's
+    clubs, not a friendly.
+    The Olympics (open item 107) play the under-21 sides (the last rows of nat_club.dat: club id at least clubs
+    minus nations, club_is_national_team 0x5409b0), which carry the nation's name. Their squad is the under-21
+    pick (NationalTeams::select_squad 0x76c120, slot 2: 0x76c26d; players aged 23 or under, 0x76cee3), so the
+    players' +0x24 is the under-21 side. The Olympics are fixture type 1 (0x669ae0), so 0x7757d0 holds them. The
+    real tournament overlaps the UEFA qualifiers too (2024: 24 July to 9 August, second qualifying round 23/24 and
+    30/31 July), and clubs need not release players for it (it is not on the FIFA international match calendar).
+    So an Olympic match is a fault only when it leaves a club fewer than SIDE_MIN players (all its players on duty
+    within a day counted). Squads: club.dat +0xd7, SLOTS staff ids (-1 for none); the national side of a player's
     squad staff.dat +0x24 (the squads of the save date). Only fixtures still to be played, and none in the start
     season of a 2001 game, which keeps the original's dates (season_friendly_dates.c keeps_original). One fault per
     competition and year, with its first case."""
@@ -929,15 +940,19 @@ def duty_clashes(game):
     first = datetime.date(game.start + 1, 7, 1).toordinal() if game.start == 2001 else 0
     today = max(first, datetime.date(game.date[0], 1, 1).toordinal() + game.date[1] if game.date[0] > 1900 else 0)
     national = collections.defaultdict(set)       # day: national side ids that play
+    olympic = collections.defaultdict(set)        # day: the sides of these that play an Olympic match
     club_matches = []
     for cid, fx in fixtures(game).items():
         comp = game.comps.get(cid, {})
+        games = OLYMPICS.match(comp.get("name", ""))
         for day, home, away in fx:
             if day < today:                       # played: its squads were others
                 continue
             for t in (home, away):
                 if t in game.sides:
                     national[day].add(t)
+                    if games:
+                        olympic[day].add(t)
             if comp.get("nation", -1) < 0 and not FRIENDLY.match(comp.get("name", "")) and home in called and \
                     away in called:
                 club_matches.append((day, cid, home, away))
@@ -947,8 +962,12 @@ def duty_clashes(game):
         year = datetime.date.fromordinal(day).year
         if (name, year) in seen:
             continue
-        hit = next(((c, side, d) for d in (day - 1, day, day + 1) for side in sorted(national.get(d, ()))
-                    for c in (home, away) if called[c][side] >= DUTY_MIN), None)
+        near = (day - 1, day, day + 1)
+        sides = set().union(*(national.get(d, set()) for d in near))
+        hit = next(((c, side, d) for d in near for side in sorted(national.get(d, ()))
+                    for c in (home, away) if called[c][side] >= DUTY_MIN and
+                    (side not in olympic.get(d, ()) or
+                     sum(called[c].values()) - sum(called[c][t] for t in sides) < SIDE_MIN)), None)
         if hit:
             c, side, d = hit
             seen.add((name, year))
