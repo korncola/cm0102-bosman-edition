@@ -141,7 +141,8 @@ static int is_host_fn(uint32_t target)
  * table holds about 12,000 entries, so a binary search takes 14 steps, and a day of a game makes millions
  * of these calls: in a profile of Continue Game the search was 16 % of the main thread. A small cache in
  * front of the search keeps the entry of each recent target. Each slot is one 64-bit word (entry index + 1
- * in the high half, the address in the low half), so a slot is never read half written. The cache gives
+ * in the high half, the address in the low half), read and written as one atomic word, so no thread (the
+ * network threads name functions with rt_name_of) reads a slot half written. The cache gives
  * the same entry as the search, so the game does the same. RECOMP_CALL_CACHE=0 turns it off (test runs). */
 #define CALL_CACHE_BITS 12
 static uint64_t call_cache[1u << CALL_CACHE_BITS];
@@ -161,14 +162,15 @@ static const RtEntry *search_entry(uint32_t target)
 static const RtEntry *find_entry(uint32_t target)
 {
     uint32_t slot = ((target >> 4) ^ (target >> (4 + CALL_CACHE_BITS))) & ((1u << CALL_CACHE_BITS) - 1);
-    uint64_t c = call_cache[slot];
+    uint64_t c = __atomic_load_n(&call_cache[slot], __ATOMIC_RELAXED);
     if ((uint32_t)c == target && c >> 32) return &rt_table[(c >> 32) - 1];
     if (call_cache_on < 0) {
         const char *v = getenv("RECOMP_CALL_CACHE");
         call_cache_on = !(v && !strcmp(v, "0"));
     }
     const RtEntry *e = search_entry(target);
-    if (e && call_cache_on) call_cache[slot] = (uint64_t)(e - rt_table + 1) << 32 | target;
+    if (e && call_cache_on)
+        __atomic_store_n(&call_cache[slot], (uint64_t)(e - rt_table + 1) << 32 | target, __ATOMIC_RELAXED);
     return e;
 }
 
@@ -177,7 +179,8 @@ static const RtEntry *find_entry(uint32_t target)
  * give what the search gives. Gives the count of lookups that differ. */
 int rt_call_cache_self_test(void)
 {
-    int bad = 0;
+    int bad = 0, on = call_cache_on;
+    call_cache_on = 1;                               /* the test runs the cache even with RECOMP_CALL_CACHE=0 */
     memset(call_cache, 0, sizeof call_cache);
     for (int pass = 0; pass < 3; pass++)
         for (uint32_t i = 0; i < rt_table_size; i++) {
@@ -187,6 +190,7 @@ int rt_call_cache_self_test(void)
             bad += find_entry(a + (1u << (4 + CALL_CACHE_BITS))) != search_entry(a + (1u << (4 + CALL_CACHE_BITS)));
         }
     memset(call_cache, 0, sizeof call_cache);
+    call_cache_on = on;
     fprintf(stderr, "call cache test: %u entries, %d lookups differ\n", rt_table_size, bad);
     return bad;
 }

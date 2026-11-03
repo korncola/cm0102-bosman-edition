@@ -25,8 +25,9 @@ days (default 14) after the first news screen (RECOMP_SAVE_AFTER_DAYS) and stops
     rules-on, rules-off  changing_rules (0.6.0 slice 11): a new game with it on has the season part
                bosman_season.dat in its save; from slice 17 it also plays by the rules table of 2001/02 (RULES_ON_PARTS). Every new-game run has
                changing_rules = off unless it sets it (new_game_runs), so the new game is the base game.
-    host-loops-off  RECOMP_QSORT=original, RECOMP_HOT=original: the host copies of hot code of the
-               original (qsort6.c, hot_loops.c) change no game decision
+    host-loops-off  RECOMP_QSORT=original, RECOMP_HOT=original, RECOMP_FTOL=original, RECOMP_CALL_CACHE=0: the
+               host copies of hot code of the original (qsort6.c, hot_loops.c, _ftol in crt.c) and the cache of
+               calls through an address (rt.c, 0.6.2 item 110) change no game decision
     files-off  RECOMP_FOLDER_CACHE=0, RECOMP_KEEP_FILES=0: the kept folder names of the path lookup
                (folder_names.c) and the kept history file of the season change (files.c) change nothing
     kinds-base  RECOMP_SEASON_CHANGE_TEST=write (0.6.0 slice 16): a rule kind that writes the game in every
@@ -235,9 +236,10 @@ SAME_SAVE_RUNS = [
     # The season change (0.6.0 slice 16) calls no rule kind in the base game (2001, changing rules off): with the
     # test kind that writes the game in every hook (RECOMP_SEASON_CHANGE_TEST=write) the save is that of normal.
     ("kinds-base", {"faster_days": "off", "_env": {"RECOMP_SEASON_CHANGE_TEST": "write"}}),
-    # The host copies of hot code of the original (qsort6.c, hot_loops.c, 0.6.1) have no option: the recompiled
-    # code (RECOMP_QSORT=original, RECOMP_HOT=original) gives the same save.
-    ("host-loops-off", {"faster_days": "off", "_env": {"RECOMP_QSORT": "original", "RECOMP_HOT": "original"}}),
+    # The host copies of hot code of the original (qsort6.c, hot_loops.c, 0.6.1; _ftol, 0.6.2 item 110) and the
+    # call cache (rt.c, item 110) have no option: the recompiled code and the plain search give the same save.
+    ("host-loops-off", {"faster_days": "off", "_env": {"RECOMP_QSORT": "original", "RECOMP_HOT": "original",
+                                                       "RECOMP_FTOL": "original", "RECOMP_CALL_CACHE": "0"}}),
     # The fixes of two error boxes of the original (call_up_news.c, euro_finals.c) act only where the original
     # stops at the box. A test-only variable turns them off: the save must equal normal.
     ("box-fixes-off", {"faster_days": "off", "_env": {"RECOMP_BOX_FIXES": "off"}}),
@@ -339,7 +341,8 @@ MATCH_RUNS = [
     ("sleep-off", {"_env": {"RECOMP_IDLE_SLEEP": "0"}}),
     ("season-code-off", {"_env": {"RECOMP_SEASON_CODE": "off"}}),
     ("box-fixes-off", {"_env": {"RECOMP_BOX_FIXES": "off"}}),
-    ("host-loops-off", {"_env": {"RECOMP_QSORT": "original", "RECOMP_HOT": "original"}}),
+    ("host-loops-off", {"_env": {"RECOMP_QSORT": "original", "RECOMP_HOT": "original", "RECOMP_FTOL": "original",
+                                 "RECOMP_CALL_CACHE": "0"}}),
     ("original-faults-keep", {"_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
     ("save-parts-keep", {"_env": {"RECOMP_SAVE_PARTS": "keep"}}),
     ("files-off", {"_env": {"RECOMP_FOLDER_CACHE": "0", "RECOMP_KEEP_FILES": "0"}}),

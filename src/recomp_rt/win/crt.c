@@ -177,9 +177,9 @@ int qsort6_self_test(void)
 }
 
 /* _ftol 0x945640, the MSVC 6 float to integer call (0.6.2 item 110). It takes ST(0), pops it and gives the
- * value cut toward zero as a 64-bit integer in edx:eax. The code: push ebp; mov ebp, esp; add esp, -0xc;
- * fnstcw [ebp-2]; mov ax, [ebp-2]; or ah, 0xc; mov [ebp-4], ax; fldcw [ebp-4]; fistp qword [ebp-0xc];
- * fldcw [ebp-2]; mov eax, [ebp-0xc]; mov edx, [ebp-8]; leave; ret. The game calls it millions of times a
+ * value cut toward zero as a 64-bit integer in edx:eax. The code (0x945640..0x945666): push ebp; mov ebp, esp;
+ * add esp, -0xc; wait; fnstcw [ebp-2]; wait; mov ax, [ebp-2]; or ah, 0xc; mov [ebp-4], ax; fldcw [ebp-4];
+ * fistp qword [ebp-0xc]; fldcw [ebp-2]; mov eax, [ebp-0xc]; mov edx, [ebp-8]; leave; ret. The game calls it millions of times a
  * day (a profile of a game day: 5.7 % of the main thread, most of it the cost of the call itself). The host
  * version below does the same: the same bytes below esp (ebp, the control word, the changed control word,
  * the integer), the same eax, edx, ebp and esp, and the x87 state with ST(0) popped and the control word
@@ -242,7 +242,8 @@ RT_WRAP(00945640, ftol)
 {
     if (ftol_mode < 0) {
         const char *v = getenv("RECOMP_FTOL");
-        ftol_mode = !v ? 0 : !strcmp(v, "check") ? 1 : !strcmp(v, "original") ? 2 : 0;
+        ftol_mode = !v ? 0 : !strcmp(v, "check") ? 1 : !strcmp(v, "original") ? 2 : -2;
+        if (ftol_mode == -2) rt_fatal("RECOMP_FTOL=%s: use original or check", v);
     }
     if (ftol_mode == 0) { ftol_host(); return; }
     if (ftol_mode == 2) { o_00945640(); return; }
@@ -261,7 +262,8 @@ int ftol_self_test(void)
                                   2147483648.0, 4294967295.9, 4294967296.0, 9.2233720368547748e18,
                                   9.2233720368547758e18, 1e19, 1e300, INFINITY, NAN, 4503599627370495.5,
                                   0.1, 1.0 / 3.0, 65535.5, 1e-310};
-    uint32_t stack = rt_alloc(4096) + 2048, n = 0;
+    uint32_t block = rt_alloc(4096), stack = block + 2048, n = 0;
+    Fpu fpu_in = fpu;
     ftol_mode = 3;
     ftol_fails = 0;
     for (size_t i = 0; i < sizeof base / sizeof *base; i++)
@@ -277,7 +279,8 @@ int ftol_self_test(void)
                 cpu = saved;
                 n++;
             }
-    fpu_init();
+    fpu = fpu_in;
+    rt_free(block);
     ftol_mode = -1;
     fprintf(stderr, "ftol test: %u values, %d differ\n", n, ftol_fails);
     return ftol_fails;
