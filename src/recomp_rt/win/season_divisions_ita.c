@@ -19,6 +19,7 @@
 #include "season_rules.h"
 #include "season_names.h"
 #include "season_divisions_ita.h"
+#include "season_ita_second.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -421,6 +422,7 @@ static int pool(uint32_t record, uint32_t *out, int max)
         if (rd32(g_mem, c + 0x57) != record || !readable(nat) || rd32(g_mem, nat) != italy) continue;
         if (record == 0 && (int16_t)rd16(g_mem, c + 0x80) <= 1) continue;       /* no extinct or empty club */
         if (went_down(c)) continue;
+        if (season_ita_second_pool_skip(c)) continue;   /* open item 117: no second team in its club's division */
         out[n++] = c;
     }
     return n;
@@ -593,7 +595,9 @@ static void choose_promoted(uint32_t b, const uint32_t *g, int no_c)
         int rows = g[i] && !(no_c && i == 2) ? (int16_t)rd16(g_mem, g[i] + 0x3e) : 0;
         for (int k = 0; k < rows && k < MAX_CLUBS && n < GROUPS * MAX_CLUBS; k++) {
             int st = 0;
-            if (!readable(row_club(g[i], k, &st)) || st == STATUS_DOWN) continue;
+            uint32_t club = row_club(g[i], k, &st);
+            if (!readable(club) || st == STATUS_DOWN) continue;
+            if (season_ita_second_up_barred(club)) continue;       /* open item 117 */
             c[n++] = (Cand){i, k, st == 0 ? 0 : st == 5 ? 1 : 2, row_points(g[i], k)};
         }
     }
@@ -635,6 +639,7 @@ static void chain(uint32_t serie_a)
     if (rt_unwinding) return;
     /* Serie A and B in pairs with the counts of their places (0x64248e, 0x642476); B and each group in pairs (as
      * 0x6424b6, 0x6424de), after the choice of the clubs that go up (Q627). */
+    season_ita_second_before_ab(a, b, g, GROUPS);              /* open item 117: second teams */
     uint32_t ab[6] = {a, b, 1, 1, rt_promote_expected(b, 1, 4), rt_promote_expected(a, 0, 4)};
     call_this(F_PROMOTE_RELEGATE, serie_a, 6, ab);
     /* The change into the era with the extra division flag: C2/A played the season before as a C2 group, two tiers
@@ -649,6 +654,7 @@ static void chain(uint32_t serie_a)
             if (readable(row_club(g[2], k, &st)) && (st == 0 || st == 5)) set_status(g[2], k, 0xff);
         }
     }
+    if (!rt_unwinding) season_ita_second_before_promoted(g, GROUPS);
     if (!rt_unwinding) choose_promoted(b, g, no_c);
     for (int i = 0; i < GROUPS && !rt_unwinding; i++) {
         if (!g[i]) continue;
@@ -674,6 +680,8 @@ static void chain(uint32_t serie_a)
     }
     if (rt_unwinding) return;
     fprintf(stderr, "recomp: serie c: %d clubs to the Serie D\n", down);
+    season_ita_second_settle(serie_a, next_season(serie_a), send_down);
+    if (rt_unwinding) return;
     if (!era_of_year((int16_t)rd16(g_mem, serie_a + 0x40))) change_into_era(serie_a);
     /* The clubs that come up are taken in the regroup: it fills each group to its count. */
 }
