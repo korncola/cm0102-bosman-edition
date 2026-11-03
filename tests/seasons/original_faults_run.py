@@ -22,8 +22,8 @@ both saves (nat_club.dat: the first nation-count rows; the manager at club +0xcf
       first check counts only the nations with a continent
     - a national manager left in the run and his team got a new manager (a retirement or a move to a club)
     - no message box, and the program ends with code 0
---keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:managers (the original's rule for this group only; money and
-age keep theirs: keep:money, keep:age). The checks must then fail: this is the
+--keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:managers (the original's rule for this group only; money, age
+and olympics keep theirs: keep:money, keep:age, keep:olympics). The checks must then fail: this is the
 proof that they find the fault (the same holds for money). The suggested save: the 2011 leg of the 0.6.0 soak seed 6
 (run-logs/release-test-0.6.0/long-games/soak-seed6/leg09/user/samesave.sav), where 161 of 213 teams have no manager.
 
@@ -44,15 +44,19 @@ The checks, for each balance (a negative balance is a debt: only the first check
     - no message box, and the program ends with code 0
 
 olympics: loads a save made on holiday (a soak leg of tests/seasons/soak_run.py, the 3.9.68 database), plays --days
-game days on holiday with --seed and changing rules --rules (Tier A with --tier-a) and saves. The Olympic pick may
-take a player of his nation's senior squad (0x76cdf1..0x76ce3a). The fix keeps him there while the senior squad's
-window runs (original_faults.c). The checks:
-    - the runtime logs at least one player that an Olympic pick left in a senior squad ("recomp: olympic squad: ")
+game days on holiday with --seed and changing rules --rules (Tier A with --tier-a) and saves, with RECOMP_CLUB_LOG=1.
+The Olympic pick may take a player of his nation's senior squad (0x76cdf1..0x76ce3a). The fix keeps him there while
+the senior squad's window runs (original_faults.c). The runtime logs each such player ("recomp: olympic squad: ",
+"keeps" with the fix, "may take" without it). The checks:
+    - at least one player that an Olympic pick kept in a senior squad, and none that it may take
+    - no team pick of fewer than 11 players (the RECOMP_CLUB_LOG line "club records: team pick of")
     - no message box, and the program ends with code 0
 The suggested save: the July 2051 save of the run set game a2001offs3 (Tier A, changing rules off, seed 3;
 run-logs/runset-pass2/run/a2001offs3/leg004/user/samesave.sav). Holland's senior squad is picked on 17 August 2052
-for a World Cup qualifier on 31 August, and the Olympic pick of 29 August took 16 of its 26 players. The qualifier
-then stopped on the box match_eng..cpp 612 (a side of fewer than 11). --keep-faults (keep:olympics) must fail.
+for a World Cup qualifier on 31 August, and on 29 August the Olympic pick took 16 of its 26 players. On main
+738c1269 (and in the run set, main 1901ffa5) Holland then fielded 10 and the game stopped on the box
+match_eng..cpp 612. On main ec04eb89 the game takes another course and keeps 12 (no box), but the pick still takes
+them. --keep-faults (keep:olympics) must fail: "may take" lines on any build, and the box on 738c1269.
 
 age: sets the birth year of the human manager of start.sav (+0x12) to --born, loads it, goes on holiday and saves 3
 game days later. The day loop stores each staff member's age at +0x18 (0x5cd3c4); for an age above 127 the save must
@@ -137,6 +141,7 @@ def managers(argv):
 
 
 OLYMPIC = "recomp: olympic squad: "
+SHORT = "recomp: club records: team pick of "
 
 
 def olympics(argv):
@@ -147,6 +152,7 @@ def olympics(argv):
         os.environ["RECOMP_ORIGINAL_FAULTS"] = "keep:olympics"
     if "--tier-a" in argv:
         os.environ["RECOMP_TIER_A"] = "1"
+    os.environ["RECOMP_CLUB_LOG"] = "1"
     o = {"program": program, "game": game, "rules": soak_run.arg(argv, "--rules", "off"), "database": None,
          "last": 2101, "seed": int(soak_run.arg(argv, "--seed", 3)), "timeout": 7200}
     work = os.path.join(keep, "olympics")
@@ -156,10 +162,19 @@ def olympics(argv):
     if code != 0:
         fails.append(f"the program ended with {code}" + (f" ({box})" if box else ""))
     log = open(os.path.join(work, "stderr.txt"), encoding="latin-1").read().split("\n")
-    kept = [x[len(OLYMPIC):] for x in log if x.startswith(OLYMPIC)]
-    print(f"players that an Olympic pick left in a senior squad: {len(kept)}" + (f", first: {kept[0]}" if kept else ""))
+    lines = [x[len(OLYMPIC):] for x in log if x.startswith(OLYMPIC)]
+    kept, taken = [x for x in lines if " keeps " in x], [x for x in lines if " may take " in x]
+    short = [x for x in log if x.startswith(SHORT)]
+    print(f"players that an Olympic pick kept in a senior squad: {len(kept)}, that it may take: {len(taken)}; team "
+          f"picks of fewer than 11: {len(short)}")
+    for x in (kept[:1] + taken[:1] + short[:3]):
+        print(f"  {x}")
     if not kept:
-        fails.append("no Olympic pick left a player in a senior squad whose window runs")
+        fails.append("no Olympic pick kept a player in a senior squad whose window runs")
+    if taken:
+        fails.append(f"Olympic picks may take {len(taken)} players from senior squads whose window runs")
+    if short:
+        fails.append(f"{len(short)} team picks of fewer than 11 players")
     return fails
 
 

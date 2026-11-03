@@ -71,7 +71,8 @@ refuses while the senior squad's window runs, but only for a squad that the huma
 0x76de03), never for an AI squad. So an Olympic pick made between an AI senior squad's pick and its match took the
 squad's young players, and in a Tier A game Holland played a World Cup qualifier with 10 (box match_eng..cpp 612).
 At 0x76ce1c, the jump that skips a candidate, the Olympic pick also skips a player of a senior squad whose window ends
-today or later (rt_olympic_keeps_senior). Other picks of slot 1 or 2 skip such a player anyway (0x76ce38).
+today or later (rt_olympic_keeps_senior; the Olympics: fixture +0 is the key at 0x9cf7a0, as at 0x76ce2d). Other
+picks of slot 1 or 2 skip such a player anyway (0x76ce38).
 """
 
 # address: (the instruction in the original, C code)

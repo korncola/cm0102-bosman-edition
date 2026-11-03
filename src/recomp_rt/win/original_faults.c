@@ -28,7 +28,8 @@ static int fixes_on_group(int group)
             int known = 0;
             for (int g = 0; g < GROUPS; g++) known |= n == strlen(names[g]) && !strncmp(p, names[g], n);
             if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
-                fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics)\n",
+                fprintf(stderr,
+                        "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics)\n",
                         (int)n, p);
         }
         for (int g = 0; g < GROUPS; g++) {
@@ -115,35 +116,39 @@ RT_WRAP(0053ab90, staff_age)
 /* Olympic squads (open item 102). `NationalTeams::select_squad` 0x76c120 picks the Olympic squad in slot 2 (the
  * under-21 side, 0x76c26d). A candidate in his nation's senior squad (+0x24 the senior side, flag 4 in +0x5e,
  * 0x76cdf1..0x76ce05) is asked of `national_teams_can_change_squad` 0x76db00 (nation, slot 0, player, removing) at
- * 0x76ce15, and for the Olympics (0x9cf7a0, 0x76ce2d) he may then leave the senior squad. 0x76db00 refuses while the
- * senior squad's window runs (its end at record +0x3a after today, 0x76deb5..0x76dee0), but only for a squad marked
- * selected (+0x44, 0x76de03). Only the human's squad screens set that mark (set_squad_selected 0x76c0f0, from
- * 0x779f7e, 0x784641, 0x78469a), so an AI senior squad lost its young players to an Olympic pick made between its
- * own pick and its match. The squads of a fixture are picked when it is 14 days away (select_squads_for_fixture
- * 0x76bab0 from the daily pass 0x76b100), so a senior match in the 14 days before the Olympics meets it: in the run
- * set game a2001offs3 (changing rules off) Holland kept 10 of 26 for a World Cup qualifier on 31 August 2052. Here the Olympic
- * pick also keeps out a player of an AI senior squad whose window ends today or later (the original looks for a
- * match today when the window ends today; a match that day is the reason to keep him). 0x76ce1c, the jump that
- * skips the candidate. Other picks of slot 1 or 2 skip a senior squad player anyway (0x76ce38). */
+ * 0x76ce15. For the Olympics (fixture +0 is the key at 0x9cf7a0, 0x76ce2d) he may then leave the senior squad.
+ * 0x76db00 refuses while the senior squad's window runs (its end at record +0x3a after today, 0x76deb5..0x76dee0),
+ * but only for a squad marked selected (+0x44, 0x76de03). Only the human's squad screens set that mark
+ * (set_squad_selected 0x76c0f0, from 0x779f7e, 0x784641, 0x78469a). So an AI senior squad lost its young players
+ * to an Olympic pick made between its own pick and its match. The squads of a fixture are picked when it is 14 days
+ * away (select_squads_for_fixture 0x76bab0 from the daily pass 0x76b100). A senior match in the 14 days before the
+ * Olympics therefore meets it. In the run set game a2001offs3 (changing rules off, main 738c1269) Holland kept 10
+ * of 26 for a World Cup qualifier on 31 August 2052 and stopped on the box match_eng..cpp 612.
+ * Here, at 0x76ce1c (the jump that skips the candidate), the Olympic pick also skips a player of an AI senior squad
+ * whose window ends today or later. On the last day of a window the original asks 0x5acee0 (not read) before it
+ * allows a change (0x76dee5..0x76df87). The fix keeps the player on that day too. Other picks of slot 1 or 2 skip a
+ * senior squad player anyway (0x76ce38). With the group off (keep:olympics) the line says what the original allows. */
 #define NATIONAL_TEAMS 0xb74318u
 #define OLYMPICS_KEY 0x9cf7a0u
 #define TODAY 0xae2c90u
 
 uint32_t rt_olympic_keeps_senior(uint32_t player, uint32_t nation, uint32_t slot, uint32_t fixture)
 {
-    if (!fixes_on_group(OLYMPICS) || (slot & 0xffu) == 0 || !player || !nation || !fixture) return 0;
-    uint32_t comp = rd32(g_mem, fixture + 0x14u), teams = rd32(g_mem, NATIONAL_TEAMS);
-    if (!comp || rd32(g_mem, comp) != rd32(g_mem, OLYMPICS_KEY) || !teams) return 0;
+    if ((slot & 0xffu) == 0 || !player || !nation || !fixture) return 0;
+    uint32_t teams = rd32(g_mem, NATIONAL_TEAMS);
+    if (rd32(g_mem, fixture) != rd32(g_mem, OLYMPICS_KEY) || !teams) return 0;
     uint32_t senior = rd32(g_mem, teams + 4u) + 110u * rd32(g_mem, nation);     /* slot 0 record, as 0x76dd16 */
     int end_day = (int16_t)rd16(g_mem, senior + 0x3au), end_year = (int16_t)rd16(g_mem, senior + 0x3cu);
     int day = (int16_t)rd16(g_mem, TODAY), year = (int16_t)rd16(g_mem, TODAY + 2u);
     if (end_year < year || (end_year == year && end_day < day)) return 0;
-    if ((int8_t)g_mem[player + 0x18u] > 23) return 1;    /* too old for this pick anyway (0x76cee3): no line */
+    int on = fixes_on_group(OLYMPICS);
+    if ((int8_t)g_mem[player + 0x18u] > 23) return (uint32_t)on;     /* too old for this pick anyway (0x76cee3) */
     char name[32];
     snprintf(name, sizeof name, "%s", log_name(nation + 4u));
-    fprintf(stderr, "recomp: olympic squad: %s keeps staff %d in its senior squad on day %d of %d (window to day %d of "
-                    "%d)\n", name, (int32_t)rd32(g_mem, player), day, year, end_day, end_year);
-    return 1;
+    fprintf(stderr, "recomp: olympic squad: %s %s staff %d %s its senior squad on day %d of %d (window to day %d of "
+                    "%d)\n", name, on ? "keeps" : "may take", (int32_t)rd32(g_mem, player), on ? "in" : "from", day,
+            year, end_day, end_year);
+    return (uint32_t)on;
 }
 
 /* Money (Q24). `Finance::get_transfer_budget` 0x598800 works on a 64-bit budget, but cuts three values to 32 bits.
