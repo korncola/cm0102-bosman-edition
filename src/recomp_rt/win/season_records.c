@@ -1236,8 +1236,9 @@ RT_WRAP(0090dae0, virtual_staff_top_up)
 
 
 /* Test log (RECOMP_CLUB_LOG=2): FIXTURE_MANAGER::add_fixture 0x5aa680 (its wrap in season_kind_cup_breaks.c calls
- * this), for a fixture whose record (+0x14) has the long name of RECOMP_FIXTURE_RECORD: the caller (return
- * address) and the fixture's clubs (+0x1c, +0x20). It only reads. */
+ * this), for a fixture whose record (+0x14) has the long name of RECOMP_FIXTURE_RECORD, or one of several names
+ * joined by "|": the caller (return address), the fixture's clubs (+0x1c, +0x20) with their names, and its date (day
+ * +0x2a, year +0x28). It only reads. */
 void season_records_fixture_log(uint32_t fx, uint32_t ret)
 {
     const char *want = getenv("RECOMP_FIXTURE_RECORD"), *v = getenv("RECOMP_CLUB_LOG");
@@ -1252,9 +1253,17 @@ void season_records_fixture_log(uint32_t fx, uint32_t ret)
         uint32_t c = rd32(g_mem, fx + 0x1c + 4u * (uint32_t)k);
         bad |= c < base || c >= end || (c - base) % 0x245u;
     }
-    if ((want && *want && !strcmp(rn, want)) || bad)
-        fprintf(stderr, "recomp: club records: add_fixture from %08x: %s, clubs %08x %08x%s\n", ret, rn,
-                rd32(g_mem, fx + 0x1c), rd32(g_mem, fx + 0x20), bad ? " (not a club)" : "");
+    int named = 0;
+    for (const char *w = want; w && *w && *rn && !named;) {         /* the names joined by "|" */
+        size_t len = strcspn(w, "|");
+        named = len == strlen(rn) && !strncmp(w, rn, len);
+        w += len + (w[len] == '|');
+    }
+    if (named || bad)
+        fprintf(stderr, "recomp: club records: add_fixture from %08x: %s, clubs %08x %08x%s %.24s v %.24s day %d/%d\n",
+                ret, rn, rd32(g_mem, fx + 0x1c), rd32(g_mem, fx + 0x20), bad ? " (not a club)" : "",
+                bad ? "?" : win_str(rd32(g_mem, fx + 0x1c) + 4), bad ? "?" : win_str(rd32(g_mem, fx + 0x20) + 4),
+                (int16_t)rd16(g_mem, fx + 0x2a), (int16_t)rd16(g_mem, fx + 0x28));
 }
 
 /* Test log (RECOMP_CLUB_LOG=2): League::create_fixtures 0x6835c0 (its wrap in season_uefa_league.c calls this):
