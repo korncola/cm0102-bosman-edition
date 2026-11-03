@@ -149,6 +149,14 @@ FLOORS = {"eng_conf", "eng_first", "eng_prm", "eng_second", "eng_third", "wel_fi
 # after 2001, 0x7cad4f), else its largest count.
 FLOOR_COUNT = {f: (18 if f == "pol_second" else CAPS[f]) for f in FLOORS}
 
+# Fixed rows that a class of another division reads in the table of a class here (open item 113). The count of the
+# file must stay above the row, in every season. BelThird::create_promotion_playoff_stage 0x423880 puts the club of
+# row 15 (+0x375, rows of 0x3b) of the Belgian Second Division into its play-off (0x423a6a..0x423a80), through
+# BelThird +0x1c, the key of the division above. BelThird::advance_stage 0x423640 calls it when the Second Division
+# is complete (0x4236bf..0x4236f1). BelSecond::create_table 0x41fd70 makes a table of 18 rows (0x426 bytes,
+# 0x41fd7b..0x41fd94), so the floor of 18 keeps row 15 inside it.
+ROW_READS = {"bel_second": (16, "BelThird::create_promotion_playoff_stage 0x423880 reads row 15 (0x423a6a..0x423a80)")}
+
 CUP_INSNS = {
     0x5BAB90: ("add ebx, 0xb8", "ebx = ebx + rt_cup_add(0xb8u, ebx, 222u, 0x9cf5d0u, 0x9cf5ccu);"),
     0x5BAC3C: ("add ebx, 0xb8", "ebx = ebx + rt_cup_add(0xb8u, ebx, 222u, 0x9cf5d0u, 0x9cf5ccu);"),

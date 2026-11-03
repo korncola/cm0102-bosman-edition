@@ -22,7 +22,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools", "recomp"))
-from league_sizes import CAPS, CLASSES, FLOOR_COUNT  # noqa: E402
+from league_sizes import CAPS, CLASSES, FLOOR_COUNT, ROW_READS  # noqa: E402
 
 OUT = os.path.join(ROOT, "src", "recomp_rt", "win", "season_size_wraps.c")
 
@@ -68,6 +68,13 @@ def make():
     return "\n".join(lines) + "\n"
 
 
+def row_read_faults(floors=None):
+    """The files whose floor is not above a fixed row that another class reads (ROW_READS, open item 113)."""
+    floors = FLOOR_COUNT if floors is None else floors
+    return [f"{f}: floor {floors.get(f, 0)} is under {need} clubs, and {why}"
+            for f, (need, why) in sorted(ROW_READS.items()) if floors.get(f, 0) < need]
+
+
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=OUT)
@@ -76,6 +83,11 @@ def main(argv):
     text = make()
     if a.check:
         have = open(a.out, encoding="utf-8").read() if os.path.exists(a.out) else ""
+        faults = row_read_faults()
+        for line in faults:
+            print(f"make_size_wraps.py: {line}")
+        if faults:
+            return 1
         if have != text:
             print(f"make_size_wraps.py: {a.out} differs from the class table: run the tool again")
             return 1
