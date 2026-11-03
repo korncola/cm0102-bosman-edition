@@ -1,6 +1,7 @@
-"""Faults of the original that long games reach (0.6.2 slice 11, Q23, Q24, Q27; src/recomp_rt/win/original_faults.c).
-The fixes act in every game, the base game too. The test switch RECOMP_ORIGINAL_FAULTS=keep turns them all off.
-"keep:managers", "keep:money" or "keep:age" (or a list: "keep:money,age") turns off one group or more.
+"""Faults of the original that long games reach (0.6.2 slice 11, Q23, Q24, Q27, open item 102;
+src/recomp_rt/win/original_faults.c). The fixes act in every game, the base game too. The test switch
+RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age" or "keep:olympics" (or a
+list: "keep:money,age") turns off one group or more.
 
 National managers (fault 26, Q23). `club_can_be_managed` 0x544820 takes a senior national team (club id from club
 count - 2 x nation count to club count - nation count, 0x544835..0x544857) only when its nation had more than 150
@@ -63,6 +64,15 @@ trace is in docs/research/2026-10-30-money-64bit.md. Each patch gives the origin
   in 32 bits (0x597019) and divides by 52: from a balance of about 1.65 billion the sum wraps and the club's top wage
   goes wrong. The high word of that product is kept at 0x5968e8, and a sum above 2,147,483,647 is clamped to it. This
   fix acts from about 1.65 billion, where the original's sum has already wrapped. A debt keeps the original's result.
+
+Olympic squads (open item 102). `NationalTeams::select_squad` 0x76c120 lets the Olympic pick (slot 2) take a player of
+his nation's senior squad when `national_teams_can_change_squad` 0x76db00 allows it (0x76ce15, 0x76ce2d). 0x76db00
+refuses while the senior squad's window runs, but only for a squad that the human's screens marked selected (+0x44,
+0x76de03), never for an AI squad. So an Olympic pick made between an AI senior squad's pick and its match took the
+squad's young players, and in a Tier A game Holland played a World Cup qualifier with 10 (box match_eng..cpp 612).
+At 0x76ce1c, the jump that skips a candidate, the Olympic pick also skips a player of a senior squad whose window ends
+today or later (rt_olympic_keeps_senior; the Olympics: fixture +0 is the key at 0x9cf7a0, as at 0x76ce2d). Other
+picks of slot 1 or 2 skip such a player anyway (0x76ce38).
 """
 
 # address: (the instruction in the original, C code)
@@ -104,6 +114,7 @@ INSNS = {
                "W32(esp + 0x34u, eax); rt_cash_wide(esp + 0x34u, eax, R32(edi + 0xa8u), 1u);"),
     0x88808F: ("mov dword ptr [esp + 0x34], eax",
                "W32(esp + 0x34u, eax); rt_cash_wide(esp + 0x34u, eax, R32(edi + 0xb0u), 1u);"),
+    0x76CE1C: ("je 0x76cf82", "if (cc_e(F) || rt_olympic_keeps_senior(esi, ebp, ebx, R32(esp + 0x8ecu))) goto L_76cf82;"),
     0x5968E8: ("mov edx, dword ptr [0xae23b4]", "rt_max_wage_high(edx, eax); edx = R32(0xae23b4u);"),
     0x597019: ("add ecx, edx", "ecx = rt_max_wage_sum(ecx, edx);"),
 }
