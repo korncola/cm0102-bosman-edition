@@ -32,14 +32,14 @@
 
 #define HOSTS 0xb5e134u                 /* HostCountry *: the object has +0 the rows, +4 the count (word);
                                          * find_hosts gets ecx = [0xb5e134] (0x92daa2) */
-#define ROW_SIZE 0x22u
+#define ROW_SIZE SEASON_INTL_ROW_SIZE
 #define ROW_COMP 0x0u
 #define ROW_YEAR 0x4u
-#define ROW_PAIRS 0x6u                  /* six dwords */
-#define ROW_CHOICE 0x1eu
+#define ROW_PAIRS SEASON_INTL_ROW_PAIRS   /* six dwords */
+#define ROW_CHOICE SEASON_INTL_ROW_CHOICE
 #define ROW_DAY 0x1fu
 #define ROW_CYCLE 0x21u
-#define CHOICE_FIXED 0xfdu
+#define CHOICE_FIXED SEASON_INTL_CHOICE_FIXED
 #define DEFAULT_DAY 200                 /* 20 July, the day of most rows of init (0x5f9970) */
 
 #define NATIONS 0xae23a8u               /* nation records, 0x122 bytes */
@@ -473,8 +473,9 @@ static void plan_write(uint32_t row, const PlannedRow *p, int from)
         wr16(g_mem, row + ROW_DAY, (uint16_t)p->day);
         /* A fixed row of the original (the Africa Cup of Nations, the Olympics up to 2028): find_hosts reads its
          * pair 1 only (0x5fa730), while season_intl_host_ids reads all six fields of a fixed row (more hosts of the
-         * table, slice 29), so the original's other pairs go (they gave Afghanistan as a third ACN host). A host
-         * that no longer exists takes the rotation host (Q6, Q32). */
+         * table, slice 29), so the original's other pairs go (they gave Afghanistan as a third ACN host). A new game
+         * has cleared them already (hosts_unset_clean); an older save may still hold them. A host that
+         * no longer exists takes the rotation host (Q6, Q32). */
         if (p->choice == CHOICE_FIXED) {
             for (int k = 2; k < 6; k++) wr32(g_mem, row + ROW_PAIRS + 4u * (uint32_t)k, 0xffffffffu);
             if (!pair_valid(row, 0)) row_rotate(row);
@@ -672,6 +673,21 @@ static void hosts_after_table_at_load(void)
     hosts_apply(obj, year, 1);
 }
 
+/* Open item 103: the host fields after the first two of the original's fixed rows hold what the heap held at the
+ * new game (season_intl_rows.c). A new game clears them in host_init. A save made before 0.6.2 holds them as they
+ * were. While the table holds only the original's 57 rows (a 2001 game before its first season change, Q152) the
+ * load clears them too. hosts_apply always adds rows, and after it every row of an edition to come is a row of
+ * the table; season_intl_host_ids finds a row by its exact year, so it never reads the rows of year 0. */
+static void hosts_unset_clean(uint32_t obj)
+{
+    uint32_t rows = readable(obj) ? rd32(g_mem, obj) : 0;
+    int count = readable(obj) ? (int16_t)rd16(g_mem, obj + 4) : 0;
+    if (!readable(rows) || count != SEASON_INTL_ORIGINAL_ROWS || !readable(rows + (uint32_t)count * ROW_SIZE - 1))
+        return;
+    int n = season_intl_rows_clean(g_mem + rows, count);
+    if (n && logging()) fprintf(stderr, "recomp: season intl: %d host rows of the original: unset hosts cleared\n", n);
+}
+
 /* Open item 40 in a save made before 0.6.2: a fixed row with no host keeps its news day; it gets none. */
 static void hosts_no_news(void)
 {
@@ -700,6 +716,9 @@ RT_WRAP(005f9970, host_init)
     uint32_t self = cpu.ecx;
     o_005f9970();
     if (rt_unwinding || !season_intl_on()) return;
+    /* Open item 103: the host fields that the original leaves unset in its fixed rows read as no host. The
+     * original never reads them, so the 2001 game stays the base game (Q152). */
+    hosts_unset_clean(self);
     /* A game that starts in 2001/02 (changing rules on) keeps the original's host table at the new game, and
      * makes no game allocation there (Q152): the rows of the table come at the first season change
      * (intl_season). */
@@ -1717,6 +1736,7 @@ static void intl_sides(int start_year)
     (void)start_year;
     season_intl_set_alive(host_alive);
     sides_rename();
+    if (season_intl_on()) hosts_unset_clean(rd32(g_mem, HOSTS));
     hosts_no_news();
     hosts_after_table_at_load();
 }

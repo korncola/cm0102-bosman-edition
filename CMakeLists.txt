@@ -207,6 +207,10 @@ if(NOT WIN32)
         src/recomp_rt/win/season_intl_table.c src/recomp_rt/win/season_nl_table.c)
     target_include_directories(season_intl_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_intl COMMAND season_intl_test)
+    # 0.6.2 open item 103: the host fields that the original's fixed host rows leave unset read as no host.
+    add_executable(season_intl_rows_test tests/seasons/test_season_intl_rows.c src/recomp_rt/win/season_intl_rows.c)
+    target_include_directories(season_intl_rows_test PRIVATE src/recomp_rt/win)
+    add_test(NAME season_intl_rows COMMAND season_intl_rows_test)
     # World Cup qualifying places with hosts (0.6.2 slice 5, open item 59): 48 teams for every host set.
     add_executable(season_wcq26_places_test tests/seasons/test_season_wcq26_places.c
         src/recomp_rt/win/season_wcq26_places.c)
