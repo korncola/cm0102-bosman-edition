@@ -109,6 +109,12 @@ int season_uefa_dropped(const SeasonUefa *r, int el_code);
  * enter it. out has SEASON_UEFA_CODE_SLOTS entries. Out[code], 0 for codes the row does not play. */
 void season_uefa_new_clubs(const SeasonUefa *r, char comp, int *out);
 
+/* Open item 94 (season_uefa_qual.c): the layout of comp ('c', 'e' or 'k') from the clubs' ids and entry codes,
+ * as the set-up of the cups will make it. Returns 0 when it makes rounds. Returns 1 with code the entry code of the
+ * lowest round whose path holds an odd number of clubs, or the group code when the group stage would have short_by
+ * clubs fewer than the row (below 0: more). Returns -1 when no layout can be made for another cause. */
+int season_uefa_balance_probe(const SeasonUefa *r, char comp, int *code, int *short_by);
+
 /* The access list by association rank (slice 23, Q369: from 2009/10; the original's brackets before). */
 typedef struct {
     int season;
