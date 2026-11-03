@@ -11,6 +11,7 @@ RECOMP_TEST_NOR_SECOND_REP=1 gives each second team of the eight groups of the S
 reputation, so the original would send four of them up. RECOMP_NOR_SECOND_LOG=1 logs the clubs that stay out and
 the clubs that go up. The runs:
     on    the shipped code: no second team goes up, four other clubs go up, and at least one second team stays
+          (each one back in its group of the Second Division after the call)
     off   RECOMP_NOR_SECOND=off, the original's list: second teams go up (proves that the test sees the fault)
 Both runs end with code 0 and show no message box of the game.
 """
@@ -36,7 +37,10 @@ def jump(name, program, game, work, env):
     found, log = ufr.boxes(work)
     fails += [f"{name}: message box {b}" for b in found]
     up = re.findall(r"recomp: nor second: (.*) goes up to the First Division( \(a second team\))?", log)
-    stays = re.findall(r"recomp: nor second: (.*) stays in the Second Division", log)
+    stays = re.findall(r"recomp: nor second: (.*) stays in (.*)", log)
+    lost = [n for n, d in stays if not d.startswith("Norwegian Second Division Group")]
+    if lost:
+        fails.append(f"{name}: second teams held back lost their group: {', '.join(lost)}")
     return fails, up, stays
 
 

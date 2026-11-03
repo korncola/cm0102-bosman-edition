@@ -30,20 +30,27 @@
  * record names its club, and the real rule bars every second team from the top two tiers, so the test needs no
  * club.
  *
- * Season games only: the base game (3.9.68) has no Norwegian second team and keeps the original. The test switch
- * RECOMP_NOR_SECOND=off lists the second teams as the original does (the log and the test switch below still
- * work). RECOMP_NOR_SECOND_LOG=1 writes the clubs that stay out and the clubs that go up.
- * RECOMP_TEST_NOR_SECOND_REP=1 (tests only) gives each second team of the eight groups the highest reputation before
- * the call, so that the original would take them first. */
+ * The club moves of a new game (season_clubs.c) put no Norwegian second or third team into Eliteserien or the First
+ * Division either (season_nor_barred), in every fill group and for a club that the database has there.
+ *
+ * Season games only (season_game_changes, as the other season code): the base game (3.9.68, which has no Norwegian
+ * second team) keeps the original. The test switch RECOMP_NOR_SECOND=off lists and moves the second teams as the
+ * original does (the log and the test switch below still work). RECOMP_NOR_SECOND_LOG=1 writes the clubs that stay
+ * out, with the group they keep, and the clubs that go up. RECOMP_TEST_NOR_SECOND_REP=1 (tests only) gives each
+ * second team of the eight groups the highest reputation before the call, so that the original would take them
+ * first. */
 #include "win.h"
 #include "season.h"
 #include "season_clubs.h"
+#include "season_names.h"
+#include "season_nor_second.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define KEY_NORWAY 0x9cf408u
+#define KEY_PREMIER 0x9cf6bcu           /* Eliteserien */
 #define KEY_FIRST 0x9cf6c0u             /* the Norwegian First Division */
 #define KEY_GROUP1 0x9cf6c4u            /* the 8 groups of the Second Division, 0x9cf6c4..0x9cf6e0 */
 #define GROUPS 8
@@ -95,18 +102,33 @@ static int lower_team(const char *name)
     return n && (!strcmp(last, "3") || !strcmp(last, "iii"));
 }
 
+/* RECOMP_NOR_SECOND=off (test switch): the original's list and club moves. Read once. */
+static int switched_off(void)
+{
+    static int off = -1;
+    if (off < 0) off = env_is("RECOMP_NOR_SECOND", "off");
+    return off;
+}
+
+int season_nor_barred(uint32_t club, uint32_t div)
+{
+    if (switched_off() || !readable(club) || !readable(div) || !norwegian(club)) return 0;
+    int32_t id = (int32_t)rd32(g_mem, div);
+    if (id != (int32_t)rd32(g_mem, KEY_PREMIER) && id != (int32_t)rd32(g_mem, KEY_FIRST)) return 0;
+    return lower_team(win_str(club + CLUB_NAME));
+}
+
 void o_00792960(void);
 RT_WRAP(00792960, nor_second_exchange)
 {
-    static int off = -1, log = -1, test_rep = -1;
-    if (off < 0) {
-        off = env_is("RECOMP_NOR_SECOND", "off");
+    static int log = -1, test_rep = -1;
+    if (log < 0) {
         log = env_is("RECOMP_NOR_SECOND_LOG", "1");
         test_rep = env_is("RECOMP_TEST_NOR_SECOND_REP", "1");
     }
     uint32_t table = rd32(g_mem, CLUBS);
     int count = (int)rd32(g_mem, CLUB_COUNT);
-    if (!season_game_on() || !readable(table) || count <= 0) {
+    if (!season_game_changes() || !readable(table) || count <= 0) {
         o_00792960();
         return;
     }
@@ -121,14 +143,18 @@ RT_WRAP(00792960, nor_second_exchange)
         was_first[i] = div == first;
         if (!in_group(div) || !norwegian(club) || !lower_team(win_str(club + CLUB_NAME))) continue;
         if (test_rep) wr16(g_mem, club + CLUB_REPUTATION, 10000);
-        if (off) continue;
+        if (switched_off()) continue;
         held[nheld] = i;
         div_of[nheld++] = div;
         wr32(g_mem, club + CLUB_DIVISION, 0);
-        if (log) fprintf(stderr, "recomp: nor second: %.51s stays in the Second Division\n", win_str(club + CLUB_NAME));
     }
     o_00792960();
-    for (int k = 0; k < nheld; k++) wr32(g_mem, table + (uint32_t)held[k] * CLUB_SIZE + CLUB_DIVISION, div_of[k]);
+    for (int k = 0; k < nheld; k++) {
+        uint32_t club = table + (uint32_t)held[k] * CLUB_SIZE;
+        wr32(g_mem, club + CLUB_DIVISION, div_of[k]);
+        if (log) fprintf(stderr, "recomp: nor second: %.51s stays in %.51s\n", win_str(club + CLUB_NAME),
+                         win_str(div_of[k] + 4));
+    }
     if (log && was_first && !rt_unwinding)
         for (int i = 0; i < count; i++) {
             uint32_t club = table + (uint32_t)i * CLUB_SIZE;
