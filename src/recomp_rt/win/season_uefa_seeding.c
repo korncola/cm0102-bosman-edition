@@ -24,7 +24,7 @@
  *   1. the Champions League places of each nation by league position (the p-th club of its records,
  *      0x9050d0 with skip placed 0, as 0x904465), with the entry round of the access list.
  *   2. the Champions League title holder (the history winner of the cup, 0x4afd80 as 0x9042e3) in the group
- *      stage, when it has no place yet. Else its place is free (the cascade of step 6 fills it).
+ *      stage, when it has no place yet. Else its place is free (the cascade fills it).
  *   3. the Europa League title holder: from 2015/16 a Champions League place ("X" rows), before a Europa League
  *      group place ("H" rows), when it has no place yet.
  *   4. the Europa League places of each nation: the first the domestic cup winner (the cup of the league
@@ -39,16 +39,18 @@
  *      the rounds below in its path (the group stage first from the Champions Path: the access lists give the
  *      free place to the best-ranked champion). The lowest round gives up its extra clubs, and fills a gap with
  *      the first club with no place of the best-ranked nations (as the UEFA Cup's fillers of 0x902cb0).
- *      Open item 94: the Champions League's cascade runs before step 4, after the association limit. A free place
- *      at its bottom then goes to the next club in league order, not to the first club left after the Europa
- *      League and Conference League places. The access lists from 2024/25 have 55 ranks and the original data 52
- *      UEFA nations, so a 2025 start of that data has free Champions Path places: Spain's 7th and 9th took them,
- *      past its 5th (Europa League) and 6th (Conference League). A club that loses its place at the bottom of a
- *      path can now take a Europa League place in step 4.
+ *      Open item 94: the Champions League's cascade runs out of this order, right after the association limit
+ *      (open item 70, below) and before step 4. A free place at its bottom then goes to the next club in league
+ *      order, not to the first club left after the Europa League and Conference League places, and the nation's
+ *      entry +0xc gains the place, as for a European Performance Spot. The access lists from 2024/25 have 55
+ *      ranks and the original data 52 UEFA nations, so a 2025 start of that data has free places in the first
+ *      qualifying round: on main the filler skipped the clubs of Spain's Europa League and Conference League
+ *      places and took its 7th and 9th (all nations) or 8th to 10th (England and Spain). A club that loses its
+ *      place at the bottom of a path can now take a Europa League place in step 4.
  *   Open item 70: after step 3 and the European Performance Spots, a nation with more Champions League places
  *      than the association limit of the season (season_uefa_cl_cap) loses the place of its last club in league
- *      order that is not a title holder. That club takes a Europa League place in step 4. In step 6 the filler
- *      of a Champions League gap skips a nation at its limit. The nation's entry +0xc loses the place, so the
+ *      order that is not a title holder. That club takes a Europa League place in step 4. The filler of a
+ *      Champions League gap skips a nation at its limit. The nation's entry +0xc loses the place, so the
  *      league table marks one Champions League place less.
  *   Slice 24, part b (2021/22 on): after step 4 the Conference League places of each nation ("k" rows): the
  *      first the cup winner when the nation has no Europa League place, the last the league cup winner for the
@@ -410,9 +412,13 @@ static void cascade(char comp, const int *p, int n, const int *target, uint32_t 
             int before = n_placed;
             add(club, comp, code, rank, 0);
             if (n_placed == before) break;
-            if (comp == 'c' && cascade_row)
-                fprintf(stderr, "recomp: uefa: Champions League %d/%02d: a free place in round %d for %.50s (rank %d)\n",
+            if (comp == 'c' && cascade_row) {
+                /* Open item 94: the place counts in the league table marks, as a European Performance Spot. */
+                if (rank >= 1 && rank <= entries) g_mem[self + 0x12u * (uint32_t)(rank - 1) + 0xc]++;
+                fprintf(stderr, "recomp: uefa: Champions League %d/%02d: a free place (entry code %d) for %.50s "
+                                "(rank %d)\n",
                         cascade_row->season, (cascade_row->season + 1) % 100, code, win_str(club + 4), rank);
+            }
         }
     }
 }

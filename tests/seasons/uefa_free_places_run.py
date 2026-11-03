@@ -5,14 +5,14 @@ Usage:
     python3 tests/seasons/uefa_free_places_run.py <cm0102_recomp> <game folder> [--keep <folder>]
 
 The run loads a save of June 2026 (the original data 3.9.68 jumped to 2025/26, England and Spain, changing rules
-on, Tier A, seed 1: test-fixtures/uefa-free-places-2026.sav, or RECOMP_FREE_PLACES_SAVE) and plays 20 days in Tier
+on, Tier A, seed 1: test-fixtures/uefa-free-places-2026.sav, or RECOMP_FREE_PLACES_SAVE) and plays 25 days in Tier
 A, past the UEFA places of day 171, then saves. The original data has 52 UEFA nations and the access list of
 2026/27 has 55 ranks, so the Champions Path has free places. The cascade of
 src/recomp_rt/win/season_uefa_seeding.c fills each with the next club in league order of the best-ranked nation
 under its association limit. The check: the Champions League clubs of each nation, title holders apart, are the
 first clubs of its top division of the last season, with no club left out (places 1 to n, a title holder's place
 apart). On main ec04eb89 the filler came after the Europa League and Conference League places and took Spain's
-7th and 9th, past its 5th and 6th. The log must show each free place. A run takes about 3 to 6 minutes.
+8th, 9th and 10th, past its 5th to 7th. The log must show each free place. A run takes about 3 to 6 minutes.
 """
 import os
 import re
@@ -27,7 +27,7 @@ import rules_report_check as rrc  # noqa: E402
 import soak_run  # noqa: E402
 
 FIXTURES = "/Users/max/Projects/cm0102/test-fixtures"
-DAYS = 20
+DAYS = 25
 
 
 def gaps(game):
@@ -38,7 +38,7 @@ def gaps(game):
     cl = {cid for cid, c in game.comps.items() if c["kind"] == "club" and rules.key(c["name"]) == "uefa_cl"}
     top_year = max((y for cid, y, *_ in game.rows if cid in cl), default=0)
     holders = {a for cid, y, a, *_ in game.rows
-               if rules.key(game.comps[cid]["name"]) in ("uefa_cl", "uefa_el") and y >= top_year}
+               if rules.key(game.comps[cid]["name"]) in ("uefa_cl", "uefa_el", "uefa_ecl") and y >= top_year}
     top = {}                                  # nation: the highest level of a division that holds clubs
     for div, last, mark, place in game.divisions.values():
         c = game.comps.get(last)
@@ -89,7 +89,7 @@ def main(argv):
                          f"no place for {', '.join(map(str, missing))} of the same table")
         with open(os.path.join(work, "leg", "stderr.txt"), encoding="latin-1") as f:
             log = f.read()
-        lines = re.findall(r"recomp: uefa: Champions League 2026/27: a free place .*", log)
+        lines = re.findall(r"recomp: uefa: Champions League 2026/27: a free place \(entry code .*", log)
         if not lines:
             fails.append(f"no log line of a free Champions League place ({work}/leg/stderr.txt)")
         for line in lines:
