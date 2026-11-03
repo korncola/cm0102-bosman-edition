@@ -24,7 +24,7 @@
  *   1. the Champions League places of each nation by league position (the p-th club of its records,
  *      0x9050d0 with skip placed 0, as 0x904465), with the entry round of the access list.
  *   2. the Champions League title holder (the history winner of the cup, 0x4afd80 as 0x9042e3) in the group
- *      stage, when it has no place yet. Else its place is free (the cascade of step 6 fills it).
+ *      stage, when it has no place yet. Else its place is free (the cascade fills it).
  *   3. the Europa League title holder: from 2015/16 a Champions League place ("X" rows), before a Europa League
  *      group place ("H" rows), when it has no place yet.
  *   4. the Europa League places of each nation: the first the domestic cup winner (the cup of the league
@@ -38,11 +38,25 @@
  *      lowest-ranked club down one round of its path, and a round with too few takes the best-ranked club of
  *      the rounds below in its path (the group stage first from the Champions Path: the access lists give the
  *      free place to the best-ranked champion). The lowest round gives up its extra clubs, and fills a gap with
- *      the first club with no place of the best-ranked nations (as the UEFA Cup's fillers of 0x902cb0).
+ *      the first club with no place of the best-ranked nations (as the UEFA Cup's fillers of 0x902cb0). The
+ *      Conference League's gaps go one to each nation down the ranking (open item 94, below).
+ *      Open item 94: the Champions League's cascade runs out of this order, right after the association limit
+ *      (open item 70, below) and before step 4. A free place at its bottom then goes to the next club in league
+ *      order, not to the first club left after the Europa League and Conference League places, and the nation's
+ *      entry +0xc gains the place, as for a European Performance Spot. The access lists from 2024/25 have 55
+ *      ranks and the original data 52 UEFA nations, so a 2025 start of that data has free places in the first
+ *      qualifying round: on main the filler skipped the clubs of Spain's Europa League and Conference League
+ *      places and took its 7th and 9th (all nations) or 8th to 10th (England and Spain). A club that loses its
+ *      place at the bottom of a path can now take a Europa League place in step 4.
+ *      Max, 3 November 2026 (open item 94): the free places of the Conference League go one to each nation down
+ *      the ranking (free_round), not all to the best-ranked nation. On e1bc6a34 Spain, rank 1 in a 2025 start of
+ *      the original data, took all five. The game cannot shrink a round, so the extra clubs stay, but no nation
+ *      gets a second one while a nation below it has none. The Champions League and Europa League fillers do not
+ *      change (lead decision, 3 November 2026).
  *   Open item 70: after step 3 and the European Performance Spots, a nation with more Champions League places
  *      than the association limit of the season (season_uefa_cl_cap) loses the place of its last club in league
- *      order that is not a title holder. That club takes a Europa League place in step 4. In step 6 the filler
- *      of a Champions League gap skips a nation at its limit. The nation's entry +0xc loses the place, so the
+ *      order that is not a title holder. That club takes a Europa League place in step 4. The filler of a
+ *      Champions League gap skips a nation at its limit. The nation's entry +0xc loses the place, so the
  *      league table marks one Champions League place less.
  *   Slice 24, part b (2021/22 on): after step 4 the Conference League places of each nation ("k" rows): the
  *      first the cup winner when the nation has no Europa League place, the last the league cup winner for the
@@ -330,20 +344,36 @@ static void move_down(int i, const int *target)
 
 static const SeasonUefa *cascade_row;   /* the row of assign_all, for the fillers of the cascade */
 
+/* Open item 94 (Max, 3 November 2026): the free places of each competition ('c', 'e', 'k') by rank index, for the
+ * fillers of the cascade. A Conference League filler takes a nation of the fewest free places, the best-ranked
+ * first, so its free places go one to each nation down the ranking. The other fillers take the best-ranked
+ * nation, as before (round 0 only, and their counts stay 0). */
+static unsigned char free_got[3][MAX_NATIONS];
+
+static int comp_index(char comp) { return comp == 'c' ? 0 : comp == 'e' ? 1 : 2; }
+
+/* 1 when rank index e may take a free place of comp in round k (nations of k free places of comp, k from 0). */
+static int free_round(char comp, int e, int k)
+{
+    if (comp != 'k') return k == 0;
+    return e >= 0 && e < MAX_NATIONS && free_got[comp_index(comp)][e] == k;
+}
+
 /* Slice 24: the filler of a Europa League gap from 2021/22. The access list then gives Europa League places only
  * to the best-ranked associations (ranks 16 and below have places "", their clubs go to the Conference League).
  * A vacancy (the title holder places, a suspended nation) moves the best-ranked cup winners up one round, and the
  * gap at the bottom goes to the cup winner of the best-ranked association with no Europa League place (the notes
  * of the access list rows: in 2021/22 Cyprus, rank 16; in 2022/23 Serbia and Czech Republic, 16 and 17). The cup
  * winner as in step 4 (0x9047e2: the winner, else the runner-up), else the first club with no place. Returns 0
- * in a season where every rank has places (to 2020/21): the original's filler then applies. */
-static uint32_t el_cup_filler(uint32_t self, uint32_t records, int count, int entries, int *rank)
+ * in a season where every rank has places (to 2020/21): the original's filler then applies. round is the round of
+ * free_round (always 0 for the Europa League). */
+static uint32_t el_cup_filler(uint32_t self, uint32_t records, int count, int entries, int round, int *rank)
 {
     const SeasonUefa *r = cascade_row;
     for (int e = 0; r && e < entries && !rt_unwinding; e++) {
         uint32_t ent = self + 0x12u * (uint32_t)e, nation = rd32(g_mem, ent + 4);
         const char *pl = season_uefa_access_places(r->season, 'e', e + 1);
-        if (!pl || *pl || nation_suspended(r, nation)) continue;
+        if (!pl || *pl || !free_round('e', e, round) || nation_suspended(r, nation)) continue;
         uint32_t club = cup_club(nation, 0x1e, 0);
         if (!club || has_place(club)) club = cup_club(nation, 0x1e, 1);
         if (!club || has_place(club)) club = pick(self, records, count, rd32(g_mem, ent), 1, 1);
@@ -387,23 +417,41 @@ static void cascade(char comp, const int *p, int n, const int *target, uint32_t 
                 placed[best].code = code;
                 continue;
             }
-            /* No club below: the first club with no place of the best-ranked nations. */
+            /* No club below: the first club with no place of the best-ranked nation. For the Conference League
+             * (open item 94, free_round) of the fewest free places, so one to each nation down the ranking. */
             uint32_t club = 0;
             int rank = 0;
-            if (comp == 'e') club = el_cup_filler(self, records, count, entries, &rank);
-            for (int e = 0; e < entries && !club && !rt_unwinding; e++) {
-                if (nation_suspended(cascade_row, rd32(g_mem, self + 0x12u * (uint32_t)e + 4))) continue;
-                /* Open item 70: no nation goes past the association limit by a filler. */
-                if (comp == 'c' && cascade_row &&
-                    cl_clubs_of(rd32(g_mem, self + 0x12u * (uint32_t)e + 4)) >= season_uefa_cl_cap(cascade_row->season))
-                    continue;
-                club = pick(self, records, count, rd32(g_mem, self + 0x12u * (uint32_t)e), 1, 1);
-                rank = e + 1;
+            for (int round = 0; round < MAX_PLACED && !club && !rt_unwinding; round++) {
+                int open = 0;               /* nations of this round or more: a later round may still find one */
+                for (int e = 0; e < entries; e++) open += free_got[comp_index(comp)][e] >= round;
+                if (!open) break;
+                if (comp == 'e') club = el_cup_filler(self, records, count, entries, round, &rank);
+                for (int e = 0; e < entries && !club && !rt_unwinding; e++) {
+                    if (!free_round(comp, e, round)) continue;
+                    if (nation_suspended(cascade_row, rd32(g_mem, self + 0x12u * (uint32_t)e + 4))) continue;
+                    /* Open item 70: no nation goes past the association limit by a filler. */
+                    if (comp == 'c' && cascade_row &&
+                        cl_clubs_of(rd32(g_mem, self + 0x12u * (uint32_t)e + 4)) >=
+                            season_uefa_cl_cap(cascade_row->season))
+                        continue;
+                    club = pick(self, records, count, rd32(g_mem, self + 0x12u * (uint32_t)e), 1, 1);
+                    rank = e + 1;
+                }
             }
             if (!club) break;
             int before = n_placed;
             add(club, comp, code, rank, 0);
             if (n_placed == before) break;
+            if (comp == 'k' && rank >= 1 && rank <= entries && rank <= MAX_NATIONS) free_got[2][rank - 1]++;
+            /* Open item 94: a Champions League free place counts in the league table marks, as a European
+             * Performance Spot. */
+            if (comp == 'c' && rank >= 1 && rank <= entries) g_mem[self + 0x12u * (uint32_t)(rank - 1) + 0xc]++;
+            if (cascade_row)
+                fprintf(stderr, "recomp: uefa: %s %d/%02d: a free place (entry code %d) for %.50s (club id %d, "
+                                "rank %d)\n",
+                        comp == 'c' ? "Champions League" : comp == 'e' ? "Europa League" : "Conference League",
+                        cascade_row->season, (cascade_row->season + 1) % 100, code, win_str(club + 4),
+                        (int32_t)rd32(g_mem, club), rank);
         }
     }
 }
@@ -445,6 +493,7 @@ static void assign_all(uint32_t self, uint32_t records, int count, const SeasonU
     if (entries > MAX_NATIONS) entries = MAX_NATIONS;
     n_placed = 0;
     cascade_row = r;
+    memset(free_got, 0, sizeof free_got);
     /* 1. Champions League places by league position. */
     for (int e = 0; e < entries && !rt_unwinding; e++) {
         uint32_t ent = self + 0x12u * (uint32_t)e;
@@ -519,6 +568,14 @@ static void assign_all(uint32_t self, uint32_t records, int count, const SeasonU
     }
     /* Open item 70: the association limit, after the title holders and the European Performance Spots. */
     if (!rt_unwinding) keep_limit(self, entries, s);
+    /* 6, Champions League part (open item 94): the cascade to the round sizes of the row, before the Europa League
+     * places. A free place at the bottom of a path then goes to the next club in league order of the best-ranked
+     * nation under its limit, as a European Performance Spot does, and the Europa League places move down one. */
+    int target[SEASON_UEFA_CODE_SLOTS];
+    season_uefa_new_clubs(r, 'c', target);
+    cascade('c', CL_CHAMPIONS, 6, target, self, records, count, entries);
+    cascade('c', CL_LEAGUE, 4, target, self, records, count, entries);
+    if (rt_unwinding) return;
     /* 4. Europa League places: the cup winner, the league places, the league cup winner. 5. Fair play. */
     int fair[3] = {-1, -1, -1};
     if (season_uefa_access_rule(s, 'f') && entries > 3)
@@ -573,11 +630,7 @@ static void assign_all(uint32_t self, uint32_t records, int count, const SeasonU
         }
     }
     if (rt_unwinding) return;
-    /* 6. The cascade to the round sizes of the row. */
-    int target[SEASON_UEFA_CODE_SLOTS];
-    season_uefa_new_clubs(r, 'c', target);
-    cascade('c', CL_CHAMPIONS, 6, target, self, records, count, entries);
-    cascade('c', CL_LEAGUE, 4, target, self, records, count, entries);
+    /* 6. The cascade to the round sizes of the row (the Champions League's came before step 4). */
     season_uefa_new_clubs(r, 'e', target);
     cascade('e', EL_MAIN, 6, target, self, records, count, entries);
     if (ecl_id >= 0 && !rt_unwinding) {
