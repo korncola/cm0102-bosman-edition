@@ -31,8 +31,8 @@
  * With 8 teams: the draw adds the two Oceania nations with the highest reputation that are not in the six, one to
  * the end of each group (places 3 and 7; the six move to 0 to 2 and 4 to 6). The groups have 4 rows; the
  * predicted places are 1, 2, 3, 3, 5, 5, 7, 7; a group's fourth gets the group stage codes of a third
- * (set_club_progress 0x79a490); each group day gets a second kick-off slot, a copy of its first, so that both
- * matches of the day play at the same time. Sites in tools/recomp/seasons.py ("OFC Nations Cup of 8 teams"). The new
+ * (set_club_progress 0x79a490); on the draw day each group day gets a second kick-off slot, a copy of its first,
+ * so that both matches of the day play at the same time. Sites in tools/recomp/seasons.py ("OFC Nations Cup of 8 teams"). The new
  * places of the two added nations are a decision of this build (the real editions had a qualifying round of the
  * smaller nations, which the game does not play): inference, not a source. */
 #include "win.h"
@@ -67,6 +67,7 @@
 #define TEAMS_OF 0xeeu                  /* team pointers, 4 bytes each */
 #define TEAM_COUNT 0xf2u                /* word (0x799e42) */
 #define GROUP_ROWS 0x3eu                /* word: the rows of group A's table (0x7995ae) */
+#define GROUP_A_ROUNDS 0xbau            /* group A's template (set_up_rules 0x799747, freed at 0x7998ff) */
 
 #define TEAMS 8
 #define GROUP 4
@@ -161,6 +162,8 @@ static uint32_t strongest(const uint32_t *teams, int n)
     return best;
 }
 
+static void second_slots(uint32_t rounds);
+
 static int club_reputation(uint32_t club) { return readable(club) ? (int16_t)rd16(g_mem, club + CLUB_REPUTATION) : 0; }
 
 /* After the original's draw of 6 (and the Australia swap of season_intl.c), before the hosts come in: for an
@@ -198,6 +201,8 @@ void season_intl_ofc_draw(uint32_t self)
     if (rt_unwinding) return;
     wr32(g_mem, self + TEAMS_OF, list);
     wr16(g_mem, self + TEAM_COUNT, TEAMS);
+    second_slots(rd32(g_mem, self + GROUP_A_ROUNDS));
+    if (rt_unwinding) return;
     if (logging())
         fprintf(stderr, "recomp: season intl: oceania_nations %d: 8 teams, %s and %s added\n", year_of(self),
                 win_str(team_nation(first) + NATION_NAME), win_str(team_nation(second) + NATION_NAME));
@@ -268,26 +273,11 @@ RT_WRAP(0079a490, ofc_progress)
 
 /* ---- The group template (create_schedule 0x798b60) ---- */
 
-/* 1 for an edition of 8 in a season game: the template of group A is made at the new season (set_up_rules 0x799740,
- * through vtable +0x3c), before the draw, so the test is the edition, not the drawn count. */
-static int edition8(uint32_t self)
+/* The original's group templates (stage -1 group A, 0 group B; 0x798b90, 0x798eec) give each of the 3 days slot 0
+ * only. For a draw of 8 each day also gets slot 1, a copy of slot 0, and slot 2 ends the list, as the Asian Cup's
+ * days (0x40ebb5, 0x40ec3e, 0x40ec4f). */
+static void second_slots(uint32_t rounds)
 {
-    if (!season_intl_on() || !is_ofc(self)) return 0;
-    const SeasonIntlEdition *e = season_intl_edition("oceania_nations", year_of(self));
-    return e && e->teams == TEAMS;
-}
-
-/* thiscall (stage as a byte, short *rounds, short *id, int *flag), ret 0x10. Called by the wrap of 0x798b60 in
- * season_intl.c inside its date shift, at the entry state. The original's group templates (stage -1 group A, 0
- * group B; 0x798b90, 0x798eec) give each of the 3 days slot 0 only. For an edition of 8 each day also gets slot 1,
- * a copy of slot 0, and slot 2 ends the list, as the Asian Cup's days (0x40ebb5, 0x40ec3e, 0x40ec4f). */
-void season_intl_ofc_template(void (*original)(void))
-{
-    uint32_t self = cpu.ecx;
-    int stage = (int8_t)rd8(g_mem, cpu.esp + 4u);
-    original();
-    if (rt_unwinding || stage > 0 || !edition8(self)) return;
-    uint32_t rounds = cpu.eax;
     if (!readable(rounds)) return;
     for (int r = 0; r < GROUP_DAYS; r++) {
         uint32_t s0 = rounds + (uint32_t)r * ROUND_SIZE + 5u;
@@ -299,4 +289,17 @@ void season_intl_ofc_template(void (*original)(void))
         if (!rt_unwinding) call_cdecl(ROUND_SLOT, 7, end);
         if (rt_unwinding) return;
     }
+}
+
+/* thiscall (stage as a byte, short *rounds, short *id, int *flag), ret 0x10. Called by the wrap of 0x798b60 in
+ * season_intl.c inside its date shift, at the entry state. Group B's template is made on the draw day
+ * (create_group_stage 0x799afe), after the draw: with 8 drawn it gets the second slots. Group A's is made at the new
+ * season (set_up_rules 0x799740, kept at +0xba), before the draw: season_intl_ofc_draw gives it the second slots. */
+void season_intl_ofc_template(void (*original)(void))
+{
+    uint32_t self = cpu.ecx;
+    int stage = (int8_t)rd8(g_mem, cpu.esp + 4u);
+    original();
+    if (rt_unwinding || stage > 0 || !drawn8(self)) return;
+    second_slots(cpu.eax);
 }
