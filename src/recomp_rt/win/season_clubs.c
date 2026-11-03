@@ -631,8 +631,8 @@ static void move_clubs(int season)
          *   B side unless the list lacks one). The place of a missing reserve or B side takes such a club in
          *   every tier. In the top two tiers the place of another missing club stays open for slice 15b when the
          *   class counts the clubs of the data. A class with a fixed count needs every place, so there it takes a
-         *   club with no division too, and the log calls it a stand-in. With no such club the place goes to the
-         *   groups of the other places (open item 105, below);
+         *   club with no division too, and the log calls it a stand-in. With no such club, a class of CLASS_SIZE
+         *   gives the place to the groups of the other places (open item 105, below);
          * - any other place (a club that moved up, or a class that takes more clubs than the real division has,
          *   slice 18): first a club that left a division of a higher rank (step "Leave"; no reserve or B side,
          *   and no move between two divisions of one rank such as German Regional North and South), so the
@@ -653,6 +653,7 @@ static void move_clubs(int season)
         int need = d->want - now;
         int missing_places = need < d->missing ? need : d->missing;
         int fixed = class_size(d->name, season) > 0;
+        int whole = fixed && class_file(d->name) && season_divisions_class_size(d->name, season) < 0;
         int reserve_places = missing_places < d->missing_reserve ? missing_places : d->missing_reserve;
         int places[2] = {d->tier > 2 || fixed ? missing_places : reserve_places, need - missing_places};
         /* The groups of a kind 1 place, in this order: 0 a club that left a higher division, 4 a club that left a
@@ -660,18 +661,10 @@ static void move_clubs(int season)
          * division with no list. Groups 4 and 2 take the club with the highest reputation first (see FILL_BY_REP). */
         static const int kind1_groups[] = {0, 4, 1, 2, 3};
         for (int kind = 0; kind < 2; kind++) {
-            /* Open item 105: a class with a fixed count needs every place. A place of a missing listed club that
-             * no club with no division can take goes to the groups of a kind 1 place. Without that, a 2025/26
-             * start on the game's own data left the Belgian First and Second Division at 17 of 18 (the list's
-             * clubs that the data lacks, and no Belgian club without a division). BelSecond's three period stages
-             * expect 10, 12 and 12 matches a club (BelSecond::create_period_stage 0x4204d0 at 0x4205b4..
-             * 0x4205cb; the period of a match is its round, BelSecond::add_result 0x420110): with 17 clubs a club
-             * has a free round in a period, the period stage never completes, so BelSecond::advance_stage
-             * 0x4201a0 never makes the play-off (stage 3), League::check_complete 0x689ad0 keeps the division open
-             * (0x689bdf..0x689be8), all_stages_complete 0x48ce10 of the Belgian First Division (it walks the
-             * divisions below) stays false, and game_season_update_pass 0x5d5ae0 never starts Belgium's next
-             * season (0x5d5ccb). */
-            if (kind == 1 && fixed) {
+            /* Open item 105: a class of CLASS_SIZE needs every place (BelSecond's period stages expect 10, 12 and
+             * 12 matches a club, BelSecond::create_period_stage 0x4204d0 at 0x4205b4..0x4205cb). A new division of
+             * slice 20 keeps its own fill (season_divisions.c). */
+            if (kind == 1 && whole) {
                 places[1] += places[0];
                 places[0] = 0;
             }
