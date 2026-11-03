@@ -97,9 +97,9 @@ int season_super_four_pick(const uint32_t *league, int count, uint32_t cw, uint3
  * played. pitch: the name of the history row's winner. NULL when the history row stands. */
 const char *season_super_official_champion(const char *file, int season, const char *pitch);
 
-/* The two clubs of a super cup, as the original's ItaSuper::init_team_list 0x65fa60 and SpaSuper::select_teams
- * 0x858aa0 pick them: the champion, then the cup winner, or the cup runner-up when the champion also won the cup.
- * Returns 0 when two different clubs are not found. */
+/* The two clubs of the Supercoppa, as the original's ItaSuper::init_team_list 0x65fa60 picks them: the champion,
+ * then the cup winner, or the cup runner-up when the champion also won the cup (0x65fb55..0x65fbee). Returns 0
+ * when two different clubs are not found. */
 int season_super_two_pick(uint32_t champion, uint32_t cw, uint32_t cru, uint32_t out[2]);
 
 /* The rules report lines "cupmore" of slice 21c (season_super_cups.c); file is the report's FILE *. */

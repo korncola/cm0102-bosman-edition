@@ -123,15 +123,17 @@ static const SuperCup *cup_of(const char *file)
     return NULL;
 }
 
-static void put_list(uint32_t cup, const uint32_t *clubs, int n)
+/* Returns 1 when the cup holds the new list. */
+static int put_list(uint32_t cup, const uint32_t *clubs, int n)
 {
     uint32_t list = game_malloc(6u * (uint32_t)n);
-    if (!list) return;
+    if (!list) return 0;
     for (int i = 0; i < n; i++) wr32(g_mem, list + 6u * (uint32_t)i, clubs[i]);   /* the two bytes stay 0 */
     game_free(rd32(g_mem, cup + CUP_TEAM_LIST));
-    if (rt_unwinding) return;
+    if (rt_unwinding) return 0;
     wr32(g_mem, cup + CUP_TEAM_LIST, list);
     wr16(g_mem, cup + CUP_TEAMS, (uint16_t)n);
+    return 1;
 }
 
 #define CLUBS 0xae23b4u
@@ -200,8 +202,7 @@ static int official_two(uint32_t cup, const char *file, const SuperCup *k)
                 name);
         return 0;
     }
-    put_list(cup, out, 2);
-    if (rt_unwinding) return 0;
+    if (!put_list(cup, out, 2)) return 0;
     fprintf(stderr, "recomp: super cups: %s %d: %.30s v %.30s (the title of the season before went to %s)\n", file,
             year, win_str(out[0] + 4), win_str(out[1] + 4), name);
     return 1;

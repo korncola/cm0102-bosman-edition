@@ -1253,7 +1253,13 @@ void season_records_fixture_log(uint32_t fx, uint32_t ret)
         uint32_t c = rd32(g_mem, fx + 0x1c + 4u * (uint32_t)k);
         bad |= c < base || c >= end || (c - base) % 0x245u;
     }
-    if ((want && *want && *rn && (!strcmp(rn, want) || strstr(want, rn))) || bad)
+    int named = 0;
+    for (const char *w = want; w && *w && *rn && !named;) {         /* the names joined by "|" */
+        size_t len = strcspn(w, "|");
+        named = len == strlen(rn) && !strncmp(w, rn, len);
+        w += len + (w[len] == '|');
+    }
+    if (named || bad)
         fprintf(stderr, "recomp: club records: add_fixture from %08x: %s, clubs %08x %08x%s %.24s v %.24s day %d/%d\n",
                 ret, rn, rd32(g_mem, fx + 0x1c), rd32(g_mem, fx + 0x20), bad ? " (not a club)" : "",
                 bad ? "?" : win_str(rd32(g_mem, fx + 0x1c) + 4), bad ? "?" : win_str(rd32(g_mem, fx + 0x20) + 4),
