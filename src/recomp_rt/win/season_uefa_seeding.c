@@ -39,6 +39,12 @@
  *      the rounds below in its path (the group stage first from the Champions Path: the access lists give the
  *      free place to the best-ranked champion). The lowest round gives up its extra clubs, and fills a gap with
  *      the first club with no place of the best-ranked nations (as the UEFA Cup's fillers of 0x902cb0).
+ *      Open item 94: the Champions League's cascade runs before step 4, after the association limit. A free place
+ *      at its bottom then goes to the next club in league order, not to the first club left after the Europa
+ *      League and Conference League places. The access lists from 2024/25 have 55 ranks and the original data 52
+ *      UEFA nations, so a 2025 start of that data has free Champions Path places: Spain's 7th and 9th took them,
+ *      past its 5th (Europa League) and 6th (Conference League). A club that loses its place at the bottom of a
+ *      path can now take a Europa League place in step 4.
  *   Open item 70: after step 3 and the European Performance Spots, a nation with more Champions League places
  *      than the association limit of the season (season_uefa_cl_cap) loses the place of its last club in league
  *      order that is not a title holder. That club takes a Europa League place in step 4. In step 6 the filler
@@ -404,6 +410,9 @@ static void cascade(char comp, const int *p, int n, const int *target, uint32_t 
             int before = n_placed;
             add(club, comp, code, rank, 0);
             if (n_placed == before) break;
+            if (comp == 'c' && cascade_row)
+                fprintf(stderr, "recomp: uefa: Champions League %d/%02d: a free place in round %d for %.50s (rank %d)\n",
+                        cascade_row->season, (cascade_row->season + 1) % 100, code, win_str(club + 4), rank);
         }
     }
 }
@@ -519,6 +528,14 @@ static void assign_all(uint32_t self, uint32_t records, int count, const SeasonU
     }
     /* Open item 70: the association limit, after the title holders and the European Performance Spots. */
     if (!rt_unwinding) keep_limit(self, entries, s);
+    /* 6, Champions League part (open item 94): the cascade to the round sizes of the row, before the Europa League
+     * places. A free place at the bottom of a path then goes to the next club in league order of the best-ranked
+     * nation under its limit, as a European Performance Spot does, and the Europa League places move down one. */
+    int target[SEASON_UEFA_CODE_SLOTS];
+    season_uefa_new_clubs(r, 'c', target);
+    cascade('c', CL_CHAMPIONS, 6, target, self, records, count, entries);
+    cascade('c', CL_LEAGUE, 4, target, self, records, count, entries);
+    if (rt_unwinding) return;
     /* 4. Europa League places: the cup winner, the league places, the league cup winner. 5. Fair play. */
     int fair[3] = {-1, -1, -1};
     if (season_uefa_access_rule(s, 'f') && entries > 3)
@@ -573,11 +590,7 @@ static void assign_all(uint32_t self, uint32_t records, int count, const SeasonU
         }
     }
     if (rt_unwinding) return;
-    /* 6. The cascade to the round sizes of the row. */
-    int target[SEASON_UEFA_CODE_SLOTS];
-    season_uefa_new_clubs(r, 'c', target);
-    cascade('c', CL_CHAMPIONS, 6, target, self, records, count, entries);
-    cascade('c', CL_LEAGUE, 4, target, self, records, count, entries);
+    /* 6. The cascade to the round sizes of the row (the Champions League's came before step 4). */
     season_uefa_new_clubs(r, 'e', target);
     cascade('e', EL_MAIN, 6, target, self, records, count, entries);
     if (ecl_id >= 0 && !rt_unwinding) {
