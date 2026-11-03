@@ -506,7 +506,8 @@ if(EXISTS "${CM0102_EXE}")
         PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/include")
     add_dependencies(cm0102_recomp recomp_gen)
     # The host qsort of the player history lists (qsort6.c) sorts as the recompiled qsort 0x945333 does,
-    # rows and eax, so "Player histories" is faster and the game stays the same (rule Q152).
+    # rows and eax, so "Player histories" is faster and the game stays the same (rule Q152). The same run
+    # checks the host _ftol (crt.c) and the cache of calls through an address (rt.c) (0.6.2 item 110).
     get_filename_component(CM0102_EXE_DIR "${CM0102_EXE}" DIRECTORY)
     add_test(NAME qsort6 COMMAND cm0102_recomp --game "${CM0102_EXE_DIR}")
     set_tests_properties(qsort6 PROPERTIES ENVIRONMENT
@@ -589,6 +590,16 @@ if(EXISTS "${CM0102_EXE}")
     # The generated C: exact integer wrap, no strict aliasing, no warnings (it is not read by people).
     set_source_files_properties(${RECOMP_GEN} PROPERTIES GENERATED TRUE COMPILE_OPTIONS "-O1;-w")
     target_compile_options(cm0102_recomp PRIVATE -fno-strict-aliasing -fwrapv -O1)
+    # ThinLTO on the Mac (0.6.2 item 110): the linker can inline small functions of the original into their
+    # callers across the generated files (the CRT float to integer call, the random function, getters), which
+    # made a game day about 9 % faster. The game stays the same (same-save set). The cache keeps a relink short.
+    if(APPLE AND CMAKE_C_COMPILER_ID MATCHES "Clang")
+        option(CM0102_LTO "ThinLTO for the game on the Mac" ON)
+        if(CM0102_LTO)
+            target_compile_options(cm0102_recomp PRIVATE -flto=thin)
+            target_link_options(cm0102_recomp PRIVATE -flto=thin "LINKER:-cache_path_lto,${CMAKE_BINARY_DIR}/lto-cache")
+        endif()
+    endif()
     # Every call of the original is a host call: give the main thread a deep stack.
     if(WIN32)
         include(packaging/windows/windows.cmake)
