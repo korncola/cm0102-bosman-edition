@@ -3,7 +3,7 @@
 season_fin_second.c).
 
 Usage:
-    python3 tests/seasons/fin_second_run.py <cm0102_recomp> <game folder> [--only on,off,drop,old,late] [--jobs n]
+    python3 tests/seasons/fin_second_run.py <cm0102_recomp> <game folder> [--only on,off,drop,old,late,hold,names] [--jobs n]
         [--keep <folder>] [--fix-off]
 
 Each run is a season jump of tests/seasons/rules_report_check.py with Finland on the May 2026 database (changing
@@ -27,7 +27,14 @@ season change. The runs:
           stage-1 finalist when stage 3 is built, and holds stage 1's place (status 5) at the season change. The
           next club of its group plays stage 3 in its place, the next club of the table takes status 5, and no
           second team goes up
---fix-off adds RECOMP_FIN_SECOND=off to every run, as a build without the fix: on, drop and late must then FAIL
+    hold  the October 2018 database, 2018 start, to 1 June 2020, with RECOMP_TEST_FIN_SECOND_REP=1 (the second teams
+          of the Second Division groups get the highest reputation) and RECOMP_TEST_FIN_SECOND_DROP=1: Helsinki IFK
+          a second team whose first team was sent down stays in its group (Klubi 04 Helsinki in 2019), second teams of
+          Premier Division clubs go up, and one whose first team then goes down leaves the First Division again, its
+          place taken by a club of the groups
+    names the September 2005 database, 2005 start, to 1 June 2006: HJK Reserves is read as HJK Helsinki's second
+          team, Atlantis Akatemia and KPV juniorit as first teams
+--fix-off adds RECOMP_FIN_SECOND=off to every run, as a build without the fix: on, drop, late and hold must then FAIL
 (the test first, item 118). All runs end with code 0 and show no message box of the game.
 """
 import concurrent.futures
@@ -50,8 +57,8 @@ CENSUS = re.compile(r"recomp: fin second: census (before|after): Premier (\d+) c
 FIX_OFF = {}
 
 
-def jump(name, program, game, work, env, last=2026):
-    code, _ = rrc.run(program, game, last, 2026, os.path.join(DB, "May 2026"), ["Finland"], [], work, 7200, None,
+def jump(name, program, game, work, env, last=2026, start=2026, db="May 2026"):
+    code, _ = rrc.run(program, game, last, start, os.path.join(DB, db), ["Finland"], [], work, 7200, None,
                       dict(ENV, **env, **FIX_OFF))
     fails = [] if code == 0 else [f"{name}: the jump ended with code {code}"]
     found, log = ufr.boxes(work)
@@ -132,7 +139,7 @@ def run_drop(program, game, work):
             fails.append(f"drop: second teams still in the First Division after the change: {after}")
         if sum("goes down from the First Division" in l for l in lines) < 2:
             fails.append("drop: fewer than 2 second teams went down from the First Division")
-        if not any("stays up in the First Division" in l for l in lines):
+        if not any("stays up in First Division" in l for l in lines):
             fails.append("drop: no club of the table stayed up in a second team's place")
     return fails
 
@@ -176,7 +183,45 @@ def run_late(program, game, work):
     return fails
 
 
-RUNS = {"on": run_on, "off": run_off, "drop": run_drop, "old": run_old, "late": run_late}
+def run_hold(program, game, work):
+    fails, log = jump("hold", program, game, work, {"RECOMP_TEST_FIN_SECOND_REP": "1", "RECOMP_TEST_FIN_SECOND_DROP": "1"},
+                      2019, 2018, "October 2018")
+    more, seen = common("hold", log, 1)
+    fails += more
+    for club, first in (("Helsinki IFK II", "Helsinki IFK"), ("Klubi 04 Helsinki", "HJK Helsinki"),
+                        ("Lahti Akatemia", "FC Lahti"), ("SJK Seinäjoki II", "SJK Seinäjoki")):
+        if f"recomp: fin second: name: {club}: second team of {first}" not in log:
+            fails.append(f"hold: {club} is not read as the second team of {first}")
+    held = re.findall(r"recomp: fin second: (.*) may not go up from Finnish Second Division", log)
+    if not held:
+        fails.append("hold: no second team was held in the Second Division (its first team below the Premier)")
+    for _, _, lines in seen:
+        for club in held:
+            if any(f"{club} goes up to the First Division" in l for l in lines):
+                fails.append(f"hold: {club} was held but went up to the First Division")
+    if not re.search(r"will go up from the Second Division \(a second team\)", log):
+        fails.append("hold: no second team of a Premier Division club was picked (the allowed path is not seen)")
+    if "does not play in the Premier Division)" not in log or "takes a place of the First Division" not in log:
+        fails.append("hold: no picked second team went down after its first team went down, or no club took the place")
+    for before, after, _ in seen:
+        if after[4]:
+            fails.append(f"hold: {after[4]} second teams above or beside their first team after a change: {after}")
+    return fails
+
+
+def run_names(program, game, work):
+    """September 2005: HJK Reserves is a second team; Atlantis Akatemia and KPV juniorit are first teams."""
+    fails, log = jump("names", program, game, work, {}, 2005, 2005, "September 2005 Helvete")
+    want = {"HJK Reserves": "second team of HJK Helsinki", "Atlantis Akatemia": "first team",
+            "KPV juniorit": "first team"}
+    for club, what in want.items():
+        if f"recomp: fin second: name: {club}: {what}" not in log:
+            fails.append(f"names: {club} is not read as: {what}")
+    return fails
+
+
+RUNS = {"on": run_on, "off": run_off, "drop": run_drop, "old": run_old, "late": run_late, "hold": run_hold,
+        "names": run_names}
 
 
 def main(argv):

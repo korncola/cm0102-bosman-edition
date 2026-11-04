@@ -52,23 +52,35 @@
  *   is not in the Premier Division goes to Second Division North (League::relegate_club_to_division 0x6831a0, as
  *   0x595fb4). Each place left over goes to the club of the Second Division groups with the highest reputation that
  *   may play there and did not just come down (League::move_club_to_division 0x6830b0, as 0x59600e).
- * - The club moves of a new game (season_clubs.c) put no Finnish second team into the Premier Division.
+ * - The club moves of a new game (season_clubs.c) put no Finnish second team into the Premier Division. A second
+ *   team that a new game leaves in the First Division above or beside its first team goes down at the first season
+ *   change, as in an older save (the fill does not know yet where the first team ends; no test database has such a
+ *   case).
  *
  * The link. No club field names a club's first team. A second team is a name of season_clubs_reserve_name (a last
  * word II, 2, B or Reserves), a last word III or 3, or a name of the table below; its first team is the Finnish
- * club named by the name without that last word, or by the table. Names that the data uses for other first teams
- * (Atlantis Akatemia, KPV juniorit, FC Jazz-juniorit, Oulun Palloseura Juniorit, Vaasan Palloseura-Juniorit,
- * Kerho 07 of the 2017 to 2021 data) are not in the table, and no fuzzy match is made. A second team with no first
- * team found keeps only the bar from the Premier Division and its play-off.
+ * club named by the name without that last word, or by the table. No fuzzy match is made. Not in the table:
+ * Atlantis Akatemia and KPV juniorit, the first teams of Atlantis FC and KPV in the old data (rules research
+ * nor-fin.md); FC Jazz-juniorit, the youth club of FC Jazz that took the name FC Jazz in 2010 (en.wikipedia.org/
+ * wiki/FC_Jazz); Oulun Palloseura Juniorit, Vaasan Palloseura-Juniorit and the Kerho 07 of the 2017 to 2021 data, for
+ * which no source says whether they are a reserve or a farm club (open item 118). A second team with no first team
+ * found keeps only the bar from the Premier Division and its play-off. In the 50 test databases every linked second
+ * team of the First and Second Divisions finds its first team. The entries for SJK Seinäjoki II and III are needed
+ * where the data names the first team Seinäjoen Jalkapallokerho.
  *
  * Test switches (tests/seasons/fin_second_run.py): RECOMP_FIN_SECOND=off plays as the original; RECOMP_FIN_SECOND_LOG
  * =1 writes what the code does and a census at each season change; RECOMP_TEST_FIN_SECOND_TOP=1 puts each second team
- * of the First Division at the top of its group before 0x594080 (as if it won the group); RECOMP_TEST_FIN_SECOND_OLD
+ * of the First Division at the top of its group before 0x594080 (as if it won the group; the rows move for good, also
+ * with RECOMP_FIN_SECOND=off); RECOMP_TEST_FIN_SECOND_OLD
  * =<n> plays as the original until n Finnish season changes are done, and with RECOMP_TEST_FIN_SECOND_TOP=1 gives
  * stage 1's place to a second team in those changes (status 5), so the original sends it up into the Premier Division
  * (an older save, made in memory); RECOMP_TEST_FIN_SECOND_DROP=1 sends the first team of each second team of the
  * First Division down at the season change (it gets status 3, and the club of status 3 with the best place stays
- * up), so the second team must go down too. */
+ * up), so the second team must go down too; RECOMP_TEST_FIN_SECOND_LATE=1 plays a save of an older build made after
+ * the play-off: a second team is the stage-1 finalist when stage 3 is built and holds stage 1's place (status 5) at
+ * the season change; RECOMP_TEST_FIN_SECOND_REP=1 gives each second team of the Second Division groups the highest
+ * reputation before 0x594080, so the original would pick it. The test switches act in season games whether the fix is
+ * on or off, so a run with RECOMP_FIN_SECOND=off shows the fault. */
 #include "win.h"
 #include "season.h"
 #include "season_clubs.h"
@@ -79,6 +91,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define KEY_FINLAND 0x9cf2fcu
 #define KEY_PREMIER 0x9cf7e8u           /* Veikkausliiga */
 #define KEY_FIRST 0x9cf7f8u             /* FinFirst; its table is the North group */
 #define KEY_FIRST_N 0x9cf7ecu           /* the comp records of the two groups (FIN.md) */
@@ -139,6 +152,15 @@ static int test_late(void)
     return v;
 }
 
+/* RECOMP_TEST_FIN_SECOND_REP=1: each second team of the Second Division groups gets the highest reputation before
+ * 0x594080, so the original would pick it. */
+static int test_rep(void)
+{
+    static int v = -1;
+    if (v < 0) v = env_is("RECOMP_TEST_FIN_SECOND_REP", "1");
+    return v;
+}
+
 static int test_drop(void)
 {
     static int v = -1;
@@ -180,8 +202,6 @@ static int in_second(uint32_t div)
     return 0;
 }
 
-/* The nation of the Finnish divisions: the nation of the first club of the Premier Division's table. Finnish
- * clubs are the clubs of that nation (club +0x53). */
 static uint32_t league_of(uint32_t key)
 {
     uint32_t leagues = rd32(g_mem, LEAGUES);
@@ -212,24 +232,13 @@ static uint32_t south_of(uint32_t first)
     return readable(s) ? s : 0;
 }
 
-static uint32_t nation_of(uint32_t club)
-{
-    uint32_t n = rd32(g_mem, club + CLUB_NATION);
-    return readable(n) ? rd32(g_mem, n) : 0xffffffffu;
-}
-
+/* A Finnish club: club +0x53 is the nation of key 0x9cf2fc (KEY_FINLAND, include/key_index.h), as Norway's test
+ * of key 0x9cf408. */
 static int finnish(uint32_t club)
 {
-    static uint32_t fin = 0xffffffffu;
     if (!readable(club)) return 0;
-    if (fin == 0xffffffffu) {
-        /* Every club of the Premier Division's table is Finnish. */
-        int n;
-        uint32_t t = table_of(league_of(KEY_PREMIER), &n);
-        if (t && n) fin = nation_of(rd32(g_mem, t));
-        if (fin == 0xffffffffu) return 0;
-    }
-    return nation_of(club) == fin;
+    uint32_t nation = rd32(g_mem, club + CLUB_NATION);
+    return readable(nation) && (int32_t)rd32(g_mem, nation) == (int32_t)rd32(g_mem, KEY_FINLAND);
 }
 
 /* Second teams that the name rule does not read, and their first teams (no fuzzy match). Names in latin-1, as the
@@ -350,16 +359,20 @@ static void hand_on(uint32_t league, const char *what)
         uint8_t s = g_mem[row + ROW_STATUS];
         if (!up_status(s) || !second_team(rd32(g_mem, row))) continue;
         g_mem[row + ROW_STATUS] = ST_NONE;
-        for (int j = 0; j < n; j++) {
+        int given = 0;
+        for (int j = 0; j < n && !given; j++) {
             uint32_t to = table + (uint32_t)j * ROW_SIZE;
             uint8_t t = g_mem[to + ROW_STATUS];
             if (up_status(t) || t == ST_DOWN || second_team(rd32(g_mem, to))) continue;
+            given = 1;
             g_mem[to + ROW_STATUS] = s;
             if (log_on())
                 fprintf(stderr, "recomp: fin second: %.51s takes status %d in place of a second team (%.51s) in %s\n",
                         cname(rd32(g_mem, to)), s, cname(rd32(g_mem, row)), what);
-            break;
         }
+        /* No club can take it: 0x689c80 finds no partner for one Premier row of status 3, which so stays up. */
+        if (!given && log_on())
+            fprintf(stderr, "recomp: fin second: no club of %s takes the status of %.51s\n", what, cname(rd32(g_mem, row)));
     }
 }
 
@@ -441,8 +454,9 @@ static void test_to_top(uint32_t league)
     }
 }
 
-/* Stage 1 of a group: the clubs of rows 0 and 1 become the two best placed clubs that are not second teams. The
- * club fields that change are saved in undo (row, club), and *nu counts them. */
+/* Stage 1 of a group: the clubs of rows 0 and 1 become the two best placed clubs of rows 0 to 6 that are not second
+ * teams (0x594080 reads row 7 for stage 2, 0x5943c2, so no club of row 7 or below is taken). The club fields that
+ * change are saved in undo (row, club), and *nu counts them. */
 static void stage1_clubs(uint32_t league, uint32_t *undo, int *nu, const char *what)
 {
     int n;
@@ -450,7 +464,7 @@ static void stage1_clubs(uint32_t league, uint32_t *undo, int *nu, const char *w
     if (n < 2) return;
     uint32_t pick[2];
     int np = 0;
-    for (int i = 0; i < n && np < 2; i++) {
+    for (int i = 0; i < n && i < 7 && np < 2; i++) {
         uint32_t club = rd32(g_mem, table + (uint32_t)i * ROW_SIZE);
         if (!second_team(club)) pick[np++] = club;
     }
@@ -479,6 +493,20 @@ RT_WRAP(00594080, fin_second_playoffs)
         return;
     }
     uint32_t south = south_of(self);
+    if (log_on())       /* the name test and the link, for each Finnish club of the played and the picked divisions */
+        for (int i = 0; i < count; i++) {
+            uint32_t club = table + (uint32_t)i * CLUB_SIZE, div = rd32(g_mem, club + CLUB_DIVISION);
+            if (!finnish(club) || !(in_premier(div) || in_first(div) || in_second(div))) continue;
+            uint32_t f = second_team(club) ? first_team(club) : 0;
+            fprintf(stderr, "recomp: fin second: name: %.51s: %s%.51s\n", cname(club),
+                    !second_team(club) ? "first team" : f ? "second team of " : "second team, no first team found",
+                    f ? cname(f) : "");
+        }
+    if (test_rep())
+        for (int i = 0; i < count; i++) {
+            uint32_t club = table + (uint32_t)i * CLUB_SIZE;
+            if (in_second(rd32(g_mem, club + CLUB_DIVISION)) && second_team(club)) wr16(g_mem, club + CLUB_REPUTATION, 10000);
+        }
     if (test_top()) {
         test_to_top(self);
         test_to_top(south);
@@ -544,7 +572,7 @@ RT_WRAP(00594610, fin_second_premier_playoff)
     uint32_t stages = readable(self) ? rd32(g_mem, self + LEAGUE_STAGES) : 0;
     uint32_t s1 = readable(stages) ? rd32(g_mem, stages + 4) : 0;
     uint32_t slot = 0, was = 0;
-    if (self == league_of(KEY_FIRST) && readable(s1) && rule_on()) {
+    if (self == league_of(KEY_FIRST) && readable(s1) && season_game_changes()) {
         int n = (int16_t)rd16(g_mem, s1 + LEAGUE_CLUBS);
         uint32_t list = rd32(g_mem, s1 + STAGE_LIST);
         for (int i = 0; readable(list) && i < n && i < 8 && !slot; i++)
@@ -562,7 +590,7 @@ RT_WRAP(00594610, fin_second_premier_playoff)
                 }
         }
         was = slot ? rd32(g_mem, slot) : 0;
-        if (slot && second_team(was)) {
+        if (slot && second_team(was) && rule_on()) {
             /* The best placed club of its group that is not a second team and not in stage 1. */
             uint32_t group = row_of(self, was) ? self : south_of(self), pick = 0;
             int t;
@@ -602,7 +630,7 @@ RT_WRAP(00596110, fin_second_chain)
     uint32_t first = league_of(KEY_FIRST), south = south_of(first);
     uint32_t groups[2] = {first, south};
     const char *gname[2] = {"First Division North", "First Division South"};
-    if ((old_left > 0 && test_top()) || (test_late() && rule_on())) {
+    if ((old_left > 0 && test_top()) || test_late()) {
         /* An older save: stage 1's place (status 5) went to the second team with the best place in the groups. */
         uint32_t from = 0, to = 0;
         for (int g = 0; g < 2; g++) {
@@ -621,17 +649,30 @@ RT_WRAP(00596110, fin_second_chain)
                                   cname(rd32(g_mem, to)));
         }
     }
-    if (test_drop() && rule_on()) {
+    if (test_drop()) {
         /* The first team of each second team of the First Division goes down; the best placed club of status 3
          * that is not such a first team stays up in its place, so the pairs keep their count. */
-        uint32_t f[8];
-        int nf = 0;
-        for (int g = 0; g < 2; g++) {
-            int n;
-            uint32_t t = table_of(groups[g], &n);
-            for (int i = 0; i < n && nf < 8; i++) {
-                uint32_t c = rd32(g_mem, t + (uint32_t)i * ROW_SIZE), ft = second_team(c) ? first_team(c) : 0;
-                if (ft && row_of(prm, ft) && g_mem[row_of(prm, ft) + ROW_STATUS] != ST_DOWN) f[nf++] = ft;
+        /* f: the first teams that go down; mine: every first team of a second team of the groups or of the picks,
+         * none of which stays up in exchange. */
+        uint32_t f[8], mine[16];
+        int nf = 0, nm = 0;
+        uint32_t clubs = rd32(g_mem, CLUBS);
+        int count = (int)rd32(g_mem, CLUB_COUNT);
+        for (int g = 0; g < 3; g++) {
+            int n = 0;
+            uint32_t t = g < 2 ? table_of(groups[g], &n) : 0;
+            for (int i = 0; i < (g < 2 ? n : 4); i++) {
+                uint32_t c;
+                if (g < 2) {
+                    c = rd32(g_mem, t + (uint32_t)i * ROW_SIZE);
+                } else {
+                    uint32_t id = readable(first) ? rd32(g_mem, first + 0xee + 4u * (uint32_t)i) : 0xffffffffu;
+                    c = (int32_t)id >= 0 && (int)id < count ? clubs + id * CLUB_SIZE : 0;
+                }
+                uint32_t ft = c && second_team(c) ? first_team(c) : 0, fr = ft ? row_of(prm, ft) : 0;
+                if (!fr) continue;
+                if (nm < 16) mine[nm++] = ft;
+                if (g_mem[fr + ROW_STATUS] != ST_DOWN && nf < 8) f[nf++] = ft;
             }
         }
         int n;
@@ -639,9 +680,9 @@ RT_WRAP(00596110, fin_second_chain)
         for (int k = 0; k < nf; k++)
             for (int i = 0; i < n; i++) {
                 uint32_t row = t + (uint32_t)i * ROW_SIZE, c = rd32(g_mem, row);
-                int mine = 0;
-                for (int j = 0; j < nf; j++) mine |= f[j] == c;
-                if (g_mem[row + ROW_STATUS] != ST_DOWN || mine || second_team(c)) continue;
+                int linked = 0;
+                for (int j = 0; j < nm; j++) linked |= mine[j] == c;
+                if (g_mem[row + ROW_STATUS] != ST_DOWN || linked || second_team(c)) continue;
                 g_mem[row + ROW_STATUS] = ST_NONE;
                 g_mem[row_of(prm, f[k]) + ROW_STATUS] = ST_DOWN;
                 if (log_on()) fprintf(stderr, "recomp: fin second: test: %.51s goes down, %.51s stays up\n",
