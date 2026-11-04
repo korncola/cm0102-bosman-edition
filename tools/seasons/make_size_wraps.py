@@ -13,7 +13,8 @@ and then season_sizes_rules(this), which sets the places of the season in a seas
 
 The file is committed, because the recompiler reads the RT_WRAP lines of src/recomp_rt/win/*.c. --check
 writes nothing and exits with code 1 when the committed file differs from what the tool makes (ctest
-season_size_wraps). RT_WRAP stops the build when an address is not a translated function.
+season_size_wraps). Both modes stop when a floor is under a fixed row that another class reads (league_sizes.py
+ROW_READS, open item 113). RT_WRAP stops the build when an address is not a translated function.
 """
 import argparse
 import os
@@ -22,7 +23,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools", "recomp"))
-from league_sizes import CAPS, CLASSES, FLOOR_COUNT  # noqa: E402
+from league_sizes import CAPS, CLASSES, FLOOR_COUNT, ROW_READS  # noqa: E402
 
 OUT = os.path.join(ROOT, "src", "recomp_rt", "win", "season_size_wraps.c")
 
@@ -68,12 +69,27 @@ def make():
     return "\n".join(lines) + "\n"
 
 
+def row_read_faults(floors=None):
+    """The files whose floor is not above a fixed row that another class reads (ROW_READS, open item 113)."""
+    floors = FLOOR_COUNT if floors is None else floors
+    return [f"{f}: floor {floors.get(f, 0)} is under {need} clubs, and {why}"
+            for f, (need, why) in sorted(ROW_READS.items()) if floors.get(f, 0) < need]
+
+
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--check", action="store_true")
     a = ap.parse_args(argv)
     text = make()
+    faults = row_read_faults()
+    # The check itself: one count under each row must give a fault.
+    faults += [f"{f}: the row check finds no fault with a floor of {need - 1}" for f, (need, _w) in ROW_READS.items()
+               if not row_read_faults({**FLOOR_COUNT, f: need - 1})]
+    for line in faults:
+        print(f"make_size_wraps.py: {line}")
+    if faults:
+        return 1
     if a.check:
         have = open(a.out, encoding="utf-8").read() if os.path.exists(a.out) else ""
         if have != text:

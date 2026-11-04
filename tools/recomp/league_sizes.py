@@ -149,6 +149,18 @@ FLOORS = {"eng_conf", "eng_first", "eng_prm", "eng_second", "eng_third", "wel_fi
 # after 2001, 0x7cad4f), else its largest count.
 FLOOR_COUNT = {f: (18 if f == "pol_second" else CAPS[f]) for f in FLOORS}
 
+# Fixed rows that a class of another division reads in the table of a class here (open item 113): file: (count, why).
+# The count of the file (+0x3e, the store of CLASSES) must reach the count here in every season, or the row holds no
+# club. BelThird::create_promotion_playoff_stage 0x423880 puts the club of row 15 (+0x375, rows of 0x3b) of the
+# Belgian Second Division into its play-off (0x423a6a..0x423a80), through BelThird +0x1c, the key of the division
+# above. BelThird::advance_stage 0x423640 calls it once the Second Division is complete and BelThird's own stage
+# counter +0x30 reaches 7 (0x4236bf..0x4236f1). BelSecond::create_table 0x41fd70 always makes 18 rows (0x426 bytes at
+# 0x41fd7b), so the read stays inside the table, and stores the count at 0x41fd82: rt_league_clubs (season_sizes.c)
+# gives the clubs of the division there, up to the cap, with no floor. The floor keeps that number of clubs: it is the
+# target of the club moves at a new game (season_clubs.c class_size) and holds the exchange of the wrap of 0x689c80
+# (season_sizes.c). So with a floor of 16 or more, row 15 holds a club. tools/seasons/make_size_wraps.py checks it.
+ROW_READS = {"bel_second": (16, "BelThird::create_promotion_playoff_stage 0x423880 reads row 15 (0x423a6a..0x423a80)")}
+
 CUP_INSNS = {
     0x5BAB90: ("add ebx, 0xb8", "ebx = ebx + rt_cup_add(0xb8u, ebx, 222u, 0x9cf5d0u, 0x9cf5ccu);"),
     0x5BAC3C: ("add ebx, 0xb8", "ebx = ebx + rt_cup_add(0xb8u, ebx, 222u, 0x9cf5d0u, 0x9cf5ccu);"),
