@@ -3,7 +3,7 @@
 clubs starts with that number after the club moves, and Belgium's leagues move on at the 2026 season change.
 
 Usage:
-    python3 tests/seasons/class_count_run.py <cm0102_recomp> <game folder> [--only start,season] [--keep <folder>]
+    python3 tests/seasons/class_count_run.py <cm0102_recomp> <game folder> [--only start,season,irish] [--keep <folder>]
 
 The runs, each a season game with start year 2025 on data set 3.9.68 (no season database: its dates move to 2025),
 all nations, changing rules on, as a Tier A run:
@@ -21,6 +21,12 @@ all nations, changing rules on, as a Tier A run:
             the data lacks, and no Belgian club without a division to stand in for it.
     season  plays to the end of 2026/27 (about 30 minutes): no message box, and no Belgian division stalls at
             the 2026 season change (rules_report_check.league_stalls).
+    irish   a 2008/09 start on 3.9.68 (0.6.2 open item 123), to the start report: no message box, no short division
+            (except SHORT_OK), and the Irish Premier and First Division hold the clubs of the rules table (10 and
+            12, the 2009 League of Ireland). IrePrm::create_table 0x63a740 and IreFirst::create_table 0x635910 count
+            the clubs of the data (10 or 12, and 9 to 12). The club moves kept the database counts (12 and 10), the
+            2009 lists hold 10 and 12, and the First Division list kept all its clubs, so the Premier Division held
+            11 and the constructor IrePrm::IrePrm 0x639bb0 stopped at ire_prm..cpp 82 (push 0x52 at 0x639ca7).
 Without --keep the runs play in a temporary folder that the script deletes when every run passes.
 """
 import os
@@ -86,7 +92,28 @@ def run_season(program, game, work):
     return fails
 
 
-RUNS = {"start": run_start, "season": run_season}
+IRISH = {"ire_prm": 10, "ire_first": 12}
+
+
+def run_irish(program, game, work):
+    code, report = rrc.run(program, game, 2008, 2008, None, ["all"], [], work, 3600, OPTIONS, ENV, start_only=True)
+    fails = [] if code == 0 else [f"irish: the game ended with code {code}"]
+    found, log = boxes("irish", work)
+    fails += found
+    if "recomp: club moves of 2008/09:" not in log:
+        fails.append("irish: the club moves did not run (no seasons tables beside the program?)")
+    fails += [f"irish: {line}" for line in short_divisions(log)]
+    if not os.path.exists(report):
+        return fails + [f"irish: no report ({work})"]
+    _, comps = rrc.read_report(report)
+    for file, want in IRISH.items():
+        got = [c["clubs"] for c in comps if c["file"] == file and c["phase"] == "start" and c["season"] == 2008]
+        if got != [want]:
+            fails.append(f"irish: {file} holds {got} clubs at the start of 2008/09, not {want}")
+    return fails
+
+
+RUNS = {"start": run_start, "season": run_season, "irish": run_irish}
 
 
 def main(argv):
