@@ -74,7 +74,10 @@ A confederation check for every edition:
     entrant-confed entrants from another confederation than the rules give (also the short name's); in the World
                   Cup qualifying up to 2 teams of each other confederation pass (the play-off between
                   confederations); a nation with a due move to a confederation of the competition passes, and so
-                  does the winner of a route competition (a Mexican winner of the Copa Sudamericana in the Recopa)
+                  does the winner of a route competition (a Mexican winner of the Copa Sudamericana in the Recopa),
+                  and a club now in the confederation that its nation moved to after the edition's first day
+                  (nations.tsv; an edition that began before the move, as the Asian Club Championship of 2001/02
+                  with Kazakh clubs, its row year 2002). A club still in the confederation it leaves is checked
     entrant-count  a finals edition with another count of teams than the finals table of the season code
                   (season_intl_table.c; after its last row the count of the last row), or than access.tsv
     entrant-host   a host of the finals table that the data holds is not an entrant; after the table, the host of
@@ -591,6 +594,10 @@ def read_nations(path):
     out = []
     for r in tsv(path):
         month, day = (int(x) for x in r["from"].split("-"))
+        try:
+            datetime.date(int(r["season"]), month, day)
+        except ValueError:
+            raise SystemExit(f"{path}: {r['nation']} {r['season']}: the date {r['from']} does not exist")
         out.append({"kind": r["kind"], "season": int(r["season"]), "from": (month, day), "nation": r["nation"],
                     "to": r["to"]})
     return out
@@ -799,11 +806,11 @@ def entrants(game, rules, access, changes=()):
         key = rules.key(comp["name"])
         if key and comp.get("nation", -1) >= 0 and comp["nation"] in game.nations:
             route_nation[key] = game.nations[comp["nation"]][0]
-    moved, due_to = collections.defaultdict(list), collections.defaultdict(set)
+    moved, due_to = collections.defaultdict(list), collections.defaultdict(set)    # moved: (day of a move, to)
     renamed = {ch["nation"]: (ch["season"], ch["to"]) for ch in changes if ch["kind"] == "rename" and due(game, ch)}
     for ch in changes:
         if ch["kind"] == "confed":
-            moved[ch["nation"]].append(ch["season"])
+            moved[ch["nation"]].append((datetime.date(ch["season"], *ch["from"]).toordinal(), ch["to"]))
             if due(game, ch):
                 due_to[ch["nation"]].add(ch["to"])            # reported once, by check_nations
 
@@ -889,7 +896,7 @@ def entrants(game, rules, access, changes=()):
                     dead.append(f"{tname} ({nation}, {renamed[nation][1]} from {renamed[nation][0]})")
                 for shown, cs in confs:
                     if cs and conf and conf not in cs and not by_route and not due_to[nation] & cs and \
-                            not any(year < m for m in moved.get(nation, ())):
+                            not any(first < m and conf == to for m, to in moved.get(nation, ())):
                         foreign[(shown, "|".join(sorted(cs)))].append(f"{tname} ({conf})")
                 if won and done and year > game.start and not by_route and all(by_key.get(r) for r in won):
                     no_route.append((nation, conf, f"{tname} ({nation}) won none of {', '.join(won)} in {year} or the edition "
