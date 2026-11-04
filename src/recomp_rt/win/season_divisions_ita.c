@@ -818,6 +818,7 @@ static void regroup(uint32_t serie_a)
     if (total < 2 * GROUPS) return;
     RegroupLog l = {0, 0, 0, 0};
     int n = regroup_into(serie_a, rec, want, GROUPS, &l);
+    if (!rt_unwinding) season_ita_second_after_regroup();         /* open item 117 */
     if (rt_unwinding || !n) return;
     int y = (int16_t)rd16(g_mem, serie_a + 0x40) + 1;      /* the season that starts (the rules of s) */
     fprintf(stderr, "recomp: serie c %d/%02d: %d clubs in groups of %d, %d and %d (%d from the Serie D, %d with no "

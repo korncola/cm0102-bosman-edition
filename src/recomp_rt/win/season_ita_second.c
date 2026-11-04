@@ -26,29 +26,34 @@
  * Futuro to AC Milan (or Milan), Inter U23 to Internazionale (or Inter). Both clubs Italian.
  *
  * The fix (season games only, season_game_changes, as the other season code; with no second team nothing changes):
- * - Serie B: a second team never goes up to Serie A. Its row of status 0 or 5 takes 0xff (the status of a row that
- *   does not move, 0x689df4) and the best placed row of Serie B that does not move takes its status.
+ * - Serie B: a second team never goes up to Serie A. Its row of status 0 or 5 takes 0xff, so 0x689c80 does not move
+ *   it (it moves only rows of status 3 of the upper league and 0 or 5 of the lower, 0x689d26, 0x689d47..0x689d4e,
+ *   and writes 0xff on both rows of each pair it has moved, 0x689df4, 0x689dff), and the best placed row of Serie B
+ *   that does not move takes its status.
  * - The groups: a second team whose first team is not in Serie A after the exchange of Serie A and B does not go up.
  *   The same hand-on in its own group, and choose_promoted passes over it.
  * - Both in one division: a second team in Serie B whose first team plays Serie B or lower next season gets status
  *   3, and the best placed relegated club of Serie B stays up (0xff), so the pairs of 0x689c80 still match. A second
  *   team in Serie A (an old save) goes down the same way. After the chain, a second team still in its first team's
  *   division or above goes down one division at a time (League::relegate_club_to_division 0x6831a0), and the best
- *   placed club that went down from the division it leaves comes back (League::move_club_to_division 0x6830b0). From
- *   Serie C it goes to the Serie D.
+ *   placed club that went down from the division it leaves (its row, now 0xff or 3, and its club one division lower)
+ *   comes back (League::move_club_to_division 0x6830b0). From Serie C it goes to the Serie D, and the best placed
+ *   club of its group that went down to the Serie D comes back into the group.
  * - The Serie D by season: when the season that starts is before 2025/26, a second team in the Serie D data division
- *   leaves it (no division), so only the regroup's last pool (clubs with no division, by reputation, when the Serie D
- *   is short) can take it back, as the vacancy rule. From 2025/26 it stays in the Serie D.
+ *   leaves it (no division), after the chain and again after the regroup (its cut sends clubs to the Serie D). From a
+ *   later season only the regroup's last pool (clubs with no division, by reputation, when the Serie D is short) can
+ *   take it back, as the vacancy rule. From 2025/26 it stays in the Serie D.
  * - The regroup's pools pass over a second team whose first team plays Serie C or lower.
  * - The club moves of a new game (season_clubs.c) put no second team into Serie A or Serie B.
  *
  * Test switches. RECOMP_ITA_SECOND=off: the original's moves (the census log still runs). RECOMP_ITA_SECOND_LOG=1:
- * the census and every move. RECOMP_TEST_ITA_SECOND_TOP=1 (tests only): before the exchange, the first second team
- * of Serie B and of each group changes places with the club of row 0 (the first place, with its points and status;
- * the rows are in table order after the final sort), so it ends first. RECOMP_TEST_ITA_SECOND_BOTTOM=1 (tests only):
+ * a line at each change, the census and every move. RECOMP_TEST_ITA_SECOND_TOP=1 (tests only): before the exchange,
+ * the first second team of Serie B changes places with the club of row 0 (the first place, with its points and
+ * status; the rows are in table order after the final sort), and the first second team of each group with the club
+ * that choose_promoted takes first (status 0, else row 0), so it goes up unless the rule bars it. RECOMP_TEST_ITA_SECOND_BOTTOM=1 (tests only):
  * the first second team of each group changes places with the club of the last row (relegated).
- * RECOMP_TEST_ITA_SECOND_DOWN=<first team>[,<first team>] (tests only): that Serie A club swaps its status with the
- * best placed relegated row, so it goes down. RECOMP_TEST_ITA_SECOND_OLD=<n> (tests only): the original's moves for
+ * RECOMP_TEST_ITA_SECOND_DOWN=<first team>[,<first team>] (tests only): that club of Serie A or B swaps its status
+ * with the best placed relegated row of its division, so it goes down. RECOMP_TEST_ITA_SECOND_OLD=<n> (tests only): the original's moves for
  * the first n Italian season changes, as a game of an older build. */
 #include "win.h"
 #include "season.h"
@@ -258,7 +263,8 @@ static void hand_on(uint32_t table, int n, int i, const char *what)
     say("%s may not go up from %s", club_at(table, i), what);
     for (int j = 0; j < n; j++) {
         uint8_t t = status_at(table, j);
-        if (j == i || moves_up(t) || t == ST_DOWN || second_team(club_at(table, j))) continue;
+        if (j == i || moves_up(t) || t == ST_DOWN || !readable(club_at(table, j)) || second_team(club_at(table, j)))
+            continue;
         g_mem[row_at(table, j) + ROW_STATUS] = s;
         say("%s takes the place in %s", club_at(table, j), what);
         return;
@@ -270,7 +276,7 @@ static void hand_on(uint32_t table, int n, int i, const char *what)
 static int goes_down(uint32_t table, int n, int i, const char *what)
 {
     for (int j = 0; j < n; j++) {
-        if (status_at(table, j) != ST_DOWN || second_team(club_at(table, j))) continue;
+        if (status_at(table, j) != ST_DOWN || !readable(club_at(table, j)) || second_team(club_at(table, j))) continue;
         g_mem[row_at(table, j) + ROW_STATUS] = ST_NONE;
         g_mem[row_at(table, i) + ROW_STATUS] = ST_DOWN;
         say("%s goes down from %s", club_at(table, i), what);
@@ -305,6 +311,19 @@ static void swap_rows(uint32_t table, int i, int j)
     wr32(g_mem, row_at(table, j), c);
 }
 
+/* 1 when the club's name is one of the list (comma separated). */
+static uint32_t object_of(uint32_t key);
+
+static int named(const char *list, uint32_t club)
+{
+    char name[52];
+    name_of(club, name);
+    size_t len = strlen(name);
+    for (const char *p = list; len && (p = strstr(p, name)) != NULL; p++)
+        if ((p == list || p[-1] == ',') && (!p[len] || p[len] == ',')) return 1;
+    return 0;
+}
+
 /* The test switches (tests only), before the exchange of Serie A and B. */
 static void test_setup(uint32_t a, uint32_t b, const uint32_t *g, int groups)
 {
@@ -331,31 +350,36 @@ static void test_setup(uint32_t a, uint32_t b, const uint32_t *g, int groups)
             snprintf(st, sizeof st, " %d", status_at(table, i));
             say("test: row %s, status%s", club_at(table, i), st);
         }
-        for (int i = 1; i < n; i++)
-            if (pair_of(club_at(table, i)) >= 0) {
+        int lead = 0;
+        for (int i = 0; k >= 0 && i < n; i++)
+            if (status_at(table, i) == ST_UP) {
+                lead = i;
+                break;
+            }
+        for (int i = 0; i < n; i++)
+            if (i != lead && pair_of(club_at(table, i)) >= 0) {
                 say("test: %s ends first%s", club_at(table, i), "");
-                swap_rows(table, 0, i);
+                swap_rows(table, lead, i);
                 break;
             }
     }
-    const char *down = getenv("RECOMP_TEST_ITA_SECOND_DOWN");
-    table = down ? table_of(a, &n) : 0;
-    for (int i = 0; table && i < n; i++) {
-        char name[52];
-        name_of(club_at(table, i), name);
-        const char *p = strstr(down, name);
-        size_t len = strlen(name);
-        if (!len || !p || (p != down && p[-1] != ',') || (p[len] && p[len] != ',') || status_at(table, i) == ST_DOWN)
-            continue;
-        for (int j = 0; j < n; j++) {
-            char other[52];
-            name_of(club_at(table, j), other);
-            const char *q = strstr(down, other);
-            if (status_at(table, j) != ST_DOWN || (other[0] && q)) continue;     /* not a club of the switch */
-            g_mem[row_at(table, j) + ROW_STATUS] = status_at(table, i);
-            g_mem[row_at(table, i) + ROW_STATUS] = ST_DOWN;
-            say("test: %s goes down from Serie A%s", club_at(table, i), "");
-            break;
+    static const char *down;
+    static int read;
+    if (!read) {
+        down = getenv("RECOMP_TEST_ITA_SECOND_DOWN");
+        read = 1;
+    }
+    for (int k = 0; down && k < 2; k++) {
+        table = table_of(k ? b : a, &n);
+        for (int i = 0; table && i < n; i++) {
+            if (!named(down, club_at(table, i)) || status_at(table, i) == ST_DOWN) continue;
+            for (int j = 0; j < n; j++) {
+                if (status_at(table, j) != ST_DOWN || named(down, club_at(table, j))) continue;
+                g_mem[row_at(table, j) + ROW_STATUS] = status_at(table, i);
+                g_mem[row_at(table, i) + ROW_STATUS] = ST_DOWN;
+                say("test: %s goes down from %s", club_at(table, i), k ? "Serie B" : "Serie A");
+                break;
+            }
         }
     }
 }
@@ -364,6 +388,7 @@ void season_ita_second_before_ab(uint32_t a, uint32_t b, const uint32_t *g, int 
 {
     if (!season_game_changes()) return;
     switched_off();                     /* reads the switches */
+    if (log_on()) fprintf(stderr, "recomp: ita second: season change, rule %s\n", rule_on() ? "on" : "off");
     census("before");
     test_setup(a, b, g, groups);
     if (!rule_on()) return;
@@ -404,17 +429,29 @@ void season_ita_second_before_promoted(const uint32_t *g, int groups)
     }
 }
 
-/* The best placed club of league (a, b) that went down this change and now plays tier: it comes back up. */
+/* The best placed club of a league's table that went down this change: its club now plays tier, one division lower
+ * (0x689c80 wrote 0xff on its row, 0x689dff; the chain's relegation to the Serie D leaves 3). 0 when none. */
 static uint32_t comes_back(uint32_t league, int tier)
 {
     int n;
     uint32_t table = table_of(league, &n);
     for (int i = 0; i < n; i++) {
         uint32_t club = club_at(table, i);
-        if (status_at(table, i) == ST_DOWN && readable(club) && club_tier(club) == tier && !second_team(club))
-            return club;
+        if (readable(club) && club_tier(club) == tier && !second_team(club)) return club;
     }
     return 0;
+}
+
+/* The group whose table holds club (-1 when none). */
+static int group_of(uint32_t club)
+{
+    for (int k = 0; k < 3; k++) {
+        int n;
+        uint32_t table = table_of(object_of(C_KEYS[k]), &n);
+        for (int i = 0; i < n; i++)
+            if (club_at(table, i) == club) return k;
+    }
+    return -1;
 }
 
 static uint32_t object_of(uint32_t key)
@@ -424,6 +461,23 @@ static uint32_t object_of(uint32_t key)
     if (id < 0 || !readable(table)) return 0;
     uint32_t obj = rd32(g_mem, table + 4u * (uint32_t)id);
     return readable(obj) ? obj : 0;
+}
+
+/* The rule and the season of the last season change (settle), for the regroup that follows it. */
+static int change_on, change_season;
+
+/* The Serie D by season: before 2025/26 no second team plays it. */
+static void no_serie_d(void)
+{
+    if (!change_on || !change_season || change_season >= 2025) return;
+    uint32_t table = rd32(g_mem, CLUBS), serie_d = record_of(KEY_SERIE_D);
+    int count = (int)rd32(g_mem, CLUB_COUNT);
+    for (int i = 0; readable(table) && i < count; i++) {
+        uint32_t club = table + (uint32_t)i * CLUB_SIZE;
+        if (rd32(g_mem, club + CLUB_DIVISION) != serie_d || !second_team(club)) continue;
+        wr32(g_mem, club + CLUB_DIVISION, 0);
+        say("%s leaves the Serie D (no second team plays it before 2025/26)%s", club, "");
+    }
 }
 
 void season_ita_second_settle(uint32_t serie_a, int season, void (*down)(uint32_t serie_a, uint32_t club, uint32_t d))
@@ -438,8 +492,19 @@ void season_ita_second_settle(uint32_t serie_a, int season, void (*down)(uint32_
             int t1 = club_tier(first), t2 = club_tier(club);
             while (t2 <= t1 && t2 <= TIER_C && !rt_unwinding) {
                 if (t2 == TIER_C) {
+                    int k = group_of(club);
+                    uint32_t back = 0;
+                    for (int j = 0; j < 3 && !back; j++)
+                        back = comes_back(object_of(C_KEYS[k >= 0 ? (k + j) % 3 : j]), TIER_D);
                     down(serie_a, club, serie_d);
                     say("%s goes to the Serie D (its first team plays %s)", club, TIER_NAME[t1]);
+                    if (back && !rt_unwinding) {
+                        uint32_t p[3] = {back, record_of(C_KEYS[k >= 0 ? k : 0]), 1};
+                        call_this(F_PROMOTE_TO, serie_a, 3, p);
+                        say("%s comes back to %s", back, "Serie C");
+                    } else {
+                        say("%s: no club comes back to %s", club, "Serie C");
+                    }
                     break;
                 }
                 uint32_t to = record_of(t2 == TIER_A ? KEY_B : KEY_C1A);
@@ -451,21 +516,25 @@ void season_ita_second_settle(uint32_t serie_a, int season, void (*down)(uint32_
                     uint32_t p[3] = {back, record_of(t2 == TIER_A ? KEY_A : KEY_B), 1};
                     call_this(F_PROMOTE_TO, serie_a, 3, p);
                     say("%s comes back to %s", back, TIER_NAME[t2]);
+                } else {
+                    say("%s: no club comes back to %s", club, TIER_NAME[t2]);
                 }
                 t2++;
             }
         }
-    /* The Serie D by season: before 2025/26 no second team plays it. */
-    if (rule_on() && season && season < 2025)
-        for (int i = 0; readable(table) && i < count && !rt_unwinding; i++) {
-            uint32_t club = table + (uint32_t)i * CLUB_SIZE;
-            if (rd32(g_mem, club + CLUB_DIVISION) != serie_d || !second_team(club)) continue;
-            wr32(g_mem, club + CLUB_DIVISION, 0);
-            say("%s leaves the Serie D (no second team plays it before 2025/26)%s", club, "");
-        }
+    change_on = rule_on();
+    change_season = season;
+    no_serie_d();
     if (rt_unwinding) return;
     census("after");
     if (old_left > 0) old_left--;
+}
+
+void season_ita_second_after_regroup(void)
+{
+    if (!season_game_changes() || rt_unwinding) return;
+    no_serie_d();
+    census("regroup");
 }
 
 int season_ita_second_pool_skip(uint32_t club)

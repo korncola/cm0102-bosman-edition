@@ -22,4 +22,7 @@ void season_ita_second_settle(uint32_t serie_a, int season, void (*down)(uint32_
 /* The regroup's pools: 1 when an Italian second team may not join Serie C (its first team plays Serie C or lower). */
 int season_ita_second_pool_skip(uint32_t club);
 
+/* After the regroup of the Serie C era: the Serie D rule by season again (the regroup's cut sends clubs there). */
+void season_ita_second_after_regroup(void);
+
 #endif
