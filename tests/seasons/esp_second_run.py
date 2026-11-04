@@ -18,10 +18,13 @@ cases do not hang on match results. The report's club lines at each season start
              proves that the test sees the fault
     esp-old  an old save made in memory: RECOMP_TEST_ESP_SECOND_OLD=1 plays as the original to the end of the first
              change (the put sends Villarreal CF B up beside Villarreal CF), 2022 to 2024. At the second change
-             Villarreal CF B goes down from La Liga and La Liga keeps 20 clubs
-    por-on   May 2026, Portugal, 2025 to 2026. GD Chaves B (no key pair) plays a group of the third tier, GD Chaves
-             the Segunda Liga. The put gives GD Chaves B row 1 of its group. With the fix it stays in the third tier
-    por-off  the same with RECOMP_ESP_SECOND=off: GD Chaves B goes up into the Segunda Liga beside GD Chaves
+             the put gives it row 1 of La Liga (so the table does not send it down), it goes down from La Liga, and
+             La Liga and the Segunda keep their sizes
+    por-on   May 2026, Portugal, 2025 to 2026. Vitória Guimarães SC B (no key pair) plays the third tier (Liga 3),
+             Vitória Guimarães SC the Primeira Liga. The put gives Vitória row 18 (relegation) and its B side row 1
+             of its table. With the fix the B side stays in the third tier while its club comes down to the
+             Segunda Liga (0x7d0320 at 0x7d03b1)
+    por-off  the same with RECOMP_ESP_SECOND=off: the B side goes up into the Segunda Liga beside its club
     pool-on  the base game (3.9.68), Portugal, changing rules on, 2001 to 2002: the pool of the Second Division B
              of the database's zones (por_prm_exchange_second_b_with_lower 0x7cff70). RECOMP_TEST_ESP_SECOND_REP=1
              gives Sporting Clube Olhanense B (A Lower Division) the highest reputation; its club plays the Second
@@ -58,7 +61,7 @@ def read_report(path):
     out, names = {}, {}
     if not os.path.exists(path):
         return out
-    with open(path, encoding="utf-8", errors="replace") as f:
+    with open(path, encoding="cp1252", errors="replace") as f:
         rows = [line.rstrip("\n").split("\t") for line in f]
     for r in rows:
         if r[0] == "comp" and len(r) > 5 and r[2] == "start":
@@ -83,7 +86,15 @@ def sizes(report, season, files):
 ESP = dict(db="April 2023", nation="Spain", extra="spain", year=2022)
 POR = dict(db="May 2026", nation="Portugal", extra="portugal", year=2025)
 ESP_PUT = {"RECOMP_TEST_ESP_SECOND_PUT": "Villarreal CF:20,Villarreal CF B:2"}
-POR_PUT = {"RECOMP_TEST_ESP_SECOND_PUT": "GD Chaves B:1"}
+VITORIA, VITORIA_B = "Vitória Guimarães SC", "Vitória Guimarães SC B"
+
+
+def game_text(text):
+    """A name as the game holds it (Windows-1252 bytes), for an environment value."""
+    return text.encode("cp1252").decode("utf-8", "surrogateescape")
+
+
+POR_PUT = {"RECOMP_TEST_ESP_SECOND_PUT": game_text(f"{VITORIA}:18,{VITORIA_B}:1")}
 
 
 def esp(name, program, game, work, off):
@@ -114,7 +125,7 @@ def esp(name, program, game, work, off):
 
 
 def esp_old(program, game, work):
-    env = dict(ESP_PUT, RECOMP_TEST_ESP_SECOND_PUT="Villarreal CF B:2", RECOMP_TEST_ESP_SECOND_OLD="1")
+    env = {"RECOMP_TEST_ESP_SECOND_PUT": "Villarreal CF B:2@1,Villarreal CF B:1@2", "RECOMP_TEST_ESP_SECOND_OLD": "1"}
     fails, log, rep = jump("esp-old", program, game, work, last=2024, env=env, **ESP)
     mid, end = where(rep, 2023, "Villarreal CF B"), where(rep, 2024, "Villarreal CF B")
     print(f"esp-old: Villarreal CF B 2023 {mid}, 2024 {end}; La Liga 2023 {sizes(rep, 2023, ['spa_first'])}, "
@@ -134,22 +145,22 @@ def esp_old(program, game, work):
 def por(name, program, game, work, off):
     env = dict(POR_PUT, **({"RECOMP_ESP_SECOND": "off"} if off else {}))
     fails, log, rep = jump(name, program, game, work, last=2026, env=env, **POR)
-    if not re.search(r"esp second: test: GD Chaves B takes row 1", log):
-        fails.append(f"{name}: the put of GD Chaves B was not made (no Portuguese season change seen)")
-    first, then = where(rep, 2025, "GD Chaves B"), where(rep, 2026, "GD Chaves B")
-    senior = where(rep, 2026, "GD Chaves")
-    print(f"{name}: GD Chaves B {first} to {then}, GD Chaves {where(rep, 2025, 'GD Chaves')} to {senior}")
-    if first != "por_second_b":
-        fails.append(f"{name}: GD Chaves B starts in {first}, not the third tier (the case is not seen)")
-    if where(rep, 2025, "GD Chaves") != "por_second":
-        fails.append(f"{name}: GD Chaves starts in {where(rep, 2025, 'GD Chaves')}, not the Segunda Liga")
+    if not re.search(r"esp second: test: Vit.{1,2}ria Guimar.{1,2}es SC B takes row 1", log):
+        fails.append(f"{name}: the put of {VITORIA_B} was not made (no Portuguese season change seen)")
+    first, then = where(rep, 2025, VITORIA_B), where(rep, 2026, VITORIA_B)
+    senior = where(rep, 2026, VITORIA)
+    print(f"{name}: B side {first} to {then}, club {where(rep, 2025, VITORIA)} to {senior}")
+    if first != "por_second_b" or where(rep, 2025, VITORIA) != "por_prm":
+        fails.append(f"{name}: the case is not seen (B side in {first}, club in {where(rep, 2025, VITORIA)})")
+    if senior != "por_second":
+        fails.append(f"{name}: the club plays {senior} in 2026, not the Segunda Liga (the put did not relegate it)")
     if off:
         if then != "por_second":
-            fails.append(f"{name}: GD Chaves B did not go up with the switch off ({then}): the test does not see the "
+            fails.append(f"{name}: the B side did not go up with the switch off ({then}): the test does not see the "
                          "fault")
         return fails
-    if then == "por_second" or (then == senior and then):
-        fails.append(f"{name}: GD Chaves B plays {then} in 2026 beside GD Chaves ({senior})")
+    if then in ("por_prm", "por_second"):
+        fails.append(f"{name}: the B side plays {then} in 2026 beside or above its club")
     return fails
 
 

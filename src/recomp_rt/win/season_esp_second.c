@@ -90,8 +90,9 @@
  *
  * Switches: RECOMP_ESP_SECOND=off (test switch) gives the original everywhere. RECOMP_ESP_SECOND_LOG=1 logs each new
  * link, each move, and a census of the reserve sides at each season change. RECOMP_TEST_ESP_SECOND_PUT="<club>:<row>
- * [,...]" (tests only) swaps the club of each name with the club of that row (1 = top) of its own table at the first
- * Spanish or Portuguese season change, before the original reads the table: the statuses stay with the rows.
+ * [@<k>][,...]" (tests only) swaps the club of each name with the club of that row (1 = top) of its own table at the
+ * first (or the k-th) season change of its nation, before the original reads the table: the statuses stay with the
+ * rows.
  * RECOMP_TEST_ESP_SECOND_REP=1 (tests only) gives the Portuguese B and C sides of the pool of 0x7cff70 the highest
  * reputation before the call.
  * RECOMP_TEST_ESP_SECOND_OLD=<n> (tests only) plays as the original until n season changes of each nation are done,
@@ -131,14 +132,11 @@
 typedef struct {
     const char *name;
     uint32_t nation, top, second, third, below;     /* keys: the nation, the four tiers (record of the third) */
-    uint32_t groups[4];                              /* keys of the groups of the third tier (club +0x60, 0x850b30) */
     int changes;                                     /* season changes seen (RECOMP_TEST_ESP_SECOND_OLD) */
 } Nation;
 
-static Nation SPAIN = {"Spain", 0x9cf488u, 0x9cf624u, 0x9cf628u, 0x9cf7b8u, KEY_LOWER,
-                       {0x9cf62cu, 0x9cf630u, 0x9cf634u, 0x9cf638u}, 0};
-static Nation PORTUGAL = {"Portugal", 0x9cf434u, 0x9cf60cu, 0x9cf610u, 0x9cf7c0u, 0x9cf620u,
-                          {0x9cf614u, 0x9cf618u, 0x9cf61cu, 0}, 0};
+static Nation SPAIN = {"Spain", 0x9cf488u, 0x9cf624u, 0x9cf628u, 0x9cf7b8u, KEY_LOWER, 0};
+static Nation PORTUGAL = {"Portugal", 0x9cf434u, 0x9cf60cu, 0x9cf610u, 0x9cf7c0u, 0x9cf620u, 0};
 
 /* The return addresses of the calls of 0x540a50 that the link serves. */
 static const uint32_t ASK_SENIOR[] = {0x855c1cu, 0x850103u, 0x8501e3u, 0x8502a3u, 0x8504ceu, 0x7cfe61u, 0x7d15fcu,
@@ -402,8 +400,10 @@ static int above_of(uint32_t club, uint32_t up[2])
     return k;
 }
 
-/* The tier of a division of a nation: 1 to 3 for the divisions the code plays (the third: its record, or one of its
- * groups as the database holds them), 4 for any other, 5 for none. */
+/* The tier of a division of a nation: 1 to 3 for the divisions the code plays (a club of the third tier has its
+ * record as division and its group at +0x60, as 0x850b09..0x850b30 reads it; a group record of the database that
+ * the new form does not play, such as Spanish Second Division B3 from 2021/22, is no part of it), 4 for any other,
+ * 5 for none. */
 static int tier_of(const Nation *n, uint32_t div)
 {
     if (!readable(div)) return 5;
@@ -411,8 +411,6 @@ static int tier_of(const Nation *n, uint32_t div)
     if (id == (int32_t)rd32(g_mem, n->top)) return 1;
     if (id == (int32_t)rd32(g_mem, n->second)) return 2;
     if (id == (int32_t)rd32(g_mem, n->third)) return 3;
-    for (int g = 0; g < 4 && n->groups[g]; g++)
-        if (id == (int32_t)rd32(g_mem, n->groups[g])) return 3;
     return 4;
 }
 
@@ -628,18 +626,24 @@ static void census(const Nation *n, const char *when)
             n->name, when, per[1], per[2], per[3], high);
 }
 
-/* RECOMP_TEST_ESP_SECOND_PUT: each named club changes places with the club of a row of its own table. */
+/* RECOMP_TEST_ESP_SECOND_PUT: each named club changes places with the club of a row of its own table, at the first
+ * season change of its nation, or at the k-th with "<club>:<row>@<k>". */
 static void test_put(const Nation *n)
 {
-    static int done = 0;
     const char *v = getenv("RECOMP_TEST_ESP_SECOND_PUT");
-    if (!v || done) return;
+    if (!v) return;
     char buf[512];
     snprintf(buf, sizeof buf, "%s", v);
-    int used = 0;
-    for (char *item = strtok(buf, ","); item; item = strtok(NULL, ",")) {
+    char *save = NULL;
+    for (char *item = strtok_r(buf, ",", &save); item; item = strtok_r(NULL, ",", &save)) {
+        char *at = strrchr(item, '@');
+        int when = 1;
+        if (at) {
+            *at = 0;
+            when = atoi(at + 1);
+        }
         char *colon = strrchr(item, ':');
-        if (!colon) continue;
+        if (!colon || when != n->changes) continue;
         *colon = 0;
         int want = atoi(colon + 1) - 1;
         uint32_t club = find_named(n, item, strlen(item), NULL);
@@ -654,14 +658,12 @@ static void test_put(const Nation *n)
                 uint32_t a = t + (uint32_t)i * ROW_SIZE, b = t + (uint32_t)want * ROW_SIZE;
                 wr32(g_mem, a, rd32(g_mem, b));
                 wr32(g_mem, b, club);
-                used = 1;
                 fprintf(stderr, "recomp: esp second: test: %.51s takes row %d (status %d) from %.51s\n", item, want + 1,
                         g_mem[b + ROW_STATUS], name_of(rd32(g_mem, a)));
                 break;
             }
         }
     }
-    done = used;
 }
 
 /* SpaFirst::resolve_b_team_clashes 0x850970 and PorPrm::apply_b_team_promotion_limits 0x7d0320: thiscall, no
