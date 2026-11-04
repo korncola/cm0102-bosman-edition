@@ -98,7 +98,7 @@ def run_off(program, game, work):
     seen = changes(log)
     if not seen:
         return fails + ["off: no Belgian season change seen"]
-    if not seen[0][1][1]:
+    if seen[0][1] is None or not seen[0][1][1]:
         fails.append(f"off: no U23 side went up to the First Division ({seen[0][1]}; the test does not see the fault)")
     direct, plays = playoffs(log)
     if direct or len(plays) < 2:
@@ -111,6 +111,8 @@ def check_on(name, log, seen):
     if not seen:
         return fails + [f"{name}: no Belgian season change seen"]
     before, after, _b, lv, lines = seen[0]
+    if after is None:
+        return fails + [f"{name}: the first change has no census after it"]
     if after[1]:
         fails.append(f"{name}: {after[1]} U23 sides in the First Division after the change")
     if not any("may not go up from level 2" in l for l in log.splitlines()):
@@ -136,6 +138,8 @@ def run_on(program, game, work):
     if lv.get("KAA Gent B") != 2:
         fails.append(f"on: KAA Gent B (first team in the First Division) is at level {lv.get('KAA Gent B')} after "
                      f"the change, want 2")
+    if not re.search(r"after: Beerschot V\.A U23 at level \d, first team Beerschot VA at level 1", log):
+        fails.append("on: Beerschot V.A U23 is not linked to Beerschot VA in the First Division (the case is not seen)")
     if any("may not go up into its first team's division" in l and "Beerschot" in l for l in log.splitlines()):
         fails.append("on: Beerschot V.A U23 (first team in the First Division) was held in the Fourth Division")
     if not any("the shield of 2024/25 keeps KRC Genk B up" in l for l in lines) or lv.get("KRC Genk B") != 2:
@@ -167,9 +171,11 @@ def run_old1(program, game, work):
     fails += sizes("old1", seen)
     if len(seen) < 2:
         return fails + [f"old1: {len(seen)} Belgian season changes seen, want 2"]
-    if not seen[0][1][1]:
+    if seen[0][1] is None or not seen[0][1][1]:
         fails.append("old1: no U23 side went up as the original in the first change (no old save made)")
     before, after, _b, _a, lines = seen[1]
+    if after is None:
+        return fails + ["old1: change 2 has no census after it"]
     print(f"old1: change 2: before {before}, after {after}")
     if not before[1]:
         fails.append("old1: no U23 side in the First Division before change 2 (the test sees no case)")

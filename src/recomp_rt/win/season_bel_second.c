@@ -38,29 +38,32 @@
  *   first teams "Jong Westel". Its first team is the Belgian club of the name without that word, or the name of a
  *   small exception table (RSC Charleroi B, Zulte-Waregem B, Beerschot V.A U23, Standard de Liège 16 FC).
  * - In the season: before 0x420680 every U23 side of the Second Division gets 0xfc; before 0x422f70 each U23 side
- *   of the Third Division whose first team plays in the Second Division or lower gets 0xfc. So the next clubs take
- *   the title, the promotion places, the periods and the play-offs. A row that already holds such a place (a save
- *   of an older build made after the table was complete) hands it to the best placed row of 0xff (hand_on); the
- *   play-off builders 0x420230 and 0x423880 do the same first.
+ *   of the Third Division whose first team plays in the Second Division or lower next season (its level now, moved
+ *   by its status once its table sets one) gets 0xfc, and gets 0xff back when that no longer holds. So the next
+ *   clubs take the title, the promotion places, the periods and the play-offs. A row that already holds such a
+ *   place (a save of an older build made after the table was complete) hands it to the best placed row of 0xff
+ *   (hand_on); the play-off builders 0x420230 and 0x423880 do the same first.
  * - The Fourth Division list: for the call of 0x423ba0 a U23 side of the four Fourth Divisions whose first team
- *   plays in the Third Division or lower reads as no division, so it is no part of the four that go up or of the
- *   relegation play-off (the original's own way for Spain, 0x8504c9..0x8504ec; see season_nor_second.c).
- * - At the season change, before 0x41ee80: (1) a U23 side in the First Division (an old save) gets 3 and the best
- *   placed club of 3 there stays up (0xff), as the moves go in pairs; (2) the shield (2020/21 and 2024/25, and
- *   2025/26 when no U23 side goes up from the Third Division): a U23 side of the Second Division with 3 by the
- *   table gets 0xff, and the club just above the relegation places gets 3 in its place (the division holds 18 in
- *   the game, so fewer clubs cannot go down as in real life); (3) a U23 side of the Second Division whose first
- *   team plays there or lower next season (its first team relegated from the First Division, or an old save) gets
- *   3 and the best placed club of 3 stays up; (4) a U23 side of the Third Division that goes up (0 or 5) to the
- *   division of its first team next season hands the place to the best placed row of 0xff of its group; (5) a U23
- *   side of the Third Division whose first team plays in the Third Division or lower next season gets 3 and the
- *   best placed club of 3 of its group stays up. A U23 side with more such sides than clubs of 3 stays one more
- *   season (logged).
+ *   plays in the Third Division or lower next season reads as no division, so it is no part of the four that go up
+ *   or of the relegation play-off (the original's own way for Spain, 0x8504c9..0x8504ec; see season_nor_second.c).
+ * - At the season change, before 0x41ee80, in this order: (1) a U23 side in the First Division (an old save) gets
+ *   3 and the best placed club of 3 there stays up (0xff), as the moves go in pairs; (2) a U23 side of the Third
+ *   Division that goes up (0 or 5) to the division of its first team next season hands the place to the best
+ *   placed row of 0xff of its group; (3) the shield (2020/21 and 2024/25, and 2025/26 when no U23 side goes up from
+ *   the Third Division after step 2): a U23 side of the Second Division with 3 by the table gets 0xff, and the club
+ *   just above the relegation places gets 3 in its place (the division holds 18 in the game, so fewer clubs cannot
+ *   go down as in real life); (4) a U23 side of the Second Division whose first team plays there or lower next
+ *   season (its first team relegated from the First Division, or an old save) gets 3 and the best placed club of 3
+ *   stays up; (5) a U23 side of the Third Division whose first team plays in the Third Division or lower next season
+ *   gets 3 and the best placed club of 3 of its group stays up. A U23 side with more such sides than clubs of 3
+ *   stays one more season (logged). A U23 side sent down from the First Division whose first team plays in the
+ *   Second Division shares its division for one season, until step 4 of the next change.
  * - Open item 124, from 2015/16: for the call of BelThird::create_promotion_playoff_stage 0x423880 the row 15 that
  *   it reads (+0x375, 0x423a80) holds the next club of the Third Division (the best placed row of 0xff that the
  *   original does not put in, the more points of the two groups, group A on a tie), and the Second Division's 16th
- *   (status 2, the place of the relegation play-off) gets 3. The results go through BelThird::update_staff_records_
- *   for_status 0x4230d0, which gives a club of this division 0 when it wins (0x4231b2) and 0xfe when it loses.
+ *   gets 3. Its place is that of the relegation play-off: status 2, or 0xfc for a U23 side (another status is a
+ *   fault: logged, and the original plays). The results go through BelThird::update_staff_records_for_status
+ *   0x4230d0, which gives a club of this division 0 when it wins (0x4231b2) and 0xfe when it loses (0x423204).
  * Accepted effects: a club that stays up or takes a place keeps the news of its earlier status, and the 16th gets
  * no news of its direct relegation (0x684cd0 and 0x4230d0 send them through vtable +0x40 when they set a status).
  * Not built (no rule text or no way in the game): the quota of four U23 sides (2025/26) and the 2026/27
@@ -312,13 +315,14 @@ static int next_level(uint32_t club)
 }
 
 /* 1 when a row of this level may not go up: in the Second Division every U23 side (never into the top tier), in
- * the Third Division a U23 side whose first team plays in the Second Division or lower. */
+ * the Third Division a U23 side whose first team plays in the Second Division or lower next season (next_level:
+ * its level now, moved by a status of promotion or relegation once its table sets one). */
 static int barred_up(uint32_t club, int level)
 {
     if (!u23(club)) return 0;
     if (level <= 2) return 1;
     uint32_t first = parent_of(club);
-    return first && level_of(first) >= level - 1;
+    return first && next_level(first) >= level - 1;
 }
 
 static int up_status(int s) { return s == ST_TITLE || s == ST_UP || s == ST_PLAYOFF; }
@@ -352,7 +356,8 @@ static void hand_on(uint32_t league, int level, const char *when)
     }
 }
 
-/* Each barred row gets 0xfc (one with 3 keeps it), so 0x684cd0 gives its places to the next rows. */
+/* Each barred row gets 0xfc (one with 3 keeps it), so 0x684cd0 gives its places to the next rows. A U23 side that
+ * is no longer barred (its first team now goes up) gets 0xff back. No other Belgian row gets 0xfc. */
 static void mark(uint32_t league, int level)
 {
     hand_on(league, level, "in the season");
@@ -361,6 +366,12 @@ static void mark(uint32_t league, int level)
     for (int i = 0; i < n; i++) {
         uint32_t row = row_at(table, i), club = rd32(g_mem, row);
         int s = g_mem[row + ROW_STATUS];
+        if (s == ST_BARRED && u23(club) && !barred_up(club, level)) {
+            g_mem[row + ROW_STATUS] = ST_NONE;
+            if (log_on()) fprintf(stderr, "recomp: bel second: %.51s may go up from level %d again\n", name_of(club),
+                                  level);
+            continue;
+        }
         if (s == ST_DOWN || s == ST_BARRED || !barred_up(club, level)) continue;
         g_mem[row + ROW_STATUS] = ST_BARRED;
         if (log_on()) fprintf(stderr, "recomp: bel second: %.51s may not go up from level %d\n", name_of(club), level);
@@ -377,7 +388,7 @@ static void test_points(uint32_t league)
         uint32_t row = row_at(table, i);
         const char *name = name_of(rd32(g_mem, row));
         size_t len = strlen(name);
-        for (const char *p = spec; (p = strstr(p, name)) != NULL; p++) {
+        for (const char *p = len ? spec : ""; (p = strstr(p, name)) != NULL; p++) {
             if ((p != spec && p[-1] != ';') || p[len] != '=') continue;
             int pts = (int16_t)rd16(g_mem, row + ROW_POINTS);
             if (p[len + 1] == '+' && pts < 150) wr16(g_mem, row + ROW_POINTS, (uint16_t)(pts + 300));
@@ -479,7 +490,16 @@ RT_WRAP(00423880, bel_third_playoff)
         return;
     }
     uint32_t club = rd32(g_mem, next);
-    if (g_mem[slot + ROW_STATUS] == ST_DOWN_PLAYOFF) g_mem[slot + ROW_STATUS] = ST_DOWN;
+    /* The place of the relegation play-off: 2, or 0xfc for a U23 side, which that zone never gives 2 (0x685274..
+     * 0x68527f: only a row of 0xff or 0xfe). */
+    int s15 = g_mem[slot + ROW_STATUS];
+    if (s15 != ST_DOWN_PLAYOFF && s15 != ST_BARRED) {
+        fprintf(stderr, "recomp: bel second: fault: %.51s (row 16) has status %d, not the place of the relegation "
+                        "play-off; it plays as in the original\n", name_of(sixteenth), s15);
+        o_00423880();
+        return;
+    }
+    g_mem[slot + ROW_STATUS] = ST_DOWN;
     if (log_on())
         fprintf(stderr, "recomp: bel second: %.51s goes down directly (status %d), %.51s (%d points) takes its "
                         "play-off place\n", name_of(sixteenth), g_mem[slot + ROW_STATUS], name_of(club),
@@ -490,7 +510,7 @@ RT_WRAP(00423880, bel_third_playoff)
 }
 
 /* BelThird::create_relegation_playoff_stage 0x423ba0, thiscall, no arguments: lists the clubs of the four Fourth
- * Divisions. A U23 side whose first team plays in the Third Division or lower is no part of the list. */
+ * Divisions. A U23 side whose first team plays in the Third Division or lower next season is no part of the list. */
 void o_00423ba0(void);
 RT_WRAP(00423ba0, bel_fourth_list)
 {
@@ -509,7 +529,7 @@ RT_WRAP(00423ba0, bel_fourth_list)
         uint32_t club = table + (uint32_t)i * CLUB_SIZE;
         if (level_of(club) != 4 || !u23(club)) continue;
         uint32_t first = parent_of(club);
-        if (!first || level_of(first) < 3) continue;         /* its first team plays above the Third Division */
+        if (!first || next_level(first) < 3) continue;       /* its first team plays above the Third Division */
         if (listed - nheld <= 16) {             /* the list needs 16 clubs (0x423c7d) */
             fprintf(stderr, "recomp: bel second: %.51s stays in the Fourth Division list (16 clubs left)\n",
                     name_of(club));
@@ -696,9 +716,9 @@ RT_WRAP(0041ee80, bel_second_chain)
         hand_on(second, 2, "at the season change");
         for (int l = 0; l < nt; l++) hand_on(third[l], 3, "at the season change");
         send_down(first, 1, "the First Division");
+        for (int l = 0; l < nt; l++) third_up(third[l]);
         if (season == 2020 || season == 2024 || (season == 2025 && !u23_goes_up_from_third())) shield(second, season);
         send_down(second, 2, "the Second Division");
-        for (int l = 0; l < nt; l++) third_up(third[l]);
         for (int l = 0; l < nt; l++) send_down(third[l], 3, l ? "Third Division group B" : "Third Division group A");
     }
     o_0041ee80();
@@ -710,7 +730,8 @@ RT_WRAP(0041ee80, bel_second_chain)
 
 int season_bel_barred(uint32_t club, uint32_t div)
 {
-    if (switched_off() || !readable(club) || !readable(div) || !u23(club)) return 0;
+    int season = season_change_is_creating() ? season_start_year() : season_now();
+    if (switched_off() || season < BAR_FROM || !readable(club) || !readable(div) || !u23(club)) return 0;
     int level = level_of_div(div);
     if (level == 1) return 1;
     uint32_t first = parent_of(club);

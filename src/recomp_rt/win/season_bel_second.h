@@ -6,7 +6,9 @@
 #include <stdint.h>
 
 /* 1 when club (a club record) is a Belgian U23 side and div (a club_comp record) is the Belgian First Division, or a
- * division at the level of its first team or above: the club moves of a new game do not put it there. */
+ * division at the level of its first team or above, in a season from 2020/21: the club moves of a new game do not
+ * put it there. The first team's division is the one it holds at the call (the data's, before the moves place it),
+ * as the moves keep their choices in their own list. */
 int season_bel_barred(uint32_t club, uint32_t div);
 
 #endif
