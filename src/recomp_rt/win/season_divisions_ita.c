@@ -591,9 +591,10 @@ static void choose_promoted(uint32_t b, const uint32_t *g, int no_c)
     }
     typedef struct { int g, k, st, rank, points; uint32_t club; } Cand;   /* st: the row's status, for the log */
     Cand c[GROUPS * MAX_CLUBS];
-    int n = 0;
+    int n = 0, read[GROUPS] = {0, 0, 0};
     for (int i = 0; i < GROUPS && !rt_unwinding; i++) {
         int rows = g[i] && !(no_c && i == 2) ? (int16_t)rd16(g_mem, g[i] + 0x3e) : 0;
+        read[i] = rows > 0;
         for (int k = 0; k < rows && k < MAX_CLUBS && n < GROUPS * MAX_CLUBS; k++) {
             int st = 0;
             uint32_t club = row_club(g[i], k, &st);
@@ -621,8 +622,11 @@ static void choose_promoted(uint32_t b, const uint32_t *g, int no_c)
                     "ABC"[c[i].g], c[i].st);
         } else if (c[i].rank < 2) set_status(g[c[i].g], c[i].k, 0xff);
     }
-    fprintf(stderr, "recomp: serie c: %d up to Serie B (groups A %d, B %d, C %d), %d down from Serie B%s\n",
-            up[0] + up[1] + up[2], up[0], up[1], up[2], want, no_c ? ", group C not read" : "");
+    /* A group with no rows read: C2/A at the change into the era with the extra division (no_c), or group C made at
+     * the change into the era without it (it played no season). */
+    fprintf(stderr, "recomp: serie c: %d up to Serie B (groups A %d, B %d, C %d), %d down from Serie B%s%s%s\n",
+            up[0] + up[1] + up[2], up[0], up[1], up[2], want, read[0] ? "" : ", group A not read",
+            read[1] ? "" : ", group B not read", read[2] ? "" : ", group C not read");
 }
 
 /* The chain of the Serie C era, in place of ItaSerA::process_promotion_relegation_chain 0x642410. */

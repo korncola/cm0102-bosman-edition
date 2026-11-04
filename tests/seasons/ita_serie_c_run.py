@@ -101,8 +101,9 @@ def check_moves(name, log):
         m = re.search(r"serie c: (\d+) up to Serie B", line)
         if not m:
             continue
-        # The change into the era with the extra division reads no group C (C2/A played as a C2 group).
-        groups = ["A", "B"] if "group C not read" in line else ["A", "B", "C"]
+        # A group with no rows read has no winner: C2/A at the change into the era with the extra division (it played
+        # as a C2 group), or group C made at the change into the era without it.
+        groups = [x for x in "ABC" if f"group {x} not read" not in line]
         winners = sorted(g for g, st in clubs if st == 5)
         others = [st for g, st in clubs if st != 5]
         if len(clubs) != int(m.group(1)):
@@ -244,7 +245,7 @@ def run_load(name, extra, table=None):
             fails.append(f"{name}: a message box after the load ({again}/stderr.txt)")
         # The save is of 2014/15, a season of the era, so group C sends clubs up at the change into 2015/16 (item 126
         # review: with no rules table every change of a game with the extra division passed over group C).
-        if "group C not read" in out:
+        if re.search(r"group [ABC] not read", out):
             fails.append(f"{name}: the change after the load passed over group C in the choice of the clubs that go up")
         if table and "rules table: none" not in out:
             fails.append(f"{name}: the load had a rules table")
