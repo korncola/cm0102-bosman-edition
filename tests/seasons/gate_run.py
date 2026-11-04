@@ -56,14 +56,9 @@ STOP_DAY = 244                      # 1 September, the day of the year from 0
 ENDS = {2001: 2004, 2002: 2006, 2003: 2006, 2004: 2008, 2005: 2008, 2006: 2010, 2007: 2010, 2008: 2012, 2009: 2012,
         2010: 2014, 2011: 2014, 2012: 2016, 2013: 2016, 2014: 2018, 2015: 2018, 2016: 2021, 2017: 2021, 2018: 2023,
         2019: 2023, 2020: 2023, 2021: 2024, 2022: 2024, 2023: 2026, 2024: 2028, 2025: 2028, 2026: 2030}
-# The start of the name of each year's database folder.
-DATES = {2003: "October 2003", 2005: "September 2005", 2007: "November 2007", 2008: "September 2008",
-         2009: "September 2009", 2010: "September 2010", 2011: "September 2011", 2012: "September 2012",
-         2013: "Autumn 2013", 2014: "October 2014", 2015: "October 2015", 2016: "October 2016", 2017: "October 2017",
-         2018: "October 2018", 2019: "October 2019", 2020: "November 2020", 2021: "October 2021",
-         2022: "October 2022", 2023: "October 2023", 2024: "October 2024", 2025: "December 2025",
-         2026: "October 2026"}
-OWN = {2002: "Summer 2002", 2004: "Summer 2004", 2006: "Summer 2006"}
+# The start of the name of each year's database folder, and the own databases: one table with rules_report_check.py.
+DATES = rrc.SEASON_DATABASES
+OWN = rrc.OWN_DATABASES
 RUN8 = [str(y) for y in range(2001, 2027)] + ["2001off", "2006off", "2011off", "2016off", "2021off", "2014c2"]
 LOCK = threading.Lock()
 
@@ -98,13 +93,7 @@ def database(y, o):
     return ["--database", data_folder(os.path.join(o["databases"], names[0]))], DATES[y]
 
 
-def data_folder(path):
-    """The folder of index.dat: the folder itself, or its one subfolder that holds it (the October 2026 zip unpacks
-    to "October 2026/October 2026 Data Update")."""
-    if os.path.isfile(os.path.join(path, "index.dat")):
-        return path
-    subs = [os.path.join(path, n) for n in sorted(os.listdir(path)) if os.path.isfile(os.path.join(path, n, "index.dat"))]
-    return subs[0] if len(subs) == 1 else path
+data_folder = rrc.data_folder
 
 
 def lines(cmd):

@@ -10,7 +10,8 @@ Usage:
     python3 tests/seasons/rules_report_check.py --run <cm0102_recomp> <game folder> [--year y] [--last y]
         [--database <folder>] [--nations england|all|all,-<name>,...|<name,name,...>]
         [--extra conference,regional,c2,spain,portugal]
-        [--keep <folder>] [--timeout s] [--start-only] [--update-expected] [--changing-rules on|off]
+        [--databases <folder>] [--own-dbs <folder>] [--keep <folder>] [--timeout s] [--start-only]
+        [--update-expected] [--changing-rules on|off]
         plays the season jump, then compares its report
 
     python3 tests/seasons/rules_report_check.py --league-advance <report> [<report> ...]
@@ -29,9 +30,13 @@ RECOMP_SEASON_JUMP=<last> turns the match engine off, so the original's quick re
 in the real day loop. RECOMP_RULES_REPORT writes the competitions at the start of each season (the first day,
 then 1 August) and at its end (1 June of the next year) (src/recomp_rt/win/season_report.c). The run ends after
 the end report of the last season. --year starts the game in that season (RECOMP_START_SEASON) with the
-database folder. --nations picks the leagues on the Select League(s) screen: england (the default
-selection), all (Select All), all,-france (Select All, then France out), or names of the first 16 rows
-(Argentina to Norway). --extra adds the lower
+database folder. Without --database a start year plays the database that its expected files were written on
+(docs/research/2026-10-21-expected-files-060.md; 0.6.2 open item 129): the folder of --databases (default
+/Users/max/Projects/cm0102/test-fixtures/databases) whose name starts with SEASON_DATABASES[year], or for 2004 and
+2006 our own database (Summer 2004.zip, Summer 2006.zip in --own-dbs, default /Users/max/Projects/cm0102/own-dbs),
+unpacked for the run and deleted after it. 2001 and 2002 play the base data (3.9.68). --nations picks the leagues on
+the Select League(s) screen: england (the default selection), all (Select All), all,-france (Select All, then
+France out), or names of the first 16 rows (Argentina to Norway). --extra adds the lower
 divisions of the screen: the English Conference, the German regional divisions and Serie C2. --changing-rules on
 plays the jump with changing rules on (slice 22; the default is off, the start season's rules). --keep keeps the
 report and the log there.
@@ -90,8 +95,10 @@ import os
 import struct
 import subprocess
 import sys
+import shutil
 import tempfile
 import time
+import zipfile
 
 
 # Friendly competitions: made by chance, not in the rules table.
@@ -844,6 +851,69 @@ def run(program, game, last, year, database, nations, extra, keep, timeout, opti
     return code, report
 
 
+DATABASES = "/Users/max/Projects/cm0102/test-fixtures/databases"
+# The start of the name of each start year's season database folder (gate_run.py plays the same folders).
+SEASON_DATABASES = {2003: "October 2003", 2005: "September 2005", 2007: "November 2007", 2008: "September 2008",
+                    2009: "September 2009", 2010: "September 2010", 2011: "September 2011", 2012: "September 2012",
+                    2013: "Autumn 2013", 2014: "October 2014", 2015: "October 2015", 2016: "October 2016",
+                    2017: "October 2017", 2018: "October 2018", 2019: "October 2019", 2020: "November 2020",
+                    2021: "October 2021", 2022: "October 2022", 2023: "October 2023", 2024: "October 2024",
+                    2025: "December 2025", 2026: "October 2026"}
+# Our own season databases, zips in OWN_DBS (gate_run.py --own-dbs).
+OWN_DBS = "/Users/max/Projects/cm0102/own-dbs"
+OWN_DATABASES = {2002: "Summer 2002", 2004: "Summer 2004", 2006: "Summer 2006"}
+# The start years whose expected files were written on the base data (3.9.68), not on a season database: 2001, and
+# 2002, written before Summer 2002 was made (docs/research/2026-10-21-expected-files-060.md). gate_run.py plays
+# Summer 2002 for 2002; it has no expected file.
+BASE_DATA_YEARS = (2001, 2002)
+
+
+def data_folder(path):
+    """The folder of index.dat: the folder itself, or its one subfolder that holds it (the October 2026 zip unpacks
+    to "October 2026/October 2026 Data Update")."""
+    if os.path.isfile(os.path.join(path, "index.dat")):
+        return path
+    subs = [os.path.join(path, n) for n in sorted(os.listdir(path))
+            if os.path.isfile(os.path.join(path, n, "index.dat"))]
+    return subs[0] if len(subs) == 1 else path
+
+
+def season_database(year, databases=DATABASES):
+    """The season database folder of a year of SEASON_DATABASES in databases; stops when there is none."""
+    names = sorted(n for n in os.listdir(databases) if n.startswith(SEASON_DATABASES[year])) \
+        if os.path.isdir(databases) else []
+    if not names:
+        raise SystemExit(f"rules_report_check.py: no database folder for {SEASON_DATABASES[year]} in {databases}")
+    return data_folder(os.path.join(databases, names[0]))
+
+
+def own_database(year, own, unpack_to):
+    """Our own database of a year of OWN_DATABASES, unpacked from its zip in own into unpack_to (as gate_run.py
+    database() does); stops when there is no zip."""
+    path = os.path.join(own, OWN_DATABASES[year] + ".zip")
+    if not os.path.isfile(path):
+        raise SystemExit(f"rules_report_check.py: no {OWN_DATABASES[year]}.zip in {own}")
+    with zipfile.ZipFile(path) as z:
+        z.extractall(unpack_to)
+    return data_folder(os.path.join(unpack_to, OWN_DATABASES[year]))
+
+
+def run_database(argv, year, unpack_to):
+    """The database folder of a --run (None: the base data). An explicit --database stays. Without it a start year
+    plays the database of its expected files: with the base data a 2007 start compared the 2001 clubs with the
+    November 2007 file (Brazilian state championships of 12, 5 and 5 clubs, batch P rr2007-a, open item 129). An own
+    database is unpacked into unpack_to, which the caller deletes after the run."""
+    if "--database" in argv:
+        return os.path.abspath(arg(argv, "--database"))
+    if not year or year in BASE_DATA_YEARS:
+        return None
+    if year in OWN_DATABASES:
+        return own_database(year, os.path.abspath(arg(argv, "--own-dbs", OWN_DBS)), unpack_to)
+    if year not in SEASON_DATABASES:
+        raise SystemExit(f"rules_report_check.py: no database for {year}; give --database")
+    return season_database(year, os.path.abspath(arg(argv, "--databases", DATABASES)))
+
+
 def arg(argv, name, default=None):
     return argv[argv.index(name) + 1] if name in argv else default
 
@@ -867,7 +937,6 @@ def main(argv):
         program, game = os.path.abspath(argv[2]), os.path.abspath(argv[3])
         year = int(arg(argv, "--year", 0)) or None
         last = int(arg(argv, "--last", 2027))
-        database = os.path.abspath(arg(argv, "--database")) if "--database" in argv else None
         nations = arg(argv, "--nations", "england")
         words = [x.strip().lower().replace("_", " ") for x in nations.split(",")]
         names = [next(n for n in NATION_ROWS if n.lower() == w.lstrip("-")) for w in words if w != "all"]
@@ -884,17 +953,23 @@ def main(argv):
         if rules not in ("on", "off"):
             print("--changing-rules takes on or off")
             return 2
-        code, report = run(program, game, last, year, database, nations, extra, keep, timeout,
-                           options_more={"changing_rules": rules}, start_only=start_only)
-        failed = [] if code == 0 else [f"the run ended with code {code}"]
         name = ("changing-" if rules == "on" else "") + f"{year or 2001}-{nations[0].lower()}" + "".join(
             f"{'-no' if nations[0] == 'all' else '-'}{n.lower().replace(' ', '_')}" for n in nations[1:]) + \
             "".join(f"-{e}" for e in extra) + ("-start" if start_only else "")
-        if os.path.exists(report):
-            failed += check(report, game if not database else None, last, name, update,
-                            data_dir=database or os.path.join(game, "Data"), start_only=start_only)
-        else:
-            failed.append("the run wrote no report")
+        unpacked = tempfile.mkdtemp(prefix="cm0102-rules-report-db-")     # an own database, deleted after the run
+        try:
+            database = run_database(argv, year, unpacked)
+            print(f"database: {database or 'the base data (3.9.68)'}")
+            code, report = run(program, game, last, year, database, nations, extra, keep, timeout,
+                               options_more={"changing_rules": rules}, start_only=start_only)
+            failed = [] if code == 0 else [f"the run ended with code {code}"]
+            if os.path.exists(report):
+                failed += check(report, game if not database else None, last, name, update,
+                                data_dir=database or os.path.join(game, "Data"), start_only=start_only)
+            else:
+                failed.append("the run wrote no report")
+        finally:
+            shutil.rmtree(unpacked, ignore_errors=True)
     for text in failed:
         print("FAIL  " + text)
     print("PASS" if not failed else f"FAILED: {len(failed)}")
