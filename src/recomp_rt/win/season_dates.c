@@ -550,7 +550,7 @@ static void shift_for(int N)
     /* slice 11c: the history between 2001 and the start; open item 74: with or without a plan (a 2001 game with
      * changing rules on), the past editions of the records that the season code adds */
     season_history_fill(plan ? p.name : NULL, N);
-    /* 0.6.2 open item 106: the season before the start, in every start year (a 2001 start has no plan) */
+    /* 0.6.2 open item 106: the real six seasons, in every start year (a 2001 start has no plan) */
     season_coeffs_fill(loaded_db_name());
 }
 

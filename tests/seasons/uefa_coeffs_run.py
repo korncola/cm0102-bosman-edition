@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
-"""The 2024/25 UEFA coefficients of the 2025/26 databases (0.6.2 open item 106).
+"""The real UEFA coefficients of the season databases that miss a season or hold all six one season off (0.6.2 open
+item 106).
 
 Usage:
     python3 tests/seasons/uefa_coeffs_run.py <cm0102_recomp> <game folder> [--only <name>,...] [--keep <folder>]
 
-"2025 Data Update" (December 2025) and "May 2026 Data Update" (May 2026) hold 0 at nation +0x108, the season
-before the start, for every nation. At the database load the game writes the 2024/25 values of the October 2026
-database there (src/recomp_rt/win/season_coeffs.c, the table of docs/research/2026-11-03-database-coefficients.tsv).
+At the database load the game writes the real six seasons (S-6)/(S-5) to (S-1)/S at nation +0xe0..+0x108 of the
+nations of the table (src/recomp_rt/win/season_coeffs.c, docs/research/2026-11-03-database-coefficients.tsv).
 
-Each run (dec2025, may2026, reshift) starts a 2025 game on one database with England (rules_report_check.py), saves one day after the start
-and ends. The checks: code 0 and no message box; the log line of the fill (56 nations written, none kept); in the
-save, +0x108 of every nation of the table holds its value (England 29.464, Spain 23.892); the two European
-Performance Spots of 2025/26 go to the nations with the best 2024/25 values, England and Spain (as in the real
-2025/26), read at +0x108; Spain ranks 3rd by the five seasons of 2025/26 (+0xe0..+0x100) and of 2026/27
-(+0xe8..+0x108, the totals of the first season change, roll_coefficients 0x903b50) and has five Champions League
-clubs in 2025/26: four by its rank and one European Performance Spot. A run takes about 3 minutes.
+Each run starts a game on one database (season database or extra version) in its own start year S with England
+(rules_report_check.py), saves one day after the start and ends. The checks: code 0 and no message box; the log line
+of the fill (every row written, none kept); in the save, the six values of every nation of the table are the real
+ones; the first ten UEFA nations by the totals of the first season (+0xe0..+0x100) are in the order of UEFA's real
+ranking of year S - 1, and by the totals of the first season change (+0xe8..+0x108, roll_coefficients 0x903b50) in
+the order of the real ranking of year S (RANKS, kassiesa.net country rankings, read 3 November 2026). From 2024 on
+the two European Performance Spots of the first season go to the two best values at +0x108 (2024: Italy and Germany;
+2025: England and Spain, as in the real seasons). The 2025 runs also check that Spain has five Champions League
+clubs in 2025/26: four by its rank and one European Performance Spot. A run takes 1 to 3 minutes.
 """
 import csv
 import os
@@ -32,24 +34,94 @@ import uefa_formats_run as ufr  # noqa: E402
 import history_check as hc  # noqa: E402
 
 DB = "/Users/max/Projects/cm0102/test-fixtures/databases"
+OWN = "/Users/max/Projects/cm0102/own-dbs"             # our own databases, as zips
 TSV = os.path.join(HERE, "..", "..", "docs", "research", "2026-11-03-database-coefficients.tsv")
-# run: (database, more environment). reshift: the test switch of season_dates.c makes the shift for 2030 and then
-# for 2025 again, so the fill is undone and made again (three fills in the log, the values as after one).
-RUNS = {"dec2025": ("December 2025", {}), "may2026": ("May 2026", {}),
-        "reshift": ("December 2025", {"RECOMP_DATES_RESHIFT": "2030"})}
-EPS_VALUES = {"England": 29.464, "Spain": 23.892}
+# run: (database, its folder in DB or zip in OWN, start year, more environment). reshift: the test switch of
+# season_dates.c makes the shift for 2030 and then for 2025 again, so the fill is undone and made again (three
+# fills in the log, the values as after one).
+RUNS = {"s2002": ("Summer 2002", "Summer 2002.zip", 2002, {}),
+        "sep2005": ("September 2005", "September 2005 Helvete", 2005, {}),
+        "s2006": ("Summer 2006", "Summer 2006.zip", 2006, {}),
+        "sep2008": ("September 2008", "September 2008", 2008, {}),
+        "sep2011": ("September 2011 ODB", "September 2011 ODB", 2011, {}),
+        "oct2019": ("October 2019", "October 2019", 2019, {}),
+        "nov2020": ("November 2020", "November 2020", 2020, {}),
+        "oct2021": ("October 2021", "October 2021", 2021, {}),
+        "oct2022": ("October 2022", "October 2022", 2022, {}),
+        "oct2023": ("October 2023", "October 2023", 2023, {}),
+        "oct2024": ("October 2024", "October 2024", 2024, {}),
+        "dec2025": ("December 2025", "December 2025", 2025, {}),
+        "may2026": ("May 2026", "May 2026", 2025, {}),
+        "oct2026": ("October 2026", "October 2026/October 2026 Data Update", 2026, {}),
+        "dec2008": ("December 2008", "December 2008", 2008, {}),
+        "mar2009": ("March 2009", "March 2009", 2008, {}),
+        "jun2010": ("June 2010", "June 2010", 2009, {}),
+        "mar2012": ("March 2012 ODB", "March 2012 ODB", 2011, {}),
+        "mar2020": ("March 2020", "March 2020", 2019, {}),
+        "apr2021": ("April 2021", "April 2021", 2020, {}),
+        "apr2022": ("April 2022", "April 2022", 2021, {}),
+        "apr2023": ("April 2023", "April 2023", 2022, {}),
+        "apr2024": ("April 2024", "April 2024", 2023, {}),
+        "reshift": ("December 2025", "December 2025", 2025, {"RECOMP_DATES_RESHIFT": "2030"})}
+# UEFA's real association ranking of each year, first ten (kassiesa.net/uefa/data/method<n>/crank<year>.html)
+RANKS = {
+    2001: ["Spain", "Italy", "England", "Germany", "France", "Holland", "Turkey", "Greece", "Russia", "Portugal"],
+    2002: ["Spain", "Italy", "England", "Germany", "France", "Greece", "Holland", "Turkey", "Portugal", "Russia"],
+    2004: ["Spain", "England", "Italy", "Germany", "France", "Portugal", "Greece", "Holland", "Czech Republic",
+           "Turkey"],
+    2005: ["Spain", "England", "Italy", "France", "Germany", "Portugal", "Holland", "Greece", "Belgium", "Scotland"],
+    2006: ["Spain", "Italy", "England", "France", "Germany", "Portugal", "Holland", "Greece", "Russia", "Romania"],
+    2007: ["Spain", "England", "Italy", "France", "Germany", "Portugal", "Romania", "Holland", "Russia", "Scotland"],
+    2008: ["England", "Spain", "Italy", "France", "Germany", "Russia", "Romania", "Portugal", "Holland", "Scotland"],
+    2009: ["England", "Spain", "Italy", "Germany", "France", "Russia", "Ukraine", "Holland", "Romania", "Portugal"],
+    2010: ["England", "Spain", "Italy", "Germany", "France", "Russia", "Ukraine", "Romania", "Portugal", "Holland"],
+    2011: ["England", "Spain", "Germany", "Italy", "France", "Portugal", "Russia", "Ukraine", "Holland", "Turkey"],
+    2012: ["England", "Spain", "Germany", "Italy", "Portugal", "France", "Russia", "Holland", "Ukraine", "Greece"],
+    2018: ["Spain", "England", "Italy", "Germany", "France", "Russia", "Portugal", "Ukraine", "Belgium", "Turkey"],
+    2019: ["Spain", "England", "Italy", "Germany", "France", "Russia", "Portugal", "Belgium", "Ukraine", "Turkey"],
+    2020: ["Spain", "England", "Germany", "Italy", "France", "Portugal", "Russia", "Belgium", "Ukraine", "Holland"],
+    2021: ["England", "Spain", "Italy", "Germany", "France", "Portugal", "Holland", "Russia", "Belgium", "Austria"],
+    2022: ["England", "Spain", "Italy", "Germany", "France", "Portugal", "Holland", "Austria", "Scotland", "Russia"],
+    2023: ["England", "Spain", "Germany", "Italy", "France", "Holland", "Portugal", "Belgium", "Scotland", "Austria"],
+    2024: ["England", "Italy", "Spain", "Germany", "France", "Holland", "Portugal", "Belgium", "Turkey",
+           "Czech Republic"],
+    2025: ["England", "Italy", "Spain", "Germany", "France", "Holland", "Portugal", "Belgium", "Czech Republic",
+           "Turkey"],
+    2026: ["England", "Italy", "Spain", "Germany", "France", "Portugal", "Holland", "Belgium", "Turkey",
+           "Czech Republic"],
+}
+
+
+# the names that the season code gives in later start years (season_intl_rules.c): the names of RANKS
+LATER_NAMES = {"Türkiye": "Turkey", "Czechia": "Czech Republic", "Netherlands": "Holland",
+               "North Macedonia": "FYR of Macedonia", "Ireland": "Republic of Ireland"}
 
 
 def ranks(nations, first):
-    """[(name)] of the UEFA nations of a save by the total of five doubles from nation +first, best first."""
-    rows = sorted(((-sum(struct.unpack_from("<5d", r, first)), name) for name, r in nations.items()))
-    return [name for _, name in rows]
+    """[(name)] of the UEFA nations of a save by the total of five doubles from nation +first, best first. Equal
+    totals go by the last of the five seasons, as UEFA ranks them (Belgium and Scotland in 2005, the Czech Republic
+    and Scotland in 2024)."""
+    rows = sorted(((-sum(v), -v[4], name) for name, v in
+                   ((name, struct.unpack_from("<5d", r, first)) for name, r in nations.items())))
+    return [name for _, _, name in rows]
 
 
-def check(name, database, env, work):
+def database_folder(where, work):
+    if not where.endswith(".zip"):
+        return os.path.join(DB, where)
+    import zipfile
+    out = os.path.join(work, "db")
+    with zipfile.ZipFile(os.path.join(OWN, where)) as z:
+        z.extractall(out)
+    inner = [os.path.join(out, d) for d in os.listdir(out) if os.path.isdir(os.path.join(out, d))]
+    return inner[0] if len(inner) == 1 else out
+
+
+def check(name, database, where, start, env, work):
     import smoke_run
     fails = []
-    code, _ = rrc.run(PROGRAM, GAME, 2025, 2025, os.path.join(DB, database), ["England"], [], work, 3600, None,
+    os.makedirs(work, exist_ok=True)
+    code, _ = rrc.run(PROGRAM, GAME, start, start, database_folder(where, work), ["England"], [], work, 3600, None,
                       dict({"RECOMP_SAVE_AFTER_DAYS": "1"}, **env))
     if code != 0:
         fails.append(f"{name}: the game ended with code {code}")
@@ -59,14 +131,10 @@ def check(name, database, env, work):
         want = [r for r in csv.DictReader(f, delimiter="\t") if r["database"] == database]
     if not want:
         fails.append(f"{name}: no row of {database} in {TSV}")
-    line = f"season coeffs: {database}: the season before the start written for {len(want)} nations, 0 kept"
+    line = f"season coeffs: {database}: the real six seasons written for {len(want)} nations, 0 kept"
     fills = 3 if "RECOMP_DATES_RESHIFT" in env else 1
     if log.count(line) != fills or log.count("season coeffs:") != fills:
         fails.append(f"{name}: not {fills} log lines {line!r} and no other")
-    eps = re.findall(r"European Performance Spot 2025/26: rank (\d+) \(([0-9.]+) at \+0x([0-9a-f]+)\)", log)
-    got = sorted((float(v), at) for _, v, at in eps)
-    if got != sorted((v, "108") for v in EPS_VALUES.values()):
-        fails.append(f"{name}: the European Performance Spots of 2025/26 are {eps}, not England and Spain at +0x108")
     save = os.path.join(work, "user", smoke_run.SAVE_NAME)
     if not os.path.exists(save):
         return fails + [f"{name}: no save ({save})"]
@@ -75,21 +143,31 @@ def check(name, database, env, work):
     recs = {hc.s32(nat, i * hc.NATION): nat[i * hc.NATION:(i + 1) * hc.NATION] for i in range(len(nat) // hc.NATION)}
     for r in want:
         rec = recs.get(int(r["nation_id"]))
-        v = struct.unpack_from("<d", rec, 0x108)[0] if rec else None
-        if v != float(r["value_0x108"]):
-            fails.append(f"{name}: {r['nation']} has {v} at +0x108, not {r['value_0x108']}")
-    uefa = {hc.text(rec, 4): rec for rec in recs.values() if g.continents.get(hc.s32(rec, 0x71)) == "UEFA"}
-    for first, season in ((0xe0, "2025/26"), (0xe8, "2026/27")):
-        order = ranks(uefa, first)
-        if order.index("Spain") != 2:
-            fails.append(f"{name}: Spain ranks {order.index('Spain') + 1} by the totals of {season}: {order[:6]}")
-    spain = [k for k, (n, _) in g.nations.items() if n == "Spain"][0]
-    cl = {k for k, c in g.comps.items() if c["name"] in ("European Champions Cup", "UEFA Champions League")}
-    clubs = sorted(g.clubs[c][0] for c, (_, _, mark, _) in g.divisions.items()
-                   if mark in cl and g.clubs[c][1] == spain)
-    if len(clubs) != 5:
-        fails.append(f"{name}: Spain has {len(clubs)} Champions League clubs in 2025/26, not 5: {clubs}")
-    print(f"{name}: Spain's Champions League clubs: {', '.join(clubs)}")
+        v = list(struct.unpack_from("<6d", rec, 0xe0)) if rec else None
+        if v != [float(x) for x in r["real"].split()]:
+            fails.append(f"{name}: {r['nation']} has {v} at +0xe0..+0x108, not {r['real']}")
+    uefa = {LATER_NAMES.get(hc.text(rec, 4), hc.text(rec, 4)): rec for rec in recs.values()
+            if g.continents.get(hc.s32(rec, 0x71)) == "UEFA"}
+    if "Serbia" in uefa:
+        uefa.pop("Yugoslavia", None)        # the record of a former nation
+    for first, year in ((0xe0, start - 1), (0xe8, start)):
+        got, real = ranks(uefa, first)[:10], RANKS[year][:10]
+        if got != real:
+            fails.append(f"{name}: the first ten by the totals of +0x{first:x}: {got}, not UEFA's {year}: {real}")
+    if start >= 2024:
+        eps = re.findall(rf"European Performance Spot {start}/{(start + 1) % 100:02d}: rank (\d+) \(([0-9.]+) at "
+                         r"\+0x([0-9a-f]+)\)", log)
+        best = sorted((struct.unpack_from("<d", r, 0x108)[0] for r in uefa.values()), reverse=True)[:2]
+        if sorted((float(v), at) for _, v, at in eps) != sorted((v, "108") for v in best):
+            fails.append(f"{name}: the European Performance Spots are {eps}, not the best two at +0x108 {best}")
+    if start == 2025:
+        spain = [k for k, (n, _) in g.nations.items() if n == "Spain"][0]
+        cl = {k for k, c in g.comps.items() if c["name"] in ("European Champions Cup", "UEFA Champions League")}
+        clubs = sorted(g.clubs[c][0] for c, (_, _, mark, _) in g.divisions.items()
+                       if mark in cl and g.clubs[c][1] == spain)
+        if len(clubs) != 5:
+            fails.append(f"{name}: Spain has {len(clubs)} Champions League clubs in 2025/26, not 5: {clubs}")
+        print(f"{name}: Spain's Champions League clubs: {', '.join(clubs)}")
     return fails
 
 

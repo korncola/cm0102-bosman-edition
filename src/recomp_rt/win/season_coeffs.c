@@ -1,4 +1,4 @@
-/* The missing UEFA season coefficient of some season databases (season_coeffs.h, 0.6.2 open item 106). */
+/* The real UEFA season coefficients of some season databases (season_coeffs.h, 0.6.2 open item 106). */
 #include "win.h"
 #include "season_coeffs.h"
 
@@ -8,18 +8,19 @@
 #define NATIONS_PTR 0xae23a8u
 #define NATION_COUNT 0xae2350u
 #define NATION_SIZE 0x122u
+#define COEFFS 0xe0u
 #define MAX_UNDO 256
 
-/* The +0x108 values that the last fill replaced, to give back before a new shift. */
-static struct { uint32_t at; double old; } undo[MAX_UNDO];
+/* The six values that the last fill replaced, to give back before a new shift. */
+static struct { uint32_t at; double old[6]; } undo[MAX_UNDO];
 static int n_undo;
 
 void season_coeffs_undo(void)
 {
     uint32_t base = rd32(g_mem, NATIONS_PTR), count = rd32(g_mem, NATION_COUNT);
     for (int i = n_undo - 1; i >= 0; i--)
-        if (base && undo[i].at >= base && undo[i].at + 8 <= base + count * NATION_SIZE)
-            wrf64(g_mem, undo[i].at, undo[i].old);
+        if (base && undo[i].at >= base && undo[i].at + 48 <= base + count * NATION_SIZE)
+            for (int k = 0; k < 6; k++) wrf64(g_mem, undo[i].at + 8u * k, undo[i].old[k]);
     n_undo = 0;
 }
 
@@ -41,23 +42,26 @@ void season_coeffs_fill(const char *name)
             kept++;
             continue;
         }
-        double before = rdf64(g_mem, rec + 0x100), now = rdf64(g_mem, rec + 0x108);
-        if (before != c->check_100 || (now != 0 && now != c->value_108)) {
-            fprintf(stderr, "recomp: season coeffs: %s: %s keeps its own values (+0x100 %.3f, +0x108 %.3f)\n",
-                    db->db, c->nation, before, now);
+        double now[6];
+        int is_found = 1, is_real = 1;
+        for (int i = 0; i < 6; i++) {
+            now[i] = rdf64(g_mem, rec + COEFFS + 8u * i);
+            is_found &= now[i] == c->found[i];
+            is_real &= now[i] == c->real[i];
+        }
+        if (!is_found && !is_real) {
+            fprintf(stderr, "recomp: season coeffs: %s: %s keeps its own values (+0xe0 %.3f, +0x108 %.3f)\n",
+                    db->db, c->nation, now[0], now[5]);
             kept++;
             continue;
         }
-        if (n_undo < MAX_UNDO) {
-            undo[n_undo].at = rec + 0x108;
-            undo[n_undo++].old = now;
-        } else {
-            rt_fatal("season coeffs: the undo record is full");
-        }
-        wrf64(g_mem, rec + 0x108, c->value_108);
-        if (now != 0 && now == c->value_108) held++;      /* no undo before this fill */
+        if (n_undo >= MAX_UNDO) rt_fatal("season coeffs: the undo record is full");
+        undo[n_undo].at = rec + COEFFS;
+        memcpy(undo[n_undo++].old, now, sizeof now);
+        for (int i = 0; i < 6; i++) wrf64(g_mem, rec + COEFFS + 8u * i, c->real[i]);
+        if (is_real) held++;      /* no undo before this fill */
         else written++;
     }
-    fprintf(stderr, "recomp: season coeffs: %s: the season before the start written for %d nations, %d kept%s\n",
-            db->db, written, kept, held ? ", some held it already" : "");
+    fprintf(stderr, "recomp: season coeffs: %s: the real six seasons written for %d nations, %d kept%s\n",
+            db->db, written, kept, held ? ", some held them already" : "");
 }
