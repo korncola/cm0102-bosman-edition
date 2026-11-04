@@ -5,8 +5,8 @@ clubs starts with that number after the club moves, and Belgium's leagues move o
 Usage:
     python3 tests/seasons/class_count_run.py <cm0102_recomp> <game folder> [--only start,season,irish] [--keep <folder>]
 
-The runs, each a season game on data set 3.9.68 (no season database), all nations, changing rules on, as a Tier A
-run. Start and season start in 2025 (the dates of the data move to 2025), irish in 2008:
+The runs, each a season game with all nations, changing rules on, as a Tier A run, with no season database. Start
+and season use data set 3.9.68 and start in 2025 (the dates of the data move to 2025). Irish starts four games:
     start   ends after the start report (about 3 minutes). After the club moves no division is short (the log
             line "club moves: <division> (tier n) holds k clubs, its class takes m") except the two of SHORT_OK,
             and the Belgian First and Second Division hold 18 clubs each in the report.
