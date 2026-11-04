@@ -20,6 +20,10 @@ RECOMP_FRA_SECOND_LOG=1 logs the reserve sides held back and the clubs that go u
           made after the table was complete). To 1 June 2023: at the change of 2022 every reserve side leaves the
           National, the three divisions keep their sizes, and no reserve side goes up
     old2  the same with the marks: the 2021/22 season plays with the fix, so no reserve side holds a place
+    old3  RECOMP_TEST_FRA_SECOND_OLD=2 with RECOMP_TEST_FRA_SECOND_PROMOTE=1: as the original to the change of 2022,
+          which also gives the reserve sides of the National its promotion places, so reserve sides go up into
+          Ligue 2. To 1 June 2024: the 2022/23 season marks them in Ligue 2, and at the change of 2023 every reserve
+          side leaves Ligue 2 and the National, with the three divisions at their sizes
 All runs end with code 0 and show no message box of the game.
 """
 import concurrent.futures
@@ -36,6 +40,26 @@ import uefa_formats_run as ufr  # noqa: E402
 DB = "/Users/max/Projects/cm0102/test-fixtures/databases"
 ENV = {"RECOMP_TEST_FRA_SECOND_REP": "1", "RECOMP_FRA_SECOND_LOG": "1"}
 LAST = 2021
+
+
+CENSUS = re.compile(r"recomp: fra second: census (before|after): Ligue 1 (\d+) clubs, (\d+) reserve sides; Ligue 2 "
+                    r"(\d+) clubs, (\d+) reserve sides; the National (\d+) clubs, (\d+) reserve sides")
+
+
+def changes(log):
+    """Each French season change: (census before, census after, the log lines between)."""
+    out, cur = [], None
+    for line in log.splitlines():
+        m = CENSUS.search(line)
+        if m and m.group(1) == "before":
+            cur = [tuple(map(int, m.groups()[1:])), None, []]
+        elif m and cur:
+            cur[1] = tuple(map(int, m.groups()[1:]))
+            out.append(cur)
+            cur = None
+        elif cur and "recomp: fra second:" in line:
+            cur[2].append(line)
+    return out
 
 
 def jump(name, program, game, work, env, last=None):
@@ -59,8 +83,11 @@ def run_on(program, game, work):
     seconds = [n for n, s in up if s]
     if seconds:
         fails.append(f"on: reserve sides went up to the National: {', '.join(seconds)}")
-    if len(up) != 4:
-        fails.append(f"on: {len(up)} clubs went up to the National, want 4")
+    log = open(os.path.join(work, "stderr.txt"), encoding="latin-1").read()
+    seen = changes(log)
+    first = [l for l in seen[0][2] if "goes up to the National" in l] if seen else []
+    if len(first) != 4:
+        fails.append(f"on: {len(first)} clubs went up to the National in the first change, want 4")
     if not stays:
         fails.append("on: no reserve side stayed in the CFA")
     return fails
@@ -75,41 +102,30 @@ def run_off(program, game, work):
     return fails
 
 
-CENSUS = re.compile(r"recomp: fra second: census (before|after): Ligue 1 (\d+) clubs, (\d+) reserve sides; Ligue 2 "
-                    r"(\d+) clubs, (\d+) reserve sides; the National (\d+) clubs, (\d+) reserve sides")
-
-
-def changes(log):
-    """Each French season change: (census before, census after, the log lines between)."""
-    out, cur = [], None
-    for line in log.splitlines():
-        m = CENSUS.search(line)
-        if m and m.group(1) == "before":
-            cur = [tuple(map(int, m.groups()[1:])), None, []]
-        elif m and cur:
-            cur[1] = tuple(map(int, m.groups()[1:]))
-            out.append(cur)
-            cur = None
-        elif cur and "recomp: fra second:" in line:
-            cur[2].append(line)
-    return out
-
-
-def run_old(name, program, game, work, no_mark):
-    env = {"RECOMP_TEST_FRA_SECOND_OLD": "1", **({"RECOMP_TEST_FRA_SECOND_NO_MARK": "1"} if no_mark else {})}
-    fails, _, _ = jump(name, program, game, work, env, last=LAST + 1)
+def run_old(name, program, game, work, no_mark, promote=False):
+    n = 2 if promote else 1
+    env = {"RECOMP_TEST_FRA_SECOND_OLD": str(n), **({"RECOMP_TEST_FRA_SECOND_NO_MARK": "1"} if no_mark else {}),
+           **({"RECOMP_TEST_FRA_SECOND_PROMOTE": "1"} if promote else {})}
+    fails, _, _ = jump(name, program, game, work, env, last=LAST + n)
     log = open(os.path.join(work, "stderr.txt"), encoding="latin-1").read()
     seen = changes(log)
-    if len(seen) < 2:
-        return fails + [f"{name}: {len(seen)} French season changes seen, want 2"]
+    if len(seen) < n + 1:
+        return fails + [f"{name}: {len(seen)} French season changes seen, want {n + 1}"]
     if not any("goes up to the National (a reserve side)" in l for l in seen[0][2]):
         fails.append(f"{name}: no reserve side went up as the original in the first change (no old save made)")
-    before, after, lines = seen[1]
-    print(f"{name}: change 2: before {before}, after {after} (Ligue 1, Ligue 2, the National: clubs, reserve sides)")
-    if before[5] == 0:
+    before, after, lines = seen[n]
+    print(f"{name}: change {n + 1}: before {before}, after {after} (Ligue 1, Ligue 2, the National: clubs, reserve "
+          f"sides)")
+    if promote and before[3] == 0:
+        fails.append(f"{name}: no reserve side in Ligue 2 before change {n + 1} (the Ligue 2 case is not seen)")
+    if promote and not any("may not go up from Ligue 2" in l for l in log.splitlines()):
+        fails.append(f"{name}: no reserve side was marked in Ligue 2's table")
+    if promote and not any("goes on from the National to the CFA" in l for l in lines):
+        fails.append(f"{name}: no reserve side went on from the National to the CFA (the Ligue 2 path is not seen)")
+    if not promote and before[5] == 0:
         fails.append(f"{name}: no reserve side in the National before change 2 (the test sees no case)")
     if after[1] or after[3] or after[5]:
-        fails.append(f"{name}: reserve sides above the CFA after change 2: {after}")
+        fails.append(f"{name}: reserve sides above the CFA after change {n + 1}: {after}")
     if (after[0], after[2], after[4]) != (before[0], before[2], before[4]):
         fails.append(f"{name}: division sizes changed: {before} to {after}")
     went = [l for l in lines if "(a reserve side)" in l]
@@ -117,19 +133,23 @@ def run_old(name, program, game, work, no_mark):
         fails.append(f"{name}: reserve sides went up: {went}")
     if not any("goes down from the National" in l for l in lines):
         fails.append(f"{name}: no reserve side went down from the National")
+    lost = [l for l in lines if "stays in" in l and "one more season" in l]
+    if lost:
+        fails.append(f"{name}: reserve sides kept for one more season: {lost}")
     marks = [l for l in log.splitlines() if "may not go up from the National" in l]
     if no_mark and marks:
         fails.append(f"{name}: {len(marks)} marks with RECOMP_TEST_FRA_SECOND_NO_MARK=1")
     if not no_mark and not marks:
         fails.append(f"{name}: no reserve side was marked in the National's table (the mark is not seen)")
-    shifted = [l for l in lines if "in place of a second team" in l]
+    shifted = [l for l in lines if "in place of a second team" in l]       # information: depends on the table
     print(f"{name}: {len(shifted)} places handed on at the season change")
     return fails
 
 
 RUNS = {"on": run_on, "off": run_off,
         "old1": lambda p, g, w: run_old("old1", p, g, w, True),
-        "old2": lambda p, g, w: run_old("old2", p, g, w, False)}
+        "old2": lambda p, g, w: run_old("old2", p, g, w, False),
+        "old3": lambda p, g, w: run_old("old3", p, g, w, False, promote=True)}
 
 
 def main(argv):
