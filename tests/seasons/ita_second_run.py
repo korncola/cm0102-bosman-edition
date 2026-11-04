@@ -21,9 +21,9 @@ original's moves for the first n changes. The runs:
            the test sees the fault)
     old    an old save, made in memory (no save is written or loaded): TOP, Atalanta BC goes down at each change,
            and the original's moves at the change of 2025, so the second teams reach Serie B (Atalanta U23 with
-           Atalanta). At the change of 2026 (rule on) Atalanta goes on down to Serie C: the second team at the top of
-           Serie B does not go up, Atalanta U23 goes down to Serie C (a relegated club other than
-           Atalanta stays up) and on to the Serie D (both in Serie C), and a club comes back for it in Serie C
+           Atalanta). At the change of 2026 (rule on) the check is of the state: before it a second team plays in its
+           first team's division, after it none is in Serie A, each is below its first team or in the Serie D or no
+           division, and the census lists the same second teams
     old3   TOP and the original's moves at the changes of 2025 and 2026, so a second team reaches Serie A. At the
            change of 2027 (TOP puts it first in Serie A) it goes down, and the best placed relegated club stays up
     d2023  October 2022, 2022 start, changing rules on (the rules of each season): BOTTOM; Juventus Next Gen goes down at the change of 2023 and, before
@@ -169,12 +169,13 @@ def run_old(program, game, work):
         fails.append("old: the rule is not off at change 1 and on at change 2")
     if not illegal(before):
         fails.append("old: no second team in its first team's division before change 2 (no old save made)")
-    for text in ("may not go up from Serie B", "goes down from Serie B", "goes to the Serie D", "comes back to "
-                 "Serie C", "takes the place in Serie B"):
-        if not has(c, text):
-            fails.append(f"old: change 2 has no line \"{text}\"")
+    # The state after change 2, not the rule's log lines: on a merged build a second team may go down from Serie B on
+    # its own results, so the rule writes no line for it. Every second team is below Serie A and below its first
+    # team (legal_after), or in the Serie D or no division.
     if [n for n, (t, f) in after.items() if t == 0]:
         fails.append(f"old: a second team in Serie A after change 2: {after}")
+    if len(after) != len(before):
+        fails.append(f"old: the census after change 2 lists {len(after)} second teams, before it {len(before)}")
     return fails + legal_after("old", seen)
 
 
