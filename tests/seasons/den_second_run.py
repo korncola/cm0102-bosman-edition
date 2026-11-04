@@ -2,7 +2,7 @@
 """Denmark: no second team in the national tournament (open item 119, 0.7.0; season_den_second.c).
 
 Usage:
-    python3 tests/seasons/den_second_run.py <cm0102_recomp> <game folder> [--only on,off,y2007,old,mark] [--jobs n]
+    python3 tests/seasons/den_second_run.py <cm0102_recomp> <game folder> [--only on,off,y2003,y2007,old,mark] [--jobs n]
         [--keep <folder>]
 
 Each run is a season jump of tests/seasons/rules_report_check.py with Denmark alone on the October 2024 database
@@ -14,6 +14,8 @@ Division. RECOMP_DEN_SECOND_LOG=1 logs the clubs held, moved and a census of eac
     on     the shipped code (rule of 2025/26, Herre-DM § 7.1): no second team goes up into the 2nd Division, four
            other clubs go up, and all four second teams stay in A Lower Division
     off    RECOMP_DEN_SECOND=off, the original's list: a second team goes up (proves that the test sees the fault)
+    y2003  RECOMP_TEST_DEN_SECOND_YEAR=2003, the rule of 2001/02 to 2004/05 (no second team played the 2nd Division,
+           DBU Årsberetning 2002 to 2005): as on, all four second teams are held and four other clubs go up
     y2007  RECOMP_TEST_DEN_SECOND_YEAR=2007, the rule of 2005/06 to 2009/10: Aalborg BK II (Aalborg BK plays the
            Superliga) may go up into the 2nd Division and is not held; the three others are held
     mark   as old with the marks of the season on (each second team below the Superliga gets 0xfc in 2025/26, so no
@@ -143,6 +145,21 @@ def run_off(program, game, work):
     return fails
 
 
+def run_y2003(program, game, work):
+    fails, log = jump("y2003", program, game, work, {"RECOMP_TEST_DEN_SECOND_YEAR": "2003"})
+    lines = first_change("y2003", log, fails, rule=2003)
+    if lines is None:
+        return fails
+    up = ups(lines)
+    if [n for n, s in up if s]:
+        fails.append(f"y2003: second teams went up: {[n for n, s in up if s]}")
+    if len(up) != 4:
+        fails.append(f"y2003: {len(up)} clubs went up to the 2nd Division, want 4")
+    if held(lines) != SECONDS:
+        fails.append(f"y2003: held {sorted(held(lines))}, want {sorted(SECONDS)}")
+    return fails
+
+
 def run_y2007(program, game, work):
     fails, log = jump("y2007", program, game, work, {"RECOMP_TEST_DEN_SECOND_YEAR": "2007"})
     lines = first_change("y2007", log, fails, rule=2007)
@@ -236,7 +253,7 @@ def run_mark(program, game, work):
     return fails
 
 
-RUNS = {"on": run_on, "off": run_off, "y2007": run_y2007, "old": run_old, "mark": run_mark}
+RUNS = {"on": run_on, "off": run_off, "y2003": run_y2003, "y2007": run_y2007, "old": run_old, "mark": run_mark}
 
 
 def main(argv):

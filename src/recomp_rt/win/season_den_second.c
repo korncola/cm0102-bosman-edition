@@ -14,10 +14,19 @@
  *   team plays the Superliga, and never the 1st Division or the Superliga. The second team of another club may not
  *   play the 2nd Division: en.wikipedia gives the admission as "up to eight reserve teams of the Danish Superliga
  *   clubs", and the Silkeborg and Vejle teams left when their clubs left the Superliga.
- * - 2001/02 to 2004/05: the Superliga second teams could first go up from the Danmarksserien in 2005/06
- *   (da.wikipedia), so before that the second team of a Superliga club stays below the 2nd Division. The second team
- *   of another club: I don't know (no source); the game keeps its own behaviour there.
- * Who takes a barred team's place: no text says (open item 119). Max, 3 November 2026: the next club in the table.
+ * - 2001/02 to 2004/05: no second team played the 2nd Division or above. DBU's annual reports (Årsberetning 2002 to
+ *   2005, read through the Wayback Machine on 4 November 2026) show second teams that won a Danmarksserien pool stay
+ *   down while the next first team went up: Silkeborg II in 2002 (Jetsmark IF up) and 2004 (Næsby BK up), Esbjerg II
+ *   in 2003 and 2004. DBU 2005 and da.wikipedia give second-team promotion as new in 2005. So no second team, of a
+ *   Superliga club or another, plays the three divisions.
+ * Who takes a barred team's place. DBU's reports of 2006 to 2010 show the next first team of the table each time,
+ * and no place left empty: 2005/06 West (Esbjerg II first, Aarhus Fremad up, Thisted to the play-off), 2006/07 East
+ * (Brøndby II second, Hvidovre to the play-off), 2006/07 West (Ikast FS second, FC Fyn to the play-off), 2008/09 West
+ * (OB II second, Brabrand to the play-off). A Superliga club that went down took its second team out of the 2nd
+ * Division by force (Silkeborg II and Vejle II in 2007, DBU 2007). In 2010 the eight second teams left, the 2nd
+ * Division sent one club down in place of six and took nine from below in place of six (dbu.dk, 6 March 2010): so
+ * a place that a second team leaves goes first to a club that would go down, then to a club from below. The full
+ * research: run-logs/0.6.2-s111c-den/research-den-second.md (outside the repo). Max, 4 November 2026: as in real life.
  *
  * The original. DenPrm::start_new_season 0x553aa0 (thiscall, this the Superliga) calls the promotion chain (vtable
  * +0xb0 = 0x689c20, at 0x553ab3), which moves the rows of status 0 or 5 of the 1st and 2nd Division up and the rows
@@ -37,8 +46,8 @@
  * The fix (season games with changing rules on; the base game and changing rules off keep the original).
  * - A second team: a Danish club whose name passes season_clubs_reserve_name (last word II, 2, B, Reserves, ...) or
  *   ends in 3 or III, except the first teams of FIRST_TEAMS ("Vejgaard B" is Vejgaard Boldspilklub). Its first team:
- *   the Danish club with the name less that word (exact, no fuzzy match), or the pair of PARENTS. Only the rules
- *   before 2010/11 need the first team.
+ *   the Danish club with the name less that word (exact, no fuzzy match), or the pair of PARENTS. Only the rule of
+ *   2005/06 to 2009/10 needs the first team.
  * - During the season: before each 0x684cd0 (League::update_positions_and_status; the shared wrap of
  *   season_second_teams.c) of the 1st or 2nd Division, a second team that may not play the division above next season
  *   gets the original's mark 0xfc, so the next club takes the title, promotion and the play-off (0x684dea..0x68518b).
@@ -219,9 +228,8 @@ static int barred_in(uint32_t club, int l, int y)
 {
     if (l < 0 || l >= LEVELS || !second_team(club)) return 0;
     y = rule_year(y);
-    if (y >= 2010) return 1;                        /* Herre-DM § 7.1: one team per club */
-    if (y >= 2005) return l <= 1 || !first_team_in_superliga(club);
-    return first_team_in_superliga(club);           /* before 2005/06: the Superliga's second teams stay below */
+    if (y >= 2010 || y < 2005) return 1;            /* Herre-DM § 7.1, and before 2005/06 no second team played */
+    return l <= 1 || !first_team_in_superliga(club); /* 2005/06 to 2009/10: a Superliga club's, 2nd Division only */
 }
 
 /* The level and season the hooks of st_mark and st_shift_up read (they take the club only). */
@@ -463,7 +471,7 @@ RT_WRAP(00553cb0, den_second_exchange)
             uint32_t club = table + (uint32_t)i * ST_CLUB_SIZE;
             if (division_of(club) != lower || !danish(club) || !second_team(club)) continue;
             if (test_rep) wr16(g_mem, club + ST_CLUB_REPUTATION, 10000);
-            if (rule_year(y) < 2010 && log_on()) {
+            if (rule_year(y) >= 2005 && rule_year(y) < 2010 && log_on()) {
                 uint32_t p = first_team(club);
                 fprintf(stderr, "recomp: den second: first team of %.51s: %.51s (%s)\n", name_of(club),
                         p ? name_of(p) : "none", !p ? "-" : level_of(division_of(p)) == 0 ? "the Superliga" : "below");
