@@ -109,6 +109,7 @@
                                          * makes rows - 1 rounds that many times (0x683ac9..0x683ad3) */
 #define DRAW_DAY 0xb6u                  /* s16 day of the year (0x79971e) */
 #define DRAW_OFFSET 0xb8u               /* s16 year offset from +0x40 (0x799739) */
+#define TEAM_MATCHES 0xa7u              /* s16: the matches of each team, -1 until worked out (League ctor 0x682263) */
 #define ROUNDS 0xa9u                    /* s16: the days of group A's template (set_up_rules 0x799740) */
 #define GAME_DATE 0xae2c90u             /* s16 day of the year, s16 year */
 #define KEY_NEW_ZEALAND 0x9cf3f4u       /* key nation id (0x799fc1) */
@@ -565,6 +566,11 @@ RT_WRAP(00799a60, ofc_group_b)
  * group with no stage (+0x2c 0): League::record_season_honours has run and the call has returned. */
 int season_intl_ofc_honours(uint32_t self)
 {
+    /* The log of the matches of each team at the edition's end (tests/seasons/ofc_team_matches_run.py). */
+    if (logging() && season_intl_on() && is_ofc(self))
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: group A %d rows, %d meetings, %d matches each "
+                        "(+0xa7)\n", year_of(self), (int16_t)rd16(g_mem, self + GROUP_ROWS),
+                (int16_t)rd16(g_mem, self + MEETINGS), (int16_t)rd16(g_mem, self + TEAM_MATCHES));
     if (!season_intl_on() || !is_ofc(self) || rd32(g_mem, self + STAGE_COUNT) != 0) return 0;
     call_this(LEAGUE_HONOURS, self, 0, NULL);
     if (!rt_unwinding) rt_ret_cdecl(0);
