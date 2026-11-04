@@ -160,7 +160,7 @@ Max answered on 2026-10-17 (spec, Q352 to Q357), and the build follows each answ
 - Q352: the researched rows replace the database rows of the label years 2002 to the start year (and 2001 where the 2000/01 pass has a row).
 - Q353: the calendar-year season of the start year is added.
 - Q354: the 2000/01 pass: `y2001-a.tsv` and `y2001-b.tsv` (233 rows for the 230 competitions of `targets-2001.tsv` that lack the label 2001 in at least one database after the shift), with their checks. Of 165 of those competitions with a 3.9.68 row at 2001, 163 agree with the research; the research corrects Italian Serie B (second Piacenza) and the Polish Super Cup (second Polonia Warszawa).
-- Q355: titles taken away later show the result on the pitch: Serie A 2004/05 and 2005/06 Juventus (second AC Milan), the Chinese league 2003 Shanghai Shenhua, the Polish Cup 2005 Dyskobolia.
+- Q355: titles taken away later show the result on the pitch: Serie A 2004/05 and 2005/06 Juventus (second AC Milan), the Chinese league 2003 Shanghai Shenhua, the Polish Cup 2005 Dyskobolia. Replaced on 3 November 2026 (0.6.2 item 108, Max: do what real life does): the rows give today's official record. Serie A 2005/06 holds Internazionale and AS Roma. Serie A 2004/05, the Chinese league 2003 and the Polish Cup 2005 are `not awarded` (no row). A start season that began before the ruling takes the holder of that time (`season_titles.c`, wrap of 0x4afd80 in `season_history.c`).
 - Q356: Dutch Premier Division 2005/06: PSV first, AZ second (the table). Ajax was 4th; the play-off decided a Champions League place.
 - Q357: the Austrian First Division and the Swiss National Division A rows carry the year where the season ends.
 

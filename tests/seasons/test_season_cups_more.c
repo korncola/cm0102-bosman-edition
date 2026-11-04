@@ -11,7 +11,6 @@
 #include "season_rules.h"
 
 #include <stdio.h>
-#include <string.h>
 
 static int failures;
 
@@ -80,32 +79,6 @@ static void picks(void)
                            out[1] != out[3] && out[2] != out[3];
             CHECK(distinct, "every pick holds four different clubs");
         }
-}
-
-/* Item 108 (0.6.2): the champion that a super cup takes when the title went to another club after the season. The
- * history keeps the result on the pitch (Q355: Serie A 2005/06 Juventus), but the Supercoppa of August 2006 was
- * Internazionale v Roma: the FIGC gave Internazionale the title on 26 July 2006, Internazionale also won the Coppa
- * Italia, so the cup runner-up Roma played (en.wikipedia.org/wiki/2006_Supercoppa_Italiana and
- * it.wikipedia.org/wiki/Supercoppa_italiana_2006, read 3 November 2026). */
-static void official_champions(void)
-{
-    const char *c = season_super_official_champion("ita_super", 2006, "Juventus");
-    CHECK(c && !strcmp(c, "Internazionale"), "Supercoppa 2006: the champion of 2005/06 is Internazionale");
-    CHECK(!season_super_official_champion("ita_super", 2005, "Juventus"),
-          "Supercoppa 2005 (August 2005, before the ruling): Juventus stays");
-    CHECK(!season_super_official_champion("ita_super", 2006, "Internazionale"), "a history row of Inter stays");
-    CHECK(!season_super_official_champion("ita_super", 2007, "Juventus"), "a later season keeps its own champion");
-    CHECK(!season_super_official_champion("spa_super", 2006, "Juventus"), "another super cup");
-    CHECK(!season_super_official_champion(NULL, 2006, "Juventus") && !season_super_official_champion("ita_super", 2006, NULL),
-          "no file or no champion");
-    /* The two clubs: the champion, then the cup winner, or the cup runner-up when the champion won the cup too (the
-     * original's ItaSuper::init_team_list 0x65fa60, 0x65fbbd..0x65fbee). */
-    uint32_t out[2];
-    CHECK(season_super_two_pick(1, 1, 2, out) && out[0] == 1 && out[1] == 2, "champion won the cup: cup runner-up");
-    CHECK(season_super_two_pick(1, 3, 2, out) && out[0] == 1 && out[1] == 3, "the cup winner");
-    CHECK(!season_super_two_pick(0, 3, 2, out), "no champion");
-    CHECK(!season_super_two_pick(1, 1, 0, out), "the champion won the cup and there is no runner-up");
-    CHECK(!season_super_two_pick(1, 1, 1, out), "the same club twice");
 }
 
 static void new_cups(void)
@@ -230,7 +203,6 @@ int main(int argc, char **argv)
     }
     four_clubs();
     picks();
-    official_champions();
     new_cups();
     layouts();
     groups();
