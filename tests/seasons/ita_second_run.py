@@ -10,7 +10,7 @@ Each run is a season jump of tests/seasons/rules_report_check.py with Italy (and
 database, so the game plays the Italian season change in the summer (the chain of the Serie C era,
 season_divisions_ita.c). RECOMP_ITA_SECOND_LOG=1 logs a line at each change, a census of every second team and its
 first team before the change, after the chain and after the regroup, and every move. Test switches:
-RECOMP_TEST_ITA_SECOND_TOP=1 puts the first second team of Serie B at the top and that of each Serie C group in the
+RECOMP_TEST_ITA_SECOND_TOP=1 puts the first second team of Serie A and of Serie B at the top and that of each Serie C group in the
 place that goes up first; RECOMP_TEST_ITA_SECOND_BOTTOM=1 puts it at the bottom of its group;
 RECOMP_TEST_ITA_SECOND_DOWN=<clubs> sends those clubs of Serie A or B down; RECOMP_TEST_ITA_SECOND_OLD=<n> plays the
 original's moves for the first n changes. The runs:
@@ -22,14 +22,15 @@ original's moves for the first n changes. The runs:
     old    an old save, made in memory (no save is written or loaded): TOP, Atalanta BC goes down at each change,
            and the original's moves at the change of 2025, so the second teams reach Serie B (Atalanta U23 with
            Atalanta). At the change of 2026 (rule on) Atalanta goes on down to Serie C: the second team at the top of
-           Serie B does not go up, Atalanta U23 goes down to Serie C and on to the Serie D (both in Serie C), and a
-           club comes back for it in each division
+           Serie B does not go up, Atalanta U23 goes down to Serie C (a relegated club other than
+           Atalanta stays up) and on to the Serie D (both in Serie C), and a club comes back for it in Serie C
     old3   TOP and the original's moves at the changes of 2025 and 2026, so a second team reaches Serie A. At the
-           change of 2027 it goes down, and a club of Serie A comes back
-    d2023  October 2022, 2022 start: BOTTOM; Juventus Next Gen goes down at the change of 2023 and, before
+           change of 2027 (TOP puts it first in Serie A) it goes down, and the best placed relegated club stays up
+    d2023  October 2022, 2022 start, changing rules on (the rules of each season): BOTTOM; Juventus Next Gen goes down at the change of 2023 and, before
            2025/26, plays no Serie D (no division)
-    d2025  October 2024, 2024 start: BOTTOM; the second teams go down at the change of 2025 and play the Serie D
-           (also true with the rule off: this run guards the season boundary)
+    d2025  October 2024, 2024 start, changing rules on: BOTTOM; the second teams go down at the change of 2025 and play the Serie D
+           (also true with the rule off: this run guards the season boundary). With changing rules off the rules
+           of the start season hold, so a 2024 start keeps the rule of 2024/25
 In every run after each change: no second team in its first team's division or above (rule on), no "no club takes
 its place", no "no club comes back" and no "league sizes: fault" line. All runs end with code 0 and show no message
 box of the game.
@@ -54,8 +55,8 @@ CHANGE = re.compile(r"recomp: ita second: season change, rule (on|off)")
 BAD = ("no club takes its place", "no club comes back", "recomp: league sizes: fault")
 
 
-def jump(name, program, game, work, env, year=2024, last=2025, database="October 2024"):
-    code, _ = rrc.run(program, game, last, year, os.path.join(DB, database), ["Italy"], [], work, 7200, None,
+def jump(name, program, game, work, env, year=2024, last=2025, database="October 2024", options=None):
+    code, _ = rrc.run(program, game, last, year, os.path.join(DB, database), ["Italy"], [], work, 7200, options,
                       dict({"RECOMP_ITA_SECOND_LOG": "1"}, **env))
     fails = [] if code == 0 else [f"{name}: the jump ended with code {code}"]
     found, log = ufr.boxes(work)
@@ -198,7 +199,7 @@ def run_old3(program, game, work):
 def run_d(name, year, database, want):
     def run(program, game, work):
         fails, log = jump(name, program, game, work, {"RECOMP_TEST_ITA_SECOND_BOTTOM": "1"}, year=year,
-                          last=year + 1, database=database)
+                          last=year + 1, database=database, options={"changing_rules": "on"})
         seen = changes(log)
         if not seen:
             return fails + [f"{name}: no Italian season change seen"]
