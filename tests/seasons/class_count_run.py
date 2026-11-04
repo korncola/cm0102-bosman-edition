@@ -21,13 +21,15 @@ run. Start and season start in 2025 (the dates of the data move to 2025), irish 
             the data lacks, and no Belgian club without a division to stand in for it.
     season  plays to the end of 2026/27 (about 30 minutes): no message box, and no Belgian division stalls at
             the 2026 season change (rules_report_check.league_stalls).
-    irish   a 2008/09 start on 3.9.68 (0.6.2 open item 123), to the start report: no message box, no short division
-            (except SHORT_OK), and the Irish Premier and First Division at the counts of the data (12 and 10).
-            IrePrm::create_table 0x63a740 takes only 10 or 12. The list of 2008 names "Bray Wanderers", which the
-            data holds as "Bray Wanderers A.F.C." (club 1855), so the club moves did not find it and left its place
-            in the Premier Division open: 11 clubs, and IrePrm::IrePrm 0x639bb0 stopped at ire_prm..cpp 82 (push
-            0x52 at 0x639ca7). The club moves now fill one more place when the open places would leave a count
-            that the class does not take (log line "would hold 11 clubs, its class takes 12").
+    irish   four starts to the start report (0.6.2 open item 123): 2008, 2010 and 2017 on 3.9.68 and 2012 on 3.9.65
+            (DATA_3965, skipped when the folder is missing). Each: no message box, no short Irish or Norwegian
+            division, and the Irish Premier and First Division at counts their classes take. IrePrm::create_table
+            0x63a740 takes only 10 or 12, IreFirst::create_table 0x635910 9 to 12. The 2008 start also holds 12 and
+            10, the counts of the data. The list of 2008 names "Bray Wanderers", which 3.9.68 holds as "Bray
+            Wanderers A.F.C." (club 1855), so the club moves did not find it and left its place in the Premier
+            Division open: 11 clubs, and IrePrm::IrePrm 0x639bb0 stopped at ire_prm..cpp 82 (push 0x52 at
+            0x639ca7). The 3.9.65 data hold 9 First Division clubs, so one open place left 8. The club moves now
+            fill as many open places as the class needs (season_clubs.c, data_class_count).
 Without --keep the runs play in a temporary folder that the script deletes when every run passes.
 """
 import os
@@ -93,25 +95,49 @@ def run_season(program, game, work):
     return fails
 
 
-IRISH = {"ire_prm": 12, "ire_first": 10}
+# The irish starts: (year, database folder or None for 3.9.68, exact counts or None). Every start checks that the
+# counts are ones the classes take: IrePrm 10 or 12, IreFirst 9 to 12.
+DATA_3965 = "/Users/max/Projects/cm0102/data-3965"
+IRISH = [(2008, None, {"ire_prm": 12, "ire_first": 10}), (2010, None, None), (2017, None, None),
+         (2012, DATA_3965, None)]
+TAKES = {"ire_prm": {10, 12}, "ire_first": {9, 10, 11, 12}}
 
 
 def run_irish(program, game, work):
     env = dict(ENV, RECOMP_CLUB_LOG="1")
-    code, report = rrc.run(program, game, 2008, 2008, None, ["all"], [], work, 3600, OPTIONS, env, start_only=True)
-    fails = [] if code == 0 else [f"irish: the game ended with code {code}"]
-    found, log = boxes("irish", work)
-    fails += found
-    if "recomp: club moves of 2008/09:" not in log:
-        fails.append("irish: the club moves did not run (no seasons tables beside the program?)")
-    fails += [f"irish: {line}" for line in short_divisions(log)]
-    if not os.path.exists(report):
-        return fails + [f"irish: no report ({work})"]
-    _, comps = rrc.read_report(report)
-    for file, want in IRISH.items():
-        got = [c["clubs"] for c in comps if c["file"] == file and c["phase"] == "start" and c["season"] == 2008]
-        if got != [want]:
-            fails.append(f"irish: {file} holds {got} clubs at the start of 2008/09, not {want}")
+    fails = []
+    for year, database, exact in IRISH:
+        name = f"irish {year}" + (f" {os.path.basename(database)}" if database else "")
+        if database and not os.path.isdir(database):
+            print(f"note  {name}: no database folder {database}, not run")
+            continue
+        sub = os.path.join(work, name.replace(" ", "-"))
+        code, report = rrc.run(program, game, year, year, database, ["all"], [], sub, 3600, OPTIONS, env,
+                               start_only=True, stop_on_box=True)
+        if code != 0:
+            fails.append(f"{name}: the game ended with code {code}")
+        found, log = boxes(name, sub)
+        fails += found
+        if f"recomp: club moves of {year}/{(year + 1) % 100:02d}:" not in log:
+            fails.append(f"{name}: the club moves did not run (no seasons tables beside the program?)")
+        fails += [f"{name}: {line}" for line in short_divisions(log) if line.startswith(("Irish", "Norwegian"))]
+        if not os.path.exists(report):
+            fails.append(f"{name}: no report ({sub})")
+            continue
+        try:
+            _, comps = rrc.read_report(report)
+        except SystemExit as e:                 # a box stops the game before the report is whole
+            fails.append(f"{name}: {e}")
+            continue
+        for file, takes in TAKES.items():
+            got = [c["clubs"] for c in comps if c["file"] == file and c["phase"] == "start" and c["season"] == year]
+            want = exact[file] if exact else None
+            if len(got) != 1 or got[0] not in takes or (want is not None and got[0] != want):
+                fails.append(f"{name}: {file} holds {got} clubs at the start, the class takes "
+                             f"{want if want is not None else sorted(takes)}")
+        shown = [f"{c['file']} {c['clubs']}" for c in comps
+                 if c["file"] in TAKES and c["phase"] == "start" and c["season"] == year]
+        print(f"      {name}: {', '.join(shown)}")
     return fails
 
 

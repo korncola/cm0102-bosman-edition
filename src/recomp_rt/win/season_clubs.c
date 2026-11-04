@@ -286,15 +286,22 @@ static const char *class_file(const char *name)
 }
 
 /* Open item 123: the least count of n or more that the class of a division takes, for a class that counts the
- * clubs of the data and takes only some counts. IrePrm::create_table 0x63a740 takes 10 (+0x3c 4) or 12 (+0x3c 3)
- * (0x63a79f..0x63a7c6) and returns 0 for any other count, so IrePrm::IrePrm 0x639bb0 stops at ire_prm..cpp 82
- * (push 0x52 at 0x639ca7). The club moves leave the place of a listed club that the data lacks open in the top
- * two tiers (below). In a 2008 start on 3.9.68 one such club (Bray Wanderers, held as "Bray Wanderers A.F.C.")
- * left the Premier Division with 11. IreFirst::create_table 0x635910 takes 9 to 12 (0x63596f..0x63597d), and
- * NorFirst 0x7909a0 has a cap in season_size_caps, so they are not here. Any other division gives n. */
+ * clubs of the data and takes only some counts. The club moves leave the place of a listed club that the data
+ * lacks open in the top two tiers (below), and the count that is left must be one that the class takes:
+ * - IrePrm::create_table 0x63a740 takes 10 (+0x3c 4) or 12 (+0x3c 3) (0x63a79f..0x63a7c6) and returns 0 for any
+ *   other count, so IrePrm::IrePrm 0x639bb0 stops at ire_prm..cpp 82 (push 0x52 at 0x639ca7). In a 2008 start on
+ *   3.9.68 one open place (Bray Wanderers, held as "Bray Wanderers A.F.C.") left the Premier Division with 11;
+ * - IreFirst::create_table 0x635910 takes 9 to 12 (0x63596f..0x63597d). The 3.9.60 and 3.9.65 data hold 9 First
+ *   Division clubs, so one open place left 8;
+ * - NorFirst::create_table 0x7909a0 takes 14 (0x790a6e..0x790a73) and sets 16 for any other count, and returns 1
+ *   only when it adds that many clubs (0x790add..0x790aeb), so 15 or fewer than 14 fail.
+ * Any other division gives n. */
 static int data_class_count(const char *name, int n)
 {
-    if (!strncmp(name, "Irish Premier Division", 52) && n > 0 && n < 12) return n <= 10 ? 10 : 12;
+    if (n <= 0) return n;
+    if (!strncmp(name, "Irish Premier Division", 52) && n < 12) return n <= 10 ? 10 : 12;
+    if (!strncmp(name, "Irish First Division", 52) && n < 9) return 9;
+    if (!strncmp(name, "Norwegian First Division", 52) && n < 16 && n != 14) return n < 14 ? 14 : 16;
     return n;
 }
 
@@ -648,7 +655,9 @@ static void move_clubs(int season)
          *   every tier. In the top two tiers the place of another missing club stays open for slice 15b when the
          *   class counts the clubs of the data. A class with a fixed count needs every place, so there it takes a
          *   club with no division too, and the log calls it a stand-in. With no such club, a class of CLASS_SIZE
-         *   gives the place to the groups of the other places (open item 105, below);
+         *   gives the place to the groups of the other places (open item 105, below). When the open places would
+         *   leave a count that the class does not take, as many of them as it needs go to those groups too (open
+         *   item 123, data_class_count);
          * - any other place (a club that moved up, or a class that takes more clubs than the real division has,
          *   slice 18): first a club that left a division of a higher rank (step "Leave"; no reserve or B side,
          *   and no move between two divisions of one rank such as German Regional North and South), so the
