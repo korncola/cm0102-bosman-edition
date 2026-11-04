@@ -600,7 +600,7 @@ static void choose_promoted(uint32_t b, const uint32_t *g, int no_c)
             if (!readable(club) || st == STATUS_DOWN) continue;
             if (season_ita_second_up_barred(club)) continue;       /* open item 117 */
             c[n++] = (Cand){i, k, st, st == 5 ? 0 : st == 0 ? 1 : 2, row_points(g[i], k), club};
-            read[i] = 1;
+            read[i] |= st == 0 || st == 5;
         }
     }
     if (rt_unwinding) return;
@@ -622,8 +622,8 @@ static void choose_promoted(uint32_t b, const uint32_t *g, int no_c)
                     "ABC"[c[i].g], c[i].st);
         } else if (c[i].rank < 2) set_status(g[c[i].g], c[i].k, 0xff);
     }
-    /* A group that gives no club to choose: C2/A at the change into the era with the extra division (no_c), or group
-     * C made at the change into the era without it (it played no season as a group of the Serie C). */
+    /* A group with no row of status 5 or 0 to choose: C2/A at the change into the era with the extra division (no_c),
+     * or group C made at the change into the era without it (its clubs played no season in it, their rows hold 0xff). */
     fprintf(stderr, "recomp: serie c: %d up to Serie B (groups A %d, B %d, C %d), %d down from Serie B%s%s%s\n",
             up[0] + up[1] + up[2], up[0], up[1], up[2], want, read[0] ? "" : ", group A not read",
             read[1] ? "" : ", group B not read", read[2] ? "" : ", group C not read");

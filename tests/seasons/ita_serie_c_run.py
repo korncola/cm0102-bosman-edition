@@ -101,7 +101,7 @@ def check_moves(name, log):
         m = re.search(r"serie c: (\d+) up to Serie B", line)
         if not m:
             continue
-        # A group that gives no club to choose has no winner: C2/A at the change into the era with the extra division (it played
+        # A group with no row of status 5 or 0 to choose has no winner: C2/A at the change into the era with the extra division (it played
         # as a C2 group), or group C made at the change into the era without it.
         groups = [x for x in "ABC" if f"group {x} not read" not in line]
         winners = sorted(g for g, st in clubs if st == 5)
