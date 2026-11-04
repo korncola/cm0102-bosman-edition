@@ -174,6 +174,7 @@ typedef struct {
     int listed, found, kept, missing, missing_reserve, filled_own, filled_left, filled_up, filled_pool, filled_spare, filled_lower;
     int open, stand_in;
     const char *name;
+    char missing_names[160];    /* open item 123b: the real names of the missing clubs that are no reserve side */
 } Division;
 
 static int same_name(uint32_t at, const char *name)
@@ -386,6 +387,34 @@ static void plain_words_by(const char *in, char *out, size_t room, int drop_word
 static void plain_words(const char *in, char *out, size_t room, int drop_words)
 {
     plain_words_by(in, out, room, drop_words, 0);
+}
+
+/* Open item 123b: list names that no rule of the match can find in some base data, with the database name that the
+ * club has there. "Bray Wanderers" (the lists from 2008/09) is "Bray Wanderers A.F.C." in 3.9.60, 3.9.65 and
+ * 3.9.68. The lists hold 3.9.68 ids, and 3.9.60 and 3.9.65 hold the club under ids 1479 and 1522, and only one of
+ * the two names has initials, so the initials step does not find it there. The count fill of the Irish divisions
+ * then hid each of these clubs (its log now names the clubs it fills for). */
+static const struct { const char *list, *data; } NAME_EXCEPTIONS[] = {
+    {"Bray Wanderers", "Bray Wanderers A.F.C."},
+    /* The lists from 2017/18 (ids 11003 and 5902); 3.9.60, 3.9.65 and 3.9.68 say "Saint". */
+    {"St. Patrick's Athletic", "Saint Patrick's Athletic"},
+    {"St. Patricks Athletic", "Saint Patrick's Athletic"},
+    /* The lists from 2018/19 (id 1710, "Bohemian F.C." in 3.9.68). */
+    {"Bohemian Football Club Dublin", "Bohemian F.C."},
+    {"Bohemian Football Club", "Bohemian F.C."},
+    /* The lists of 2011 and 2012; 3.9.60 and 3.9.65 hold "Cork City" under other ids than 2741. The 2010 list names
+     * the club by its owner of that season, Cork City FORAS Co-op, the same club in the same league place. */
+    {"Cork City F.C.", "Cork City"},
+    {"Cork City FORAS Co-op", "Cork City"},
+    /* The list of 2012 (Salthill Devon of Galway, club 10004 in 3.9.68). */
+    {"Salthill Devon Galway", "Salthill Devon"},
+};
+
+static const char *name_exception(const char *list)
+{
+    for (size_t i = 0; i < sizeof NAME_EXCEPTIONS / sizeof NAME_EXCEPTIONS[0]; i++)
+        if (!strncmp(list, NAME_EXCEPTIONS[i].list, 52)) return NAME_EXCEPTIONS[i].data;
+    return NULL;
 }
 
 /* 1 when the two lists of words (space between) have a word in common. */
@@ -612,7 +641,7 @@ static void move_clubs(int season)
             if (hits == 1) k = hit, by_plain++;
             else if (hits > 1 && close == 1) k = close_hit, by_plain++;
         }
-        if (k < 0 && rows[r].club_id >= 0) {
+        if (k < 0) {
             /* Open item 123b: the club of the list id, when its name differs from the list name only in dotted
              * initials. "Bray Wanderers" (the 2008 list) is "Bray Wanderers A.F.C." in 3.9.68 (club 1855), and the
              * plain forms "bray wanderers" and "bray wanderers a f c" differ. With the initials joined and left out
@@ -624,15 +653,24 @@ static void move_clubs(int season)
             plain_words_by(rows[r].club, want, sizeof want, 1, PLAIN_JOIN);
             plain_name(rows[r].club, old_want, sizeof old_want);
             plain_words_by(rows[r].club, ini_want, sizeof ini_want, 1, PLAIN_INITIALS);
+            /* With no club of the list id in the nation (the 3.9.60 and 3.9.65 data hold other ids, or the row has
+             * none), the name alone, and then both names must have initials with a word in common: "Dundalk FC" is
+             * "Dundalk F.C." (club 2709 in 3.9.65), and "C.D. Marino" is not "Club Marino" (no initials). */
+            int id_in_nation = 0;
+            for (int i = 0; i < count && !id_in_nation && rows[r].club_id >= 0; i++)
+                id_in_nation = club[i].id == rows[r].club_id && !club[i].national && club[i].nation == div[t].nation;
             int id_hit = -1;
             for (int i = 0; i < count && id_hit < 0 && *want; i++) {
-                if (club[i].id != rows[r].club_id || club[i].national || club[i].nation != div[t].nation) continue;
+                if (club[i].national || club[i].nation != div[t].nation) continue;
+                if (id_in_nation ? club[i].id != rows[r].club_id : 0) continue;
                 const char *name = win_str(club[i].at + CLUB_NAME);
                 plain_words_by(name, have, sizeof have, 1, PLAIN_JOIN);
+                if (!id_in_nation && strcmp(have, want)) continue;
                 plain_name(name, old_have, sizeof old_have);
                 plain_words_by(name, ini_have, sizeof ini_have, 1, PLAIN_INITIALS);
                 if (strcmp(have, want) || !strcmp(old_have, old_want)) break;
                 if (*ini_have && *ini_want && !share_word(ini_have, ini_want)) break;
+                if (!id_in_nation && !(*ini_have && *ini_want)) break;
                 id_hit = i;
             }
             int others = 0;
@@ -649,10 +687,32 @@ static void move_clubs(int season)
             }
         }
         if (k < 0) {
+            /* Open item 123b: the exception rows (NAME_EXCEPTIONS), when one club of the nation has the other name. */
+            const char *other = name_exception(rows[r].club);
+            int hits = 0, hit = -1;
+            for (int i = 0; i < count && other; i++)
+                if (!club[i].national && club[i].nation == div[t].nation && same_name(club[i].at + CLUB_NAME, other))
+                    hits++, hit = i;
+            if (hits == 1) {
+                k = hit, by_plain++;
+                if (log) fprintf(stderr, "recomp: club moves: by exception: %d/%02d\t%s\t%s\t%s (%d)\n", season,
+                                 (season + 1) % 100, rows[r].division, rows[r].club, other, club[k].id);
+            }
+        }
+        if (k < 0) {
             unmatched++;
             div[t].missing++;
             if (season_clubs_reserve_name(rows[r].real) || season_clubs_reserve_name(rows[r].club))
                 div[t].missing_reserve++;
+            else {
+                char *m = div[t].missing_names;
+                size_t used = strlen(m);
+                size_t need = strlen(rows[r].real) + (used ? 2 : 0);
+                if (used + need + 5 < sizeof div[t].missing_names)
+                    snprintf(m + used, sizeof div[t].missing_names - used, "%s%s", used ? ", " : "", rows[r].real);
+                else if (used + 5 < sizeof div[t].missing_names && (used < 4 || strcmp(m + used - 4, ", ...")))
+                    snprintf(m + used, sizeof div[t].missing_names - used, ", ...");
+            }
             if (log) fprintf(stderr, "recomp: club moves: missing: %d/%02d\t%s\ttier %d\t%s\n", season,
                              (season + 1) % 100, rows[r].division, div[t].tier, rows[r].real);
             continue;
@@ -777,8 +837,10 @@ static void move_clubs(int season)
         if (extra > open_places) extra = open_places;
         if (extra > 0) {
             places[1] += extra;
-            if (log) fprintf(stderr, "recomp: club moves: %s would hold %d clubs, its class takes %d: %d open places "
-                                     "fill\n", d->name, ends, ends + extra, extra);
+            /* Open item 123b: logged in every game with the list clubs that the database lacks, so that a club the
+             * match fails to find (as Bray Wanderers was) shows here and does not hide behind the fill. */
+            fprintf(stderr, "recomp: club moves: %s would hold %d clubs, its class takes %d: %d open places fill "
+                            "(missing clubs: %s)\n", d->name, ends, ends + extra, extra, d->missing_names);
         }
         /* The groups of a kind 1 place, in this order: 0 a club that left a higher division, 4 a club that left a
          * lower division with a list, 1 a club with no division, 2 a club of a spare division, 3 a club of a lower
