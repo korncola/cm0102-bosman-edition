@@ -3,7 +3,7 @@
 season_esp_second.c).
 
 Usage:
-    python3 tests/seasons/esp_second_run.py <cm0102_recomp> <game folder> [--only esp-on,esp-off,esp-old,por-on,por-off]
+    python3 tests/seasons/esp_second_run.py <cm0102_recomp> <game folder> [--only esp-on,esp-off,esp-old,por-on,por-off,pool-on,pool-off]
         [--jobs n] [--keep <folder>]
 
 Each run is a season jump of tests/seasons/rules_report_check.py with one nation and its third tier (RECOMP_TEST_EXTRA),
@@ -22,6 +22,11 @@ cases do not hang on match results. The report's club lines at each season start
     por-on   May 2026, Portugal, 2025 to 2026. GD Chaves B (no key pair) plays a group of the third tier, GD Chaves
              the Segunda Liga. The put gives GD Chaves B row 1 of its group. With the fix it stays in the third tier
     por-off  the same with RECOMP_ESP_SECOND=off: GD Chaves B goes up into the Segunda Liga beside GD Chaves
+    pool-on  the base game (3.9.68), Portugal, changing rules on, 2001 to 2002: the pool of the Second Division B
+             of the database's zones (por_prm_exchange_second_b_with_lower 0x7cff70). RECOMP_TEST_ESP_SECOND_REP=1
+             gives Sporting Clube Olhanense B (A Lower Division) the highest reputation; its club plays the Second
+             Division B. With the fix it stays out of the pool and does not join its club's division
+    pool-off the same with RECOMP_ESP_SECOND=off: Olhanense B goes up into the Second Division B
 All runs end with code 0 and show no message box of the game.
 """
 import concurrent.futures
@@ -39,9 +44,9 @@ DB = "/Users/max/Projects/cm0102/test-fixtures/databases"
 LOG = {"RECOMP_ESP_SECOND_LOG": "1"}
 
 
-def jump(name, program, game, work, db, nation, extra, year, last, env):
-    code, _ = rrc.run(program, game, last, year, os.path.join(DB, db), [nation], [extra], work, 10800, None,
-                      dict(LOG, **env))
+def jump(name, program, game, work, db, nation, extra, year, last, env, options=None):
+    code, _ = rrc.run(program, game, last, year, os.path.join(DB, db) if db else None, [nation], [extra], work, 10800,
+                      options, dict(LOG, **env))
     fails = [] if code == 0 else [f"{name}: the jump ended with code {code}"]
     found, log = ufr.boxes(work)
     fails += [f"{name}: message box {b}" for b in found]
@@ -120,8 +125,9 @@ def esp_old(program, game, work):
         fails.append("esp-old: Villarreal CF B still plays La Liga in 2024")
     if "Villarreal CF B goes down from" not in log:
         fails.append("esp-old: no old-save move logged")
-    if sizes(rep, 2024, ["spa_first"]) != [20]:
-        fails.append(f"esp-old: La Liga has {sizes(rep, 2024, ['spa_first'])} clubs in 2024")
+    if sizes(rep, 2024, ["spa_first", "spa_second"]) != sizes(rep, 2023, ["spa_first", "spa_second"]):
+        fails.append(f"esp-old: La Liga or the Segunda changed size: 2023 {sizes(rep, 2023, ['spa_first', 'spa_second'])}"
+                     f", 2024 {sizes(rep, 2024, ['spa_first', 'spa_second'])}")
     return fails
 
 
@@ -147,11 +153,37 @@ def por(name, program, game, work, off):
     return fails
 
 
+OLHANENSE, OLHANENSE_B = "Sporting Clube Olhanense", "Sporting Clube Olhanense B"
+
+
+def pool(name, program, game, work, off):
+    env = {"RECOMP_TEST_ESP_SECOND_REP": "1", **({"RECOMP_ESP_SECOND": "off"} if off else {})}
+    fails, log, rep = jump(name, program, game, work, None, "Portugal", "portugal", None, 2002, env,
+                           {"changing_rules": "on"})
+    first, then = where(rep, 2001, OLHANENSE_B), where(rep, 2002, OLHANENSE_B)
+    club = where(rep, 2002, OLHANENSE)
+    print(f"{name}: Olhanense B {first} to {then}, Olhanense {where(rep, 2001, OLHANENSE)} to {club}")
+    if where(rep, 2001, OLHANENSE) != "por_second_b" or first == "por_second_b":
+        fails.append(f"{name}: the case is not seen (Olhanense {where(rep, 2001, OLHANENSE)}, B side {first})")
+    if off:
+        if then != "por_second_b":
+            fails.append(f"{name}: Olhanense B did not go up with the switch off ({then}): the test does not see the "
+                         "fault")
+        return fails
+    if "Sporting Clube Olhanense B stays out of the Second Division B pool" not in log:
+        fails.append(f"{name}: Olhanense B was not held out of the pool")
+    if then == "por_second_b" and club == "por_second_b":
+        fails.append(f"{name}: Olhanense B plays the Second Division B beside its club in 2002")
+    return fails
+
+
 RUNS = {"esp-on": lambda p, g, w: esp("esp-on", p, g, w, False),
         "esp-off": lambda p, g, w: esp("esp-off", p, g, w, True),
         "esp-old": esp_old,
         "por-on": lambda p, g, w: por("por-on", p, g, w, False),
-        "por-off": lambda p, g, w: por("por-off", p, g, w, True)}
+        "por-off": lambda p, g, w: por("por-off", p, g, w, True),
+        "pool-on": lambda p, g, w: pool("pool-on", p, g, w, False),
+        "pool-off": lambda p, g, w: pool("pool-off", p, g, w, True)}
 
 
 def main(argv):

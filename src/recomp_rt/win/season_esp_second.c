@@ -16,7 +16,7 @@
  * 0 (0x540ad8..0x540af5; +0x244 is 1 for a club with a pair, set at the start of a game by 0x541e60 at 0x541ea2).
  * Then it compares the club id with 83 senior key ids (0x540b1b..0x54129c, each a jump to 0x541871, which writes
  * *out = 1 at 0x54187c and returns the club of the paired B key) and 82 B side key ids (jumps to 0x54129c, which
- * returns the paired senior club and leaves *out as it was). With no match it returns 0 (0x541868). The key ids
+ * writes *out = 0 at 0x5412a7 and returns the paired senior club). With no match it returns 0 (0x541868). The key ids
  * come from exact names of 2001 (src/cm3/key_ids_table.c). So *out tells the role: 1 when the club returned is the
  * reserve side of the club asked. There is no C side and no Villarreal, Getafe, Granada, Almería, Zaragoza or
  * Oviedo B side, and no Portuguese B side but Benfica, Braga, Marítimo, Porto and Sporting B.
@@ -49,13 +49,16 @@
  * would let 0x541e60 trim squads). The link: a B side "<name> B" belongs to the club named "<name>"; a C side
  * "<name> C" to "<name> B", or to "<name>" when the club has no B side. The names are compared whole, without case,
  * within the nation (the data has no field that names a reserve side's club). Over the databases of the research
- * (run-logs/0.6.2-s111b/research/db) every Spanish or Portuguese B or C side in a played division gives its first
- * team's exact name this way, except "Deportivo Alavés B" (club "C.D. Alavés"), which the key pairs hold.
+ * (run-logs/0.6.2-s111b/research/db) this gives every Spanish or Portuguese B or C side its club, except the sides of
+ * a small table (NAMED below: CF Peralada-Girona B, C.D. Numancia B, Real Sociedad C and others, whose names do not
+ * hold their club's name) and "Deportivo Alavés B" (club "C.D. Alavés"), which the key pairs hold. No fuzzy match.
  * - A call that asks for the senior side (the role *out 0) gets the club above: the B side's first team, the C
  *   side's B side. *out is written 0.
  * - A call of 0x850970 or 0x7d0320 (the role *out 1) gets the club below: a first team's B side (or its C side
  *   with no B side), a B side's C side. *out is written 1. A B side of the key pairs with a C side gets its C side
  *   there too (the original gives the B side's senior, which those calls skip).
+ * Left out: SpaLower::create_table 0x8533d0 (the Spanish Lower Division, a tier the season code does not play) reads
+ * the pairs at 0x85351e, 0x8535e4 and 0x8536cb as the original; the cups (0x84d975.., 0x7ce308..) as well.
  * So a newer side gets the 0xfc mark of the season, is held from promotion and from the play-off, and goes down
  * with its first team; a C side the same against its B side.
  *
@@ -78,16 +81,19 @@
  *   the best placed row of status 3 gets 0xfe, as the original (0x850ab6, 0x850ebc); in a group of the third tier
  *   status 3 (the original's 0x850dd1; the refill fills the group). A place of promotion that it held goes to the
  *   first row of 0xff, as 0x850e8e.
- * A reserve side two divisions too high goes down one division at each season change. The tiers below the third
- * are not checked.
+ * A C side counts against the lowest of its B side and its first team. A reserve side whose club above goes up out
+ * of the same division at this change stays. A reserve side two divisions too high goes down one division at each
+ * season change. The tiers below the third are not checked.
  *
- * Club moves of a new game (season_clubs.c): a B or C side does not take a place in the division where a club
- * above it plays (season_esp_barred).
+ * Club moves of a new game (season_clubs.c): a B or C side does not take a place of the top three tiers in the
+ * division of a club above it or higher, by the divisions that the moves plan (season_esp_barred).
  *
  * Switches: RECOMP_ESP_SECOND=off (test switch) gives the original everywhere. RECOMP_ESP_SECOND_LOG=1 logs each new
  * link, each move, and a census of the reserve sides at each season change. RECOMP_TEST_ESP_SECOND_PUT="<club>:<row>
  * [,...]" (tests only) swaps the club of each name with the club of that row (1 = top) of its own table at the first
  * Spanish or Portuguese season change, before the original reads the table: the statuses stay with the rows.
+ * RECOMP_TEST_ESP_SECOND_REP=1 (tests only) gives the Portuguese B and C sides of the pool of 0x7cff70 the highest
+ * reputation before the call.
  * RECOMP_TEST_ESP_SECOND_OLD=<n> (tests only) plays as the original until n season changes of each nation are done,
  * as a game of an older build. */
 #include "win.h"
@@ -105,6 +111,7 @@
 #define CLUB_NAME 0x04u
 #define CLUB_NATION 0x53u
 #define CLUB_DIVISION 0x57u
+#define CLUB_REPUTATION 0x80u
 #define LEAGUES 0xadadfcu               /* the competition objects, by competition id */
 #define LEAGUE_CLUBS 0x3eu              /* s16 rows */
 #define LEAGUE_TABLE 0xb1u              /* rows of 0x3b bytes: +0 the club, +0x37 the status */
@@ -124,12 +131,14 @@
 typedef struct {
     const char *name;
     uint32_t nation, top, second, third, below;     /* keys: the nation, the four tiers (record of the third) */
-    uint32_t change_fn;
+    uint32_t groups[4];                              /* keys of the groups of the third tier (club +0x60, 0x850b30) */
     int changes;                                     /* season changes seen (RECOMP_TEST_ESP_SECOND_OLD) */
 } Nation;
 
-static Nation SPAIN = {"Spain", 0x9cf488u, 0x9cf624u, 0x9cf628u, 0x9cf7b8u, KEY_LOWER, 0x850970u, 0};
-static Nation PORTUGAL = {"Portugal", 0x9cf434u, 0x9cf60cu, 0x9cf610u, 0x9cf7c0u, 0x9cf620u, 0x7d0320u, 0};
+static Nation SPAIN = {"Spain", 0x9cf488u, 0x9cf624u, 0x9cf628u, 0x9cf7b8u, KEY_LOWER,
+                       {0x9cf62cu, 0x9cf630u, 0x9cf634u, 0x9cf638u}, 0};
+static Nation PORTUGAL = {"Portugal", 0x9cf434u, 0x9cf60cu, 0x9cf610u, 0x9cf7c0u, 0x9cf620u,
+                          {0x9cf614u, 0x9cf618u, 0x9cf61cu, 0}, 0};
 
 /* The return addresses of the calls of 0x540a50 that the link serves. */
 static const uint32_t ASK_SENIOR[] = {0x855c1cu, 0x850103u, 0x8501e3u, 0x8502a3u, 0x8504ceu, 0x7cfe61u, 0x7d15fcu,
@@ -204,20 +213,69 @@ static char reserve_kind(uint32_t club, size_t *base)
     return k;
 }
 
-/* The club of the nation n named name[0..len) followed by suffix (NULL: none, else " B" or " C"), or 0. */
-static uint32_t find_named(const Nation *n, const char *name, size_t len, const char *suffix)
+/* The Spanish and Portuguese clubs by name (lower case), sorted: built at the first look-up after index_reset (each
+ * season change, each exchange of the pool, the club moves of a new game) or when the club table moves. */
+typedef struct {
+    char name[52];
+    const Nation *n;
+    uint32_t club;
+} Named;
+
+static Named *index_rows;
+static int index_count = -1;
+static uint32_t index_table;
+
+static void index_reset(void) { index_count = -1; }
+
+static void lower_copy(char *out, const char *in, size_t len)
+{
+    for (size_t i = 0; i < len; i++) out[i] = (char)tolower((unsigned char)in[i]);
+    out[len] = 0;
+}
+
+static int by_name(const void *a, const void *b) { return strcmp(((const Named *)a)->name, ((const Named *)b)->name); }
+
+static void index_build(void)
 {
     uint32_t table = rd32(g_mem, CLUBS);
     int count = (int)rd32(g_mem, CLUB_COUNT);
-    size_t want = len + (suffix ? strlen(suffix) : 0);
-    for (int i = 0; readable(table) && i < count; i++) {
+    if (index_count >= 0 && table == index_table) return;
+    free(index_rows);
+    index_rows = NULL;
+    index_count = 0;
+    index_table = table;
+    if (!readable(table) || count <= 0) return;
+    index_rows = malloc(sizeof *index_rows * (size_t)count);
+    for (int i = 0; index_rows && i < count; i++) {
         uint32_t club = table + (uint32_t)i * CLUB_SIZE;
-        if (nation_of(club) != n) continue;
-        const char *s = name_of(club);
-        if (name_len(s) != want || strncasecmp(s, name, len)) continue;
-        if (suffix && strncasecmp(s + len, suffix, strlen(suffix))) continue;
-        return club;
+        const Nation *n = nation_of(club);
+        if (!n) continue;
+        Named *e = &index_rows[index_count++];
+        lower_copy(e->name, name_of(club), name_len(name_of(club)));
+        e->n = n;
+        e->club = club;
     }
+    qsort(index_rows, (size_t)index_count, sizeof *index_rows, by_name);
+}
+
+/* The club of the nation n named name[0..len) followed by suffix (NULL: none, else " B" or " C"), or 0. Names
+ * compare whole and without case. */
+static uint32_t find_named(const Nation *n, const char *name, size_t len, const char *suffix)
+{
+    char want[64];
+    size_t extra = suffix ? strlen(suffix) : 0;
+    if (len + extra > 51) return 0;
+    lower_copy(want, name, len);
+    if (suffix) lower_copy(want + len, suffix, extra);
+    index_build();
+    int lo = 0, hi = index_count;
+    while (lo < hi) {                                   /* the first row not below want */
+        int mid = (lo + hi) / 2;
+        if (strcmp(index_rows[mid].name, want) < 0) lo = mid + 1;
+        else hi = mid;
+    }
+    for (int i = lo; i < index_count && !strcmp(index_rows[i].name, want); i++)
+        if (index_rows[i].n == n) return index_rows[i].club;
     return 0;
 }
 
@@ -344,27 +402,40 @@ static int above_of(uint32_t club, uint32_t up[2])
     return k;
 }
 
-/* The tier of a division of a nation: 1 to 3 for the divisions the code plays, 4 for any other. */
+/* The tier of a division of a nation: 1 to 3 for the divisions the code plays (the third: its record, or one of its
+ * groups as the database holds them), 4 for any other, 5 for none. */
 static int tier_of(const Nation *n, uint32_t div)
 {
-    if (!readable(div)) return 4;
+    if (!readable(div)) return 5;
     int32_t id = (int32_t)rd32(g_mem, div);
     if (id == (int32_t)rd32(g_mem, n->top)) return 1;
     if (id == (int32_t)rd32(g_mem, n->second)) return 2;
     if (id == (int32_t)rd32(g_mem, n->third)) return 3;
+    for (int g = 0; g < 4 && n->groups[g]; g++)
+        if (id == (int32_t)rd32(g_mem, n->groups[g])) return 3;
     return 4;
 }
 
-/* The highest tier (1 to 4) of the clubs above a reserve side, or 5 for a club with none. */
+/* The division of a club: as the club moves of a new game plan it while they run (season_esp_barred; 0 for a club
+ * that they take out of its division), else its own. */
+static uint32_t (*planned_div)(uint32_t club);
+
+static uint32_t div_of(uint32_t club)
+{
+    return planned_div ? planned_div(club) : rd32(g_mem, club + CLUB_DIVISION);
+}
+
+/* The lowest tier (1 to 4) of the clubs above a reserve side that play in a division, or 5 for none: a reserve side
+ * plays below each of them (a C side below its B side and its first team). */
 static int above_tier(const Nation *n, uint32_t club)
 {
     uint32_t up[2];
-    int k = above_of(club, up), best = 5;
+    int k = above_of(club, up), low = 0;
     for (int i = 0; i < k; i++) {
-        int t = tier_of(n, rd32(g_mem, up[i] + CLUB_DIVISION));
-        if (t < best) best = t;
+        int t = tier_of(n, div_of(up[i]));
+        if (t <= 4 && t > low) low = t;
     }
-    return best;
+    return low ? low : 5;
 }
 
 /* 1 when a reserve side plays in the division of a club above it, or above that club, within the top three tiers. */
@@ -374,17 +445,20 @@ static int too_high(const Nation *n, uint32_t club)
     return t <= 3 && a <= 4 && a >= t;
 }
 
-int season_esp_barred(uint32_t club, uint32_t div)
+int season_esp_barred(uint32_t club, uint32_t div, uint32_t (*planned)(uint32_t club))
 {
     if (!readable(club) || !readable(div)) return 0;
     Nation *n = nation_of(club);
     if (!rule_on(n)) return 0;
-    uint32_t up[2];
-    int k = above_of(club, up);
-    for (int i = 0; i < k; i++)
-        if (rd32(g_mem, up[i] + CLUB_DIVISION) == div) return 1;
-    return 0;
+    int t = tier_of(n, div);
+    if (t > 3) return 0;
+    planned_div = planned;
+    int a = above_tier(n, club);
+    planned_div = NULL;
+    return a <= 4 && a >= t;
 }
+
+void season_esp_second_moves(void) { index_reset(); }
 
 /* The league object of a key (0 when none). */
 static uint32_t league_of(uint32_t key)
@@ -445,7 +519,8 @@ static int first_row(uint32_t league, uint8_t from, uint8_t to, const char *skip
 /* A reserve side of the second division in a place of the title, promotion or the play-off while a club above it
  * plays the top or the second division (a save made after the table was complete, with no 0xfc): it gets 0xfc, and
  * its place goes to the best placed row of 0xff that is no such side, as the original hands on a place (0x850e8e).
- * A play-off already played keeps its winner. */
+ * A play-off already played keeps its winner. A reserve side with a club above it in any division may not go up
+ * into the top division (it would share it or play above). */
 static void shift_up(const Nation *n, uint32_t league)
 {
     int rows;
@@ -453,8 +528,7 @@ static void shift_up(const Nation *n, uint32_t league)
     char barred[64] = {0};
     for (int i = 0; i < rows; i++) {
         uint32_t club = rd32(g_mem, table + (uint32_t)i * ROW_SIZE);
-        int a = readable(club) ? above_tier(n, club) : 5;
-        barred[i] = a <= 2;
+        barred[i] = readable(club) && above_tier(n, club) <= 4;   /* no reserve side goes up into the top tier */
     }
     for (int i = 0; i < rows; i++) {
         uint32_t row = table + (uint32_t)i * ROW_SIZE;
@@ -477,6 +551,31 @@ static void shift_up(const Nation *n, uint32_t league)
  * division, 0xfe below, as 0x850ebc) and a club that takes a place of promotion that it held (0, as 0x850e8e) are
  * no reserve side with a club above it (it may be one that goes down with its club; and one whose club plays the
  * tier above or lower may not go up). */
+/* The status of a club's row in a table, or -1 when it has none there. */
+static int row_status(uint32_t table, int rows, uint32_t club)
+{
+    for (int i = 0; i < rows; i++)
+        if (rd32(g_mem, table + (uint32_t)i * ROW_SIZE) == club) return g_mem[table + (uint32_t)i * ROW_SIZE + ROW_STATUS];
+    return -1;
+}
+
+/* 1 when a reserve side of the table (tier) shares the tier with a club above it, or plays above it, and that club
+ * does not go up out of this table at this change (a club above that goes up leaves it below). */
+static int stays_too_high(const Nation *n, uint32_t table, int rows, uint32_t club, int tier)
+{
+    if (tier_of(n, rd32(g_mem, club + CLUB_DIVISION)) != tier) return 0;
+    uint32_t up[2];
+    int k = above_of(club, up);
+    for (int i = 0; i < k; i++) {
+        int t = tier_of(n, rd32(g_mem, up[i] + CLUB_DIVISION));
+        if (t > 4 || t < tier) continue;
+        int s = row_status(table, rows, up[i]);
+        if (s == ST_TITLE || s == ST_UP) continue;
+        return 1;
+    }
+    return 0;
+}
+
 static void old_save_down(const Nation *n, uint32_t league, int tier)
 {
     int rows;
@@ -487,7 +586,7 @@ static void old_save_down(const Nation *n, uint32_t league, int tier)
         int a = readable(club) ? above_tier(n, club) : 5;
         stay_skip[i] = a <= 4;
         up_skip[i] = a <= 4 && a >= tier - 1;
-        high[i] = a <= 4 && a >= tier && tier_of(n, rd32(g_mem, club + CLUB_DIVISION)) == tier;
+        high[i] = readable(club) && stays_too_high(n, table, rows, club, tier);
     }
     int down = 0;
     for (int i = 0; i < rows; i++) {
@@ -499,7 +598,7 @@ static void old_save_down(const Nation *n, uint32_t league, int tier)
         if (log_on())
             fprintf(stderr, "recomp: esp second: %.51s goes down from %.51s (a club above it plays there or "
                     "higher)\n", name_of(club), win_str(rd32(g_mem, club + CLUB_DIVISION) + 4));
-        if (tier > 1 && up_status(s)) first_row(league, ST_NONE, ST_UP, up_skip);
+        if (tier > 1 && up_status(s)) first_row(league, ST_NONE, s, up_skip);
     }
     for (int k = 0; k < down && tier < 3; k++)          /* the best placed club of status 3 stays up */
         if (!first_row(league, ST_DOWN, tier == 1 ? ST_NONE : ST_HELD, stay_skip) && log_on())
@@ -571,6 +670,7 @@ static void season_change(Nation *n, void (*original)(void))
 {
     uint32_t self = cpu.ecx;
     n->changes++;
+    index_reset();
     test_put(n);
     int on = rule_on(n);
     if (on) {
@@ -591,6 +691,23 @@ RT_WRAP(00850970, esp_second_spain) { season_change(&SPAIN, o_00850970); }
 void o_007d0320(void);
 RT_WRAP(007d0320, esp_second_portugal) { season_change(&PORTUGAL, o_007d0320); }
 
+/* RECOMP_TEST_ESP_SECOND_REP=1 (tests only): before the pool of 0x7cff70 each Portuguese B or C side of the Third
+ * Division and A Lower Division gets the highest reputation (club +0x80), so that the original would take it first. */
+static void test_rep(void)
+{
+    if (!env_is("RECOMP_TEST_ESP_SECOND_REP", "1")) return;
+    uint32_t table = rd32(g_mem, CLUBS);
+    int count = (int)rd32(g_mem, CLUB_COUNT);
+    for (int i = 0; readable(table) && i < count; i++) {
+        uint32_t club = table + (uint32_t)i * CLUB_SIZE, div = rd32(g_mem, club + CLUB_DIVISION);
+        size_t base;
+        if (!readable(div) || nation_of(club) != &PORTUGAL || !reserve_kind(club, &base)) continue;
+        int32_t id = (int32_t)rd32(g_mem, div);
+        if (id == (int32_t)rd32(g_mem, PORTUGAL.below) || id == (int32_t)rd32(g_mem, KEY_LOWER))
+            wr16(g_mem, club + CLUB_REPUTATION, 10000);
+    }
+}
+
 /* The B and C sides that leave the pool of 0x7cff70 for the call, with their divisions. */
 static uint32_t *hidden_club, *hidden_div;
 static int nhidden;
@@ -600,11 +717,11 @@ void season_esp_second_pool(uint32_t nation_key, int phase)
     if (nation_key != PORTUGAL.nation) return;
     if (phase == 0) {
         nhidden = 0;
+        index_reset();
+        test_rep();
         if (!rule_on(&PORTUGAL)) return;
         uint32_t table = rd32(g_mem, CLUBS);
         int count = (int)rd32(g_mem, CLUB_COUNT);
-        free(hidden_club);
-        free(hidden_div);
         hidden_club = malloc(sizeof *hidden_club * (size_t)(count > 0 ? count : 1));
         hidden_div = malloc(sizeof *hidden_div * (size_t)(count > 0 ? count : 1));
         for (int i = 0; hidden_club && hidden_div && readable(table) && i < count; i++) {
@@ -625,5 +742,8 @@ void season_esp_second_pool(uint32_t nation_key, int phase)
     }
     for (int i = 0; i < nhidden; i++) wr32(g_mem, hidden_club[i] + CLUB_DIVISION, hidden_div[i]);
     nhidden = 0;
+    free(hidden_club);
+    free(hidden_div);
+    hidden_club = hidden_div = NULL;
     if (!rt_unwinding) census(&PORTUGAL, "after the exchange");
 }
