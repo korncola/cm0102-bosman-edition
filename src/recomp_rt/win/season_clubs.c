@@ -6,6 +6,7 @@
 #include "season_second_teams.h"
 #include "season_fin_second.h"
 #include "season_bel_second.h"
+#include "season_esp_second.h"
 #include "season_tur_groups.h"
 #include "season_arg_zones.h"
 #include "season_names.h"
@@ -167,6 +168,18 @@ typedef struct {
     int id, national;
     int kept;                       /* 1 when a list keeps it in its division */
 } Club;
+
+/* The clubs of the moves that run (items 121, 122: season_esp_barred reads the planned division of a club). */
+static const Club *moves_club;
+static uint32_t moves_table;
+static int moves_count;
+
+static uint32_t planned_division(uint32_t at)
+{
+    uint32_t i = (at - moves_table) / CLUB_SIZE;
+    if (!moves_club || at < moves_table || i >= (uint32_t)moves_count) return rd32(g_mem, at + CLUB_DIVISION);
+    return moves_club[i].div;
+}
 
 /* One division of the game. */
 typedef struct {
@@ -378,6 +391,7 @@ static int fill_takes(const Club *c, const Division *div, int ncomps, uint32_t c
     if (season_second_barred(c->at, d->at)) return 0;   /* open items 111, 114 to 122: a second team's bar */
     if (season_fin_barred(c->at, d->at)) return 0;      /* open item 118: no Finnish second team in the Veikkausliiga */
     if (season_bel_barred(c->at, d->at)) return 0;      /* open item 115: a Belgian U23 side below its first team */
+    if (season_esp_barred(c->at, d->at, planned_division)) return 0;      /* items 121, 122: no B or C side in its club's division */
     if (season_tur_groups_tagged(c->at)) return 0;      /* Summer 2002: the first season places it in its group */
     int t = c->db_div >= comps ? (int)((c->db_div - comps) / COMP_SIZE) : -1;
     int reserve_ok = !season_clubs_reserve_name(win_str(c->at + CLUB_NAME)) || d->missing_reserve;
@@ -461,6 +475,10 @@ static void move_clubs(int season)
         c->db_div = c->div = rd32(g_mem, c->at + CLUB_DIVISION);
         c->national = c->id >= national_from;
     }
+    moves_club = club;
+    moves_table = table;
+    moves_count = count;
+    season_esp_second_moves();
     /* The divisions: every club_comp record, its club count in the database and the count it keeps. */
     for (int i = 0; i < ncomps; i++) {
         Division *d = &div[i];
@@ -653,6 +671,7 @@ static void move_clubs(int season)
             if (season_second_barred(c->at, d->at)) continue;   /* open items 111, 114 to 122 */
             if (season_fin_barred(c->at, d->at)) continue;      /* open item 118 */
             if (season_bel_barred(c->at, d->at)) continue;      /* open item 115 */
+            if (season_esp_barred(c->at, d->at, planned_division)) continue;      /* items 121, 122 */
             /* Summer 2002: a club that the data tags for a Category B group (club +0x60) plays there; a database
              * place of another division does not keep it (two such clubs in Category A left two groups short). */
             if (season_tur_groups_tagged(c->at)) continue;
@@ -792,6 +811,7 @@ static void move_clubs(int season)
                     "the plain name), %d divisions not in it, %d divisions short, %d divisions with another class "
                     "count\n", season, (season + 1) % 100, lists, whole, moved, left, cut, unmatched, by_plain,
             unknown_division, short_after, resized);
+    moves_club = NULL;
     free(order);
     free(club);
     free(div);
