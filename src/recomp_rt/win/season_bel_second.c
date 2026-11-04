@@ -656,22 +656,29 @@ static void third_up(uint32_t league)
 }
 
 /* RECOMP_TEST_BEL_DOWN (tests only): the named clubs of the First Division get 3, as a relegated first team, and
- * as many clubs of 3 stay up, so the moves stay in pairs. */
+ * as many clubs of 3 (not named) stay up first, so the moves stay in pairs. */
+static int test_named(const char *spec, const char *name)
+{
+    size_t len = strlen(name);
+    for (const char *p = len ? spec : ""; (p = strstr(p, name)) != NULL; p++)
+        if ((p == spec || p[-1] == ';') && (!p[len] || p[len] == ';')) return 1;
+    return 0;
+}
+
 static void test_down(void)
 {
     const char *spec = getenv("RECOMP_TEST_BEL_DOWN");
     int n;
     uint32_t first = league_of(KEY_FIRST), table = spec ? table_of(first, &n) : 0;
-    for (int i = 0; table && i < n; i++) {
-        uint32_t row = row_at(table, i);
-        const char *name = name_of(rd32(g_mem, row));
-        size_t len = strlen(name);
-        const char *p = strstr(spec, name);
-        if (!p || (p != spec && p[-1] != ';') || (p[len] && p[len] != ';') || g_mem[row + ROW_STATUS] == ST_DOWN)
-            continue;
-        if (!stay_up(first, 1, "the First Division (test)")) continue;
-        g_mem[row + ROW_STATUS] = ST_DOWN;
-        fprintf(stderr, "recomp: bel second: test: %.51s goes down from the First Division\n", name);
+    int named[64], k = 0;
+    for (int i = 0; table && i < n; i++)
+        if (g_mem[row_at(table, i) + ROW_STATUS] != ST_DOWN && test_named(spec, name_of(rd32(g_mem, row_at(table, i)))))
+            named[k++] = i;
+    k = stay_up(first, k, "the First Division (test)");
+    for (int j = 0; j < k; j++) {
+        g_mem[row_at(table, named[j]) + ROW_STATUS] = ST_DOWN;
+        fprintf(stderr, "recomp: bel second: test: %.51s goes down from the First Division\n",
+                name_of(rd32(g_mem, row_at(table, named[j]))));
     }
 }
 

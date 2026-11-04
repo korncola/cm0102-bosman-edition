@@ -159,8 +159,8 @@ def run_parent(program, game, work):
                                                   for l in lines):
         fails.append(f"parent: Club Brugge KV II is at level {lv.get('Club Brugge KV II')}, want 3 (down with its "
                      f"first team)")
-    if lv.get("KAA Gent B") != 3 or not any("KAA Gent B may not go up to its first team's division" in l
-                                           for l in lines):
+    if lv.get("KAA Gent B") != 3 or not any(re.search(r"KAA Gent B may not (go up to its first team's division|take "
+                                                     r"status [05] at the season change)", l) for l in lines):
         fails.append(f"parent: KAA Gent B is at level {lv.get('KAA Gent B')}, want 3 (held in the Third Division)")
     return fails
 
