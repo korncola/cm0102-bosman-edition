@@ -487,6 +487,12 @@ int season_intl_ofc_kept(uint32_t team)
 void season_intl_ofc_rules(uint32_t self)
 {
     if (!season_intl_on() || !is_ofc(self)) return;
+    /* +0xa7, the matches of each team of the group table, is worked out once from the rows and meetings
+     * (0x684817..0x684830, 0x6827ef..0x68280f) and only the League constructor sets it to -1 (0x682263), so an
+     * edition of another size kept the count of the edition before (3 from the groups of 4 of 2002 in the groups of 3
+     * of 2004, or in the home-and-away group of 2008). Each edition works it out again after its draw. A new game is
+     * unchanged: the constructor set -1 just before (set_up_rules from the constructor, 0x798994). */
+    wr16(g_mem, self + TEAM_MATCHES, 0xffffu);
     if (one_group(self)) {
         int year = year_of(self);
         wr32(g_mem, self + STAGE_COUNT, 0);
