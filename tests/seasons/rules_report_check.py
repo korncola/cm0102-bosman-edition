@@ -10,7 +10,7 @@ Usage:
     python3 tests/seasons/rules_report_check.py --run <cm0102_recomp> <game folder> [--year y] [--last y]
         [--database <folder>] [--nations england|all|all,-<name>,...|<name,name,...>]
         [--extra conference,regional,c2,spain,portugal]
-        [--keep <folder>] [--timeout s] [--start-only] [--update-expected] [--changing-rules on|off]
+        [--databases <folder>] [--keep <folder>] [--timeout s] [--start-only] [--update-expected] [--changing-rules on|off]
         plays the season jump, then compares its report
 
     python3 tests/seasons/rules_report_check.py --league-advance <report> [<report> ...]
@@ -29,7 +29,9 @@ RECOMP_SEASON_JUMP=<last> turns the match engine off, so the original's quick re
 in the real day loop. RECOMP_RULES_REPORT writes the competitions at the start of each season (the first day,
 then 1 August) and at its end (1 June of the next year) (src/recomp_rt/win/season_report.c). The run ends after
 the end report of the last season. --year starts the game in that season (RECOMP_START_SEASON) with the
-database folder. --nations picks the leagues on the Select League(s) screen: england (the default
+database folder. Without --database, a year of SEASON_DATABASES plays its season database in --databases (default
+/Users/max/Projects/cm0102/test-fixtures/databases), the database that its expected files were written on (0.6.2
+open item 129); 2001 and the years of the own databases (2002, 2004, 2006) play the base data. --nations picks the leagues on the Select League(s) screen: england (the default
 selection), all (Select All), all,-france (Select All, then France out), or names of the first 16 rows
 (Argentina to Norway). --extra adds the lower
 divisions of the screen: the English Conference, the German regional divisions and Serie C2. --changing-rules on
@@ -844,6 +846,45 @@ def run(program, game, last, year, database, nations, extra, keep, timeout, opti
     return code, report
 
 
+DATABASES = "/Users/max/Projects/cm0102/test-fixtures/databases"
+# The start of the name of each start year's season database folder (gate_run.py plays the same folders).
+SEASON_DATABASES = {2003: "October 2003", 2005: "September 2005", 2007: "November 2007", 2008: "September 2008",
+                    2009: "September 2009", 2010: "September 2010", 2011: "September 2011", 2012: "September 2012",
+                    2013: "Autumn 2013", 2014: "October 2014", 2015: "October 2015", 2016: "October 2016",
+                    2017: "October 2017", 2018: "October 2018", 2019: "October 2019", 2020: "November 2020",
+                    2021: "October 2021", 2022: "October 2022", 2023: "October 2023", 2024: "October 2024",
+                    2025: "December 2025", 2026: "October 2026"}
+# Our own season databases, zips in /Users/max/Projects/cm0102/own-dbs (gate_run.py --own-dbs).
+OWN_DATABASES = {2002: "Summer 2002", 2004: "Summer 2004", 2006: "Summer 2006"}
+
+
+def data_folder(path):
+    """The folder of index.dat: the folder itself, or its one subfolder that holds it (the October 2026 zip unpacks
+    to "October 2026/October 2026 Data Update")."""
+    if os.path.isfile(os.path.join(path, "index.dat")):
+        return path
+    subs = [os.path.join(path, n) for n in sorted(os.listdir(path)) if os.path.isfile(os.path.join(path, n, "index.dat"))]
+    return subs[0] if len(subs) == 1 else path
+
+
+def season_database(year, databases=DATABASES):
+    """The season database folder of a year of SEASON_DATABASES in databases; stops when there is none."""
+    names = sorted(n for n in os.listdir(databases) if n.startswith(SEASON_DATABASES[year])) \
+        if os.path.isdir(databases) else []
+    if not names:
+        raise SystemExit(f"rules_report_check.py: no database folder for {SEASON_DATABASES[year]} in {databases}")
+    return data_folder(os.path.join(databases, names[0]))
+
+
+def run_database(year, database, databases=DATABASES):
+    """The database folder of a run (None: the base data). An explicit --database stays. Without it a start year
+    plays its season database, as its expected files do: with the base data a 2007 start compared 2001 clubs with
+    the November 2007 file (Brazilian state championships of 12, 5 and 5 clubs, batch P rr2007-a, open item 129)."""
+    if database or not year or year not in SEASON_DATABASES:
+        return database
+    return season_database(year, databases)
+
+
 def arg(argv, name, default=None):
     return argv[argv.index(name) + 1] if name in argv else default
 
@@ -867,7 +908,9 @@ def main(argv):
         program, game = os.path.abspath(argv[2]), os.path.abspath(argv[3])
         year = int(arg(argv, "--year", 0)) or None
         last = int(arg(argv, "--last", 2027))
-        database = os.path.abspath(arg(argv, "--database")) if "--database" in argv else None
+        database = run_database(year, os.path.abspath(arg(argv, "--database")) if "--database" in argv else None,
+                                arg(argv, "--databases", DATABASES))
+        print(f"database: {database or 'the base data (3.9.68)'}")
         nations = arg(argv, "--nations", "england")
         words = [x.strip().lower().replace("_", " ") for x in nations.split(",")]
         names = [next(n for n in NATION_ROWS if n.lower() == w.lstrip("-")) for w in words if w != "all"]
