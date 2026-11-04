@@ -313,32 +313,59 @@ static int class_size_of(const char *file)
     return 0;
 }
 
-/* A club name in a plain form, to find a club whose name in the research differs a little from the database
- * ("Operário Futebol Clube Ltda" and "Operário Futebol Clube"): the letters of Windows-1252 without accents,
- * lower case, words of letters and digits, and (when drop is set) the words that only say "club" (fc, futebol,
- * clube, ltda, ...) left out. */
-static void plain_words(const char *in, char *out, size_t room, int drop_words)
+/* 1 for a letter or digit of Windows-1252 (a letter with an accent counts). */
+static int plain_letter(unsigned char ch)
 {
-    static const char *const drop[] = {"fc", "cf", "sc", "ac", "ec", "ca", "cd", "sd", "ud", "if", "fk", "sk",
-                                       "bk", "afc", "club", "clube", "futebol", "football", "ltda", "de", "da",
-                                       "do", "das", "dos", "the", "e", "y", "and"};
+    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') ||
+           (ch >= 0xc0 && ch != 0xf7);
+}
+
+/* The words of a plain form, see plain_words. join: initials with full stops are one word ("A.F.C." is "afc",
+ * "S.S.C." is "ssc"): a full stop joins when one letter stands before it and one letter after it, and no letter
+ * follows that letter, so "St. Patrick's", "J. Smith" and "A.Smith" stay apart. With join and drop_words a
+ * joined word is left out as a club-form word, as fc is.
+ * initials: only the club-form initials are given, the joined words and the short form words (fc, cd, afc, ...). */
+enum { PLAIN_JOIN = 1, PLAIN_INITIALS = 2 };
+
+static void plain_words_by(const char *in, char *out, size_t room, int drop_words, int how)
+{
+    static const char *const forms[] = {"fc", "cf", "sc", "ac", "ec", "ca", "cd", "sd", "ud", "if", "fk", "sk", "bk",
+                                        "afc"};     /* the short form words */
+    static const char *const words[] = {"club", "clube", "futebol", "football", "ltda", "de", "da", "do", "das",
+                                        "dos", "the", "e", "y", "and"};
     static const char fold[] = "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYTsaaaaaaaceeeeiiiidnooooo/ouuuuyty";   /* 0xc0.. */
     char word[64];
-    size_t n = 0, w = 0;
+    size_t n = 0, w = 0, seg = 0;       /* seg: the letters since the start of the word or a joining full stop */
+    int joined = 0;
     out[0] = 0;
     for (const unsigned char *p = (const unsigned char *)in;; p++) {
         int ch = *p;
         if (ch >= 0xc0) ch = (unsigned char)fold[ch - 0xc0];
         if (ch >= 'A' && ch <= 'Z') ch += 32;
         int letter = (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9');
-        if (letter && w < sizeof word - 1) {
-            word[w++] = (char)ch;
+        if (letter) {
+            if (w < sizeof word - 1) word[w++] = (char)ch;
+            seg++;
             continue;
         }
+        if ((how & (PLAIN_JOIN | PLAIN_INITIALS)) && ch == '.' && seg == 1 && plain_letter(p[1]) &&
+            !plain_letter(p[1] ? p[2] : 0)) {
+            seg = 0;
+            joined = 1;
+            continue;
+        }
+        seg = 0;
         if (w) {
             word[w] = 0;
             int skip = 0;
-            for (size_t k = 0; drop_words && k < sizeof drop / sizeof drop[0] && !skip; k++) skip = !strcmp(word, drop[k]);
+            int form = 0;
+            for (size_t k = 0; k < sizeof forms / sizeof forms[0] && !form; k++) form = !strcmp(word, forms[k]);
+            if (how & PLAIN_INITIALS) {
+                skip = !joined && !form;
+            } else if (drop_words) {
+                skip = form || (joined && (how & PLAIN_JOIN));
+                for (size_t k = 0; k < sizeof words / sizeof words[0] && !skip; k++) skip = !strcmp(word, words[k]);
+            }
             if (!skip && n + w + 2 < room) {
                 if (n) out[n++] = ' ';
                 memcpy(out + n, word, w);
@@ -346,9 +373,34 @@ static void plain_words(const char *in, char *out, size_t room, int drop_words)
                 out[n] = 0;
             }
             w = 0;
+            joined = 0;
         }
         if (!*p) break;
     }
+}
+
+/* A club name in a plain form, to find a club whose name in the research differs a little from the database
+ * ("Operário Futebol Clube Ltda" and "Operário Futebol Clube"): the letters of Windows-1252 without accents,
+ * lower case, words of letters and digits, and (when drop is set) the words that only say "club" (fc, futebol,
+ * clube, ltda, ...) left out. */
+static void plain_words(const char *in, char *out, size_t room, int drop_words)
+{
+    plain_words_by(in, out, room, drop_words, 0);
+}
+
+/* 1 when the two lists of words (space between) have a word in common. */
+static int share_word(const char *a, const char *b)
+{
+    for (const char *p = a; *p;) {
+        size_t n = strcspn(p, " ");
+        for (const char *q = b; *q;) {
+            size_t m = strcspn(q, " ");
+            if (n == m && !strncmp(p, q, n)) return 1;
+            q += m + (q[m] == ' ');
+        }
+        p += n + (p[n] == ' ');
+    }
+    return 0;
 }
 
 static void plain_name(const char *in, char *out, size_t room)
@@ -559,6 +611,42 @@ static void move_clubs(int season)
             }
             if (hits == 1) k = hit, by_plain++;
             else if (hits > 1 && close == 1) k = close_hit, by_plain++;
+        }
+        if (k < 0 && rows[r].club_id >= 0) {
+            /* Open item 123b: the club of the list id, when its name differs from the list name only in dotted
+             * initials. "Bray Wanderers" (the 2008 list) is "Bray Wanderers A.F.C." in 3.9.68 (club 1855), and the
+             * plain forms "bray wanderers" and "bray wanderers a f c" differ. With the initials joined and left out
+             * as club-form words both are "bray wanderers". Three checks keep other clubs out: the club has the
+             * list id, the initials of the two names have a word in common or one name has none ("UD Logroñés" is
+             * not "C.D. Logroñés", club 6678 in the 2008 data), and no other club of the nation has the joined
+             * form ("Ehime F.C." is not "Ehime" while "Ehime FC" is there). */
+            char want[128], have[128], old_want[128], old_have[128], ini_want[64], ini_have[64];
+            plain_words_by(rows[r].club, want, sizeof want, 1, PLAIN_JOIN);
+            plain_name(rows[r].club, old_want, sizeof old_want);
+            plain_words_by(rows[r].club, ini_want, sizeof ini_want, 1, PLAIN_INITIALS);
+            int id_hit = -1;
+            for (int i = 0; i < count && id_hit < 0 && *want; i++) {
+                if (club[i].id != rows[r].club_id || club[i].national || club[i].nation != div[t].nation) continue;
+                const char *name = win_str(club[i].at + CLUB_NAME);
+                plain_words_by(name, have, sizeof have, 1, PLAIN_JOIN);
+                plain_name(name, old_have, sizeof old_have);
+                plain_words_by(name, ini_have, sizeof ini_have, 1, PLAIN_INITIALS);
+                if (strcmp(have, want) || !strcmp(old_have, old_want)) break;
+                if (*ini_have && *ini_want && !share_word(ini_have, ini_want)) break;
+                id_hit = i;
+            }
+            int others = 0;
+            for (int i = 0; i < count && id_hit >= 0 && !others; i++) {
+                if (i == id_hit || club[i].national || club[i].nation != div[t].nation) continue;
+                plain_words_by(win_str(club[i].at + CLUB_NAME), have, sizeof have, 1, PLAIN_JOIN);
+                others = !strcmp(have, want);
+            }
+            if (id_hit >= 0 && !others) {
+                k = id_hit, by_plain++;
+                if (log) fprintf(stderr, "recomp: club moves: by initials: %d/%02d\t%s\t%s\t%s (%d)\n", season,
+                                 (season + 1) % 100, rows[r].division, rows[r].club, win_str(club[k].at + CLUB_NAME),
+                                 club[k].id);
+            }
         }
         if (k < 0) {
             unmatched++;

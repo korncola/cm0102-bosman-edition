@@ -29,7 +29,11 @@ and season use data set 3.9.68 and start in 2025 (the dates of the data move to 
             Wanderers A.F.C." (club 1855), so the club moves did not find it and left its place in the Premier
             Division open: 11 clubs, and IrePrm::IrePrm 0x639bb0 stopped at ire_prm..cpp 82 (push 0x52 at
             0x639ca7). The 3.9.65 data hold 9 First Division clubs, so one open place left 8. The club moves now
-            fill as many open places as the class needs (season_clubs.c, data_class_count).
+            fill as many open places as the class needs (season_clubs.c, data_class_count), and find a club of the
+            list id whose name differs only in dotted initials (item 123b): each start logs exactly the clubs of
+            BY_INITIALS as "by initials", Bray Wanderers among them, and on 3.9.68 no listed Bray Wanderers is
+            missing. The lists hold 3.9.68 club ids, so the 3.9.65 start finds none by initials (Bray Wanderers
+            A.F.C. is club 1522 there) and the fill keeps the Premier Division at 12.
 Without --keep the runs play in a temporary folder that the script deletes when every run passes.
 """
 import os
@@ -101,6 +105,20 @@ DATA_3965 = "/Users/max/Projects/cm0102/data-3965"
 IRISH = [(2008, None, {"ire_prm": 12, "ire_first": 10}), (2010, None, None), (2017, None, None),
          (2012, DATA_3965, None)]
 TAKES = {"ire_prm": {10, 12}, "ire_first": {9, 10, 11, 12}}
+# Item 123b: the list clubs that each start finds by the joined initials (list name, database name and id), found
+# by the rule of season_clubs.c over the lists of these seasons on 3.9.68. The 3.9.65 start of 2012 finds none.
+BY_INITIALS = {
+    2008: {("Italian Serie A", "S.S. Lazio", "Lazio (6411)"), ("Italian Serie A", "S.S.C. Napoli", "Napoli (7752)"),
+           ("Italian Serie A", "Bologna F.C. 1909", "Bologna 1909 (1728)"),
+           ("Irish Premier Division", "Bray Wanderers", "Bray Wanderers A.F.C. (1855)")},
+    2010: {("Italian Serie A", "S.S. Lazio", "Lazio (6411)"), ("Italian Serie A", "S.S.C. Napoli", "Napoli (7752)"),
+           ("Italian Serie A", "Bologna F.C. 1909", "Bologna 1909 (1728)"),
+           ("Irish Premier Division", "Bray Wanderers", "Bray Wanderers A.F.C. (1855)")},
+    2017: {("Italian Serie A", "A.C. Milan", "AC Milan (7369)"),
+           ("Turkish 2. Division Category A", "Istanbulspor", "Istanbulspor A.S. (5461)"),
+           ("Turkish 2. Division Category A", "Adanaspor", "Adanaspor A.S. (236)"),
+           ("Irish Premier Division", "Bray Wanderers", "Bray Wanderers A.F.C. (1855)")},
+}
 
 
 def run_irish(program, game, work):
@@ -121,6 +139,13 @@ def run_irish(program, game, work):
         if f"recomp: club moves of {year}/{(year + 1) % 100:02d}:" not in log:
             fails.append(f"{name}: the club moves did not run (no seasons tables beside the program?)")
         fails += [f"{name}: {line}" for line in short_divisions(log) if line.startswith(("Irish", "Norwegian"))]
+        tag = f"{year}/{(year + 1) % 100:02d}"
+        got = set(re.findall(rf"recomp: club moves: by initials: {tag}\t(.+?)\t(.+?)\t(.+)", log))
+        want = BY_INITIALS.get(year, set()) if not database else set()
+        fails += [f"{name}: not found by initials: {w}" for w in sorted(want - got)]
+        fails += [f"{name}: found by initials, not expected: {g}" for g in sorted(got - want)]
+        if not database:                        # 3.9.65 has other ids (Bray Wanderers A.F.C. is 1522)
+            fails += [f"{name}: {m}" for m in re.findall(r"club moves: missing: [^\n]*Bray Wanderers[^\n]*", log)]
         if not os.path.exists(report):
             fails.append(f"{name}: no report ({sub})")
             continue
