@@ -514,20 +514,43 @@ static int first_row(uint32_t league, uint8_t from, uint8_t to, const char *skip
     return 0;
 }
 
-/* A reserve side of the second division in a place of the title, promotion or the play-off while a club above it
- * plays the top or the second division (a save made after the table was complete, with no 0xfc): it gets 0xfc, and
- * its place goes to the best placed row of 0xff that is no such side, as the original hands on a place (0x850e8e).
- * A play-off already played keeps its winner. A reserve side with a club above it in any division may not go up
- * into the top division (it would share it or play above). */
-static void shift_up(const Nation *n, uint32_t league)
+/* The status of a club's row in a table, or -1 when it has none there. */
+static int row_status(uint32_t table, int rows, uint32_t club)
+{
+    for (int i = 0; i < rows; i++)
+        if (rd32(g_mem, table + (uint32_t)i * ROW_SIZE) == club) return g_mem[table + (uint32_t)i * ROW_SIZE + ROW_STATUS];
+    return -1;
+}
+
+/* 1 when a reserve side of a table of the second (tier 2) or third tier (tier 3) may not go up at this change: from
+ * the second division none may (it would share the top division with its club or play above it); from the third tier
+ * one whose club above plays the second division or lower, or comes down into it from the top division (status 3). */
+static int may_not_go_up(const Nation *n, uint32_t club, int tier)
+{
+    if (!readable(club)) return 0;
+    if (tier == 2) return above_tier(n, club) <= 4;
+    uint32_t up[2];
+    int k = above_of(club, up), top_rows;
+    uint32_t top = table_of(league_of(n->top), &top_rows);
+    for (int i = 0; i < k; i++) {
+        int t = tier_of(n, rd32(g_mem, up[i] + CLUB_DIVISION));
+        if ((t >= 2 && t <= 4) || (t == 1 && row_status(top, top_rows, up[i]) == ST_DOWN)) return 1;
+    }
+    return 0;
+}
+
+/* Before the original: a reserve side that may not go up and holds the title, promotion or the play-off gets 0xfc,
+ * and its place goes to the best placed row of 0xff that is no such side, as the original hands on a place
+ * (0x850e8e). This covers a save made after the table was complete (no 0xfc of the season), and a third-tier side
+ * that holds the title (status 5): 0x850970 and 0x7d0320 hold such a side (0xfe, 0x850c2a, 0x7d05a7) but count a
+ * place to hand on only for status 0 (0x850be9..0x850c26, 0x7d0574..0x7d05a3), so the place would stay empty. A play-off already played keeps
+ * its winner. */
+static void shift_up(const Nation *n, uint32_t league, int tier)
 {
     int rows;
     uint32_t table = table_of(league, &rows);
     char barred[64] = {0};
-    for (int i = 0; i < rows; i++) {
-        uint32_t club = rd32(g_mem, table + (uint32_t)i * ROW_SIZE);
-        barred[i] = readable(club) && above_tier(n, club) <= 4;   /* no reserve side goes up into the top tier */
-    }
+    for (int i = 0; i < rows; i++) barred[i] = may_not_go_up(n, rd32(g_mem, table + (uint32_t)i * ROW_SIZE), tier);
     for (int i = 0; i < rows; i++) {
         uint32_t row = table + (uint32_t)i * ROW_SIZE;
         uint8_t s = g_mem[row + ROW_STATUS];
@@ -535,8 +558,8 @@ static void shift_up(const Nation *n, uint32_t league)
         g_mem[row + ROW_STATUS] = ST_BARRED;
         if (up_status(s)) {
             if (log_on())
-                fprintf(stderr, "recomp: esp second: %.51s held status %d of the second division\n",
-                        name_of(rd32(g_mem, row)), s);
+                fprintf(stderr, "recomp: esp second: %.51s held status %d of tier %d\n", name_of(rd32(g_mem, row)), s,
+                        tier);
             first_row(league, ST_NONE, s, barred);
         }
     }
@@ -549,14 +572,6 @@ static void shift_up(const Nation *n, uint32_t league)
  * division, 0xfe below, as 0x850ebc) and a club that takes a place of promotion that it held (0, as 0x850e8e) are
  * no reserve side with a club above it (it may be one that goes down with its club; and one whose club plays the
  * tier above or lower may not go up). */
-/* The status of a club's row in a table, or -1 when it has none there. */
-static int row_status(uint32_t table, int rows, uint32_t club)
-{
-    for (int i = 0; i < rows; i++)
-        if (rd32(g_mem, table + (uint32_t)i * ROW_SIZE) == club) return g_mem[table + (uint32_t)i * ROW_SIZE + ROW_STATUS];
-    return -1;
-}
-
 /* 1 when a reserve side of the table (tier) shares the tier with a club above it, or plays above it, and that club
  * does not go up out of this table at this change (a club above that goes up leaves it below). */
 static int stays_too_high(const Nation *n, uint32_t table, int rows, uint32_t club, int tier)
@@ -677,7 +692,10 @@ static void season_change(Nation *n, void (*original)(void))
     int on = rule_on(n);
     if (on) {
         census(n, "before");
-        shift_up(n, league_of(n->second));
+        shift_up(n, league_of(n->second), 2);
+        uint32_t groups[8];
+        int ng = third_tables(n, groups, 8);
+        for (int i = 0; i < ng; i++) shift_up(n, groups[i], 3);
     }
     original();
     if (rt_unwinding || !on) return;

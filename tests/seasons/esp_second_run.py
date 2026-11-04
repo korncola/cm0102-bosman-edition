@@ -23,7 +23,7 @@ cases do not hang on match results. The report's club lines at each season start
     por-on   May 2026, Portugal, 2025 to 2026. Vitória Guimarães SC B (no key pair) plays the third tier (Liga 3),
              Vitória Guimarães SC the Primeira Liga. The put gives Vitória row 18 (relegation) and its B side row 1
              of its table. With the fix the B side stays in the third tier while its club comes down to the
-             Segunda Liga (0x7d0320 at 0x7d03b1)
+             Segunda Liga (0x7d0320 at 0x7d03b1), and the next club takes its place of the title
     por-off  the same with RECOMP_ESP_SECOND=off: the B side goes up into the Segunda Liga beside its club
     pool-on  the base game (3.9.68), Portugal, changing rules on, 2001 to 2002: the pool of the Second Division B
              of the database's zones (por_prm_exchange_second_b_with_lower 0x7cff70). RECOMP_TEST_ESP_SECOND_REP=1
@@ -161,6 +161,9 @@ def por(name, program, game, work, off):
         return fails
     if then in ("por_prm", "por_second"):
         fails.append(f"{name}: the B side plays {then} in 2026 beside or above its club")
+    if not re.search(r"esp second: Vit.{1,2}ria Guimar.{1,2}es SC B held status 5 of tier 3", log):
+        fails.append(f"{name}: the title place of the B side was not handed on (the original holds it at 0x7d05a7 "
+                     "with no club in its place)")
     return fails
 
 
