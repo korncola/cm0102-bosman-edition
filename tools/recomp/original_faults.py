@@ -1,7 +1,7 @@
 """Faults of the original that long games reach (0.6.2 slice 11, Q23, Q24, Q27, open item 102;
 src/recomp_rt/win/original_faults.c). The fixes act in every game, the base game too. The test switch
-RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age" or "keep:olympics" (or a
-list: "keep:money,age") turns off one group or more.
+RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age", "keep:olympics" or
+"keep:ire_super" (or a list: "keep:money,age") turns off one group or more.
 
 National managers (fault 26, Q23). `club_can_be_managed` 0x544820 takes a senior national team (club id from club
 count - 2 x nation count to club count - nation count, 0x544835..0x544857) only when its nation had more than 150
@@ -73,6 +73,18 @@ squad's young players, and in a Tier A game Holland played a World Cup qualifier
 At 0x76ce1c, the jump that skips a candidate, the Olympic pick also skips a player of a senior squad whose window ends
 today or later (rt_olympic_keeps_senior; the Olympics: fixture +0 is the key at 0x9cf7a0, as at 0x76ce2d). Other
 picks of slot 1 or 2 skip such a player anyway (0x76ce38).
+
+The Irish Super Cup (open item 127). `IreSuperCup::create_table` 0x63b0c0 fills its four places with the Irish clubs
+of the Champions League (club +0x1db the key at 0x9cf6e8, 0x63b10a..0x63b17b), the UEFA Cup (0x9cf6f0, 0x63b1c7..
+0x63b21a) and the Intertoto Cup (0x9cf6f8, 0x63b228..0x63b27b), then with Premier Division clubs (club +0x57 the
+key at 0x9cf80c, 0x63b295..0x63b2df). The last loop takes the first Premier Division clubs in club order and does not
+ask whether a club is already in the table. When Ireland has fewer than four European places, a club of the first
+loops is often taken again: the run set game a2001offs3 drew "Athlone Town v Athlone Town" in 2057 and a2001offs1
+"Bohemian F.C. v Bohemian F.C." in 2041. That match is never played, so the edition never completes, the season pass
+never calls `IreSuperCup::start_new_season` 0x63b550, and `update_for_date` 0x63b300 never draws again (it draws only
+while +0x45 is 0 and +0x40 is the year, 0x63b311..0x63b331): the cup is gone for the rest of the game. At 0x63b2ae
+(the jump that skips a club of another division) the last loop also skips a club that is already in the table
+(rt_ire_super_has).
 """
 
 # address: (the instruction in the original, C code)
@@ -115,6 +127,7 @@ INSNS = {
     0x88808F: ("mov dword ptr [esp + 0x34], eax",
                "W32(esp + 0x34u, eax); rt_cash_wide(esp + 0x34u, eax, R32(edi + 0xb0u), 1u);"),
     0x76CE1C: ("je 0x76cf82", "if (cc_e(F) || rt_olympic_keeps_senior(esi, ebp, ebx, R32(esp + 0x8ecu))) goto L_76cf82;"),
+    0x63B2AE: ("jne 0x63b2c6", "if (!cc_e(F) || rt_ire_super_has(esi, edi, ebx)) goto L_63b2c6;"),
     0x5968E8: ("mov edx, dword ptr [0xae23b4]", "rt_max_wage_high(edx, eax); edx = R32(0xae23b4u);"),
     0x597019: ("add ecx, edx", "ecx = rt_max_wage_sum(ecx, edx);"),
 }

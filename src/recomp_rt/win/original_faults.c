@@ -1,7 +1,7 @@
 /* Faults of the original that long games reach (0.6.2 slice 11, tools/recomp/original_faults.py). The fixes act in
  * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS turns them off: "keep" all
- * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age and
- * olympics. */
+ * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age,
+ * olympics and ire_super. */
 #include "win.h"
 #include "../rt.h"
 
@@ -12,13 +12,13 @@
 #define CLUB_COUNT 0xae235cu     /* clubs, national teams and under-21 teams */
 #define NATION_COUNT 0xae2350u
 
-enum { MANAGERS, MONEY, AGE, OLYMPICS, GROUPS };
+enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, GROUPS };
 
 static int fixes_on_group(int group)
 {
     static int on[GROUPS] = {-1};
     if (on[0] < 0) {
-        static const char *const names[GROUPS] = {"managers", "money", "age", "olympics"};
+        static const char *const names[GROUPS] = {"managers", "money", "age", "olympics", "ire_super"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
         if (v && strcmp(v, "keep") && strncmp(v, "keep:", 5))
             fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS=%s is not keep or keep:<groups>: every fix acts\n", v);
@@ -29,7 +29,8 @@ static int fixes_on_group(int group)
             for (int g = 0; g < GROUPS; g++) known |= n == strlen(names[g]) && !strncmp(p, names[g], n);
             if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
                 fprintf(stderr,
-                        "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics)\n",
+                        "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics, "
+                        "ire_super)\n",
                         (int)n, p);
         }
         for (int g = 0; g < GROUPS; g++) {
@@ -148,6 +149,23 @@ uint32_t rt_olympic_keeps_senior(uint32_t player, uint32_t nation, uint32_t slot
     fprintf(stderr, "recomp: olympic squad: %s %s staff %d %s its senior squad on day %d of %d (window to day %d of "
                     "%d)\n", name, on ? "keeps" : "may take", (int32_t)rd32(g_mem, player), on ? "in" : "from", day,
             year, end_day, end_year);
+    return (uint32_t)on;
+}
+
+/* The Irish Super Cup (open item 127, tools/recomp/original_faults.py). At 0x63b2ae the last loop of
+ * `IreSuperCup::create_table` 0x63b0c0 has found a Premier Division club. The table (+0xb1) holds rows of 0x3b bytes
+ * with the club at +0 (League::add_club_to_table 0x687430), and the loops have filled the first `rows` (ebx). A club
+ * that is one of them is skipped, so the table holds four clubs and the edition can complete. With the group off
+ * (keep:ire_super) the line says that the original takes the club again. */
+uint32_t rt_ire_super_has(uint32_t cup, uint32_t club, uint32_t rows)
+{
+    uint32_t table = rd32(g_mem, cup + 0xb1u);
+    int found = 0;
+    for (uint32_t i = 0; table && i < rows && i < 4u && !found; i++) found = rd32(g_mem, table + 0x3bu * i) == club;
+    if (!found) return 0;
+    int on = fixes_on_group(IRE_SUPER);
+    fprintf(stderr, "recomp: Irish Super Cup %d: %s %s, already in the table\n", (int16_t)rd16(g_mem, cup + 0x40u),
+            on ? "skips" : "takes again", log_name(club + 4u));
     return (uint32_t)on;
 }
 
