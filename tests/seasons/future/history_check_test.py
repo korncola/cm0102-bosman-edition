@@ -110,7 +110,9 @@ NATION_CHANGES = ("kind\tseason\tfrom\tnation\tto\tsource\n"
                   "confed\t2020\t02-01\tElbonia\tAFC\tdue, in AFC\n"
                   "confed\t2030\t09-01\tOsterlich\tCONMEBOL\tdue; an Asia Finals runner-up in 2027, before the move\n"
                   "rename\t2040\t07-08\tOsterlich\tNova Osterlich\tdue on the save date, day 189 of 2040\n"
-                  "confed\t2040\t01-10\tCarpania\tUEFA\tdue; in the Asia Club Cup of 2039/40, which began before\n")
+                  "confed\t2040\t01-10\tCarpania\tUEFA\tdue; in the Asia Club Cup of 2039/40, which began before\n"
+                  "confed\t2041\t01-10\tElbonia\tUEFA\tnot due; Elbonia Rovers (AFC) in the Champions Match of 2040 "
+                  "stays a fault\n")
 NATION_FAULTS = {("nation-name", "Hatay", 2024), ("nation-name", "Ruritania", 2030), ("nation-name", "Osterlich", 2040),
                  ("nation-confed", "Durania", 2035), ("side-name", "Old Freedonia", 2030)}
 SHORT_NAMES = {15: "Asia Shield"}                               # the short name (+0x38) of a competition
