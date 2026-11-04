@@ -6,6 +6,7 @@
 #include "season_comps.h"
 #include "season_divisions.h"
 #include "season_divisions_ita.h"
+#include "season_esp_second.h"
 #include "season_names.h"
 #include "season_rules.h"
 
@@ -859,7 +860,9 @@ static void group_refill(const GroupTier *g, void (*original)(void))
     const SeasonRule *r;
     uint32_t obj = group_next(g, self, &r);
     if (!obj) {
+        season_esp_second_pool(g->nation_key, 0);      /* items 121, 122: no B side into its club's tier */
         original();
+        season_esp_second_pool(g->nation_key, 1);
         return;
     }
     uint32_t rec = record_of(g->key), out_rec = record_of(g->out_key), table = rd32(g_mem, CLUBS);
