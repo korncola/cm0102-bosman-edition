@@ -45,7 +45,7 @@ COMPS = [(0, "Aland League", 2, 0, "club"), (1, "Euro Super Cup", 2, -1, "club")
          (18, "Durania Cup", 1, 3, "club"), (19, "Pacific Bowl", -1, -1, "club"), (20, "Champions Cup", 2, -1, "club"),
          (21, "Holders Cup", 2, -1, "club"), (22, "Holders Final", 2, -1, "club"),
          (23, "Club Trophy", 2, -1, "club"), (24, "Friendly", -1, -1, "nation"), (25, "Club Shield", 2, -1, "club"),
-         (26, "Aland Second", 2, 0, "club")]
+         (26, "Aland Second", 2, 0, "club"), (27, "Asia Club Cup", 1, -1, "club")]
 LEVELS = {0: 20, 26: 10}                     # the level of a division (+0x69), higher is better
 # The places of the Champions Cup in the save (euro-place, open item 94): club id: (division, last division, last
 # place). Aland City from 1st place passes; Aland Club 0 from the second division and Aland Club 1 from 9th place
@@ -109,7 +109,8 @@ NATION_CHANGES = ("kind\tseason\tfrom\tnation\tto\tsource\n"
                   "confed\t2035\t09-01\tDurania\tUEFA\tdue, still in AFC\n"
                   "confed\t2020\t02-01\tElbonia\tAFC\tdue, in AFC\n"
                   "confed\t2030\t09-01\tOsterlich\tCONMEBOL\tdue; an Asia Finals runner-up in 2027, before the move\n"
-                  "rename\t2040\t07-08\tOsterlich\tNova Osterlich\tdue on the save date, day 189 of 2040\n")
+                  "rename\t2040\t07-08\tOsterlich\tNova Osterlich\tdue on the save date, day 189 of 2040\n"
+                  "confed\t2040\t01-10\tCarpania\tUEFA\tdue; in the Asia Club Cup of 2039/40, which began before\n")
 NATION_FAULTS = {("nation-name", "Hatay", 2024), ("nation-name", "Ruritania", 2030), ("nation-name", "Osterlich", 2040),
                  ("nation-confed", "Durania", 2035), ("side-name", "Old Freedonia", 2030)}
 SHORT_NAMES = {15: "Asia Shield"}                               # the short name (+0x38) of a competition
@@ -133,8 +134,11 @@ FIXTURES_2038 = [(10, side(0), side(1), 160), (10, side(4), side(0), 164), (10, 
 FIXTURES_2039 = [(16, 0, 3, 220), (16, 4, 0, 222), (1, 0, 1, 100), (13, side(6), side(8), 150),
                  (17, side(3), side(4), 120), (17, side(0), side(11), 124), (17, side(12), side(3), 127),
                  (15, side(0), side(1), 130), (19, 5, 0, 140)] + \
-    [(20, 6 + k, 7 + k, 250 + 7 * k) for k in range(0, 8, 2)]   # Champions Cup 2039/40: 8 Aland clubs, the limit 7
+    [(20, 6 + k, 7 + k, 250 + 7 * k) for k in range(0, 8, 2)] + \
+    [(27, 4, 3, 300)]       # Asia Club Cup 2039/40 (AFC): Carpania FC enters before Carpania moves to UEFA on 10
+                            # January 2040; its row year is 2040, no fault (the AFC club cups of 2001/02 and Kazakhstan)
 FIXTURES_2040 = [(16, 0, 5, 150), (16, 3, 0, 250), (1, 0, 3, 100),   # the match of day 250 is after the save date
+                 (27, 3, 4, 20),
                  (19, 4, 0, 140),
                  (21, 8, 9, 187), (21, 10, 11, 187),   # Holders Cup 2040: a qualifying day 2 days before the save date,
                                                       # still running (open item 70): its holder enters later, no fault
@@ -595,13 +599,15 @@ def main():
                 "durania_cup\tDurania Cup\tdomestic_cup\tDurania\t0\t1\t2031\t2030\n"
                 "pacific\tPacific Bowl\tsuper_cup\tAFC|UEFA\t0\t1\t2041\tnone\n"
                 "holders\tHolders Cup\tclub_continental\tUEFA\t0\t1\t2041\tnone\n"
-                "holders_final\tHolders Final\tclub_continental\tUEFA\t0\t1\t2041\tnone\n")
+                "holders_final\tHolders Final\tclub_continental\tUEFA\t0\t1\t2041\tnone\n"
+                "acc\tAsia Club Cup\tclub_continental\tAFC\t0\t1\t2041\tnone\n")
     names = os.path.join(work, "names.tsv")
     with open(names, "w", encoding="utf-8") as f:
         f.write("# a note line\npattern\tcomp\nAmericas Finals\tamericas\n(The )?World Finals\tworld\n"
                 "Euro Super Cup\tesc\nNations Shield\tshield\nAsia Shield\tasia_shield\n"
                 "Champions Match\tchamp\nAland League\taland\nQual Zone\twc_qual_zone\n"
-                "Durania Cup\tdurania_cup\nPacific Bowl\tpacific\nChampions Cup\tuefa_cl\nHolders Cup\tholders\nHolders Final\tholders_final\n")
+                "Durania Cup\tdurania_cup\nPacific Bowl\tpacific\nChampions Cup\tuefa_cl\nHolders Cup\tholders\nHolders Final\tholders_final\n"
+                "Asia Club Cup\tacc\n")
     known = os.path.join(work, "known.tsv")
     with open(known, "w", encoding="utf-8") as f:
         f.write("check\tcompetition\tyear\tnote\nduplicate\tEuro Finals\t*\tplanted\n")
