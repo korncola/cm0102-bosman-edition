@@ -63,7 +63,7 @@ Cup: United States, Canada, Costa Rica, Jamaica. Each host has a fixed row that 
 the World Cup, Euro and Olympics (0x404480). The other finals give 0 (0x5dce00), so the original writes no host
 into their history rows. At 0x519c2f a season game takes the first host of the edition's row (or of the edition,
 for the OFC Nations Cup, which has no row). The Club World Cup keeps none: its row of every year holds a random
-nation (0x5fab70).
+nation (0x5fab70), and from 0.6.2 the host of the edition while it plays (open item 125).
 
 `daily_update` lists every row of the year 5 years ahead on its decision day for the "host chosen" news, fixed rows
 too (0x5faa7f), and the news text of a row with no host is empty (0x77cb91). A row with no host gets a decision day

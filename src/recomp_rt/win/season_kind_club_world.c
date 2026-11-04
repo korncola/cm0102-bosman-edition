@@ -415,6 +415,106 @@ static int edition_dates(int edition, KnockoutDates *d)
     return 0;
 }
 
+/* The real host (0.6.2 open item 125). The original gives the host row of the Club World Championship (key id
+ * [0x9cf7bc], year 0, so it answers every year) a random nation at each new edition
+ * (HostCountry::redraw_world_club_and_confed_hosts 0x5fab70, 0x5fac7e..0x5facc3), and pick_entrants 0x92a8b0 takes
+ * place 11 from that nation (find_hosts 0x5fa730 at 0x92a944..0x92a961, pick_entrant 0x92ae60 at 0x92ab7c). In a
+ * 2023 game that drew Spain, Barcelona played the play-off on 12 December, the clash check moved its Champions
+ * League match of 13 December to the 20th (add_fixture 0x5aa680, find_new_fixture_date 0x5ab510), and the
+ * Europa League knockout draw waited a week for the Champions League thirds. Here the edition takes its real host
+ * from the format text of its row in club-world.tsv ("; host Saudi Arabia"; with changing rules off the start
+ * season's row, as edition_dates), and the host row gives that nation, which the venue code reads too
+ * (find_hosts at 0x85c5ff..0x85c61c, season_gold_cup.c). When the host's champion is also its continent's winner
+ * (2007 and 2008 Japan, 2022 Morocco), the real host place went to the continent's runner-up; here pick_entrant
+ * gives the next club of the host nation. */
+#define HOST_TABLE 0xb5e134u            /* HostCountry *: +0 the rows, +4 the count (word) */
+#define HOST_ROW 0x22u                  /* +0 key id, +4 year (word), +6 host pairs of 8 bytes, +0x1e the choice */
+#define KEY_CLUB_WORLD 0x9cf7bcu
+#define NATIONS 0xae23a8u
+#define NATION_COUNT 0xae2350u
+#define NATION_SIZE 0x122u
+#define CLUBS 0xae23b4u
+#define CLUB_RECORDS 0xae235cu          /* clubs = [0xae235c] - 2 x nations, as pick_entrant (0x92b180) */
+#define CLUB_SIZE 0x245u
+#define CLUB_NATION 0x53u
+
+static int in_game(uint32_t p) { return p >= 0x10000u && p < 0xfff00000u; }
+
+/* The nation id of the edition's host in the table, -1 when the row names none, -2 when the data has no such
+ * nation (with a log line). */
+static int edition_host(int edition)
+{
+    const SeasonRule *r = row_of("world_club_champ", season_changing_rules() ? edition : season_start_year());
+    const char *p = r && r->format_text ? strstr(r->format_text, "; host ") : NULL;
+    if (!p) return -1;
+    p += 7;
+    size_t n = strcspn(p, ";(");
+    while (n && p[n - 1] == ' ') n--;
+    uint32_t nations = rd32(g_mem, NATIONS);
+    int count = (int32_t)rd32(g_mem, NATION_COUNT);
+    for (int id = 0; in_game(nations) && id < count && id < 10000; id++) {
+        const char *name = win_str(nations + (uint32_t)id * NATION_SIZE + 4u);
+        if (strlen(name) == n && !strncmp(name, p, n)) return id;
+    }
+    fprintf(stderr, "recomp: club world %d: no nation %.*s in the data, so the drawn host stays\n", edition, (int)n, p);
+    return -2;
+}
+
+/* The clubs of a nation. pick_entrant with a nation and no league of it in the game looks for 6 of them with a
+ * reputation bar that falls by 1500 a turn and has no floor (0x92b173..0x92b1d2), so it needs 6. Every host of the
+ * table has 17 or more in each database (club.dat +0x53). */
+static int nation_clubs(int nation)
+{
+    uint32_t clubs = rd32(g_mem, CLUBS);
+    int count = (int32_t)rd32(g_mem, CLUB_RECORDS) - 2 * (int32_t)rd32(g_mem, NATION_COUNT), n = 0;
+    for (int i = 0; in_game(clubs) && i < count && i < 100000; i++) {
+        uint32_t nat = rd32(g_mem, clubs + (uint32_t)i * CLUB_SIZE + CLUB_NATION);
+        if (in_game(nat) && (int32_t)rd32(g_mem, nat) == nation) n++;
+    }
+    return n;
+}
+
+/* Place 11 of the picks from the real host, and the host row of the edition: the first row of the key with the
+ * edition's year or year 0, as find_hosts 0x5fa730 reads it (0x5fa74b..0x5fa7a9). The host goes into all three
+ * pairs, so a later choice of a pair (0x5faaae) gives it too. A host with fewer than 6 clubs keeps the drawn host. */
+static void real_host(uint32_t obj, uint32_t picks, int edition)
+{
+    int host = edition_host(edition);
+    if (host < 0) return;
+    const char *name = win_str(rd32(g_mem, NATIONS) + (uint32_t)host * NATION_SIZE + 4u);
+    int have = nation_clubs(host);
+    if (have < 6) {
+        fprintf(stderr, "recomp: club world %d: the host %s has %d clubs, so the drawn host stays\n", edition, name,
+                have);
+        return;
+    }
+    uint32_t old = rd32(g_mem, picks + 4u * PICK_HOST);
+    wr32(g_mem, picks + 4u * PICK_HOST, 0);
+    uint32_t pa[5] = {0xffffffffu, (uint32_t)host, picks, 12, 0xffffffffu};
+    uint32_t club = call_this(0x92ae60u, obj, 5, pa);
+    if (rt_unwinding) return;
+    if (!in_game(club)) {
+        wr32(g_mem, picks + 4u * PICK_HOST, old);
+        fprintf(stderr, "recomp: club world %d: no club of the host %s, so the drawn host stays\n", edition, name);
+        return;
+    }
+    wr32(g_mem, picks + 4u * PICK_HOST, club);
+    uint32_t table = rd32(g_mem, HOST_TABLE), key = rd32(g_mem, KEY_CLUB_WORLD);
+    uint32_t rows = in_game(table) ? rd32(g_mem, table) : 0;
+    int count = in_game(table) ? (int16_t)rd16(g_mem, table + 4u) : 0;
+    for (int i = 0; in_game(rows) && i < count && i < 1000; i++) {
+        uint32_t row = rows + (uint32_t)i * HOST_ROW;
+        int year = (int16_t)rd16(g_mem, row + 4u);
+        if (rd32(g_mem, row) != key || (year != edition && year != 0)) continue;
+        for (uint32_t pair = 0; pair < 3; pair++) {
+            wr32(g_mem, row + 6u + 8u * pair, (uint32_t)host);
+            wr32(g_mem, row + 10u + 8u * pair, 0xffffffffu);
+        }
+        break;
+    }
+    fprintf(stderr, "recomp: club world %d: host %s, host place %s\n", edition, name, win_str(club + 4u));
+}
+
 /* The start date (the picks and the draw): one week before the first match (formats doc 5.4). The original's
  * start branch tests the same fields (0x92a73d..0x92a765), so it cannot draw the groups on 1 July first. */
 static void set_start_date(uint32_t obj, int edition)
@@ -467,6 +567,8 @@ static int build_knockout(uint32_t obj, int clubs, int host_for_ofc)
         if (rt_unwinding) return 0;
         wr32(g_mem, picks + 4u * PICK_AFC, club);
     }
+    real_host(obj, picks, (int16_t)rd16(g_mem, obj + YEAR_AT));
+    if (rt_unwinding) return 0;
     static uint32_t list;
     if (!list) list = win_static_alloc(4u * 8u);
     for (int i = 0; i < clubs; i++) {
@@ -676,6 +778,8 @@ static int pick_groups(uint32_t obj)
         if (rt_unwinding) { game_free(all); return 0; }
         wr32(g_mem, all + 4u * PICK_AFC, club);
     }
+    real_host(obj, all, (int16_t)rd16(g_mem, obj + YEAR_AT));
+    if (rt_unwinding) { game_free(all); return 0; }
     /* 20 more: indexes 12 to 21 UEFA, 22 to 25 CONMEBOL, 26 and 27 AFC, 28 and 29 CAF, 30 and 31 CONCACAF, the
      * clubs of the highest reputation of the continent not yet picked (season_comps_top_club: pick_entrant gives
      * at most about 6 clubs of a continent, then its error box 0x92b0fd). The continent globals are those of

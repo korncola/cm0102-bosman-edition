@@ -46,6 +46,8 @@ The checks (each run):
       knockout of that many clubs (the log line of season_kind_club_world.c); with changing rules off, the club
       count of the start season
     - part 26c: a season with 32 clubs in the table plays the groups of Form G (log line "club world groups")
+    - open item 125: the edition takes the host of its row ("; host Japan"): its host place comes from that nation,
+      or the log says that the nation has fewer than 6 clubs
     - part 26c (Q401): the knockout's first match and final are on the days of the table's format text (December,
       or February for 2020/21 to 2022/23), and when the run reaches the final, places 1 to 3 (Form G: 1 and 2) are
       written on the final's day or at most 7 days later
@@ -188,6 +190,7 @@ def check(name, report, log, rules_on):
             # Part 26c (Q401): the knockout plays on the real dates of the table, the first match to the final.
             if want and row:
                 failed += check_dates(name, s, row, text, last)
+                failed += check_host(name, s, row, text)
     if rules_on:
         sentences = re.findall(r"The (.+?) (is played again from the \d{4}/\d\d season|is no longer played|is not "
                                r"played in the \d{4}/\d\d season)\.", text)
@@ -245,6 +248,20 @@ def check_dates(name, s, row, text, last):
         if not ok:
             fails.append(f"{name}: Club World Championship {s}: places {sorted(places)}, want {want_places} on {final}")
     return fails
+
+
+def check_host(name, s, row, text):
+    """Open item 125: the edition takes the host of its row's format text ("; host Saudi Arabia"): the log line of
+    the host place, or the line that the host has fewer than 6 clubs (the drawn host stays)."""
+    m = re.search(r"; host ([^;(]+)", row["format_text"] or "")
+    if not m:
+        return []
+    host = m.group(1).strip()
+    ok = re.search(rf"club world {s}: (host {re.escape(host)}, host place .+|the host {re.escape(host)} has \d+ "
+                   rf"clubs, so the drawn host stays)", text)
+    print(f"  {'ok  ' if ok else 'FAIL'}  {name}: Club World Championship {s}: host {host}: "
+          f"{ok.group(1) if ok else 'no log line'}")
+    return [] if ok else [f"{name}: Club World Championship {s}: no host line for {host}"]
 
 
 def load_and_play(program, game, save, out, days, timeout=1200, table=None):
