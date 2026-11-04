@@ -44,11 +44,12 @@
  *   later season only the regroup's last pool (clubs with no division, by reputation, when the Serie D is short) can
  *   take it back, as the vacancy rule. From 2025/26 it stays in the Serie D.
  * - The regroup's pools pass over a second team whose first team plays Serie C or lower.
- * - The club moves of a new game (season_clubs.c) put no second team into Serie A or Serie B.
+ * - The club moves of a new game (season_clubs.c, through the hook barred_at_start of season_second_teams.c) put no
+ *   second team into Serie A or Serie B.
  *
  * Test switches. RECOMP_ITA_SECOND=off: the original's moves (the census log still runs). RECOMP_ITA_SECOND_LOG=1:
  * a line at each change, the census and every move. RECOMP_TEST_ITA_SECOND_TOP=1 (tests only): before the exchange,
- * the first second team of Serie B changes places with the club of row 0 (the first place, with its points and
+ * the first second team of Serie A and of Serie B changes places with the club of row 0 (the first place, with its points and
  * status; the rows are in table order after the final sort), and the first second team of each group with the club
  * that choose_promoted takes first (status 0, else row 0), so it goes up unless the rule bars it. RECOMP_TEST_ITA_SECOND_BOTTOM=1 (tests only):
  * the first second team of each group changes places with the club of the last row (relegated).
@@ -59,6 +60,7 @@
 #include "season.h"
 #include "season_names.h"
 #include "season_ita_second.h"
+#include "season_second_teams.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -272,11 +274,14 @@ static void hand_on(uint32_t table, int n, int i, const char *what)
     say("%s: no club takes its place in %s", club_at(table, i), what);
 }
 
-/* Row i (a second team) goes down: status 3, and the best placed relegated row that is no second team stays up. */
+/* Row i (a second team) goes down: status 3, and the best placed relegated row that is no second team and not its
+ * own first team (whose fall is the cause) stays up. */
 static int goes_down(uint32_t table, int n, int i, const char *what)
 {
+    uint32_t first = first_of(club_at(table, i));
     for (int j = 0; j < n; j++) {
-        if (status_at(table, j) != ST_DOWN || !readable(club_at(table, j)) || second_team(club_at(table, j))) continue;
+        uint32_t c = club_at(table, j);
+        if (status_at(table, j) != ST_DOWN || !readable(c) || c == first || second_team(c)) continue;
         g_mem[row_at(table, j) + ROW_STATUS] = ST_NONE;
         g_mem[row_at(table, i) + ROW_STATUS] = ST_DOWN;
         say("%s goes down from %s", club_at(table, i), what);
@@ -343,8 +348,8 @@ static void test_setup(uint32_t a, uint32_t b, const uint32_t *g, int groups)
                 break;
             }
     }
-    for (int k = -1; top && k < groups; k++) {
-        table = table_of(k < 0 ? b : g[k], &n);
+    for (int k = -2; top && k < groups; k++) {
+        table = table_of(k == -2 ? a : k == -1 ? b : g[k], &n);
         for (int i = 0; log_on() && i < n && i < 6; i++) {
             char st[16];
             snprintf(st, sizeof st, " %d", status_at(table, i));
@@ -543,9 +548,14 @@ int season_ita_second_pool_skip(uint32_t club)
     return club_tier(first_of(club)) >= TIER_C;
 }
 
-int season_ita_barred(uint32_t club, uint32_t div)
+/* The club moves of a new game (season_clubs.c, through season_second_barred): no second team of the pair table into
+ * Serie A or Serie B. */
+static int ita_barred_at_start(uint32_t club, uint32_t div)
 {
     if (switched_off() || !readable(club) || !readable(div) || pair_of(club) < 0) return 0;
     int t = tier_of(div);
     return t == TIER_A || t == TIER_B;
 }
+
+static const SecondTeamHooks ita_hooks = {NULL, NULL, NULL, ita_barred_at_start};
+SEASON_SECOND_HOOKS(ita_hooks)

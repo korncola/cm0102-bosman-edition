@@ -4,10 +4,6 @@
 
 #include <stdint.h>
 
-/* The club moves of a new game (season_clubs.c): 1 when club is an Italian second team of the pair table and div is
- * Serie A or Serie B. */
-int season_ita_barred(uint32_t club, uint32_t div);
-
 /* The chain of the Serie C era (season_divisions_ita.c), in this order:
  * - before league_promote_and_relegate 0x689c80 of Serie A and B: a, b the league objects, g the group objects;
  * - after it, before the choice of the clubs that go up to Serie B (choose_promoted also asks
