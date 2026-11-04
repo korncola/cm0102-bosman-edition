@@ -29,6 +29,10 @@ The runs:
                 as a save made after the table was complete). To 1 June 2019: at the change of December 2018 the places
                 of the second teams of the First Division go on to the next clubs, every second team leaves the
                 Premier League and the sizes stay
+    old-all     the same with RECOMP_TEST_RUS_SECOND_ALL_DOWN=1 (every second team of the First Division goes down
+                at the zone exchange): at the change of December 2018 more than three go down, a club of the zones
+                takes the place of each one beyond the three rows, every second team of the two divisions goes down
+                (those that may go up from the zones still do), and the sizes stay
 All runs end with code 0 and show no message box of the game.
 """
 import concurrent.futures
@@ -90,8 +94,9 @@ def first_change(name, log, fails, n=1):
 def ups(name, lines, fails, change):
     """Three clubs go up from the zones at each change (the original's three places, 0x7ec0be)."""
     up = [l for l in lines if re.search(r"goes up to the First Division( \(a (barred )?second team\))?$", l)]
-    if len(up) != 3:
-        fails.append(f"{name}: change {change}: {len(up)} clubs went up from the zones, want 3: {up}")
+    extra = [l for l in lines if "goes up to the First Division in place of" in l]
+    if len(up) != 3 + len(extra):
+        fails.append(f"{name}: change {change}: {len(up)} clubs went up from the zones, want {3 + len(extra)}: {up}")
 
 
 def run_on(program, game, work):
@@ -143,25 +148,43 @@ def run_parent(name, program, game, work, off):
     got = first_change(name, log, fails, 2)
     if got:
         _, _, lines = got
-        down = [l for l in lines if "test: " in l and "goes down from the Premier League" in l]
-        stays = [l for l in lines if "stays in the First Division (a barred second team)" in l]
+        down = [re.search(r"\(its second team (.*)\)$", l).group(1) for l in lines
+                if "test: " in l and "goes down from the Premier League (its second team" in l]
         if not down:
             fails.append(f"{name}: no club was sent down by the test switch (no case)")
+            return fails
+        stays = [l for l in lines if l.endswith(f"{down[0]} stays in the First Division (a barred second team)")]
         if off and not stays:
             fails.append(f"{name}: no second team stayed with its club with the original (the test does not see "
                          f"the fault)")
         if not off:
             if stays:
                 fails.append(f"{name}: barred second teams stayed in the First Division: {stays}")
-            if not [l for l in lines if "went down from the First Division" in l]:
-                fails.append(f"{name}: no second team went down from the First Division")
+            if not [l for l in lines if l.endswith(f"{down[0]} went down from the First Division")]:
+                fails.append(f"{name}: {down[0]} did not go down from the First Division")
     return fails
 
 
-def run_old(program, game, work):
-    fails, log = jump("old", program, game, work, {"RECOMP_TEST_RUS_SECOND_OLD": "2", "RECOMP_TEST_RUS_SECOND_REP": "1",
-                                                   "RECOMP_TEST_RUS_SECOND_PTS": "1",
-                                                   "RECOMP_TEST_RUS_SECOND_NO_MARK": "1"}, last=2018)
+def run_old(program, game, work, name="old", all_down=False):
+    env = {"RECOMP_TEST_RUS_SECOND_OLD": "2", "RECOMP_TEST_RUS_SECOND_REP": "1", "RECOMP_TEST_RUS_SECOND_PTS": "1",
+           "RECOMP_TEST_RUS_SECOND_NO_MARK": "1", **({"RECOMP_TEST_RUS_SECOND_ALL_DOWN": "1"} if all_down else {})}
+    fails, log = jump(name, program, game, work, env, last=2018)
+    if all_down:
+        got = first_change(name, log, fails, 3)
+        if got:
+            before, after, lines = got
+            ups(name, lines, fails, 3)
+            if before[3] + before[1] <= 3:
+                fails.append(f"{name}: {before[3] + before[1]} second teams to send down, want more than 3 (no case)")
+            went = [l for l in lines if l.endswith("went down from the First Division")]
+            if after[1] or len(went) != before[3] + before[1]:
+                fails.append(f"{name}: {len(went)} second teams went down, want {before[3] + before[1]}; "
+                             f"{after[1]} left in the Premier League")
+            if [l for l in lines if "stays in the First Division" in l]:
+                fails.append(f"{name}: a second team stayed in the First Division")
+            if not [l for l in lines if "goes up to the First Division in place of" in l]:
+                fails.append(f"{name}: no club took the place of a fourth second team (the path is not seen)")
+        return fails
     first = first_change("old", log, fails, 2)
     if first and not first[1][1]:
         fails.append("old: no second team went up to the Premier League as the original (no old save made)")
@@ -182,7 +205,8 @@ def run_old(program, game, work):
 RUNS = {"on": run_on, "off": run_off,
         "parent": lambda p, g, w: run_parent("parent", p, g, w, False),
         "parent-off": lambda p, g, w: run_parent("parent-off", p, g, w, True),
-        "old": run_old}
+        "old": run_old,
+        "old-all": lambda p, g, w: run_old(p, g, w, "old-all", True)}
 
 
 def main(argv):

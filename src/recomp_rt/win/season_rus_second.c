@@ -53,8 +53,9 @@
  * The fix, season games only (season_game_changes):
  * - the zone exchange: a second team that may not play in the First Division is no part of the list of 0x7ebe20
  *   (for the call its division reads as none, then it gets its zone back), so the next club of its zones goes up.
- *   It may not when its club plays below the Premier League, or when another second team of its club plays in the
- *   First Division or stands before it in the zones (higher reputation, then the lower club id);
+ *   It may not when its club plays below the Premier League, or when another second team of its club stays in the
+ *   First Division, or stands before it (higher reputation, then the lower club record) in a zone of another pair.
+ *   With fewer than three clubs left in the list the original moves no club (0x7ebfeb); the zones hold far more;
  * - the same call: a second team in the First Division that may not stay there takes, for the call only, the club
  *   of the highest of the last three rows (row +0x3e - 3, then - 2, then - 1) that may stay, so the original sends
  *   it to that row's zone and the club of the row stays up: it counts among the clubs that go down. A second team
@@ -66,8 +67,9 @@
  * - the Premier League (a game of an older build): before the chain each second team gets status 3 in exchange for
  *   the best placed club of status 3, which stays up (the chain moves pairs). It comes down into the First Division
  *   and goes on to a zone as above when it may not stay there either;
- * - the club moves of a new game (season_clubs.c) put no second team into the Premier League, nor into the First
- *   Division while its club's division then is not the Premier League.
+ * - the club moves of a new game (season_clubs.c) put no second team into the Premier League or the First Division
+ *   to fill a place (they read the database's divisions, not those of the moves). A second team that the research
+ *   list keeps there (Spartak-2 and Zenit-2 in 2015/16 to 2018/19) stays.
  *
  * Switches. RECOMP_RUS_SECOND=off (test) gives the original. RECOMP_RUS_SECOND_LOG=1 logs the clubs held, moved and
  * marked, and a census of each division before and after each season change. Tests only: RECOMP_TEST_RUS_SECOND_REP=1
@@ -78,7 +80,8 @@
  * RECOMP_TEST_RUS_SECOND_PARENT_DOWN=1 sends the parent of a second team of the First Division down from the Premier
  * League at the next season change (status 3, in exchange for the best placed club of status 3);
  * RECOMP_TEST_RUS_SECOND_OLD=<n> plays as the original until n Russian season changes are done, as a game of an older
- * build; RECOMP_TEST_RUS_SECOND_NO_MARK=1 gives no mark before 0x684cd0, as a save made after the table was complete,
+ * build; RECOMP_TEST_RUS_SECOND_ALL_DOWN=1 sends every second team of the First Division down at the zone exchange
+ * (more than three: the path after the call); RECOMP_TEST_RUS_SECOND_NO_MARK=1 gives no mark before 0x684cd0, as a save made after the table was complete,
  * so that the season change hands the places on. */
 #include "win.h"
 #include "season.h"
@@ -201,7 +204,8 @@ static const char *const first_teams[] = {
 };
 
 /* The cache of the links: for each club of the table, its parent (0 for none). */
-static uint32_t c_table, c_date;
+static uint32_t names_sig(uint32_t table, int count);
+static uint32_t c_table, c_date, c_sig;
 static int c_count = -1;
 static uint32_t *c_parent;
 static int *c_seconds, c_nseconds;      /* the clubs (indices) that have a parent */
@@ -252,6 +256,20 @@ static void cache_build(uint32_t table, int count)
     c_table = table;
     c_count = count;
     c_date = rd32(g_mem, GAME_DATE);
+    c_sig = names_sig(table, count);
+}
+
+/* A short check of the names (the first, middle and last club), so that a load of another game with the same table,
+ * count and date builds the links again. */
+static uint32_t names_sig(uint32_t table, int count)
+{
+    uint32_t h = 2166136261u;
+    for (int k = 0; count > 0 && k < 3; k++) {
+        char raw[NAME_ROOM + 1];
+        name_of(table + (uint32_t)(k == 0 ? 0 : k == 1 ? count / 2 : count - 1) * ST_CLUB_SIZE, raw);
+        for (const char *p = raw; *p; p++) h = (h ^ (uint8_t)*p) * 16777619u;
+    }
+    return h;
 }
 
 /* The index of a club in the table (-1 when none), with the cache up to date. */
@@ -260,7 +278,8 @@ static int club_index(uint32_t club)
     int count;
     uint32_t table = st_clubs(&count);
     if (!table) return -1;
-    if (table != c_table || count != c_count || rd32(g_mem, GAME_DATE) != c_date) cache_build(table, count);
+    if (table != c_table || count != c_count || rd32(g_mem, GAME_DATE) != c_date || names_sig(table, count) != c_sig)
+        cache_build(table, count);
     if (!c_parent || club < table || (club - table) % ST_CLUB_SIZE) return -1;
     uint32_t i = (club - table) / ST_CLUB_SIZE;
     return i < (uint32_t)c_count ? (int)i : -1;
@@ -299,20 +318,42 @@ static int before(uint32_t a, uint32_t b)
     return ra != rb ? ra > rb : a < b;
 }
 
+/* The zone (0 to 5) of a club, or -1. */
+static int zone_of(uint32_t club)
+{
+    uint32_t div = rd32(g_mem, club + ST_CLUB_DIVISION);
+    if (!st_readable(div)) return -1;
+    for (uint32_t k = 0; k < ZONES; k++)
+        if ((int32_t)rd32(g_mem, div) == (int32_t)rd32(g_mem, KEY_ZONE1 + 4u * k)) return (int)k;
+    return -1;
+}
+
+/* 1 when the club holds one of the last three rows of the First Division table (0x7ebe20 sends it down). */
+static int in_last_rows(uint32_t club)
+{
+    int n;
+    uint32_t table = st_table_of(st_league_of(KEY_FIRST), &n);
+    for (int r = n - 3; table && n >= 3 && r < n; r++)
+        if (rd32(g_mem, table + (uint32_t)r * ST_ROW_SIZE) == club) return 1;
+    return 0;
+}
+
 /* A second team that may not stay in or go up to the First Division: its club plays below the Premier League, or
- * another second team of its club plays in the First Division or stands before it in the zones. */
+ * another second team of its club stays there (in the First Division and not in the last three rows; with two
+ * there, the one that stands behind goes), or stands before it in a zone of another pair (0x7ebe20 takes one club
+ * of each pair of zones, so two of one pair never go up together). */
 static int barred_first(uint32_t club)
 {
     uint32_t parent = season_rus_parent(club);
     if (!parent) return 0;
     if (level_of_club(parent) != 0) return 1;
-    int self = level_of_club(club);
+    int self = level_of_club(club), zone = zone_of(club);
     for (int k = 0; k < c_nseconds; k++) {
         uint32_t other = c_table + (uint32_t)c_seconds[k] * ST_CLUB_SIZE;
         if (other == club || c_parent[c_seconds[k]] != parent) continue;
         int l = level_of_club(other);
-        if (l == 1 && (self != 1 || before(other, club))) return 1;
-        if (l == 2 && self == 2 && before(other, club)) return 1;
+        if (l == 1 && !in_last_rows(other) && (self != 1 || before(other, club))) return 1;
+        if (l == 2 && self == 2 && zone_of(other) / 2 != zone / 2 && before(other, club)) return 1;
     }
     return 0;
 }
@@ -385,8 +426,8 @@ static void test_parent_down(uint32_t prm)
             if (rd32(g_mem, row) != parent || g_mem[row + ST_ROW_STATUS] == ST_DOWN) continue;
             if (!stay_up(prm, 1, parent)) return;
             g_mem[row + ST_ROW_STATUS] = ST_DOWN;
-            fprintf(stderr, "recomp: " TAG ": test: %.51s goes down from the Premier League\n",
-                    win_str(parent + ST_CLUB_NAME));
+            fprintf(stderr, "recomp: " TAG ": test: %.51s goes down from the Premier League (its second team %.51s)\n",
+                    win_str(parent + ST_CLUB_NAME), win_str(rd32(g_mem, first + (uint32_t)i * ST_ROW_SIZE) + ST_CLUB_NAME));
             return;
         }
     }
@@ -429,8 +470,7 @@ static int barred_at_start(uint32_t club, uint32_t div)
     if (switched_off() || !russian(club)) return 0;
     uint32_t parent = season_rus_parent(club);
     if (!parent) return 0;
-    int level = level_of(div);
-    return level == 0 || (level == 1 && level_of_club(parent) != 0);
+    return level_of(div) <= 1;
 }
 
 static const SecondTeamHooks rus_hooks = {before_status, before_chain, NULL, barred_at_start};
@@ -449,7 +489,7 @@ RT_WRAP(007ebe20, rus_second_exchange)
         o_007ebe20();
         return;
     }
-    int on = rule_on(), log = log_on();
+    int on = rule_on(), log = log_on(), all_down = test_on("RECOMP_TEST_RUS_SECOND_ALL_DOWN");
     uint32_t self = cpu.ecx, first = st_comp_of(KEY_FIRST);
     int *held = malloc(sizeof *held * (size_t)count);
     uint32_t *div_of = malloc(sizeof *div_of * (size_t)count);
@@ -469,6 +509,7 @@ RT_WRAP(007ebe20, rus_second_exchange)
         int l = level_of_club(club);
         was[i] = l == 1 ? 1 : l == 2 ? 2 : 0;
         barred[i] = (char)(l <= 2 && barred_first(club));
+        if (all_down && l == 1 && season_rus_parent(club)) barred[i] = 1;
     }
     int rep = test_on("RECOMP_TEST_RUS_SECOND_REP") ? 1 : st_env_is("RECOMP_TEST_RUS_SECOND_REP", "allowed") ? 2 : 0;
     for (int i = 0; rep && i < count; i++) {
@@ -489,9 +530,14 @@ RT_WRAP(007ebe20, rus_second_exchange)
     int nrows = 0, ndown = 0, nextra = 0, n;
     uint32_t extra[MAX_DOWN];
     uint32_t ft = st_table_of(st_league_of(KEY_FIRST), &n);
-    for (int i = 0; on && i < count && ndown < MAX_DOWN; i++) {
+    for (int i = 0; on && i < count; i++) {
         if (was[i] != 1 || !barred[i]) continue;
         uint32_t club = table + (uint32_t)i * ST_CLUB_SIZE;
+        if (ndown == MAX_DOWN) {
+            if (log) fprintf(stderr, "recomp: " TAG ": %.51s stays in the First Division one more season (more than %d "
+                             "second teams)\n", win_str(club + ST_CLUB_NAME), MAX_DOWN);
+            continue;
+        }
         down[ndown++] = club;
         int at = -1;
         for (int r = n - 3; ft && n >= 3 && r < n && at < 0; r++)
