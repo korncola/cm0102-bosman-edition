@@ -138,6 +138,24 @@ static void new_cups(void)
     CHECK(season_new_cup_row_edition("new_rus_super", 2012) == 2012, "Russian Super Cup of July 2012 in row 2012/13");
     CHECK(season_new_cup_row_edition("new_nor_super", 2008) == 2009, "Norwegian Super Cup of 2009 in row 2008/09");
     CHECK(season_new_cup_row_edition("new_conf_cup", 2007) == 2007, "Conference League Cup in row 2007/08");
+    /* The format played (open item 131). Changing rules on: the edition's own; the National League Cup of 2024/25
+     * has no format the game can play. Off: the rules of the start season stay, so a 2008 game plays the cup of
+     * 2008 in every season (the row of 2024 gave rounds of day 0 and the box "Date..cpp 52"). */
+    f = season_new_cup_played("new_conf_cup", 2024, 1, 2008);
+    CHECK(f && f->clubs < 0, "Conference League Cup 2024/25, changing rules on: not played");
+    f = season_new_cup_played("new_conf_cup", 2024, 0, 2008);
+    CHECK(f && f->clubs == 0 && f->round[0].day == 22, "Conference League Cup 2024/25 of a 2008 game, rules off");
+    f = season_new_cup_played("new_conf_cup", 2040, 0, 2004);
+    CHECK(f && f->clubs == 0, "Conference League Cup 2040/41 of a 2004 game, rules off");
+    f = season_new_cup_played("new_rus_super", 2012, 0, 2010);
+    CHECK(f && f->round[0].month == 2, "Russian Super Cup 2012 of a 2010 game, rules off: in March as in 2011");
+    f = season_new_cup_played("new_rus_super", 2012, 1, 2010);
+    CHECK(f && f->round[0].month == 6, "Russian Super Cup 2012 of a 2010 game, rules on: in July");
+    f = season_new_cup_played("new_all_ireland", 2014, 0, 2010);
+    CHECK(f && f->clubs == 12, "All-Ireland cup 2014/15 of a 2010 game, rules off: 12 clubs as in 2010");
+    /* A start whose own row is not played makes no cup (new_held), so the format of a later edition is not asked. */
+    CHECK(season_new_cup_held("new_conf_cup", 2024) == 0, "Conference League Cup 2024/25: a 2024 start makes none");
+    CHECK(season_new_cup_held("new_all_ireland", 2005) == 0, "All-Ireland cup 2005/06: a 2005 start makes none");
     CHECK(season_new_cup_next("new_nor_super", 2019) == SEASON_CUPS_NEVER, "Norwegian Super Cup after 2018");
     /* The Russian Premier League Cup: one edition, 2003 (row 2002/03). */
     CHECK(season_new_cup_held("new_rus_lge_cup", 2003) == 1, "Russian Premier League Cup 2003");
