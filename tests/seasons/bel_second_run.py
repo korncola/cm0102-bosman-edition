@@ -57,17 +57,20 @@ def jump(name, program, game, work, env, last=2025):
 
 
 def changes(log):
-    """Each Belgian season change: (census before, census after, {club: level before}, {club: level after}, lines)."""
+    """Each Belgian season change: (census before, census after, {club: level before}, {club: level after}, lines,
+    {club: its first team's level after})."""
     out, cur = [], None
     for line in log.splitlines():
         m = CENSUS.search(line)
         s = SIDE.search(line)
         if s and cur is not None:
             cur[2 if s.group(1) == "before" else 3][s.group(2)] = int(s.group(3))
+            if s.group(1) == "after":
+                cur[5][s.group(2)] = int(s.group(5))
         elif s and s.group(1) == "before":
-            cur = [None, None, {s.group(2): int(s.group(3))}, {}, []]
+            cur = [None, None, {s.group(2): int(s.group(3))}, {}, [], {}]
         elif m and m.group(1) == "before":
-            cur = cur or [None, None, {}, {}, []]
+            cur = cur or [None, None, {}, {}, [], {}]
             cur[0] = tuple(map(int, m.groups()[1:]))
         elif m and cur:
             cur[1] = tuple(map(int, m.groups()[1:]))
@@ -80,7 +83,7 @@ def changes(log):
 
 def sizes(name, seen):
     fails = []
-    for k, (before, after, _b, _a, _l) in enumerate(seen):
+    for k, (before, after, _b, _a, _l, _f) in enumerate(seen):
         if after is None or [before[i] for i in (0, 2, 4)] != [after[i] for i in (0, 2, 4)]:
             fails.append(f"{name}: change {k + 1}: division sizes changed: {before} to {after}")
     return fails
@@ -110,7 +113,7 @@ def check_on(name, log, seen):
     fails = sizes(name, seen)
     if not seen:
         return fails + [f"{name}: no Belgian season change seen"]
-    before, after, _b, lv, lines = seen[0]
+    before, after, _b, lv, lines, _f = seen[0]
     if after is None:
         return fails + [f"{name}: the first change has no census after it"]
     if after[1]:
@@ -173,16 +176,24 @@ def run_old1(program, game, work):
         return fails + [f"old1: {len(seen)} Belgian season changes seen, want 2"]
     if seen[0][1] is None or not seen[0][1][1]:
         fails.append("old1: no U23 side went up as the original in the first change (no old save made)")
-    before, after, _b, _a, lines = seen[1]
+    before, after, lv_b, lv_a, _l, first_a = seen[1]
     if after is None:
         return fails + ["old1: change 2 has no census after it"]
     print(f"old1: change 2: before {before}, after {after}")
     if not before[1]:
         fails.append("old1: no U23 side in the First Division before change 2 (the test sees no case)")
+    # The state after the change, not one log line: a U23 side may go down on its own results or by the rule.
     if after[1]:
         fails.append(f"old1: {after[1]} U23 sides still in the First Division after change 2")
-    if not any("goes down from the First Division" in l for l in lines):
-        fails.append("old1: no U23 side went down from the First Division")
+    if not lv_a:
+        fails.append("old1: change 2 lists no U23 side after it")
+    for club, level in lv_a.items():
+        first = first_a.get(club)
+        if level == 1:
+            fails.append(f"old1: {club} is in the First Division after change 2")
+        elif first is not None and level <= first and not (lv_b.get(club) == 1 and level == first == 2):
+            # Accepted effect: a side sent down from the First Division shares the Second with its first team.
+            fails.append(f"old1: {club} at level {level} is not below its first team (level {first}) after change 2")
     return fails
 
 
