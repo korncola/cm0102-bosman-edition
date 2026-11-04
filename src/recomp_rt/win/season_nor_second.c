@@ -31,7 +31,7 @@
  * club.
  *
  * The club moves of a new game (season_clubs.c) put no Norwegian second or third team into Eliteserien or the First
- * Division either (season_nor_barred), in every fill group and for a club that the database has there.
+ * Division either (season_nor_barred, through season_second_barred), in every fill group and for a club that the database has there.
  *
  * Old saves (Max, 3 November 2026: "do whatever real life does"). A game of 0.6.1 or earlier can hold second teams
  * in the First Division or in Eliteserien. The real rule bars them there, so each goes down at the next season
@@ -46,7 +46,7 @@
  * - Before each 0x684cd0 of the First Division, a second team gets status 0xfc (unless it has 3), so the next club
  *   takes the title, promotion and the play-off. NorFirst::create_play_off_stage 0x790e20 takes the row of
  *   status 1 (0x790e97); when a save comes from the days after the table was complete, the wrap of 0x790e20 first
- *   hands the places on to the next clubs (shift_up).
+ *   hands the places on to the next clubs (st_shift_up).
  * - At the season change, before the chain of NorPrm (vtable +0xb0, 0x689c20, called at 0x7927b3; it calls
  *   league_promote_and_relegate 0x689c80 in pairs, 0x689c60), each second team of the First Division gets status 3,
  *   and the best placed club of status 3 gets 0xff and stays up. 0x792960 sends every row of status 3 to group 1
@@ -74,12 +74,16 @@
  * highest reputation before the call, so that the original would take them first. RECOMP_TEST_NOR_SECOND_OLD=<n>
  * (tests only) plays as the original until n Norwegian season changes are done, as a game of an older build.
  * RECOMP_TEST_NOR_SECOND_NO_MARK=1 (tests only) gives no 0xfc before 0x684cd0, as a save of an older build made
- * after the table was complete, so that the wraps of 0x790e20 and the season change hand the places on. */
+ * after the table was complete, so that the wraps of 0x790e20 and the season change hand the places on.
+ *
+ * The wraps of 0x684cd0 and 0x689c20, the mark st_mark and the hand-on st_shift_up live in season_second_teams.c,
+ * which the other nations share (open items 114 to 122). */
 #include "win.h"
 #include "season.h"
 #include "season_clubs.h"
 #include "season_names.h"
 #include "season_nor_second.h"
+#include "season_second_teams.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,34 +96,21 @@
 #define GROUPS 8
 #define CLUBS 0xae23b4u
 #define CLUB_COUNT 0xae235cu
-#define COMPS 0xae23d0u
-#define CLUB_SIZE 0x245u
-#define COMP_SIZE 0x6bu
-#define CLUB_NAME 0x04u
-#define CLUB_NATION 0x53u
-#define CLUB_DIVISION 0x57u
-#define CLUB_REPUTATION 0x80u
-#define LEAGUES 0xadadfcu               /* the competition objects, by competition id (0x792966) */
-#define LEAGUE_CLUBS 0x3eu              /* s16 rows */
-#define LEAGUE_TABLE 0xb1u              /* rows of 0x3b bytes: +0 the club, +0x37 the status */
-#define ROW_SIZE 0x3bu
-#define ROW_STATUS 0x37u
-#define ST_TITLE 5
-#define ST_UP 0
-#define ST_PLAYOFF 1
-#define ST_DOWN 3
-#define ST_BARRED 0xfc
-#define ST_NONE 0xff
+#define CLUB_SIZE ST_CLUB_SIZE
+#define CLUB_NAME ST_CLUB_NAME
+#define CLUB_DIVISION ST_CLUB_DIVISION
+#define CLUB_REPUTATION ST_CLUB_REPUTATION
+#define ROW_SIZE ST_ROW_SIZE
+#define ROW_STATUS ST_ROW_STATUS
 #define F_MOVE_UP 0x006830b0u           /* League::move_club_to_division (this unused), (club, comp, 1) ret 0xc */
 #define F_MOVE_DOWN 0x006831a0u         /* League::relegate_club_to_division (this unused), (club, comp, 1) ret 0xc */
 
-static int readable(uint32_t p) { return p >= 0x10000u && p < 0xfff00000u; }
-
-static int env_is(const char *name, const char *value)
-{
-    const char *v = getenv(name);
-    return v && !strcmp(v, value);
-}
+#define readable st_readable
+#define env_is st_env_is
+#define league_of st_league_of
+#define table_of st_table_of
+#define comp_of st_comp_of
+#define call_this st_call_this
 
 /* 1 when a division record is one of the eight groups. */
 static int in_group(uint32_t div)
@@ -131,11 +122,7 @@ static int in_group(uint32_t div)
     return 0;
 }
 
-static int norwegian(uint32_t club)
-{
-    uint32_t nation = rd32(g_mem, club + CLUB_NATION);
-    return readable(nation) && (int32_t)rd32(g_mem, nation) == (int32_t)rd32(g_mem, KEY_NORWAY);
-}
+static int norwegian(uint32_t club) { return st_nation_is(club, KEY_NORWAY); }
 
 /* 1 for a second or third team: the reserve names of season_clubs_reserve_name, or a last word 3 or III (the data
  * has "Odds BK 3" and "Rosenborg 3"; § 2-7 places every lower team of a club below its higher team). */
@@ -174,87 +161,11 @@ static int log_on(void)
     return log;
 }
 
-/* The league object of a division key (0 when none). */
-static uint32_t league_of(uint32_t key)
-{
-    uint32_t leagues = rd32(g_mem, LEAGUES);
-    int32_t id = (int32_t)rd32(g_mem, key);
-    if (!readable(leagues) || id < 0 || id > 0xffff) return 0;
-    uint32_t league = rd32(g_mem, leagues + 4u * (uint32_t)id);
-    return readable(league) ? league : 0;
-}
-
 static int rule_on(void) { return !switched_off() && season_game_changes(); }
-
-/* The table of a league and its row count (0 when none). */
-static uint32_t table_of(uint32_t league, int *n)
-{
-    *n = 0;
-    if (!readable(league)) return 0;
-    uint32_t table = rd32(g_mem, league + LEAGUE_TABLE);
-    int rows = (int16_t)rd16(g_mem, league + LEAGUE_CLUBS);
-    if (!readable(table) || rows <= 0 || rows > 64) return 0;
-    *n = rows;
-    return table;
-}
 
 static int barred_club(uint32_t club)
 {
     return readable(club) && norwegian(club) && lower_team(win_str(club + CLUB_NAME));
-}
-
-static int up_status(int s) { return s == ST_TITLE || s == ST_UP || s == ST_PLAYOFF; }
-
-/* Before 0x684cd0 of the First Division: each second team gets the original's mark 0xfc (none has 3 yet). */
-static void mark_first(uint32_t league)
-{
-    int n;
-    uint32_t table = table_of(league, &n);
-    for (int i = 0; i < n; i++) {
-        uint32_t row = table + (uint32_t)i * ROW_SIZE;
-        uint8_t s = g_mem[row + ROW_STATUS];
-        if (s == ST_DOWN || s == ST_BARRED || !barred_club(rd32(g_mem, row))) continue;
-        g_mem[row + ROW_STATUS] = ST_BARRED;
-        if (log_on()) fprintf(stderr, "recomp: nor second: %.51s may not go up from the First Division\n",
-                              win_str(rd32(g_mem, row) + CLUB_NAME));
-    }
-}
-
-/* A complete table where a second team holds the title, promotion or the play-off (a save of an older build): the
- * clubs below take the places in table order, and each second team gets 0xfc. The rows are in table order (the sort
- * 0x6827d0 of the last 0x684cd0). Runs again with no change. */
-static void shift_up(uint32_t league, const char *when)
-{
-    int n;
-    uint32_t table = table_of(league, &n);
-    int any = 0;
-    for (int i = 0; i < n && !any; i++) {
-        uint32_t row = table + (uint32_t)i * ROW_SIZE;
-        any = up_status(g_mem[row + ROW_STATUS]) && barred_club(rd32(g_mem, row));
-    }
-    if (!any) return;
-    uint8_t places[64];
-    int np = 0;
-    for (int i = 0; i < n; i++) {
-        uint8_t s = g_mem[table + (uint32_t)i * ROW_SIZE + ROW_STATUS];
-        if (up_status(s)) places[np++] = s;
-    }
-    int k = 0;
-    for (int i = 0; i < n; i++) {
-        uint32_t row = table + (uint32_t)i * ROW_SIZE;
-        uint8_t s = g_mem[row + ROW_STATUS];
-        if (barred_club(rd32(g_mem, row))) {
-            if (s != ST_DOWN) g_mem[row + ROW_STATUS] = ST_BARRED;
-            continue;
-        }
-        if (s == ST_DOWN) continue;
-        uint8_t want = k < np ? places[k] : (up_status(s) ? ST_NONE : s);
-        k++;
-        if (want != s && log_on())
-            fprintf(stderr, "recomp: nor second: %.51s takes status %d in place of a second team %s\n",
-                    win_str(rd32(g_mem, row) + CLUB_NAME), want == ST_NONE ? -1 : want, when);
-        g_mem[row + ROW_STATUS] = want;
-    }
 }
 
 /* Up to k clubs of status 3 (not second teams), the best placed first, stay up (0xff). Returns how many. */
@@ -324,11 +235,6 @@ static void census(uint32_t div, int *clubs, int *seconds)
     }
 }
 
-static uint32_t comp_of(uint32_t key)
-{
-    return rd32(g_mem, COMPS) + rd32(g_mem, key) * COMP_SIZE;
-}
-
 static void log_census(const char *when)
 {
     if (!log_on()) return;
@@ -337,15 +243,6 @@ static void log_census(const char *when)
     census(comp_of(KEY_FIRST), &c2, &s2);
     fprintf(stderr, "recomp: nor second: census %s: Eliteserien %d clubs, %d second teams; First Division %d clubs, "
             "%d second teams\n", when, c1, s1, c2, s2);
-}
-
-static uint32_t call_this(uint32_t fn, uint32_t self, int nargs, const uint32_t *args)
-{
-    Cpu saved = cpu;
-    cpu.ecx = self;
-    uint32_t r = rt_callback(fn, nargs, args);
-    if (!rt_unwinding) cpu = saved;
-    return r;
 }
 
 /* The places of the First Division that the clubs of the groups take beyond the original's four (more second teams
@@ -448,44 +345,46 @@ RT_WRAP(00792960, nor_second_exchange)
     }
 }
 
-/* League::update_positions_and_status 0x684cd0 (vtable +0x94), thiscall, no arguments. */
-void o_00684cd0(void);
-RT_WRAP(00684cd0, nor_second_status)
+/* Before League::update_positions_and_status 0x684cd0 (season_second_teams.c): the second teams of the First
+ * Division get 0xfc. */
+static void nor_before_status(uint32_t league)
 {
     static int no_mark = -1;
     if (no_mark < 0) no_mark = env_is("RECOMP_TEST_NOR_SECOND_NO_MARK", "1");
-    if (cpu.ecx && cpu.ecx == league_of(KEY_FIRST) && !no_mark && rule_on()) mark_first(cpu.ecx);
-    o_00684cd0();
+    if (league == league_of(KEY_FIRST) && !no_mark && rule_on())
+        st_mark(league, barred_club, "nor second", "the First Division", log_on());
 }
 
 /* NorFirst::create_play_off_stage 0x790e20, thiscall, no arguments. */
 void o_00790e20(void);
 RT_WRAP(00790e20, nor_second_playoff)
 {
-    if (cpu.ecx == league_of(KEY_FIRST) && rule_on()) shift_up(cpu.ecx, "before the play-off");
+    if (cpu.ecx == league_of(KEY_FIRST) && rule_on())
+        st_shift_up(cpu.ecx, barred_club, "nor second", "before the play-off", log_on());
     o_00790e20();
 }
 
-/* The promotion chain 0x689c20 (vtable +0xb0), thiscall (pairwise) ret 4: NorPrm::start_new_season calls it first
+/* Before and after the promotion chain 0x689c20 (season_second_teams.c): NorPrm::start_new_season calls it first
  * (0x7927b3). For Eliteserien the second teams go down before it. */
-void o_00689c20(void);
-RT_WRAP(00689c20, nor_second_chain)
+static char *was_prm;
+static int was_count;
+
+static void nor_before_chain(uint32_t self)
 {
-    uint32_t self = cpu.ecx;
-    if (!readable(self) || self != league_of(KEY_PREMIER) || !season_game_changes()) {
-        o_00689c20();
-        return;
-    }
+    free(was_prm);                       /* left by a chain that unwound (no after_chain) */
+    was_prm = NULL;
+    if (self != league_of(KEY_PREMIER) || !season_game_changes()) return;
     log_census("before");
     first_extra = prm_down = 0;
     uint32_t prm = comp_of(KEY_PREMIER), table = rd32(g_mem, CLUBS);
     int count = readable(table) ? (int)rd32(g_mem, CLUB_COUNT) : 0;
-    char *was_prm = log_on() && count > 0 ? calloc((size_t)count, 1) : NULL;
+    was_prm = log_on() && count > 0 ? calloc((size_t)count, 1) : NULL;
+    was_count = count;
     for (int i = 0; was_prm && i < count; i++)
         was_prm[i] = rd32(g_mem, table + (uint32_t)i * CLUB_SIZE + CLUB_DIVISION) == prm;
     if (rule_on()) {
         uint32_t first = league_of(KEY_FIRST);
-        shift_up(first, "at the season change");
+        st_shift_up(first, barred_club, "nor second", "at the season change", log_on());
         int down;
         first_extra = season_down(first, 0, "the First Division", &down);
         season_down(self, 1, "Eliteserien", &prm_down);
@@ -493,12 +392,22 @@ RT_WRAP(00689c20, nor_second_chain)
          * more club of status 3 stays up there. */
         first_extra += prm_down - stay_up(first, prm_down, "the First Division");
     }
-    o_00689c20();
-    for (int i = 0; was_prm && !rt_unwinding && i < count; i++) {
+}
+
+static void nor_after_chain(uint32_t self)
+{
+    if (self != league_of(KEY_PREMIER) || !was_prm) return;
+    uint32_t prm = comp_of(KEY_PREMIER), table = rd32(g_mem, CLUBS);
+    int count = readable(table) ? (int)rd32(g_mem, CLUB_COUNT) : 0;
+    for (int i = 0; i < was_count && i < count; i++) {
         uint32_t club = table + (uint32_t)i * CLUB_SIZE;
         if (!was_prm[i] && rd32(g_mem, club + CLUB_DIVISION) == prm)
             fprintf(stderr, "recomp: nor second: %.51s goes up to Eliteserien%s\n", win_str(club + CLUB_NAME),
                     barred_club(club) ? " (a second team)" : "");
     }
     free(was_prm);
+    was_prm = NULL;
 }
+
+static const SecondTeamHooks nor_hooks = {nor_before_status, nor_before_chain, nor_after_chain, season_nor_barred};
+SEASON_SECOND_HOOKS(nor_hooks)
