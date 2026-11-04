@@ -2,7 +2,7 @@
 """Denmark: no second team in the national tournament (open item 119, 0.7.0; season_den_second.c).
 
 Usage:
-    python3 tests/seasons/den_second_run.py <cm0102_recomp> <game folder> [--only on,off,y2007,old] [--jobs n]
+    python3 tests/seasons/den_second_run.py <cm0102_recomp> <game folder> [--only on,off,y2007,old,mark] [--jobs n]
         [--keep <folder>]
 
 Each run is a season jump of tests/seasons/rules_report_check.py with Denmark alone on the October 2024 database
@@ -16,6 +16,9 @@ Division. RECOMP_DEN_SECOND_LOG=1 logs the clubs held, moved and a census of eac
     off    RECOMP_DEN_SECOND=off, the original's list: a second team goes up (proves that the test sees the fault)
     y2007  RECOMP_TEST_DEN_SECOND_YEAR=2007, the rule of 2005/06 to 2009/10: Aalborg BK II (Aalborg BK plays the
            Superliga) may go up into the 2nd Division and is not held; the three others are held
+    mark   as old with the marks of the season on (each second team below the Superliga gets 0xfc in 2025/26, so no
+           place is handed on at the change) and RECOMP_TEST_DEN_SECOND_NO_STAY=1, so clubs of A Lower Division take
+           the places that second teams leave in the 2nd Division
     old    the state of a long game of an older build, made in memory (no save is written or loaded):
            RECOMP_TEST_DEN_SECOND_OLD=1 plays the change of 2025 as the original (which sends some second teams up
            into the 2nd Division), then RECOMP_TEST_DEN_SECOND_PLACE=1 puts the second teams left in A Lower Division
@@ -39,7 +42,10 @@ DB = "/Users/max/Projects/cm0102/test-fixtures/databases"
 ENV = {"RECOMP_TEST_DEN_SECOND_REP": "1", "RECOMP_DEN_SECOND_LOG": "1"}
 SECONDS = {"Aalborg BK II", "Aarhus Fremad II", "Hobro IK II", "Naestved IF (Naestved BK II)"}
 CENSUS = re.compile(r"recomp: den second: census (before|after): Superliga (\d+) clubs, (\d+) second teams; "
-                    r"1st Division (\d+) clubs, (\d+) second teams; 2nd Division (\d+) clubs, (\d+) second teams")
+                    r"1st Division (\d+) clubs, (\d+) second teams; 2nd Division (\d+) clubs, (\d+) second teams; "
+                    r"change into (\d+)/\d+ \(rule of (\d+)\)")
+NEXT = re.compile(r"recomp: den second: next club: (.*), place (\d+) \(above it (\d+) left the division, (\d+) go down, "
+                  r"(\d+) are barred\)")
 
 
 def jump(name, program, game, work, env, last=2025):
@@ -57,9 +63,11 @@ def changes(log):
     for line in log.splitlines():
         m = CENSUS.search(line)
         if m and m.group(1) == "before":
-            cur = [tuple(map(int, m.groups()[1:])), None, []]
+            cur = [tuple(map(int, m.groups()[1:7])), None, [], tuple(map(int, m.groups()[7:]))]
         elif m and cur:
-            cur[1] = tuple(map(int, m.groups()[1:]))
+            cur[1] = tuple(map(int, m.groups()[1:7]))
+            if tuple(map(int, m.groups()[7:])) != cur[3]:
+                cur[2].append(f"census years differ: {cur[3]} and {m.groups()[7:]}")
             out.append(cur)
             cur = None
         elif cur and "recomp: den second:" in line:
@@ -76,13 +84,33 @@ def held(lines):
     return {m for m in re.findall(r"recomp: den second: (.*) stays in A Lower Division$", "\n".join(lines), re.M)}
 
 
-def first_change(name, log, fails):
+def check_year(name, n, change, rule, fails):
+    """The census of change n gives the season that starts (2025 + n - 1) and the rule's season."""
+    want = (2024 + n, rule or 2024 + n)
+    if change[3] != want:
+        fails.append(f"{name}: change {n} is into {change[3][0]} with the rule of {change[3][1]}, want {want}")
+
+
+def check_next(name, lines, fails):
+    """Each place goes to the best placed club still in the division below that may take it."""
+    for line in lines:
+        m = NEXT.search(line)
+        if m:
+            print(f"{name}: {line.split('den second: ')[1]}")
+            if int(m.group(4)):
+                fails.append(f"{name}: a club going down was passed over for {m.group(1)}")
+            if int(m.group(2)) != 1 + int(m.group(3)) + int(m.group(4)) + int(m.group(5)):
+                fails.append(f"{name}: {m.group(1)} is not the best placed club that may take the place")
+
+
+def first_change(name, log, fails, rule=None):
     seen = changes(log)
     if not seen:
         fails.append(f"{name}: no Danish season change seen")
         return None
-    before, after, lines = seen[0]
+    before, after, lines, _ = seen[0]
     print(f"{name}: change 1: before {before}, after {after}")
+    check_year(name, 1, seen[0], rule, fails)
     if after[0::2] != before[0::2]:
         fails.append(f"{name}: division sizes changed: {before} to {after}")
     return lines
@@ -117,13 +145,24 @@ def run_off(program, game, work):
 
 def run_y2007(program, game, work):
     fails, log = jump("y2007", program, game, work, {"RECOMP_TEST_DEN_SECOND_YEAR": "2007"})
-    lines = first_change("y2007", log, fails)
+    lines = first_change("y2007", log, fails, rule=2007)
     if lines is None:
         return fails
-    want = SECONDS - {"Aalborg BK II"}
+    # The first teams the rule reads (exact name, or the pair table for Naestved).
+    links = dict(re.findall(r"recomp: den second: first team of (.*?): (.*)$", "\n".join(lines), re.M))
+    print(f"y2007: first teams {links}")
+    want_links = {"Aalborg BK II": "Aalborg BK", "Aarhus Fremad II": "Aarhus Fremad", "Hobro IK II": "Hobro IK",
+                  "Naestved IF (Naestved BK II)": "Naestved Boldklub"}
+    for team, first in want_links.items():
+        if not links.get(team, "").startswith(first + " ("):
+            fails.append(f"y2007: first team of {team} read as {links.get(team)}, want {first}")
+    # A second team may play the 2nd Division only while its first team plays the Superliga.
+    want = {t for t in SECONDS if not links.get(t, "").endswith("(the Superliga)")}
+    if "Aalborg BK II" in want:
+        print("y2007: note: Aalborg BK left the Superliga in 2024/25, so its second team is held too")
     if held(lines) != want:
         fails.append(f"y2007: held {sorted(held(lines))}, want {sorted(want)}")
-    bad = [n for n, s in ups(lines) if s and n != "Aalborg BK II"]
+    bad = [n for n, s in ups(lines) if s and n in want]
     if bad:
         fails.append(f"y2007: barred second teams went up: {bad}")
     if len(ups(lines)) != 4:
@@ -143,7 +182,11 @@ def run_old(program, game, work):
     seen = changes(log)
     if len(seen) < 2:
         return fails + [f"old: {len(seen)} Danish season changes seen, want 2"]
-    before, after, lines = seen[1]
+    before, after, lines, _ = seen[1]
+    check_year("old", 2, seen[1], None, fails)
+    check_next("old", lines, fails)
+    if not any(NEXT.search(l) for l in lines):
+        fails.append("old: no club took a place of a second team in a division above")
     print(f"old: change 2: before {before}, after {after} (clubs, second teams of the Superliga, 1st, 2nd Division)")
     if before[1] + before[3] + before[5] == 0:
         fails.append("old: no second team in the three divisions before change 2 (the test sees no case)")
@@ -159,7 +202,41 @@ def run_old(program, game, work):
     return fails
 
 
-RUNS = {"on": run_on, "off": run_off, "y2007": run_y2007, "old": run_old}
+def run_mark(program, game, work):
+    """As old, but with the marks of the season on and no club of status 3 staying up."""
+    env = {"RECOMP_TEST_DEN_SECOND_OLD": "1", "RECOMP_TEST_DEN_SECOND_PLACE": "1", "RECOMP_TEST_DEN_SECOND_NO_STAY": "1"}
+    fails, log = jump("mark", program, game, work, env, last=2026)
+    placed = [n for n, _ in re.findall(r"recomp: den second: test: (.*) placed in (.*) for", log)]
+    seen = changes(log)
+    if len(seen) < 2 or not placed:
+        return fails + [f"mark: {len(seen)} Danish season changes seen and {len(placed)} second teams placed"]
+    between = log.split("census after", 1)[1].split("census before", 1)[0]
+    marked = set(re.findall(r"recomp: den second: (.*) may not go up from the (?:1st|2nd) Division", between))
+    print(f"mark: marked during 2025/26: {sorted(marked)}")
+    lower = [n for n, w in re.findall(r"recomp: den second: test: (.*) placed in (.*) for", log) if w != "the Superliga"]
+    if not lower or not set(lower) <= marked:
+        fails.append(f"mark: placed {lower} below the Superliga, marked {sorted(marked)}")
+    before, after, lines, _ = seen[1]
+    print(f"mark: change 2: before {before}, after {after}")
+    check_year("mark", 2, seen[1], None, fails)
+    check_next("mark", lines, fails)
+    shifted = [l for l in lines if "in place of a second team at the season change" in l]
+    if shifted:
+        fails.append(f"mark: places handed on at the change although the marks were on: {shifted}")
+    if [l for l in lines if "stays up in the 2nd Division" in l]:
+        fails.append("mark: a club stayed up with RECOMP_TEST_DEN_SECOND_NO_STAY=1")
+    filled = [l for l in lines if "goes up to the 2nd Division in place of a second team" in l]
+    if not filled:
+        fails.append("mark: no club of A Lower Division took a place of a second team (the fill is not seen)")
+    for k in (1, 3, 5):
+        if after[k]:
+            fails.append(f"mark: {after[k]} second teams left in a division after change 2: {after}")
+    if after[0::2] != before[0::2]:
+        fails.append(f"mark: division sizes changed: {before} to {after}")
+    return fails
+
+
+RUNS = {"on": run_on, "off": run_off, "y2007": run_y2007, "old": run_old, "mark": run_mark}
 
 
 def main(argv):

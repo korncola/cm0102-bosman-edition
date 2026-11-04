@@ -11,8 +11,9 @@
  * - 2005/06 to 2009/10: the 2nd Division admitted up to six (from 2007/08 eight) second teams of Superliga clubs,
  *   which "kunne ikke rykke op i 1. division" (da.wikipedia). The second teams of Silkeborg and Vejle went down with
  *   their first teams in 2006/07 (the 0.6.0 research). So a second team may play the 2nd Division while its first
- *   team plays the Superliga, and never the 1st Division or the Superliga. The second team of another club: the
- *   sources name only Superliga clubs' teams (my reading: no other second team played there).
+ *   team plays the Superliga, and never the 1st Division or the Superliga. The second team of another club may not
+ *   play the 2nd Division: en.wikipedia gives the admission as "up to eight reserve teams of the Danish Superliga
+ *   clubs", and the Silkeborg and Vejle teams left when their clubs left the Superliga.
  * - 2001/02 to 2004/05: the Superliga second teams could first go up from the Danmarksserien in 2005/06
  *   (da.wikipedia), so before that the second team of a Superliga club stays below the 2nd Division. The second team
  *   of another club: I don't know (no source); the game keeps its own behaviour there.
@@ -63,7 +64,8 @@
  * build), RECOMP_TEST_DEN_SECOND_PLACE=1 (with _OLD: after the original's change, the second teams of A Lower Division
  * swap divisions with the weakest club of the Superliga, the 1st and the 2nd Division in turn, as a long game of an
  * older build), RECOMP_TEST_DEN_SECOND_NO_MARK=1 (no 0xfc, as a save of an older build made after the table was
- * complete). */
+ * complete), RECOMP_TEST_DEN_SECOND_NO_STAY=1 (no club of status 3 stays up, so the clubs of A Lower Division take
+ * every place of the 2nd Division that a second team leaves). */
 #include "win.h"
 #include "season.h"
 #include "season_clubs.h"
@@ -244,7 +246,7 @@ static void den_before_status(uint32_t league)
         }
 }
 
-static void census(const char *when)
+static void census(const char *when, int y)
 {
     if (!log_on()) return;
     int n[LEVELS + 1] = {0}, s[LEVELS + 1] = {0}, count;
@@ -257,15 +259,16 @@ static void census(const char *when)
         s[l] += second_team(club);
     }
     fprintf(stderr, "recomp: den second: census %s: Superliga %d clubs, %d second teams; 1st Division %d clubs, %d "
-            "second teams; 2nd Division %d clubs, %d second teams\n", when, n[0], s[0], n[1], s[1], n[2], s[2]);
+            "second teams; 2nd Division %d clubs, %d second teams; change into %d/%02d (rule of %d)\n", when, n[0], s[0],
+            n[1], s[1], n[2], s[2], y, (y + 1) % 100, rule_year(y));
 }
 
 static void den_before_chain(uint32_t self)
 {
     if (self != st_league_of(KEY_PRM) || !season_code_on() || !season_changing_rules()) return;
-    census("before");
-    if (!rule_on()) return;
     cur_year = season_of(self);
+    census("before", cur_year + 1);
+    if (!rule_on()) return;
     for (int l = 1; l < LEVELS; l++) {
         cur_level = l;
         st_shift_up(st_league_of(l == 1 ? KEY_FIRST : KEY_SECOND), barred_up, TAG, "at the season change", log_on());
@@ -285,17 +288,29 @@ static int row_of(uint32_t league, uint32_t club)
 static const char *name_of(uint32_t club) { return win_str(club + ST_CLUB_NAME); }
 
 /* The best placed club of the league's table that is still in division div, may play the level above in season y
- * and has no status 3 (the clubs just sent down left the table's division). Its row gets 0xff. 0 when none. */
+ * and has no status 3 (the clubs just sent down left the table's division). Its row gets 0xff. 0 when none. The log
+ * gives its place and why each club above it does not take the place. */
 static uint32_t next_up(uint32_t league, uint32_t div, int above, int y)
 {
-    int n;
+    int n, left = 0, down = 0, barred = 0;
     uint32_t table = st_table_of(league, &n);
     for (int i = 0; i < n; i++) {
         uint32_t row = table + (uint32_t)i * ST_ROW_SIZE, club = rd32(g_mem, row);
-        if (!st_readable(club) || division_of(club) != div || g_mem[row + ST_ROW_STATUS] == ST_DOWN ||
-            barred_in(club, above, y))
+        if (!st_readable(club) || division_of(club) != div) {
+            left++;
             continue;
+        }
+        if (g_mem[row + ST_ROW_STATUS] == ST_DOWN) {
+            down++;
+            continue;
+        }
+        if (barred_in(club, above, y)) {
+            barred++;
+            continue;
+        }
         g_mem[row + ST_ROW_STATUS] = ST_NONE;
+        if (log_on()) fprintf(stderr, "recomp: den second: next club: %.51s, place %d (above it %d left the division, "
+                              "%d go down, %d are barred)\n", name_of(club), i + 1, left, down, barred);
         return club;
     }
     return 0;
@@ -304,6 +319,9 @@ static uint32_t next_up(uint32_t league, uint32_t div, int above, int y)
 /* The best placed club of status 3 of the 2nd Division's table that may stay there (0xff). 1 when one stays. */
 static int stay_up(uint32_t league, uint32_t div, int y)
 {
+    static int none = -1;
+    if (none < 0) none = st_env_is("RECOMP_TEST_DEN_SECOND_NO_STAY", "1");
+    if (none) return 0;
     int n;
     uint32_t table = st_table_of(league, &n);
     for (int i = 0; i < n; i++) {
@@ -350,7 +368,7 @@ static void test_place(void)
     }
 }
 
-int season_den_barred(uint32_t club, uint32_t div)
+static int season_den_barred(uint32_t club, uint32_t div)
 {
     if (switched_off() || !season_changing_rules() || !danish(club)) return 0;
     return barred_in(club, level_of(div), season_start_year());
@@ -379,6 +397,7 @@ RT_WRAP(00553cb0, den_second_exchange)
     char *was_top = calloc((size_t)count, 1);       /* in one of the three divisions before the call */
     uint32_t *held = malloc(sizeof *held * (size_t)count);
     if (!was_top || !held) {
+        fprintf(stderr, "recomp: den second: no memory for the season change: the original's list runs\n");
         free(was_top);
         free(held);
         o_00553cb0();
@@ -437,12 +456,19 @@ RT_WRAP(00553cb0, den_second_exchange)
             need++;
         }
         while (need > 0 && stay_up(second_league, second, y)) need--;
-        /* A barred second team of A Lower Division is no part of the list. */
+        /* A barred second team of A Lower Division is no part of the list, nor one that left a division above in
+         * this call (before 2010/11 a Superliga club's second team may play the 2nd Division, but one sent down from
+         * the 1st Division or the Superliga goes to A Lower Division, see the top). */
         for (int i = 0; i < count; i++) {
             uint32_t club = table + (uint32_t)i * ST_CLUB_SIZE;
             if (division_of(club) != lower || !danish(club) || !second_team(club)) continue;
             if (test_rep) wr16(g_mem, club + ST_CLUB_REPUTATION, 10000);
-            if (!barred_in(club, 2, y)) continue;
+            if (rule_year(y) < 2010 && log_on()) {
+                uint32_t p = first_team(club);
+                fprintf(stderr, "recomp: den second: first team of %.51s: %.51s (%s)\n", name_of(club),
+                        p ? name_of(p) : "none", !p ? "-" : level_of(division_of(p)) == 0 ? "the Superliga" : "below");
+            }
+            if (!barred_in(club, 2, y) && !was_top[i]) continue;
             held[nheld++] = club;
             wr32(g_mem, club + ST_CLUB_DIVISION, 0);
         }
@@ -483,7 +509,7 @@ RT_WRAP(00553cb0, den_second_exchange)
     if (!rt_unwinding && old_left > 0 && --old_left == 0 && test_place_on) test_place();
     free(was_top);
     free(held);
-    if (!rt_unwinding) census("after");
+    if (!rt_unwinding) census("after", y);
 }
 
 static const SecondTeamHooks den_hooks = {den_before_status, den_before_chain, NULL, season_den_barred};
