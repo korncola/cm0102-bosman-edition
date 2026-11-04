@@ -247,6 +247,8 @@ uint32_t season_intl_team_named(const char *names);
 /* After the OFC Nations Cup's draw of 6 (the wrap of 0x799e30 in season_intl.c): an edition of 8 teams gets two
  * more, in groups of 4 (0.6.2 open item 45, season_intl_ofc.c). */
 void season_intl_ofc_draw(uint32_t self);
+/* 1 for a team that the OFC draw now being made gave a qualifying place (0.7.0, option b): ofc_hosts keeps it. */
+int season_intl_ofc_kept(uint32_t team);
 /* The OFC Nations Cup's template 0x798b60 (the wrap in season_intl.c, inside its date shift): a group made after a
  * draw of 8 gets a second kick-off slot on each match day. */
 void season_intl_ofc_template(void (*original)(void));

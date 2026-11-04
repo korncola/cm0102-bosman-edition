@@ -808,7 +808,9 @@ static void ofc_australia(uint32_t self)
  * the six (Papua New Guinea 2016, Vanuatu 2024 did not). In a season game each host of the edition at +0x40
  * (the table hosts, after the table the rotation host) that is not in the draw takes the place of the team with
  * the lowest reputation (club +0x80, the field of the sort compare 0x4b07d0 at 0x4b07f0) that is not a host. The
- * count stays (+0xf2: 6 at 0x799e42, 8 after season_intl_ofc_draw). */
+ * count stays (+0xf2: 6 at 0x799e42, 8 after season_intl_ofc_draw). A team of a qualifying place is kept (0.7.0,
+ * season_intl_ofc_kept): the split of direct and qualifying places already holds every Oceania host that the data has,
+ * so this matters only for a host that the split leaves out (no national team, or not of Oceania). */
 static void ofc_hosts(uint32_t self)
 {
     if (!season_intl_on()) return;
@@ -840,6 +842,7 @@ static void ofc_hosts(uint32_t self)
             uint32_t t = rd32(g_mem, pool + 4u * (uint32_t)k);
             int host = 0;
             for (int j = 0; j < n; j++) host |= readable(t) && team_nation(t) == team_nation(hosts[j]);
+            host |= readable(t) && season_intl_ofc_kept(t);    /* a qualifying place stays (above) */
             int rep = readable(t) ? (int16_t)rd16(g_mem, t + 0x80u) : -0x8000;
             if (!host && (low < 0 || rep <= low_rep)) low = k, low_rep = rep;
         }

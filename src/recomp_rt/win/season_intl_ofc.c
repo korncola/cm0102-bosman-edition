@@ -28,13 +28,13 @@
  * group (League table row 0x6826d0 at 0x799cb7..0x799ce6), so it is the same for groups of 4. The rule bytes of
  * set_up_rules 0x799690 (+0x43, +0xc2..+0xc7, +0x4a) are those of the Asian Cup's groups of 4 (0x40f4c0).
  *
- * With 8 teams: the draw adds the two Oceania nations with the highest reputation that are not in the six, one to
- * the end of each group (places 3 and 7; the six move to 0 to 2 and 4 to 6). The groups have 4 rows; the
- * predicted places are 1, 2, 3, 3, 5, 5, 7, 7; a group's fourth gets the group stage codes of a third
- * (set_club_progress 0x79a490); on the draw day each group day gets a second kick-off slot, a copy of its first,
- * so that both matches of the day play at the same time. Sites in tools/recomp/seasons.py ("OFC Nations Cup of 8 teams"). The new
- * places of the two added nations are a decision of this build (the real editions had a qualifying round of the
- * smaller nations, which the game does not play): inference, not a source.
+ * With 8 teams: the draw adds two Oceania nations by the real split of direct and qualifying places (split_draw
+ * below, 0.7.0 option b), one to the end of each group (places 3 and 7; the six move to 0 to 2 and 4 to 6). The
+ * groups have 4 rows; the predicted places are 1, 2, 3, 3, 5, 5, 7, 7; a group's fourth gets the group stage codes
+ * of a third (set_club_progress 0x79a490); on the draw day each group day gets a second kick-off slot, a copy of its
+ * first, so that both matches of the day play at the same time. Sites in tools/recomp/seasons.py ("OFC Nations Cup
+ * of 8 teams"). The places of the two added nations in the groups are a decision of this build: inference, not a
+ * source.
  *
  * The edition of 4 teams (2008, int-continental-87; https://www.rsssf.org/tables/08oc.html, read 3 November 2026): New
  * Zealand, New Caledonia, Fiji and Vanuatu in one group, home and away, no knockout, 12 matches on 8 days from 17
@@ -221,13 +221,18 @@ static uint32_t strongest(const uint32_t *teams, int n)
 }
 
 static void second_slots(uint32_t rounds);
+static int split_draw(uint32_t self, uint32_t teams[TEAMS], uint32_t *first, uint32_t *second);
+static uint32_t kept[2];                /* the teams of the qualifying places of the draw (ofc_hosts keeps them) */
+static int n_kept;
 
 static int club_reputation(uint32_t club) { return readable(club) ? (int16_t)rd16(g_mem, club + CLUB_REPUTATION) : 0; }
 
 /* After the original's draw of 6 (and the Australia swap of season_intl.c), before the hosts come in: for an
  * edition of 8 the block at +0xee becomes 8 teams, group A in places 0 to 3 and group B in 4 to 7. The six keep
- * their groups (places 0 to 2 and 3 to 5 become 0 to 2 and 4 to 6). The two added nations are chosen by the nation
- * reputation, as ofc_australia chooses. The stronger goes to the group whose first place (New Zealand, and
+ * their groups (places 0 to 2 and 3 to 5 become 0 to 2 and 4 to 6). The two added nations come from the split of
+ * direct and qualifying places (split_draw; every edition of 8 has one, in the table and after it); only when the
+ * data has fewer than 8 Oceania nations with a national team are they chosen by the nation reputation, as
+ * ofc_australia chooses. The first goes to the group whose first place (New Zealand, and
  * Australia or the nation in its place, in the order drawn at 0x799f92) has the lower team reputation, the field
  * that the original's sort of teams compares (0x4b07d0). When the data has fewer than two more Oceania nations the
  * six stay. */
@@ -238,6 +243,7 @@ void season_intl_ofc_draw(uint32_t self)
     if (!season_intl_on() || !is_ofc(self)) return;
     const SeasonIntlEdition *e = season_intl_rule_edition("oceania_nations", year_of(self));
     uint32_t six = rd32(g_mem, self + TEAMS_OF);
+    n_kept = 0;
     if (e && e->teams == ONE_GROUP && readable(six) && (int16_t)rd16(g_mem, self + TEAM_COUNT) == 6) {
         draw_one_group(self, six);
         return;
@@ -245,10 +251,14 @@ void season_intl_ofc_draw(uint32_t self)
     if (!e || e->teams != TEAMS || !readable(six) || (int16_t)rd16(g_mem, self + TEAM_COUNT) != 6) return;
     uint32_t teams[TEAMS] = {0};
     for (int k = 0; k < 6; k++) teams[k < 3 ? k : k + 1] = rd32(g_mem, six + 4u * (uint32_t)k);
-    uint32_t first = strongest(teams, TEAMS);
-    if (rt_unwinding) return;
-    teams[3] = first;                                   /* so that the second pick leaves it out */
-    uint32_t second = first ? strongest(teams, TEAMS) : 0;
+    uint32_t first = 0, second = 0;
+    if (!split_draw(self, teams, &first, &second)) {
+        if (rt_unwinding) return;
+        first = strongest(teams, TEAMS);
+        if (rt_unwinding) return;
+        teams[3] = first;                               /* so that the second pick leaves it out */
+        second = first ? strongest(teams, TEAMS) : 0;
+    }
     if (rt_unwinding) return;
     if (!second) {
         fprintf(stderr, "recomp: season intl: oceania_nations %d: no two more Oceania nations, 6 teams play\n",
@@ -302,6 +312,171 @@ static void draw_one_group(uint32_t self, uint32_t six)
         fprintf(stderr, "recomp: season intl: oceania_nations %d: one group of 4: %s, %s, %s, %s\n", year_of(self),
                 win_str(team_nation(teams[0]) + NATION_NAME), win_str(team_nation(teams[1]) + NATION_NAME),
                 win_str(team_nation(teams[2]) + NATION_NAME), win_str(team_nation(teams[3]) + NATION_NAME));
+}
+
+/* ---- The direct and qualifying places of an edition of 8 (0.7.0, open item 45 option b; Max, 3 November 2026) ----
+ *
+ * The real editions of 8 took the best-ranked Oceania nations straight to the finals and gave the last places to a
+ * qualifying round of the lowest-ranked (run-logs/0.6.2-s45b/research-ofc.md):
+ * - 2002 (https://www.rsssf.org/tables/02oc.html): 6 straight, the top six of the FIFA ranking of October 2001
+ *   (Australia, New Zealand, Fiji, Tahiti, Solomon Islands, Vanuatu), and 2 from the round of the nations ranked 7
+ *   to 12 (Papua New Guinea, New Caledonia);
+ * - 2012, 2016 and 2024 (https://en.wikipedia.org/wiki/2012_OFC_Nations_Cup_qualification, ..._2016_OFC_Nations_Cup,
+ *   ..._2024_OFC_Men's_Nations_Cup_qualification): 7 straight with the hosts, 1 from the round of the four lowest.
+ * After the table each edition takes the split of the last row (2024, split_of); with changing rules off the split
+ * of the start season's edition stays (Q232). Max chose (option b) that the game plays no round: the qualifying
+ * places go to the strongest of the next nations of the ranking.
+ *
+ * The ranking is the game's own FIFA ranking: the FIFA_RANKINGS object (its pointer at [0xb74318] +0x1c, read at
+ * 0x49c248..0x49c253 by the rankings screen) has at +0 its table, a record of 0x2c bytes for each nation id, +0x10
+ * its position from 1
+ * (create_default_table 0x58dd50 seeds the score from nation +0xa8, the ranking points of the data, and numbers the
+ * positions by score at 0x58de5f..0x58de7d; update_rankings 0x58d460 numbers them again each month;
+ * get_nation_strength_tier 0x58e190 reads +0x10 at 0x58e1ae). A nation with no position comes after those with one,
+ * then the nation reputation and the nation id decide. The hosts of the edition (the table's, after the table the
+ * rotation's) go straight; the next 8 - places - hosts Oceania nations with a national team go straight too; the
+ * next `places` take the qualifying places.
+ *
+ * The draw keeps the original's draw of six (0x799e30: the group heads and the Melanesian and Polynesian places):
+ * a team of the six that does not go straight gives its place to the best-ranked nation that goes straight and is
+ * not in yet. The added places 3 and 7 take the qualifying places (2002), or the last nation that goes straight and
+ * the qualifying place (2012 on), as season_intl_ofc_draw places them. */
+
+#define FIFA_HOLDER 0xb74318u           /* +0x1c: FIFA_RANKINGS * (0x49c248, 0x49c253) */
+#define FIFA_RECORD 0x2cu               /* a record a nation id (0x58e1a6..0x58e1ae) */
+#define FIFA_POSITION 0x10u             /* s16, 1 the best (0x58de73) */
+#define NO_POSITION 30000
+
+static const struct {
+    int year, places;
+} splits[] = {{2002, 2}, {2012, 1}, {2016, 1}, {2024, 1}};
+
+/* The qualifying places of the finals of `year`: the split of its rule edition, or of the last table edition before
+ * it (an edition after the table, a copy of the 2024 row with its own year: continued, season_intl_rules.c), 0 for an
+ * edition that is not of 8. */
+static int split_of(int year)
+{
+    const SeasonIntlEdition *e = season_intl_rule_edition("oceania_nations", year);
+    int places = 0, from = 0;
+    if (!e || e->teams != TEAMS) return 0;
+    for (size_t i = 0; i < sizeof splits / sizeof splits[0]; i++)
+        if (splits[i].year <= e->year && splits[i].year > from) from = splits[i].year, places = splits[i].places;
+    return places;
+}
+
+static int fifa_position(int id)
+{
+    uint32_t holder = rd32(g_mem, FIFA_HOLDER), rankings = readable(holder) ? rd32(g_mem, holder + 0x1cu) : 0;
+    uint32_t table = readable(rankings) ? rd32(g_mem, rankings) : 0;
+    uint32_t at = readable(table) ? table + (uint32_t)id * FIFA_RECORD + FIFA_POSITION : 0;
+    if (!readable(at)) return NO_POSITION;
+    int pos = (int16_t)rd16(g_mem, at);
+    return pos > 0 ? pos : NO_POSITION;
+}
+
+typedef struct {
+    uint32_t team;
+    int position, rep, id, host;
+} Ranked;
+
+static int ranked_compare(const void *a, const void *b)
+{
+    const Ranked *x = a, *y = b;
+    if (x->position != y->position) return x->position - y->position;
+    if (x->rep != y->rep) return y->rep - x->rep;
+    return x->id - y->id;
+}
+
+static int team_in(const uint32_t *list, int n, uint32_t team)
+{
+    for (int k = 0; k < n; k++)
+        if (list[k] && team_nation(list[k]) == team_nation(team)) return 1;
+    return 0;
+}
+
+/* See above. Gives 0 for an edition with no split, or when the data has fewer than 8 Oceania nations. */
+static int split_draw(uint32_t self, uint32_t teams[TEAMS], uint32_t *first, uint32_t *second)
+{
+    int year = year_of(self), places = split_of(year);
+    if (!places) return 0;
+    /* The hosts, as ofc_hosts finds them. */
+    const SeasonIntlEdition *e = season_intl_edition("oceania_nations", year);
+    uint32_t hosts[6], oceania = rd32(g_mem, CONTINENT_OCEANIA);
+    int nh = 0;
+    char one[128];
+    for (const char *p = e && e->hosts ? e->hosts : ""; *p && nh < 6;) {
+        size_t len = strcspn(p, ";");
+        snprintf(one, sizeof one, "%.*s", (int)len, p);
+        p += len;
+        if (*p == ';') p++;
+        uint32_t t = season_intl_team_named(one);
+        if (rt_unwinding) return 0;
+        if (t && continent_of(team_nation(t)) == oceania) hosts[nh++] = team_nation(t);
+    }
+    Ranked list[64];
+    int n = 0;
+    for (int id = 0; id < nation_count() && n < 64; id++) {
+        uint32_t nation = nation_at(id);
+        if (continent_of(nation) != oceania) continue;
+        uint32_t a[1] = {nation};
+        uint32_t club = call_cdecl(NATIONAL_TEAM, 1, a);
+        if (rt_unwinding) return 0;
+        if (team_nation(club) != nation) continue;
+        int host = 0;
+        for (int h = 0; h < nh; h++) host |= hosts[h] == nation;
+        list[n++] = (Ranked){club, fifa_position(id), (int16_t)rd16(g_mem, nation + NATION_REPUTATION), id, host};
+    }
+    qsort(list, (size_t)n, sizeof list[0], ranked_compare);
+    uint32_t direct[TEAMS], qual[2];
+    int nd = 0, nq = 0;
+    for (int i = 0; i < n; i++)
+        if (list[i].host) direct[nd++] = list[i].team;
+    for (int i = 0; i < n; i++) {
+        if (list[i].host) continue;
+        if (nd < TEAMS - places) direct[nd++] = list[i].team;
+        else if (nq < places) qual[nq++] = list[i].team;
+    }
+    if (nd + nq < TEAMS) {
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: %d Oceania nations for 8 places\n", year, n);
+        return 0;
+    }
+    /* A team of the six that does not go straight gives its place to the best of those that do. */
+    for (int k = 0; k < TEAMS; k++) {
+        if (!teams[k] || team_in(direct, nd, teams[k])) continue;
+        uint32_t t = 0;
+        for (int d = 0; d < nd && !t; d++)
+            if (!team_in(teams, TEAMS, direct[d])) t = direct[d];
+        if (!t) continue;
+        if (logging())
+            fprintf(stderr, "recomp: season intl: oceania_nations %d: %s does not go straight, %s does\n", year,
+                    win_str(team_nation(teams[k]) + NATION_NAME), win_str(team_nation(t) + NATION_NAME));
+        teams[k] = t;
+    }
+    uint32_t rest = 0;
+    for (int d = 0; d < nd && !rest; d++)
+        if (!team_in(teams, TEAMS, direct[d])) rest = direct[d];
+    *first = places == 2 ? qual[0] : rest;
+    *second = places == 2 ? qual[1] : qual[0];
+    if (!*first || !*second) return 0;
+    for (int k = 0; k < nq; k++) kept[k] = qual[k];
+    n_kept = nq;
+    if (logging()) {
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: straight:", year);
+        for (int d = 0; d < nd; d++)
+            fprintf(stderr, "%s %s", d ? "," : "", win_str(team_nation(direct[d]) + NATION_NAME));
+        fprintf(stderr, "; qualifying places:");
+        for (int k = 0; k < nq; k++)
+            fprintf(stderr, "%s %s", k ? "," : "", win_str(team_nation(qual[k]) + NATION_NAME));
+        fprintf(stderr, "\n");
+    }
+    return 1;
+}
+
+int season_intl_ofc_kept(uint32_t team)
+{
+    for (int k = 0; k < n_kept; k++)
+        if (kept[k] && team_nation(kept[k]) == team_nation(team)) return 1;
+    return 0;
 }
 
 /* ---- The edition of one group: rules, template, group B, honours ---- */
