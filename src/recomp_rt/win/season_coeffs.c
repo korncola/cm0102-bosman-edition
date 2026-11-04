@@ -1,4 +1,4 @@
-/* The real UEFA season coefficients of some season databases (season_coeffs.h, 0.6.2 open item 106). */
+/* The real UEFA season coefficients of the season databases (season_coeffs.h, 0.6.2 open item 106). */
 #include "win.h"
 #include "season_coeffs.h"
 

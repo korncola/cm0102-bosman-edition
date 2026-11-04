@@ -486,10 +486,10 @@ static void assign_all(uint32_t self, uint32_t records, int count, const SeasonU
      * points of that season divided by the clubs entered there, before these places) each get one more league
      * phase place, for their best-placed club with no place yet. At a new game the shift does not run (the year
      * test at 0x903b6f takes the start year, tools/recomp/seasons.py), so +0x108 is the database's value of the
-     * season before. Databases that hold 0 there for every nation fall back to +0x100. The databases that miss it
-     * get the real value at the load (season_coeffs.h, open item 106). It comes after the title holders and before
-     * the Europa League places, so the clubs below move down one place (CL regulations 2024/25, Art. 3.07 and
-     * 3.08). */
+     * season before. Every known database gets the real value there at the load (season_coeffs.h, open item 106).
+     * A database that holds 0 there for every nation (a Custom database) falls back to +0x100. It comes after the
+     * title holders and before the Europa League places, so the clubs below move down one place (CL regulations
+     * 2024/25, Art. 3.07 and 3.08). */
     if (r->cl_league && !rt_unwinding) {
         int best[2] = {-1, -1};
         double val[2] = {0, 0};

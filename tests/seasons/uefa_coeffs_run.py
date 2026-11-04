@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""The real UEFA coefficients of the season databases that miss a season or hold all six one season off (0.6.2 open
-item 106).
+"""The real UEFA coefficients of every season database and extra database (0.6.2 open item 106).
 
 Usage:
     python3 tests/seasons/uefa_coeffs_run.py <cm0102_recomp> <game folder> [--only <name>,...] [--keep <folder>]
@@ -8,15 +7,16 @@ Usage:
 At the database load the game writes the real six seasons (S-6)/(S-5) to (S-1)/S at nation +0xe0..+0x108 of the
 nations of the table (src/recomp_rt/win/season_coeffs.c, docs/research/2026-11-03-database-coefficients.tsv).
 
-Each run starts a game on one database (season database or extra version) in its own start year S with England
+Each run starts a game on one database (season database or extra database) in its own start year S with England
 (rules_report_check.py), saves one day after the start and ends. The checks: code 0 and no message box; the log line
-of the fill (every row written, none kept); in the save, the six values of every nation of the table are the real
-ones; the first ten UEFA nations by the totals of the first season (+0xe0..+0x100) are in the order of UEFA's real
-ranking of year S - 1, and by the totals of the first season change (+0xe8..+0x108, roll_coefficients 0x903b50) in
-the order of the real ranking of year S (RANKS, kassiesa.net country rankings, read 3 November 2026). From 2024 on
-the two European Performance Spots of the first season go to the two best values at +0x108 (2024: Italy and Germany;
-2025: England and Spain, as in the real seasons). The 2025 runs also check that Spain has five Champions League
-clubs in 2025/26: four by its rank and one European Performance Spot. A run takes 1 to 3 minutes.
+of the fill (every row written, none kept; on the zips of our own databases of 4 November 2026 every row held
+already, on their earlier zips every row written); in the save, the six values of every nation of the table are the
+real ones; the first ten UEFA nations by the totals of the first season (+0xe0..+0x100) are in the order of UEFA's
+real ranking of year S - 1, and by the totals of the first season change (+0xe8..+0x108, roll_coefficients 0x903b50)
+in the order of the real ranking of year S (RANKS, kassiesa.net country rankings, read 3 November 2026). From 2024
+on the two European Performance Spots of the first season go to the two best values at +0x108 (2024: Italy and
+Germany; 2025: England and Spain, as in the real seasons). The 2025 runs also check that Spain has five Champions
+League clubs in 2025/26: four by its rank and one European Performance Spot. A run takes 1 to 3 minutes.
 """
 import csv
 import os
@@ -62,11 +62,42 @@ RUNS = {"s2002": ("Summer 2002", "Summer 2002.zip", 2002, {}),
         "apr2022": ("April 2022", "April 2022", 2021, {}),
         "apr2023": ("April 2023", "April 2023", 2022, {}),
         "apr2024": ("April 2024", "April 2024", 2023, {}),
+        "oct2003": ("October 2003", "October 2003 Sawczuk", 2003, {}),
+        "s2004": ("Summer 2004", "Summer 2004.zip", 2004, {}),
+        "nov2007": ("November 2007", "November 2007", 2007, {}),
+        "feb2008": ("February 2008", "February 2008", 2007, {}),
+        "sep2009": ("September 2009", "September 2009", 2009, {}),
+        "apr2010": ("April 2010 SIM", "April 2010 SIM", 2009, {}),
+        "feb2010": ("February 2010 ODB", "February 2010 ODB", 2009, {}),
+        "sep2010": ("September 2010 ODB", "September 2010 ODB", 2010, {}),
+        "dec2010": ("December 2010 SIM", "December 2010 SIM", 2010, {}),
+        "feb2011": ("February 2011 ODB", "February 2011 ODB", 2010, {}),
+        "apr2011": ("April 2011 SIM", "April 2011 SIM", 2010, {}),
+        "mar2012s": ("March 2012 SIM", "March 2012 SIM", 2011, {}),
+        "sep2012": ("September 2012", "September 2012", 2012, {}),
+        "mar2013": ("March 2013", "March 2013", 2012, {}),
+        "aut2013": ("Autumn 2013", "Autumn 2013", 2013, {}),
+        "mar2014": ("March 2014", "March 2014", 2013, {}),
+        "oct2014": ("October 2014", "October 2014", 2014, {}),
+        "apr2015": ("April 2015", "April 2015", 2014, {}),
+        "oct2015": ("October 2015", "October 2015", 2015, {}),
+        "apr2016": ("April 2016", "April 2016", 2015, {}),
+        "oct2016": ("October 2016", "October 2016", 2016, {}),
+        "apr2017": ("April 2017", "April 2017", 2016, {}),
+        "oct2017": ("October 2017", "October 2017", 2017, {}),
+        "mar2018": ("March 2018", "March 2018", 2017, {}),
+        "oct2018": ("October 2018", "October 2018", 2018, {}),
+        "mar2019": ("March 2019", "March 2019", 2018, {}),
+        # the zips of our own databases before 4 November 2026: the load writes every row
+        "s2002old": ("Summer 2002", "old/Summer 2002 (2026-11-04, before the real coefficients).zip", 2002, {}),
+        "s2004old": ("Summer 2004", "old/Summer 2004 (2026-11-04, before the real coefficients).zip", 2004, {}),
+        "s2006old": ("Summer 2006", "old/Summer 2006 (2026-11-04, before the real coefficients).zip", 2006, {}),
         "reshift": ("December 2025", "December 2025", 2025, {"RECOMP_DATES_RESHIFT": "2030"})}
 # UEFA's real association ranking of each year, first ten (kassiesa.net/uefa/data/method<n>/crank<year>.html)
 RANKS = {
     2001: ["Spain", "Italy", "England", "Germany", "France", "Holland", "Turkey", "Greece", "Russia", "Portugal"],
     2002: ["Spain", "Italy", "England", "Germany", "France", "Greece", "Holland", "Turkey", "Portugal", "Russia"],
+    2003: ["Spain", "Italy", "England", "Germany", "France", "Greece", "Portugal", "Holland", "Scotland", "Turkey"],
     2004: ["Spain", "England", "Italy", "Germany", "France", "Portugal", "Greece", "Holland", "Czech Republic",
            "Turkey"],
     2005: ["Spain", "England", "Italy", "France", "Germany", "Portugal", "Holland", "Greece", "Belgium", "Scotland"],
@@ -77,6 +108,11 @@ RANKS = {
     2010: ["England", "Spain", "Italy", "Germany", "France", "Russia", "Ukraine", "Romania", "Portugal", "Holland"],
     2011: ["England", "Spain", "Germany", "Italy", "France", "Portugal", "Russia", "Ukraine", "Holland", "Turkey"],
     2012: ["England", "Spain", "Germany", "Italy", "Portugal", "France", "Russia", "Holland", "Ukraine", "Greece"],
+    2013: ["Spain", "England", "Germany", "Italy", "Portugal", "France", "Ukraine", "Russia", "Holland", "Turkey"],
+    2014: ["Spain", "England", "Germany", "Italy", "Portugal", "France", "Russia", "Holland", "Ukraine", "Belgium"],
+    2015: ["Spain", "England", "Germany", "Italy", "Portugal", "France", "Russia", "Ukraine", "Holland", "Belgium"],
+    2016: ["Spain", "Germany", "England", "Italy", "Portugal", "France", "Russia", "Ukraine", "Belgium", "Holland"],
+    2017: ["Spain", "Germany", "England", "Italy", "France", "Russia", "Portugal", "Ukraine", "Belgium", "Turkey"],
     2018: ["Spain", "England", "Italy", "Germany", "France", "Russia", "Portugal", "Ukraine", "Belgium", "Turkey"],
     2019: ["Spain", "England", "Italy", "Germany", "France", "Russia", "Portugal", "Belgium", "Ukraine", "Turkey"],
     2020: ["Spain", "England", "Germany", "Italy", "France", "Portugal", "Russia", "Belgium", "Ukraine", "Holland"],
@@ -131,7 +167,11 @@ def check(name, database, where, start, env, work):
         want = [r for r in csv.DictReader(f, delimiter="\t") if r["database"] == database]
     if not want:
         fails.append(f"{name}: no row of {database} in {TSV}")
-    line = f"season coeffs: {database}: the real six seasons written for {len(want)} nations, 0 kept"
+    # our own databases hold the real values from 4 November 2026 (tools/seasons/own_db/coeffs.py): the rows fix a
+    # copy of an earlier zip, and on these zips the fill finds every value real already
+    line = (f"season coeffs: {database}: the real six seasons written for 0 nations, 0 kept, some held them already"
+            if where.endswith(".zip") and not where.startswith("old/") else
+            f"season coeffs: {database}: the real six seasons written for {len(want)} nations, 0 kept")
     fills = 3 if "RECOMP_DATES_RESHIFT" in env else 1
     if log.count(line) != fills or log.count("season coeffs:") != fills:
         fails.append(f"{name}: not {fills} log lines {line!r} and no other")
