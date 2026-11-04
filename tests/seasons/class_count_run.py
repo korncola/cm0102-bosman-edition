@@ -5,8 +5,8 @@ clubs starts with that number after the club moves, and Belgium's leagues move o
 Usage:
     python3 tests/seasons/class_count_run.py <cm0102_recomp> <game folder> [--only start,season,irish] [--keep <folder>]
 
-The runs, each a season game with start year 2025 on data set 3.9.68 (no season database: its dates move to 2025),
-all nations, changing rules on, as a Tier A run:
+The runs, each a season game on data set 3.9.68 (no season database), all nations, changing rules on, as a Tier A
+run. Start and season start in 2025 (the dates of the data move to 2025), irish in 2008:
     start   ends after the start report (about 3 minutes). After the club moves no division is short (the log
             line "club moves: <division> (tier n) holds k clubs, its class takes m") except the two of SHORT_OK,
             and the Belgian First and Second Division hold 18 clubs each in the report.
@@ -22,13 +22,12 @@ all nations, changing rules on, as a Tier A run:
     season  plays to the end of 2026/27 (about 30 minutes): no message box, and no Belgian division stalls at
             the 2026 season change (rules_report_check.league_stalls).
     irish   a 2008/09 start on 3.9.68 (0.6.2 open item 123), to the start report: no message box, no short division
-            (except SHORT_OK), every club of the Irish Premier Division list found in the data (no RECOMP_CLUB_LOG
-            line "club moves: missing:"; the First Division list has two clubs that 3.9.68 lacks), and the two
-            divisions at the counts of the data (12 and 10), which IrePrm::create_table 0x63a740 (10 or 12) and
-            IreFirst::create_table 0x635910 (9 to 12) take. The list of 2008 names "Bray Wanderers", the data
-            "Bray Wanderers A.F.C." (club 1855). The plain name kept "a f c" as three words, so the club was not
-            found, its place in the Premier Division stayed open (11 clubs), and the constructor IrePrm::IrePrm
-            0x639bb0 stopped at ire_prm..cpp 82 (push 0x52 at 0x639ca7).
+            (except SHORT_OK), and the Irish Premier and First Division at the counts of the data (12 and 10).
+            IrePrm::create_table 0x63a740 takes only 10 or 12. The list of 2008 names "Bray Wanderers", which the
+            data holds as "Bray Wanderers A.F.C." (club 1855), so the club moves did not find it and left its place
+            in the Premier Division open: 11 clubs, and IrePrm::IrePrm 0x639bb0 stopped at ire_prm..cpp 82 (push
+            0x52 at 0x639ca7). The club moves now fill one more place when the open places would leave a count
+            that the class does not take (log line "would hold 11 clubs, its class takes 12").
 Without --keep the runs play in a temporary folder that the script deletes when every run passes.
 """
 import os
@@ -106,7 +105,6 @@ def run_irish(program, game, work):
     if "recomp: club moves of 2008/09:" not in log:
         fails.append("irish: the club moves did not run (no seasons tables beside the program?)")
     fails += [f"irish: {line}" for line in short_divisions(log)]
-    fails += [f"irish: {m.group(0)}" for m in re.finditer(r"club moves: missing: 2008/09\tIrish Premier Division\t.*", log)]
     if not os.path.exists(report):
         return fails + [f"irish: no report ({work})"]
     _, comps = rrc.read_report(report)

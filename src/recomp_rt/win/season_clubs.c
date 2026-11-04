@@ -285,19 +285,25 @@ static const char *class_file(const char *name)
     return NULL;
 }
 
+/* Open item 123: the least count of n or more that the class of a division takes, for a class that counts the
+ * clubs of the data and takes only some counts. IrePrm::create_table 0x63a740 takes 10 (+0x3c 4) or 12 (+0x3c 3)
+ * (0x63a79f..0x63a7c6) and returns 0 for any other count, so IrePrm::IrePrm 0x639bb0 stops at ire_prm..cpp 82
+ * (push 0x52 at 0x639ca7). The club moves leave the place of a listed club that the data lacks open in the top
+ * two tiers (below). In a 2008 start on 3.9.68 one such club (Bray Wanderers, held as "Bray Wanderers A.F.C.")
+ * left the Premier Division with 11. IreFirst::create_table 0x635910 takes 9 to 12 (0x63596f..0x63597d), and
+ * NorFirst 0x7909a0 has a cap in season_size_caps, so they are not here. Any other division gives n. */
+static int data_class_count(const char *name, int n)
+{
+    if (!strncmp(name, "Irish Premier Division", 52) && n > 0 && n < 12) return n <= 10 ? 10 : 12;
+    return n;
+}
+
 /* The count of a class after 2001. */
 static int class_size_of(const char *file)
 {
     for (size_t k = 0; file && k < sizeof CLASS_SIZE / sizeof CLASS_SIZE[0]; k++)
         if (!strcmp(file, CLASS_SIZE[k].file)) return CLASS_SIZE[k].size;
     return 0;
-}
-
-/* 1 for a letter or digit of Windows-1252 (a letter with an accent counts). */
-static int plain_letter(unsigned char ch)
-{
-    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') ||
-           (ch >= 0xc0 && ch != 0xf7);
 }
 
 /* A club name in a plain form, to find a club whose name in the research differs a little from the database
@@ -311,7 +317,7 @@ static void plain_words(const char *in, char *out, size_t room, int drop_words)
                                        "do", "das", "dos", "the", "e", "y", "and"};
     static const char fold[] = "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYTsaaaaaaaceeeeiiiidnooooo/ouuuuyty";   /* 0xc0.. */
     char word[64];
-    size_t n = 0, w = 0, seg = 0;     /* seg: the letters since the start of the word or a joining full stop */
+    size_t n = 0, w = 0;
     out[0] = 0;
     for (const unsigned char *p = (const unsigned char *)in;; p++) {
         int ch = *p;
@@ -320,17 +326,8 @@ static void plain_words(const char *in, char *out, size_t room, int drop_words)
         int letter = (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9');
         if (letter && w < sizeof word - 1) {
             word[w++] = (char)ch;
-            seg++;
             continue;
         }
-        /* Initials with full stops are one word: "A.F.C." is "afc" and "S.P.A.L." is "spal", so "Bray Wanderers
-         * A.F.C." (3.9.68) is "bray wanderers" as the list's "Bray Wanderers" (open item 123). A full stop joins
-         * when one letter stands before it and one letter after it. "St. Patrick's" and "J. Smith" stay apart. */
-        if (ch == '.' && seg == 1 && plain_letter(p[1]) && !plain_letter(p[1] ? p[2] : 0)) {
-            seg = 0;
-            continue;
-        }
-        seg = 0;
         if (w) {
             word[w] = 0;
             int skip = 0;
@@ -676,6 +673,16 @@ static void move_clubs(int season)
         int whole = fixed && class_file(d->name) && season_divisions_class_size(d->name, season) < 0;
         int reserve_places = missing_places < d->missing_reserve ? missing_places : d->missing_reserve;
         int places[2] = {d->tier > 2 || fixed ? missing_places : reserve_places, need - missing_places};
+        /* Open item 123: the places that stay open must leave a count that the class takes. */
+        int open_places = missing_places - places[0];
+        int ends = d->want - open_places;
+        int extra = data_class_count(d->name, ends) - ends;
+        if (extra > open_places) extra = open_places;
+        if (extra > 0) {
+            places[1] += extra;
+            if (log) fprintf(stderr, "recomp: club moves: %s would hold %d clubs, its class takes %d: %d open places "
+                                     "fill\n", d->name, ends, ends + extra, extra);
+        }
         /* The groups of a kind 1 place, in this order: 0 a club that left a higher division, 4 a club that left a
          * lower division with a list, 1 a club with no division, 2 a club of a spare division, 3 a club of a lower
          * division with no list. Groups 4 and 2 take the club with the highest reputation first (see FILL_BY_REP). */
