@@ -75,6 +75,13 @@ The suggested save: run set game a2001offs3 (Tier A, changing rules off, seed 3)
 (run-logs/runset-pass2/run/a2001offs3/leg004/user/samesave.sav) to day 162 of 2057 with the same seed:
 run-logs/0.6.2-s127/r3/user/samesave.sav. Ireland then has three European places, and the original drew "Athlone Town v
 Athlone Town". --keep-faults (keep:ire_super) must fail.
+    With --old the save holds a cup that has already stopped. At the next season change the runtime restarts it
+    ("recomp: Irish Super Cup: the cup of <year> is restarted in <game year>", "left stopped" with the fault kept),
+    and the checks above apply to that game year in place of the "skips" line. The suggested save: a2001offs3 of
+    batch O at day 202 of 2061 (run-logs/merge-062p/offs3/a2001offs3/leg005/user/samesave.sav, cup stopped since
+    2057) with --days 360.
+    With --parked (and --rules on) no restart line may come: run set game a2001s1 at day 212 of 2011
+    (run-logs/runset-pass2/run/a2001s1/leg000/user/samesave.sav, seed 1) with --days 365.
 
 age: sets the birth year of the human manager of start.sav (+0x12) to --born, loads it, goes on holiday and saves 3
 game days later. The day loop stores each staff member's age at +0x18 (0x5cd3c4); for an age above 127 the save must
@@ -197,6 +204,7 @@ def olympics(argv):
 
 
 IRE_SUPER = "recomp: Irish Super Cup "
+IRE_RESTART = "recomp: Irish Super Cup: the cup of "
 
 
 def ire_super(argv):
@@ -222,11 +230,29 @@ def ire_super(argv):
     skips, again = [x for x in lines if ": skips " in x], [x for x in lines if ": takes again " in x]
     for x in lines:
         print(f"  {x}")
-    if not skips:
-        fails.append("the last loop of the Irish Super Cup skipped no club that was already in its table")
+    if "--parked" in argv:
+        # Changing rules on: the rules table stops the cup, and no restart may bring it back.
+        old = [x for x in log if x.startswith(IRE_RESTART)]
+        print(f"  {len(old)} restart lines")
+        return fails + [f"a cup was restarted against the rules table: {x}" for x in old]
+    if "--old" in argv:
+        # A save in which the cup has stopped: "the cup of <year> is restarted in <game year>".
+        old = [x[len(IRE_RESTART):] for x in log if x.startswith(IRE_RESTART)]
+        for x in old:
+            print(f"  {x}")
+        restarted = [x for x in old if " is restarted in " in x]
+        stopped = [x for x in old if " is left stopped in " in x]
+        if not restarted:
+            fails.append("the stopped Irish Super Cup was not restarted at the season change")
+        if stopped:
+            fails.append(f"the Irish Super Cup was left stopped: {stopped[0]}")
+        years = sorted({int(x.split()[-1]) for x in restarted})
+    else:
+        if not skips:
+            fails.append("the last loop of the Irish Super Cup skipped no club that was already in its table")
+        years = sorted({int(x.split(":")[0]) for x in lines if x.split(":")[0].isdigit()})
     if again:
         fails.append(f"the Irish Super Cup took {len(again)} clubs into its table again")
-    years = sorted({int(x.split(":")[0]) for x in lines if x.split(":")[0].isdigit()})
     saved = os.path.join(work, "user", soak_run.smoke_run.SAVE_NAME)
     if not os.path.exists(saved):
         return fails + [f"no save {saved}"]
