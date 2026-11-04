@@ -242,6 +242,10 @@ def run_load(name, extra, table=None):
             fails.append(f"{name}: the save did not load and play on (code {r.returncode}, {again})")
         if "message box" in out:
             fails.append(f"{name}: a message box after the load ({again}/stderr.txt)")
+        # The save is of 2014/15, a season of the era, so group C sends clubs up at the change into 2015/16 (item 126
+        # review: with no rules table every change of a game with the extra division passed over group C).
+        if "group C not read" in out:
+            fails.append(f"{name}: the change after the load passed over group C in the choice of the clubs that go up")
         if table and "rules table: none" not in out:
             fails.append(f"{name}: the load had a rules table")
         made = re.search(r"new competition ita_ser_c2a made for \d+ \(entry 21, record \d+\) from the save", out)

@@ -648,8 +648,11 @@ static void chain(uint32_t serie_a)
     /* The change into the era with the extra division flag: C2/A played the season before as a C2 group, two tiers
      * below Serie B (the C2 rows of 2013/14 send no club up: all join the single Serie C, ita-210, ita-211), so its
      * rows of status 0 and 5 do not go up to Serie B: they take 0xff (0x689df4), and the choice of the clubs that go
-     * up passes over the group. Q529. */
-    int no_c = g[2] && extra_division_flag() && !era_of_year((int16_t)rd16(g_mem, serie_a + 0x40));
+     * up passes over the group. Q529. With no rules table rules_season gives 0, so era_of_year gives 0 for every
+     * season: the state then tells whether the season just played was the era (C2/B ends at change_into_era, below),
+     * else group C's winners never went up in such a game (item 126 review). */
+    int played = (int16_t)rd16(g_mem, serie_a + 0x40);
+    int no_c = g[2] && extra_division_flag() && !(rules_season(played) ? era_of_year(played) : era_by_state());
     if (!rt_unwinding && no_c) {
         int n = (int16_t)rd16(g_mem, g[2] + 0x3e);
         for (int k = 0; k < n && n <= 60 && !rt_unwinding; k++) {
