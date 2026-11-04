@@ -31,7 +31,8 @@ ita_ser_c1a, ita_ser_c1b and ita_ser_c2a, Q520) at the end of each season of the
 with changing rules off every later season keeps the start season's counts, Q232), and C2/B and C2/C with
 year 2999 at the end of a season of the era (Q623); the log has the 38 match days of each group of 20, the regroup line of each
 season change into the era, and the news sentence of the change in the change runs. In each season change
-of the era 4 clubs go up to Serie B (the three group winners first, item 126) and Serie B sends 4 down (Q627), and group C is made once (no line "starts
+of the era 4 clubs go up to Serie B (the group winners first,
+item 126) and Serie B sends 4 down (Q627), and group C is made once (no line "starts
 again"). The two-group runs (Q529): C2/A and C2/B hold the clubs of their rows at the end of each two-group season
 (20 and 20 in 2011/12, the 21 of C2/B is 20; 18 and 18 in 2012/13 and 2013/14), C2/C has year 2999, each
 season change into a two-group season regroups C2 into the two counts, and in each season change C1 sends down as
@@ -96,12 +97,22 @@ def check_moves(name, log):
         m = re.search(r"serie c: up to Serie B: (.*) \(group ([ABC]), status (\d+)\)", line)
         if m:
             clubs.append((m.group(2), int(m.group(3))))
-        elif re.search(r"serie c: \d+ up to Serie B", line):
-            winners = sorted(g for g, st in clubs if st == 5)
-            if winners != ["A", "B", "C"]:
-                fails.append(f"{name}: the group winners that go up to Serie B are {winners} of {clubs} (want A, B "
-                             f"and C, item 126)")
-            clubs = []
+            continue
+        m = re.search(r"serie c: (\d+) up to Serie B", line)
+        if not m:
+            continue
+        # The change into the era with the extra division reads no group C (C2/A played as a C2 group).
+        groups = ["A", "B"] if "group C not read" in line else ["A", "B", "C"]
+        winners = sorted(g for g, st in clubs if st == 5)
+        others = [st for g, st in clubs if st != 5]
+        if len(clubs) != int(m.group(1)):
+            fails.append(f"{name}: {len(clubs)} club lines for {m.group(1)} up to Serie B")
+        if winners != groups:
+            fails.append(f"{name}: the group winners that go up to Serie B are {winners} of {clubs} (want "
+                         f"{', '.join(groups)}, item 126)")
+        elif len(clubs) <= 2 * len(groups) and any(st != 0 for st in others):
+            fails.append(f"{name}: a club other than a play-off winner goes up to Serie B before one: {clubs}")
+        clubs = []
     if "group C starts again" in log:
         fails.append(f"{name}: group C started twice in one season change")
     # O259, row A22: the Coppa Italia's lower places fill from its own loop (Serie B, its relegated clubs and places 3

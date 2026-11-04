@@ -51,7 +51,7 @@
  * a line at each change, the census and every move. RECOMP_TEST_ITA_SECOND_TOP=1 (tests only): before the exchange,
  * the first second team of Serie A and of Serie B changes places with the club of row 0 (the first place, with its points and
  * status; the rows are in table order after the final sort), and the first second team of each group with the club
- * that choose_promoted takes first (status 0, else row 0), so it goes up unless the rule bars it. RECOMP_TEST_ITA_SECOND_BOTTOM=1 (tests only):
+ * that choose_promoted takes first (status 5, the group winner, else row 0; item 126), so it goes up unless the rule bars it. RECOMP_TEST_ITA_SECOND_BOTTOM=1 (tests only):
  * the first second team of each group changes places with the club of the last row (relegated).
  * RECOMP_TEST_ITA_SECOND_DOWN=<first team>[,<first team>] (tests only): that club of Serie A or B swaps its status
  * with the best placed relegated row of its division, so it goes down. RECOMP_TEST_ITA_SECOND_OLD=<n> (tests only): the original's moves for
@@ -357,7 +357,7 @@ static void test_setup(uint32_t a, uint32_t b, const uint32_t *g, int groups)
         }
         int lead = 0;
         for (int i = 0; k >= 0 && i < n; i++)
-            if (status_at(table, i) == ST_UP) {
+            if (status_at(table, i) == ST_TITLE) {
                 lead = i;
                 break;
             }
