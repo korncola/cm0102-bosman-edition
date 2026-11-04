@@ -8,14 +8,17 @@ Usage:
 League +0xa7 holds the matches of each team of a League table. The League constructor sets it to -1 (0x682263), and
 the table code works it out once from the rows and the meetings, (rows - 1) x meetings (0x684817..0x684830,
 0x6827ef..0x68280f). Nothing else sets it, so an OFC object that goes from an edition of 8 (groups of 4: 3 matches)
-to one of 6 (groups of 3: 2 matches) kept the 3 of the edition before.
+to one of 6 (groups of 3: 2 matches) kept the 3 of the edition before, and the 2004 edition then stopped after its
+groups (no knockout, no end of the edition); the home-and-away group of 2008 (4 rows, 2 meetings: 6) kept it too.
 
 One new game, Tier A, England's leagues (the national sides of every nation play), seed 1, changing rules on: the
-3.9.68 database, a 2001/02 start, 1250 days, past the 2002 edition (8 teams, November 2002 in a 2001 game) and the
-2004 edition (6 teams, groups from 31 May 2004, the knockout later in 2004). With RECOMP_SEASON_INTL_LOG=1 the class
+3.9.68 database, a 2001/02 start, 2720 days (to December 2008), past the 2002 edition (8 teams, November 2002 in a
+2001 game), the 2004 edition (6 teams, from 31 May 2004) and the 2008 edition (one group of 4, home and away, to
+November 2008). With RECOMP_SEASON_INTL_LOG=1 the class
 logs at each edition's end its group A rows, meetings and +0xa7 (season_intl_ofc_honours).
 
-The checks: the program ends with code 0 and shows no message box; the log names the editions 2002 and 2004; in each,
+The checks: the program ends with code 0 and shows no message box; the log names the editions 2002, 2004 and 2008; in
+each,
 +0xa7 is (rows - 1) x meetings.
 """
 import os
@@ -28,7 +31,7 @@ sys.path.insert(0, HERE)
 import soak_run  # noqa: E402
 
 LINE = re.compile(r"oceania_nations (\d+): group A (-?\d+) rows, (-?\d+) meetings, (-?\d+) matches each")
-YEARS = (2002, 2004)
+YEARS = (2002, 2004, 2008)
 
 
 def main(argv):
@@ -42,7 +45,7 @@ def main(argv):
     o = {"program": program, "game": game, "rules": "on", "database": None, "seed": 1, "start": 2001, "last": 2011,
          "nations": ["England"], "extra": [], "timeout": 5400}
     work = os.path.join(keep, "leg")
-    code, took, box = soak_run.new_game_leg(o, work, 1250)
+    code, took, box = soak_run.new_game_leg(o, work, 2720)
     fails = []
     if code != 0 or box:
         fails.append(f"the run ended with code {code}{', box ' + box if box else ''} ({work})")

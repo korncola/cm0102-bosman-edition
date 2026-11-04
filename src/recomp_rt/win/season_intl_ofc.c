@@ -487,11 +487,14 @@ int season_intl_ofc_kept(uint32_t team)
 void season_intl_ofc_rules(uint32_t self)
 {
     if (!season_intl_on() || !is_ofc(self)) return;
-    /* +0xa7, the matches of each team of the group table, is worked out once from the rows and meetings
-     * (0x684817..0x684830, 0x6827ef..0x68280f) and only the League constructor sets it to -1 (0x682263), so an
-     * edition of another size kept the count of the edition before (3 from the groups of 4 of 2002 in the groups of 3
-     * of 2004, or in the home-and-away group of 2008). Each edition works it out again after its draw. A new game is
-     * unchanged: the constructor set -1 just before (set_up_rules from the constructor, 0x798994). */
+    /* +0xa7, the matches of each team of the group table: only the League constructor sets it to -1 (0x682263), and
+     * each League step that meets -1 works it out as (rows - 1) x meetings, first init_table_row 0x687453 on the draw
+     * day (0x799659), which also sizes each row's form array from it (0x687570); the table sort (0x6827ef) and the
+     * load (0x688c29) do the same. So an edition of another size kept the count of the edition before: the groups of
+     * 3 of 2004 kept the 3 of the groups of 4 of 2002, and the 2004 edition then stopped after its groups (a Tier A
+     * game of 2001 had no knockout by July 2004); the home-and-away group of 2008 (6) kept 3. As season_sizes.c does
+     * for a league whose size changes, each edition works it out again. A new game is unchanged: the constructor set
+     * -1 just before (set_up_rules from the constructor, 0x798994). */
     wr16(g_mem, self + TEAM_MATCHES, 0xffffu);
     if (one_group(self)) {
         int year = year_of(self);
