@@ -785,6 +785,20 @@ static int ecl_take_el_thirds(uint32_t ecl)
     return put;
 }
 
+/* The knockout draw waits while a slot of the thirds is empty: the competition calls advance_stage again each day
+ * (Cup::update_for_date 0x51f890). Open item 125: the waiting line goes out once per wait, on the first day of the
+ * competition's season that finds a slot empty. */
+static int first_wait(uint32_t uc, uint32_t year)
+{
+    static struct { uint32_t uc, year; } seen[4];
+    static int next;
+    for (int i = 0; i < 4; i++)
+        if (seen[i].uc == uc && seen[i].year == year) return 0;
+    seen[next].uc = uc, seen[next].year = year;
+    next = (next + 1) % 4;
+    return 1;
+}
+
 static void draw_knockout_po(uint32_t uc, const UcGroups *f, uint32_t year, int groups)
 {
     uint32_t seed[8], unseed[8], winner[8];
@@ -819,8 +833,9 @@ static void draw_knockout_po(uint32_t uc, const UcGroups *f, uint32_t year, int 
         unseed[k] = readable(entries) ? rd32(g_mem, entries + 6u * (uint32_t)(count - 8 + k)) : 0;
         unseed_group[k] = -1;
         if (!readable(unseed[k])) {
-            fprintf(stderr, "recomp: uefa: %s knockout: no %s third in slot %d\n", uc_name(uc),
-                    ecl ? "Europa League" : "Champions League", count - 8 + k);
+            if (first_wait(uc, year))
+                fprintf(stderr, "recomp: uefa: %s knockout: no %s third in slot %d, so the draw waits\n", uc_name(uc),
+                        ecl ? "Europa League" : "Champions League", count - 8 + k);
             return;
         }
     }
@@ -918,7 +933,9 @@ static void draw_knockout(uint32_t uc)
     for (int k = 0; k < 8; k++) {                                     /* the slots of the Champions League thirds */
         thirds[k] = readable(entries) ? rd32(g_mem, entries + 6u * (uint32_t)(count - 8 + k)) : 0;
         if (!readable(thirds[k])) {
-            fprintf(stderr, "recomp: uefa: UEFA Cup knockout: no Champions League third in slot %d\n", count - 8 + k);
+            if (first_wait(uc, year))
+                fprintf(stderr, "recomp: uefa: UEFA Cup knockout: no Champions League third in slot %d, so the draw "
+                        "waits\n", count - 8 + k);
             return;
         }
     }
