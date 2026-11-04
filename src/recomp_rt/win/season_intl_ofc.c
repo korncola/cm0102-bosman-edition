@@ -28,15 +28,49 @@
  * group (League table row 0x6826d0 at 0x799cb7..0x799ce6), so it is the same for groups of 4. The rule bytes of
  * set_up_rules 0x799690 (+0x43, +0xc2..+0xc7, +0x4a) are those of the Asian Cup's groups of 4 (0x40f4c0).
  *
- * With 8 teams: the draw adds the two Oceania nations with the highest reputation that are not in the six, one to
- * the end of each group (places 3 and 7; the six move to 0 to 2 and 4 to 6). The groups have 4 rows; the
- * predicted places are 1, 2, 3, 3, 5, 5, 7, 7; a group's fourth gets the group stage codes of a third
- * (set_club_progress 0x79a490); on the draw day each group day gets a second kick-off slot, a copy of its first,
- * so that both matches of the day play at the same time. Sites in tools/recomp/seasons.py ("OFC Nations Cup of 8 teams"). The new
- * places of the two added nations are a decision of this build (the real editions had a qualifying round of the
- * smaller nations, which the game does not play): inference, not a source. */
+ * With 8 teams: the draw adds two Oceania nations by the real split of direct and qualifying places (split_draw
+ * below, 0.7.0 option b), one to the end of each group (places 3 and 7; the six move to 0 to 2 and 4 to 6). The
+ * groups have 4 rows; the predicted places are 1, 2, 3, 3, 5, 5, 7, 7; a group's fourth gets the group stage codes
+ * of a third (set_club_progress 0x79a490); on the draw day each group day gets a second kick-off slot, a copy of its
+ * first, so that both matches of the day play at the same time. Sites in tools/recomp/seasons.py ("OFC Nations Cup
+ * of 8 teams"). The places of the two added nations in the groups are a decision of this build: inference, not a
+ * source.
+ *
+ * The edition of 4 teams (2008, int-continental-87; https://www.rsssf.org/tables/08oc.html, read 3 November 2026): New
+ * Zealand, New Caledonia, Fiji and Vanuatu in one group, home and away, no knockout, 12 matches on 8 days from 17
+ * October 2007 to 19 November 2008. The game plays it so (with changing rules off, in every edition when the start
+ * season's edition is this one, Q232):
+ * - set_up_rules 0x799690 (the constructor 0x798994 and start_new_season 0x799951 call it; a load does not, 0x798961):
+ *   each pair meets twice (+0x3c, 1 at 0x7996d2; the League scheduler makes rows - 1 rounds that many times,
+ *   0x683ac9..0x683ad3), and the stage count +0x2c (2 at 0x798980) becomes 0, so League::update_for_date 0x6847c0
+ *   never calls advance_stage 0x7999d0 (it calls it while +0x30 < +0x2c - 1, 0x6849d1..0x6849e0) and ends the
+ *   edition when the group's table is complete: the club history 0x442e80 (0x6849fa), the honours (vtable +0x30,
+ *   0x684a8f) and the complete flag +0x4c (0x684a9e). The draw date (+0xb6 day, +0xb8 year offset; 5 March of the
+ *   edition year at 0x7996b3..0x799739) becomes 1 October 2007, after the South Pacific Games of 2007 that chose the
+ *   three other teams (inference: the sources give no draw). The next set_up_rules gives +0x2c its 2 again, with a
+ *   new stage array (a load of a save of the edition of 4 makes the array of the saved count, none for 0:
+ *   0x688e44..0x688e5b);
+ * - the group template (create_schedule 0x798b60, stage -1, kept at +0xba): 6 match days in place of 3 (0x798bc8),
+ *   so the League scheduler makes a double round robin of 2 fixtures a day. The days are the real days of the
+ *   edition with two matches, or one match on each of two near days: 17 and 21 November 2007, 14 and 21 June, 6 and
+ *   10 September 2008; for a game made after them (a 2008/09 start, made on 1 January 2008) the first 6 of these and
+ *   15 October and 19 November 2008 that come at least a week after the game's day (15 October: an international
+ *   match day of 2008, inference; 19 November: the real last match day). With fewer than 6 such days the original's
+ *   template of 3 days stays and each pair meets once. The friendly days of the finals (season_intl_finals_busy)
+ *   still cover the original's 19 June window only (finals_days, season_intl_rules.c): a friendly that clashes with
+ *   a group day is moved by add_fixture 0x5aa680 as any clash;
+ * - the draw: New Zealand (key id 0x9cf3f4, one of the original's six) and the three Oceania nations with the
+ *   highest nation reputation (the real three came from the South Pacific Games, which the game does not play:
+ *   inference); +0xf2 is 4, so create_group_table makes 4 rows, and the wrap of create_group_stage 0x799a60 (group
+ *   B; the original calls it at 0x79a2c7) skips it; the predicted places are 1 to 4; the progress codes of the group
+ *   (set_club_progress 0x79a490) are the places, as the original passes on the codes of its knockout stage
+ *   (0x79a515..0x79a52b), not the codes of a group that goes on to a knockout (inference);
+ * - the honours: slot +0x30 of the class is 0x595160, a jump to stage 1's (the knockout's Cup::record_season_honours
+ *   0x519a90). With no stage the class takes League::record_season_honours 0x684640: the group's first is the winner,
+ *   the second the runner-up (rows 0 and 1 of +0xb1, 0x68465b..0x68465d). */
 #include "win.h"
 #include "season_intl.h"
+#include "season_uefa_days.h"         /* season_day_of_year */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,8 +103,21 @@
 #define GROUP_ROWS 0x3eu                /* word: the rows of group A's table (0x7995ae) */
 #define GROUP_A_ROUNDS 0xbau            /* group A's template (set_up_rules 0x799747, freed at 0x7998ff) */
 
+#define STAGES 0xcu                     /* the stage array (8 bytes at 0x798987) */
+#define STAGE_COUNT 0x2cu               /* 2 at 0x798980 */
+#define MEETINGS 0x3cu                  /* s16: the times each pair meets (1 at 0x7996d2); the League scheduler
+                                         * makes rows - 1 rounds that many times (0x683ac9..0x683ad3) */
+#define DRAW_DAY 0xb6u                  /* s16 day of the year (0x79971e) */
+#define DRAW_OFFSET 0xb8u               /* s16 year offset from +0x40 (0x799739) */
+#define ROUNDS 0xa9u                    /* s16: the days of group A's template (set_up_rules 0x799740) */
+#define GAME_DATE 0xae2c90u             /* s16 day of the year, s16 year */
+#define KEY_NEW_ZEALAND 0x9cf3f4u       /* key nation id (0x799fc1) */
+#define LEAGUE_HONOURS 0x00684640u      /* League::record_season_honours, thiscall () */
+
 #define TEAMS 8
 #define GROUP 4
+#define ONE_GROUP 4                     /* the edition of one group, home and away (2008) */
+#define ONE_GROUP_DAYS 6
 
 static int logging(void)
 {
@@ -122,6 +169,17 @@ static int is_ofc(uint32_t self) { return readable(self) && rd32(g_mem, self) ==
 /* 1 when the class holds a drawn edition of 8 teams (the count that season_intl_ofc_draw wrote). */
 static int drawn8(uint32_t self) { return is_ofc(self) && (int16_t)rd16(g_mem, self + TEAM_COUNT) == TEAMS; }
 
+/* 1 when the class holds a drawn edition of one group of 4 (the count that season_intl_ofc_draw wrote). */
+static int drawn4(uint32_t self) { return is_ofc(self) && (int16_t)rd16(g_mem, self + TEAM_COUNT) == ONE_GROUP; }
+
+/* 1 for the edition of one group, home and away, in a season game (the table's 2008). */
+static int one_group(uint32_t self)
+{
+    if (!season_intl_on() || !is_ofc(self)) return 0;
+    const SeasonIntlEdition *e = season_intl_rule_edition("oceania_nations", year_of(self));
+    return e && e->teams == ONE_GROUP;
+}
+
 /* ---- The draw ---- */
 
 static int nation_count(void) { return (int)rd32(g_mem, NATION_COUNT); }
@@ -163,28 +221,44 @@ static uint32_t strongest(const uint32_t *teams, int n)
 }
 
 static void second_slots(uint32_t rounds);
+static int split_draw(uint32_t self, uint32_t teams[TEAMS], uint32_t *first, uint32_t *second);
+static uint32_t kept[2];                /* the teams of the qualifying places of the draw (ofc_hosts keeps them) */
+static int n_kept;
 
 static int club_reputation(uint32_t club) { return readable(club) ? (int16_t)rd16(g_mem, club + CLUB_REPUTATION) : 0; }
 
 /* After the original's draw of 6 (and the Australia swap of season_intl.c), before the hosts come in: for an
  * edition of 8 the block at +0xee becomes 8 teams, group A in places 0 to 3 and group B in 4 to 7. The six keep
- * their groups (places 0 to 2 and 3 to 5 become 0 to 2 and 4 to 6). The two added nations are chosen by the nation
- * reputation, as ofc_australia chooses. The stronger goes to the group whose first place (New Zealand, and
+ * their groups (places 0 to 2 and 3 to 5 become 0 to 2 and 4 to 6). The two added nations come from the split of
+ * direct and qualifying places (split_draw; every edition of 8 has one, in the table and after it); only when the
+ * data has fewer than 8 Oceania nations with a national team are they chosen by the nation reputation, as
+ * ofc_australia chooses. The first goes to the group whose first place (New Zealand, and
  * Australia or the nation in its place, in the order drawn at 0x799f92) has the lower team reputation, the field
  * that the original's sort of teams compares (0x4b07d0). When the data has fewer than two more Oceania nations the
  * six stay. */
+static void draw_one_group(uint32_t self, uint32_t six);
+
 void season_intl_ofc_draw(uint32_t self)
 {
     if (!season_intl_on() || !is_ofc(self)) return;
-    const SeasonIntlEdition *e = season_intl_edition("oceania_nations", year_of(self));
+    const SeasonIntlEdition *e = season_intl_rule_edition("oceania_nations", year_of(self));
     uint32_t six = rd32(g_mem, self + TEAMS_OF);
+    n_kept = 0;
+    if (e && e->teams == ONE_GROUP && readable(six) && (int16_t)rd16(g_mem, self + TEAM_COUNT) == 6) {
+        draw_one_group(self, six);
+        return;
+    }
     if (!e || e->teams != TEAMS || !readable(six) || (int16_t)rd16(g_mem, self + TEAM_COUNT) != 6) return;
     uint32_t teams[TEAMS] = {0};
     for (int k = 0; k < 6; k++) teams[k < 3 ? k : k + 1] = rd32(g_mem, six + 4u * (uint32_t)k);
-    uint32_t first = strongest(teams, TEAMS);
-    if (rt_unwinding) return;
-    teams[3] = first;                                   /* so that the second pick leaves it out */
-    uint32_t second = first ? strongest(teams, TEAMS) : 0;
+    uint32_t first = 0, second = 0;
+    if (!split_draw(self, teams, &first, &second)) {
+        if (rt_unwinding) return;
+        first = strongest(teams, TEAMS);
+        if (rt_unwinding) return;
+        teams[3] = first;                               /* so that the second pick leaves it out */
+        second = first ? strongest(teams, TEAMS) : 0;
+    }
     if (rt_unwinding) return;
     if (!second) {
         fprintf(stderr, "recomp: season intl: oceania_nations %d: no two more Oceania nations, 6 teams play\n",
@@ -208,14 +282,303 @@ void season_intl_ofc_draw(uint32_t self)
                 win_str(team_nation(first) + NATION_NAME), win_str(team_nation(second) + NATION_NAME));
 }
 
+/* The edition of one group: New Zealand from the original's six (else the strongest), then the three Oceania nations
+ * with the highest reputation that are not in. With fewer than four in the data the six stay. */
+static void draw_one_group(uint32_t self, uint32_t six)
+{
+    uint32_t teams[ONE_GROUP] = {0}, nz = 0;
+    int nz_id = (int)rd32(g_mem, KEY_NEW_ZEALAND);
+    for (int k = 0; k < 6; k++) {
+        uint32_t t = rd32(g_mem, six + 4u * (uint32_t)k);
+        if (nz_id >= 0 && nz_id < nation_count() && readable(t) && team_nation(t) == nation_at(nz_id)) nz = t;
+    }
+    for (int k = 0; k < ONE_GROUP; k++) {
+        teams[k] = k == 0 && nz ? nz : strongest(teams, ONE_GROUP);
+        if (rt_unwinding) return;
+        if (!teams[k]) {
+            fprintf(stderr, "recomp: season intl: oceania_nations %d: fewer than 4 Oceania nations, 6 teams play\n",
+                    year_of(self));
+            return;
+        }
+    }
+    uint32_t list = game_malloc(4u * ONE_GROUP);
+    if (rt_unwinding || !list) return;
+    for (int k = 0; k < ONE_GROUP; k++) wr32(g_mem, list + 4u * (uint32_t)k, teams[k]);
+    game_free(six);
+    if (rt_unwinding) return;
+    wr32(g_mem, self + TEAMS_OF, list);
+    wr16(g_mem, self + TEAM_COUNT, ONE_GROUP);
+    if (logging())
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: one group of 4: %s, %s, %s, %s\n", year_of(self),
+                win_str(team_nation(teams[0]) + NATION_NAME), win_str(team_nation(teams[1]) + NATION_NAME),
+                win_str(team_nation(teams[2]) + NATION_NAME), win_str(team_nation(teams[3]) + NATION_NAME));
+}
+
+/* ---- The direct and qualifying places of an edition of 8 (0.7.0, open item 45 option b; Max, 3 November 2026) ----
+ *
+ * The real editions of 8 took the best-ranked Oceania nations straight to the finals and gave the last places to a
+ * qualifying round of the lowest-ranked (run-logs/0.6.2-s45b/research-ofc.md):
+ * - 2002 (https://www.rsssf.org/tables/02oc.html): 6 straight, the top six of the FIFA ranking of October 2001
+ *   (Australia, New Zealand, Fiji, Tahiti, Solomon Islands, Vanuatu), and 2 from the round of the nations ranked 7
+ *   to 12 (Papua New Guinea, New Caledonia);
+ * - 2012, 2016 and 2024 (https://en.wikipedia.org/wiki/2012_OFC_Nations_Cup_qualification, ..._2016_OFC_Nations_Cup,
+ *   ..._2024_OFC_Men's_Nations_Cup_qualification): 7 straight with the hosts, 1 from the round of the four lowest.
+ * After the table each edition takes the split of the last row (2024, split_of); with changing rules off the split
+ * of the start season's edition stays (Q232). Max chose (option b) that the game plays no round: the qualifying
+ * places go to the strongest of the next nations of the ranking.
+ *
+ * The ranking is the game's own FIFA ranking: the FIFA_RANKINGS object (its pointer at [0xb74318] +0x1c, read at
+ * 0x49c248..0x49c253 by the rankings screen) has at +0 its table, a record of 0x2c bytes for each nation id, +0x10
+ * its position from 1
+ * (create_default_table 0x58dd50 seeds the score from nation +0xa8, the ranking points of the data, and numbers the
+ * positions by score at 0x58de5f..0x58de7d; update_rankings 0x58d460 numbers them again each month;
+ * get_nation_strength_tier 0x58e190 reads +0x10 at 0x58e1ae). A nation with no position comes after those with one,
+ * then the nation reputation and the nation id decide. The hosts of the edition (the table's, after the table the
+ * rotation's) go straight; the next 8 - places - hosts Oceania nations with a national team go straight too; the
+ * next `places` take the qualifying places.
+ *
+ * The draw keeps the original's draw of six (0x799e30: the group heads and the Melanesian and Polynesian places):
+ * a team of the six that does not go straight gives its place to the best-ranked nation that goes straight and is
+ * not in yet. The added places 3 and 7 take the qualifying places (2002), or the last nation that goes straight and
+ * the qualifying place (2012 on), as season_intl_ofc_draw places them. */
+
+#define FIFA_HOLDER 0xb74318u           /* +0x1c: FIFA_RANKINGS * (0x49c248, 0x49c253) */
+#define FIFA_RECORD 0x2cu               /* a record a nation id (0x58e1a6..0x58e1ae) */
+#define FIFA_POSITION 0x10u             /* s16, 1 the best (0x58de73) */
+#define NO_POSITION 30000
+
+static const struct {
+    int year, places;
+} splits[] = {{2002, 2}, {2012, 1}, {2016, 1}, {2024, 1}};
+
+/* The qualifying places of the finals of `year`: the split of its rule edition, or of the last table edition before
+ * it (an edition after the table, a copy of the 2024 row with its own year: continued, season_intl_rules.c), 0 for an
+ * edition that is not of 8. */
+static int split_of(int year)
+{
+    const SeasonIntlEdition *e = season_intl_rule_edition("oceania_nations", year);
+    int places = 0, from = 0;
+    if (!e || e->teams != TEAMS) return 0;
+    for (size_t i = 0; i < sizeof splits / sizeof splits[0]; i++)
+        if (splits[i].year <= e->year && splits[i].year > from) from = splits[i].year, places = splits[i].places;
+    return places;
+}
+
+static int fifa_position(int id)
+{
+    uint32_t holder = rd32(g_mem, FIFA_HOLDER), rankings = readable(holder) ? rd32(g_mem, holder + 0x1cu) : 0;
+    uint32_t table = readable(rankings) ? rd32(g_mem, rankings) : 0;
+    uint32_t at = readable(table) ? table + (uint32_t)id * FIFA_RECORD + FIFA_POSITION : 0;
+    if (!readable(at)) return NO_POSITION;
+    int pos = (int16_t)rd16(g_mem, at);
+    return pos > 0 ? pos : NO_POSITION;
+}
+
+typedef struct {
+    uint32_t team;
+    int position, rep, id, host;
+} Ranked;
+
+static int ranked_compare(const void *a, const void *b)
+{
+    const Ranked *x = a, *y = b;
+    if (x->position != y->position) return x->position - y->position;
+    if (x->rep != y->rep) return y->rep - x->rep;
+    return x->id - y->id;
+}
+
+static int team_in(const uint32_t *list, int n, uint32_t team)
+{
+    for (int k = 0; k < n; k++)
+        if (list[k] && team_nation(list[k]) == team_nation(team)) return 1;
+    return 0;
+}
+
+/* See above. Gives 0 for an edition with no split, or when the data has fewer than 8 Oceania nations. */
+static int split_draw(uint32_t self, uint32_t teams[TEAMS], uint32_t *first, uint32_t *second)
+{
+    int year = year_of(self), places = split_of(year);
+    if (!places) return 0;
+    /* The hosts, as ofc_hosts finds them. */
+    const SeasonIntlEdition *e = season_intl_edition("oceania_nations", year);
+    uint32_t hosts[6], oceania = rd32(g_mem, CONTINENT_OCEANIA);
+    int nh = 0;
+    char one[128];
+    for (const char *p = e && e->hosts ? e->hosts : ""; *p && nh < 6;) {
+        size_t len = strcspn(p, ";");
+        snprintf(one, sizeof one, "%.*s", (int)len, p);
+        p += len;
+        if (*p == ';') p++;
+        uint32_t t = season_intl_team_named(one);
+        if (rt_unwinding) return 0;
+        if (t && continent_of(team_nation(t)) == oceania) hosts[nh++] = team_nation(t);
+    }
+    Ranked list[64];
+    int n = 0;
+    for (int id = 0; id < nation_count() && n < 64; id++) {
+        uint32_t nation = nation_at(id);
+        if (continent_of(nation) != oceania) continue;
+        uint32_t a[1] = {nation};
+        uint32_t club = call_cdecl(NATIONAL_TEAM, 1, a);
+        if (rt_unwinding) return 0;
+        if (team_nation(club) != nation) continue;
+        int host = 0;
+        for (int h = 0; h < nh; h++) host |= hosts[h] == nation;
+        list[n++] = (Ranked){club, fifa_position(id), (int16_t)rd16(g_mem, nation + NATION_REPUTATION), id, host};
+    }
+    qsort(list, (size_t)n, sizeof list[0], ranked_compare);
+    uint32_t direct[TEAMS], qual[2];
+    int nd = 0, nq = 0;
+    for (int i = 0; i < n; i++)
+        if (list[i].host) direct[nd++] = list[i].team;
+    for (int i = 0; i < n; i++) {
+        if (list[i].host) continue;
+        if (nd < TEAMS - places) direct[nd++] = list[i].team;
+        else if (nq < places) qual[nq++] = list[i].team;
+    }
+    if (nd + nq < TEAMS) {
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: %d Oceania nations for 8 places\n", year, n);
+        return 0;
+    }
+    /* A team of the six that does not go straight gives its place to the best of those that do. */
+    for (int k = 0; k < TEAMS; k++) {
+        if (!teams[k] || team_in(direct, nd, teams[k])) continue;
+        uint32_t t = 0;
+        for (int d = 0; d < nd && !t; d++)
+            if (!team_in(teams, TEAMS, direct[d])) t = direct[d];
+        if (!t) continue;
+        if (logging())
+            fprintf(stderr, "recomp: season intl: oceania_nations %d: %s does not go straight, %s does\n", year,
+                    win_str(team_nation(teams[k]) + NATION_NAME), win_str(team_nation(t) + NATION_NAME));
+        teams[k] = t;
+    }
+    uint32_t rest = 0;
+    for (int d = 0; d < nd && !rest; d++)
+        if (!team_in(teams, TEAMS, direct[d])) rest = direct[d];
+    *first = places == 2 ? qual[0] : rest;
+    *second = places == 2 ? qual[1] : qual[0];
+    if (!*first || !*second) return 0;
+    for (int k = 0; k < nq; k++) kept[k] = qual[k];
+    n_kept = nq;
+    if (logging()) {
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: straight:", year);
+        for (int d = 0; d < nd; d++)
+            fprintf(stderr, "%s %s", d ? "," : "", win_str(team_nation(direct[d]) + NATION_NAME));
+        fprintf(stderr, "; qualifying places:");
+        for (int k = 0; k < nq; k++)
+            fprintf(stderr, "%s %s", k ? "," : "", win_str(team_nation(qual[k]) + NATION_NAME));
+        fprintf(stderr, "\n");
+    }
+    return 1;
+}
+
+int season_intl_ofc_kept(uint32_t team)
+{
+    for (int k = 0; k < n_kept; k++)
+        if (kept[k] && team_nation(kept[k]) == team_nation(team)) return 1;
+    return 0;
+}
+
+/* ---- The edition of one group: rules, template, group B, honours ---- */
+
+/* After set_up_rules 0x799690 (the wrap in season_intl.c, inside its date shift, before its late draw): the stage
+ * count and the draw date of the edition of one group; the stage count of 2 back for the next edition. */
+void season_intl_ofc_rules(uint32_t self)
+{
+    if (!season_intl_on() || !is_ofc(self)) return;
+    if (one_group(self)) {
+        int year = year_of(self);
+        wr32(g_mem, self + STAGE_COUNT, 0);
+        if ((int16_t)rd16(g_mem, self + ROUNDS) == ONE_GROUP_DAYS) wr16(g_mem, self + MEETINGS, 2);
+        wr16(g_mem, self + DRAW_DAY, (uint16_t)season_day_of_year(year - 1, 10, 1));
+        wr16(g_mem, self + DRAW_OFFSET, (uint16_t)-1);
+        if (logging()) fprintf(stderr, "recomp: season intl: oceania_nations %d: one group, draw 1 October %d\n", year,
+                               year - 1);
+        return;
+    }
+    if (rd32(g_mem, self + STAGE_COUNT) != 0) return;
+    /* After the edition of one group (or a load of its save, whose stage array has the saved count 0) */
+    uint32_t stages = game_malloc(8);
+    if (rt_unwinding || !stages) return;
+    game_free(rd32(g_mem, self + STAGES));
+    if (rt_unwinding) return;
+    wr32(g_mem, self + STAGES, stages);
+    wr32(g_mem, self + STAGE_COUNT, 2);
+}
+
+/* The real match days of the edition of one group, the year as an offset from the edition year. */
+static const SeasonNlDate one_group_days[] = {
+    {17, 11, -1}, {21, 11, -1}, {14, 6, 0}, {21, 6, 0}, {6, 9, 0}, {10, 9, 0}, {15, 10, 0}, {19, 11, 0},
+};
+
+/* The template of group A for the edition of one group: thiscall (stage, short *rounds, short *id, int *flag), ret
+ * 0x10, as the original's group template (flag 1, 3 days, id 0x3e9 + stage, a block of 0x41 a day at
+ * 0x798ba6..0x798bd0). Gives 0 for another stage or edition. */
+static int one_group_template(uint32_t self)
+{
+    uint32_t sp = cpu.esp;
+    int stage = (int8_t)rd8(g_mem, sp + 4u);
+    if (stage != -1 || !one_group(self)) return 0;
+    int year = year_of(self), ty = (int16_t)rd16(g_mem, GAME_DATE + 2), td = (int16_t)rd16(g_mem, GAME_DATE);
+    long from = season_intl_abs_day(year - 1, season_day_of_year(year - 1, 10, 1));
+    if (ty >= 1900 && season_intl_abs_day(ty, td) > from) from = season_intl_abs_day(ty, td);
+    SeasonNlDate days[ONE_GROUP_DAYS];
+    int n = 0;
+    for (size_t i = 0; i < sizeof one_group_days / sizeof one_group_days[0] && n < ONE_GROUP_DAYS; i++) {
+        SeasonNlDate d = one_group_days[i];
+        int y = year + d.year;
+        if (season_intl_abs_day(y, season_day_of_year(y, d.month, d.day)) >= from + 7) days[n++] = d;
+    }
+    if (n < ONE_GROUP_DAYS) {
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: %d match days to come, the original's template\n",
+                year, n);
+        return 0;
+    }
+    uint32_t rec = game_malloc(ONE_GROUP_DAYS * ROUND_SIZE);
+    if (rt_unwinding || !rec) return 0;
+    uint32_t rounds = rd32(g_mem, sp + 8u), id = rd32(g_mem, sp + 0xcu), flag = rd32(g_mem, sp + 0x10u);
+    if (readable(flag)) wr32(g_mem, flag, 1);
+    if (readable(rounds)) wr16(g_mem, rounds, ONE_GROUP_DAYS);
+    if (readable(id)) wr16(g_mem, id, (uint16_t)(0x3e9 + stage));
+    for (int i = 0; i < ONE_GROUP_DAYS && !rt_unwinding; i++) season_nl_league_round(rec, i, days[i], year);
+    if (rt_unwinding) return 1;
+    if (logging())
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: one group, home and away, from %d/%d/%d\n", year,
+                days[0].day, days[0].month, year + days[0].year);
+    rt_ret_stdcall(rec, 4);
+    return 1;
+}
+
+void o_00799a60(void);
+
+/* create_group_stage 0x799a60, thiscall (group), ret 4 (0x799c43): group B. None in the edition of one group. */
+RT_WRAP(00799a60, ofc_group_b)
+{
+    if (season_intl_on() && drawn4(cpu.ecx)) {
+        rt_ret_stdcall(1, 1);
+        return;
+    }
+    o_00799a60();
+}
+
+/* Slot +0x30 0x595160 (the wrap in season_cup_groups.c), thiscall () ret 0: 1 when the class is the edition of one
+ * group with no stage (+0x2c 0): League::record_season_honours has run and the call has returned. */
+int season_intl_ofc_honours(uint32_t self)
+{
+    if (!season_intl_on() || !is_ofc(self) || rd32(g_mem, self + STAGE_COUNT) != 0) return 0;
+    call_this(LEAGUE_HONOURS, self, 0, NULL);
+    if (!rt_unwinding) rt_ret_cdecl(0);
+    return 1;
+}
+
 /* ---- Sites of seasons.py ---- */
 
 /* The size of a group: 3 in the original (create_group_table 0x7995a9, 0x7995ae; create_group_stage 0x799a80,
- * 0x799ac2, 0x799acb, 0x799b74), 4 when the draw holds 8 teams. +0xf2 keeps the count until create_group_stage
- * has run (0x79a2c7, then cleared at 0x79a2e1). */
+ * 0x799ac2, 0x799acb, 0x799b74), 4 when the draw holds 8 teams or the one group of 4. +0xf2 keeps the count until
+ * create_group_stage has run (0x79a2c7, then cleared at 0x79a2e1). */
 uint32_t rt_intl_ofc_group(uint32_t self, uint32_t original)
 {
-    return drawn8(self) ? (uint32_t)GROUP : original;
+    return drawn8(self) || drawn4(self) ? (uint32_t)GROUP : original;
 }
 
 /* ---- Predicted positions (vtable +0x5c, 0x79a320) ---- */
@@ -223,27 +586,29 @@ uint32_t rt_intl_ofc_group(uint32_t self, uint32_t original)
 void o_0079a320(void);
 
 /* The original sorts the teams with 0x4b07d0 (0x79a414) and gives 6 places 1, 2, 3, 3, 5, 5 (0x79a425..0x79a46b).
- * With 8 teams: 1, 2, 3, 3, 5, 5, 7, 7. */
+ * With 8 teams: 1, 2, 3, 3, 5, 5, 7, 7; with the one group of 4: 1, 2, 3, 4. */
 RT_WRAP(0079a320, ofc_predicted)
 {
-    static const int pos8[TEAMS] = {1, 2, 3, 3, 5, 5, 7, 7};
+    static const int pos8[TEAMS] = {1, 2, 3, 3, 5, 5, 7, 7}, pos4[ONE_GROUP] = {1, 2, 3, 4};
     uint32_t self = cpu.ecx, stats = readable(self) ? rd32(g_mem, self + 8u) : 0;
     uint32_t teams = readable(self) ? rd32(g_mem, self + TEAMS_OF) : 0;
-    if (!drawn8(self) || !readable(stats) || !readable(teams)) {
+    int n = drawn8(self) ? TEAMS : drawn4(self) ? ONE_GROUP : 0;
+    const int *pos = n == TEAMS ? pos8 : pos4;
+    if (!n || !readable(stats) || !readable(teams)) {
         o_0079a320();
         return;
     }
-    uint32_t list = game_malloc(4u * TEAMS);
+    uint32_t list = game_malloc(4u * (uint32_t)n);
     if (rt_unwinding) return;
     if (list) {
-        memcpy(g_mem + list, g_mem + teams, 4u * TEAMS);
-        uint32_t qa[4] = {list, TEAMS, 4, CLUB_COMPARE};
+        memcpy(g_mem + list, g_mem + teams, 4u * (uint32_t)n);
+        uint32_t qa[4] = {list, (uint32_t)n, 4, CLUB_COMPARE};
         call_cdecl(GAME_QSORT, 4, qa);
         if (rt_unwinding) return;
-        for (int k = 0; k < TEAMS; k++) {
+        for (int k = 0; k < n; k++) {
             uint32_t club = rd32(g_mem, list + 4u * (uint32_t)k);
             if (!club) continue;
-            uint32_t pa[2] = {club, (uint32_t)pos8[k]};
+            uint32_t pa[2] = {club, (uint32_t)pos[k]};
             call_this(SET_FINAL_POSITION, stats, 2, pa);
             if (rt_unwinding) return;
         }
@@ -264,6 +629,13 @@ void o_0079a490(void);
 RT_WRAP(0079a490, ofc_progress)
 {
     uint32_t self = cpu.ecx, sp = cpu.esp;
+    /* The edition of one group (+0x2c 0, no knockout): the stage byte 1 takes the original's path of a knockout
+     * stage (0x79a49e..0x79a4a3), so the codes are the group's places. */
+    if (season_intl_on() && is_ofc(self) && rd32(g_mem, self + STAGE_COUNT) == 0 && (int8_t)rd8(g_mem, sp + 8u) < 1) {
+        wr8(g_mem, sp + 8u, 1);
+        o_0079a490();
+        return;
+    }
     if (season_intl_on() && is_ofc(self) && (int16_t)rd16(g_mem, self + GROUP_ROWS) == GROUP &&
         (int8_t)rd8(g_mem, sp + 8u) < 1)
         for (uint32_t at = 0xcu; at <= 0x14u; at += 4u)
@@ -294,11 +666,13 @@ static void second_slots(uint32_t rounds)
 /* thiscall (stage as a byte, short *rounds, short *id, int *flag), ret 0x10. Called by the wrap of 0x798b60 in
  * season_intl.c inside its date shift, at the entry state. Group B's template is made on the draw day
  * (create_group_stage 0x799afe), after the draw: with 8 drawn it gets the second slots. Group A's is made at the new
- * season (set_up_rules 0x799740, kept at +0xba), before the draw: season_intl_ofc_draw gives it the second slots. */
+ * season (set_up_rules 0x799740, kept at +0xba), before the draw: season_intl_ofc_draw gives it the second slots. The
+ * edition of one group takes its own template of 6 days (one_group_template). */
 void season_intl_ofc_template(void (*original)(void))
 {
     uint32_t self = cpu.ecx;
     int stage = (int8_t)rd8(g_mem, cpu.esp + 4u);
+    if (one_group_template(self)) return;
     original();
     if (rt_unwinding || stage > 0 || !drawn8(self)) return;
     second_slots(cpu.eax);

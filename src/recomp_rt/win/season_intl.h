@@ -261,9 +261,17 @@ uint32_t season_intl_team_named(const char *names);
 /* After the OFC Nations Cup's draw of 6 (the wrap of 0x799e30 in season_intl.c): an edition of 8 teams gets two
  * more, in groups of 4 (0.6.2 open item 45, season_intl_ofc.c). */
 void season_intl_ofc_draw(uint32_t self);
+/* 1 for a team that the OFC draw now being made gave a qualifying place (0.7.0, option b): ofc_hosts keeps it. */
+int season_intl_ofc_kept(uint32_t team);
 /* The OFC Nations Cup's template 0x798b60 (the wrap in season_intl.c, inside its date shift): a group made after a
  * draw of 8 gets a second kick-off slot on each match day. */
 void season_intl_ofc_template(void (*original)(void));
+/* After the OFC Nations Cup's set_up_rules 0x799690 (the wrap in season_intl.c): the stage count and draw date of the
+ * edition of one group, home and away (2008), and the stage count of 2 again after it. */
+void season_intl_ofc_rules(uint32_t self);
+/* Slot +0x30 0x595160 of the OFC Nations Cup's edition of one group: League::record_season_honours 0x684640 in place
+ * of the knockout's, then the return. 1 when it ran (season_cup_groups.c). */
+int season_intl_ofc_honours(uint32_t self);
 
 /* 1 while the Oceania section must not advance from its final to the play-off: the cycle's tie has a CONCACAF
  * partner whose section is not complete (O259 A16; season_intl_qual.c, called by the wrap of 0x91f0d0). */

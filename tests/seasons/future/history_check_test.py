@@ -746,6 +746,29 @@ def main():
     got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
     if got != [(2030, 12), (2030, 4)]:
         bad.append(f"editions of a cup with a final after a group day: {got}, not [(2030, 12), (2030, 4)]")
+    # Open item 45: the OFC Nations Cup of 2008, one group of 4 home and away on 17 and 21 November 2007, 14 and 21
+    # June, 6 and 10 September 2008 (a pause of 206 days), then the next edition of the same 4 teams in 2012, with a
+    # pairing of 2008. One edition each.
+    g = [((2007, 11, 17), 0, 1), ((2007, 11, 17), 2, 3), ((2007, 11, 21), 0, 2), ((2007, 11, 21), 1, 3),
+         ((2008, 6, 14), 0, 3), ((2008, 6, 14), 1, 2), ((2008, 6, 21), 1, 0), ((2008, 6, 21), 3, 2),
+         ((2008, 9, 6), 2, 0), ((2008, 9, 6), 3, 1), ((2008, 9, 10), 3, 0), ((2008, 9, 10), 2, 1),
+         ((2012, 6, 1), 0, 1), ((2012, 6, 1), 2, 3)]
+    days = [(datetime.date(*d).toordinal(), h, a) for d, h, a in g]
+    got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
+    if got != [(2008, 4), (2012, 4)]:
+        bad.append(f"editions of a home-and-away group with a pause: {got}, not [(2008, 4), (2012, 4)]")
+    # A pause of the same length before a day whose pairing met at home already: a new edition.
+    days = [(datetime.date(*d).toordinal(), h, a) for d, h, a in g[:4] + [((2008, 6, 14), 0, 1), ((2008, 6, 14), 2, 3)]]
+    got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
+    if got != [(2007, 4), (2008, 4)]:
+        bad.append(f"editions of a group that meets at home again after a pause: {got}, not [(2007, 4), (2008, 4)]")
+    # A single round robin of 4 that ends on a day of two matches, then 200 days later the next edition of the same
+    # teams with the home sides reversed: two editions (the first had played its whole round robin).
+    rr = g[:4] + [((2007, 11, 24), 0, 3), ((2007, 11, 24), 1, 2), ((2008, 6, 14), 1, 0), ((2008, 6, 14), 3, 2)]
+    days = [(datetime.date(*d).toordinal(), h, a) for d, h, a in rr]
+    got = [(y, len(t)) for y, _, _, t in history_check.editions_of(days)]
+    if got != [(2007, 4), (2008, 4)]:
+        bad.append(f"editions of a single round robin and its next edition: {got}, not [(2007, 4), (2008, 4)]")
 
     # Open item 70: the association limit of the Champions League by season.
     def lim(season, nations):
