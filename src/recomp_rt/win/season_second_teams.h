@@ -5,7 +5,8 @@
  *   - League::update_positions_and_status 0x684cd0 (vtable +0x94): the hooks before_status run before it,
  *   - the promotion chain 0x689c20 (vtable +0xb0): the hooks before_chain run before it and after_chain after it,
  *   - the club moves of a new game (season_clubs.c) ask season_second_barred, which asks each nation.
- * A nation adds its hooks with SEASON_SECOND_HOOKS(name) in its own file; no line of this file names a nation.
+ * A nation adds its hooks with SEASON_SECOND_HOOKS(name) in its own file, so no nation edits this file or
+ * season_second_teams.c.
  * Each hook gets the league object (the this of the call) and acts only on its own leagues. */
 #ifndef RECOMP_SEASON_SECOND_TEAMS_H
 #define RECOMP_SEASON_SECOND_TEAMS_H

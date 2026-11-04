@@ -371,12 +371,13 @@ static int was_count;
 
 static void nor_before_chain(uint32_t self)
 {
+    free(was_prm);                       /* left by a chain that unwound (no after_chain) */
+    was_prm = NULL;
     if (self != league_of(KEY_PREMIER) || !season_game_changes()) return;
     log_census("before");
     first_extra = prm_down = 0;
     uint32_t prm = comp_of(KEY_PREMIER), table = rd32(g_mem, CLUBS);
     int count = readable(table) ? (int)rd32(g_mem, CLUB_COUNT) : 0;
-    free(was_prm);
     was_prm = log_on() && count > 0 ? calloc((size_t)count, 1) : NULL;
     was_count = count;
     for (int i = 0; was_prm && i < count; i++)
@@ -397,7 +398,8 @@ static void nor_after_chain(uint32_t self)
 {
     if (self != league_of(KEY_PREMIER) || !was_prm) return;
     uint32_t prm = comp_of(KEY_PREMIER), table = rd32(g_mem, CLUBS);
-    for (int i = 0; readable(table) && i < was_count; i++) {
+    int count = readable(table) ? (int)rd32(g_mem, CLUB_COUNT) : 0;
+    for (int i = 0; i < was_count && i < count; i++) {
         uint32_t club = table + (uint32_t)i * CLUB_SIZE;
         if (!was_prm[i] && rd32(g_mem, club + CLUB_DIVISION) == prm)
             fprintf(stderr, "recomp: nor second: %.51s goes up to Eliteserien%s\n", win_str(club + CLUB_NAME),
