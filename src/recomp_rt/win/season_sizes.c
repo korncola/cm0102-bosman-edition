@@ -128,23 +128,6 @@ int season_sizes_clubs(const char *file, int season)
     return within(file, r->clubs);
 }
 
-/* The counts that create_table of a class that counts the clubs of the data takes: IrePrm::create_table 0x63a740
- * takes 10 (+0x3c 4) or 12 (+0x3c 3) and returns 0 for any other count, so IrePrm::IrePrm 0x639bb0 stops at
- * ire_prm..cpp 82 (push 0x52 at 0x639ca7); IreFirst::create_table 0x635910 takes 9 to 12 (0x63596f..0x63597d). */
-static int data_class_takes(const char *file, int n)
-{
-    if (!strcmp(file, "ire_prm")) return n == 10 || n == 12;
-    if (!strcmp(file, "ire_first")) return n >= 9 && n <= 12;
-    return 0;
-}
-
-int season_sizes_data_clubs(const char *file, int season)
-{
-    if (!sizes_on() || !file || !size_file(file) || cap_of(file) > 0) return -1;
-    const SeasonRule *r = row_of_season(file, season);
-    return r && data_class_takes(file, r->clubs) ? r->clubs : -1;
-}
-
 /* A division that a cup takes whole after a capped number of lower clubs keeps the clubs that the database gives
  * it, up to its class count, when its row has fewer (season_sizes.h). DenCup::collect_entrants 0x551240 wants 92
  * clubs (0x5c at 0x551254): lower clubs of [0x9cf764] up to the room of rt_cup_room (0x55131c), then every club of

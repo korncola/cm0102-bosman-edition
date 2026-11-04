@@ -173,7 +173,6 @@ typedef struct {
     int fresh;          /* slice 20: a record that the module adds, with no club in the database */
     int listed, found, kept, missing, missing_reserve, filled_own, filled_left, filled_up, filled_pool, filled_spare, filled_lower;
     int open, stand_in;
-    int data_fixed;     /* item 123: a class that counts the clubs of the data and needs the count of its row */
     const char *name;
 } Division;
 
@@ -286,25 +285,19 @@ static const char *class_file(const char *name)
     return NULL;
 }
 
-/* The divisions whose class counts the clubs of the data and takes only some counts (season_sizes_data_clubs). */
-static const struct { const char *name, *file; } DATA_CLASS[] = {
-    {"Irish Premier Division", "ire_prm"},
-    {"Irish First Division", "ire_first"},
-};
-
-static const char *data_class_file(const char *name)
-{
-    for (size_t k = 0; k < sizeof DATA_CLASS / sizeof DATA_CLASS[0]; k++)
-        if (!strncmp(name, DATA_CLASS[k].name, 52)) return DATA_CLASS[k].file;
-    return NULL;
-}
-
 /* The count of a class after 2001. */
 static int class_size_of(const char *file)
 {
     for (size_t k = 0; file && k < sizeof CLASS_SIZE / sizeof CLASS_SIZE[0]; k++)
         if (!strcmp(file, CLASS_SIZE[k].file)) return CLASS_SIZE[k].size;
     return 0;
+}
+
+/* 1 for a letter or digit of Windows-1252 (a letter with an accent counts). */
+static int plain_letter(unsigned char ch)
+{
+    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') ||
+           (ch >= 0xc0 && ch != 0xf7);
 }
 
 /* A club name in a plain form, to find a club whose name in the research differs a little from the database
@@ -318,7 +311,7 @@ static void plain_words(const char *in, char *out, size_t room, int drop_words)
                                        "do", "das", "dos", "the", "e", "y", "and"};
     static const char fold[] = "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYTsaaaaaaaceeeeiiiidnooooo/ouuuuyty";   /* 0xc0.. */
     char word[64];
-    size_t n = 0, w = 0;
+    size_t n = 0, w = 0, seg = 0;     /* seg: the letters since the start of the word or a joining full stop */
     out[0] = 0;
     for (const unsigned char *p = (const unsigned char *)in;; p++) {
         int ch = *p;
@@ -327,8 +320,17 @@ static void plain_words(const char *in, char *out, size_t room, int drop_words)
         int letter = (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9');
         if (letter && w < sizeof word - 1) {
             word[w++] = (char)ch;
+            seg++;
             continue;
         }
+        /* Initials with full stops are one word: "A.F.C." is "afc" and "S.P.A.L." is "spal", so "Bray Wanderers
+         * A.F.C." (3.9.68) is "bray wanderers" as the list's "Bray Wanderers" (open item 123). A full stop joins
+         * when one letter stands before it and one letter after it. "St. Patrick's" and "J. Smith" stay apart. */
+        if (ch == '.' && seg == 1 && plain_letter(p[1]) && !plain_letter(p[1] ? p[2] : 0)) {
+            seg = 0;
+            continue;
+        }
+        seg = 0;
         if (w) {
             word[w] = 0;
             int skip = 0;
@@ -566,23 +568,6 @@ static void move_clubs(int season)
         div[t].found++;
         by_list[r - first] = k;
     }
-    /* Open item 123: a division with a list whose class counts the clubs of the data keeps the count of its row,
-     * where the class takes it, not the count of the database. A 2008/09 start on 3.9.68 (database 12 and 10, the
-     * 2009 lists 10 and 12): the First Division list kept its 12 clubs, the Premier Division held 11, and
-     * IrePrm::IrePrm 0x639bb0 stopped at ire_prm..cpp 82. A division with no list keeps the database count, as
-     * the database holds the real clubs of its own season. */
-    for (int i = 0; i < ncomps; i++) {
-        if (!div[i].target || div[i].spare) continue;
-        int n = season_sizes_data_clubs(data_class_file(div[i].name), season);
-        if (n <= 0) continue;
-        div[i].data_fixed = 1;
-        if (n == div[i].want) continue;
-        if (log) fprintf(stderr, "recomp: club moves: %s takes %d clubs (its row), the database gives it %d\n",
-                         div[i].name, n, div[i].n0);
-        div[i].want = n;
-        if (!div[i].sized) resized++;
-        div[i].sized = 1;
-    }
     /* Keep: in each target, the listed clubs that the database has there first, then the others, up to the
      * count of the division. A club in two lists keeps the first. */
     for (int pass = 0; pass < 2; pass++)
@@ -687,7 +672,7 @@ static void move_clubs(int season)
         }
         int need = d->want - now;
         int missing_places = need < d->missing ? need : d->missing;
-        int fixed = class_size(d->name, season) > 0 || d->data_fixed;
+        int fixed = class_size(d->name, season) > 0;
         int whole = fixed && class_file(d->name) && season_divisions_class_size(d->name, season) < 0;
         int reserve_places = missing_places < d->missing_reserve ? missing_places : d->missing_reserve;
         int places[2] = {d->tier > 2 || fixed ? missing_places : reserve_places, need - missing_places};

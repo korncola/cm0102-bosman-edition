@@ -45,10 +45,6 @@ void season_sizes_rules(uint32_t obj);
  * when the class is not in the size table or the row holds no usable count. */
 int season_sizes_clubs(const char *file, int season);
 
-/* The club count of a division whose class counts the clubs of the data (cap 0 in season_size_caps) in the row of
- * a season, when the class's create_table takes that count, or -1 (0.6.2 open item 123). */
-int season_sizes_data_clubs(const char *file, int season);
-
 /* 1 when the club moves leave a division of this file the clubs of the database, up to the class count, where its
  * row has fewer (a cup takes the division whole). */
 int season_sizes_keeps_database(const char *file);

@@ -22,11 +22,13 @@ all nations, changing rules on, as a Tier A run:
     season  plays to the end of 2026/27 (about 30 minutes): no message box, and no Belgian division stalls at
             the 2026 season change (rules_report_check.league_stalls).
     irish   a 2008/09 start on 3.9.68 (0.6.2 open item 123), to the start report: no message box, no short division
-            (except SHORT_OK), and the Irish Premier and First Division hold the clubs of the rules table (10 and
-            12, the 2009 League of Ireland). IrePrm::create_table 0x63a740 and IreFirst::create_table 0x635910 count
-            the clubs of the data (10 or 12, and 9 to 12). The club moves kept the database counts (12 and 10), the
-            2009 lists hold 10 and 12, and the First Division list kept all its clubs, so the Premier Division held
-            11 and the constructor IrePrm::IrePrm 0x639bb0 stopped at ire_prm..cpp 82 (push 0x52 at 0x639ca7).
+            (except SHORT_OK), every club of the Irish Premier Division list found in the data (no RECOMP_CLUB_LOG
+            line "club moves: missing:"; the First Division list has two clubs that 3.9.68 lacks), and the two
+            divisions at the counts of the data (12 and 10), which IrePrm::create_table 0x63a740 (10 or 12) and
+            IreFirst::create_table 0x635910 (9 to 12) take. The list of 2008 names "Bray Wanderers", the data
+            "Bray Wanderers A.F.C." (club 1855). The plain name kept "a f c" as three words, so the club was not
+            found, its place in the Premier Division stayed open (11 clubs), and the constructor IrePrm::IrePrm
+            0x639bb0 stopped at ire_prm..cpp 82 (push 0x52 at 0x639ca7).
 Without --keep the runs play in a temporary folder that the script deletes when every run passes.
 """
 import os
@@ -92,17 +94,19 @@ def run_season(program, game, work):
     return fails
 
 
-IRISH = {"ire_prm": 10, "ire_first": 12}
+IRISH = {"ire_prm": 12, "ire_first": 10}
 
 
 def run_irish(program, game, work):
-    code, report = rrc.run(program, game, 2008, 2008, None, ["all"], [], work, 3600, OPTIONS, ENV, start_only=True)
+    env = dict(ENV, RECOMP_CLUB_LOG="1")
+    code, report = rrc.run(program, game, 2008, 2008, None, ["all"], [], work, 3600, OPTIONS, env, start_only=True)
     fails = [] if code == 0 else [f"irish: the game ended with code {code}"]
     found, log = boxes("irish", work)
     fails += found
     if "recomp: club moves of 2008/09:" not in log:
         fails.append("irish: the club moves did not run (no seasons tables beside the program?)")
     fails += [f"irish: {line}" for line in short_divisions(log)]
+    fails += [f"irish: {m.group(0)}" for m in re.finditer(r"club moves: missing: 2008/09\tIrish Premier Division\t.*", log)]
     if not os.path.exists(report):
         return fails + [f"irish: no report ({work})"]
     _, comps = rrc.read_report(report)
