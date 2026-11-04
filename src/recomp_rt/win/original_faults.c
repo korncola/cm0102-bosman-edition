@@ -1,7 +1,7 @@
 /* Faults of the original that long games reach (0.6.2 slice 11, tools/recomp/original_faults.py). The fixes act in
  * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS turns them off: "keep" all
- * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age and
- * olympics. */
+ * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age,
+ * olympics and nsl. */
 #include "win.h"
 #include "../rt.h"
 
@@ -12,13 +12,13 @@
 #define CLUB_COUNT 0xae235cu     /* clubs, national teams and under-21 teams */
 #define NATION_COUNT 0xae2350u
 
-enum { MANAGERS, MONEY, AGE, OLYMPICS, GROUPS };
+enum { MANAGERS, MONEY, AGE, OLYMPICS, NSL, GROUPS };
 
 static int fixes_on_group(int group)
 {
     static int on[GROUPS] = {-1};
     if (on[0] < 0) {
-        static const char *const names[GROUPS] = {"managers", "money", "age", "olympics"};
+        static const char *const names[GROUPS] = {"managers", "money", "age", "olympics", "nsl"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
         if (v && strcmp(v, "keep") && strncmp(v, "keep:", 5))
             fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS=%s is not keep or keep:<groups>: every fix acts\n", v);
@@ -29,7 +29,7 @@ static int fixes_on_group(int group)
             for (int g = 0; g < GROUPS; g++) known |= n == strlen(names[g]) && !strncmp(p, names[g], n);
             if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
                 fprintf(stderr,
-                        "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics)\n",
+                        "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics, nsl)\n",
                         (int)n, p);
         }
         for (int g = 0; g < GROUPS; g++) {
@@ -149,6 +149,38 @@ uint32_t rt_olympic_keeps_senior(uint32_t player, uint32_t nation, uint32_t slot
                     "%d)\n", name, on ? "keeps" : "may take", (int32_t)rd32(g_mem, player), on ? "in" : "from", day,
             year, end_day, end_year);
     return (uint32_t)on;
+}
+
+/* Australian NSL stages (open item 128, original_faults.py). `AusNsl::start_new_season` 0x411de0 keeps the stage
+ * index (+0x30) and the stages of the season before, so from the second season the game builds no finals series
+ * and no Grand Final (`AusNsl::advance_stage` 0x411f70 acts only while the index is below the count - 1). At
+ * 0x411e1c each stage 0..index is freed by its slot 0 with 1, as `ArgPrm::start_new_season` 0x405720,
+ * `BraNatFirst::start_new_season` 0x42a640 and the AusNsl destructor 0x4110e0 do, its slot of the array (+0xc) set to 0, and the index set to -1, as the ctor 0x410e90
+ * leaves it. */
+#define NSL_STAGES 0xcu
+#define NSL_STAGE_COUNT 0x2cu
+#define NSL_STAGE_NOW 0x30u
+
+void rt_aus_nsl_new_season(uint32_t self)
+{
+    if (!fixes_on_group(NSL)) return;
+    int32_t now = (int32_t)rd32(g_mem, self + NSL_STAGE_NOW), count = (int32_t)rd32(g_mem, self + NSL_STAGE_COUNT);
+    uint32_t stages = rd32(g_mem, self + NSL_STAGES);
+    if (now < 0) return;
+    for (int32_t i = 0; stages && i <= now && i < count; i++) {
+        uint32_t stage = rd32(g_mem, stages + 4u * (uint32_t)i);
+        if (!stage) continue;
+        wr32(g_mem, stages + 4u * (uint32_t)i, 0u);
+        Cpu saved = cpu;
+        cpu.ecx = stage;
+        const uint32_t one = 1u;
+        rt_callback(rd32(g_mem, rd32(g_mem, stage)), 1, &one);      /* the scalar deleting destructor, slot 0 */
+        if (rt_unwinding) return;
+        cpu = saved;
+    }
+    wr32(g_mem, self + NSL_STAGE_NOW, 0xffffffffu);
+    fprintf(stderr, "recomp: aus nsl: a new season from stage %d of %d on day %d of %d\n", now, count,
+            (int16_t)rd16(g_mem, TODAY), (int16_t)rd16(g_mem, TODAY + 2u));
 }
 
 /* Money (Q24). `Finance::get_transfer_budget` 0x598800 works on a 64-bit budget, but cuts three values to 32 bits.

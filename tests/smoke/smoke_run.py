@@ -259,7 +259,8 @@ SAME_SAVE_RUNS = [
     # The fixes of faults of the original (0.6.2 slice 11, original_faults.c) act in every game, but only when a
     # small nation's national team loses or misses its manager (at the latest at the first month change in play),
     # for money above 2,147,483,647 (the top wage from about 1.65 billion), at an age above 127 and at an Olympic
-    # squad pick inside a senior squad's window: in these runs none of that happens, so with their test switch off
+    # squad pick inside a senior squad's window, and at the season change of the Australian NSL (late in July, after
+    # the 14 days of each saved game): in these runs none of that happens, so with their test switch off
     # the save is that of normal. A saved game whose days pass a month change keeps only the other groups
     # (FAULTS_ACT).
     ("original-faults-keep", {"faster_days": "off", "_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
