@@ -1,7 +1,7 @@
 /* Faults of the original that long games reach (0.6.2 slice 11, tools/recomp/original_faults.py). The fixes act in
  * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS turns them off: "keep" all
- * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age and
- * olympics. */
+ * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age,
+ * olympics and holiday. */
 #include "win.h"
 #include "../rt.h"
 
@@ -12,13 +12,13 @@
 #define CLUB_COUNT 0xae235cu     /* clubs, national teams and under-21 teams */
 #define NATION_COUNT 0xae2350u
 
-enum { MANAGERS, MONEY, AGE, OLYMPICS, GROUPS };
+enum { MANAGERS, MONEY, AGE, OLYMPICS, HOLIDAY, GROUPS };
 
 static int fixes_on_group(int group)
 {
     static int on[GROUPS] = {-1};
     if (on[0] < 0) {
-        static const char *const names[GROUPS] = {"managers", "money", "age", "olympics"};
+        static const char *const names[GROUPS] = {"managers", "money", "age", "olympics", "holiday"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
         if (v && strcmp(v, "keep") && strncmp(v, "keep:", 5))
             fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS=%s is not keep or keep:<groups>: every fix acts\n", v);
@@ -29,7 +29,7 @@ static int fixes_on_group(int group)
             for (int g = 0; g < GROUPS; g++) known |= n == strlen(names[g]) && !strncmp(p, names[g], n);
             if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
                 fprintf(stderr,
-                        "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics)\n",
+                        "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics, holiday)\n",
                         (int)n, p);
         }
         for (int g = 0; g < GROUPS; g++) {
@@ -335,4 +335,78 @@ void rt_cash_news(uint32_t cash, uint32_t value)
 {
     if (news_pending && value == (uint32_t)INT32_MAX) cash_wide(cash, value, news_pending, 1u);
     news_pending = 0;
+}
+
+/* Holiday offers (open item 132, original_faults.py). The settings of "Go on holiday ?" are the bytes at human record
+ * +0x9b23 (HUMAN_MANAGER::get_holiday_option 0x5fea50): option 0 is 1 for "Reject all offers for players" and 2 for
+ * "Reject all offers below asking price" (the confirm build 0x6b2d80, its input 0x6b35c1). A player's asking price is
+ * staff +0x52 (TRANSFER_MANAGER::set_player_squad_status 0x8ce1e9). */
+#define HUMANS 0xb63c98u          /* the human manager object: +0xc the count of humans on holiday */
+#define STAFF_RECORDS 0xae23bcu
+#define IS_HUMAN_CLUB 0x600a50u   /* cdecl (club, ignore_holiday, quick, manager, any) */
+#define CLUB_MANAGER 0x53ca90u    /* cdecl (club) */
+#define ON_HOLIDAY 0x5fd210u      /* thiscall HUMANS (manager) */
+#define HOLIDAY_OPTION 0x5fea50u  /* thiscall HUMANS (option, manager) */
+#define RELEASE_CLAUSE 0x867b50u  /* thiscall contract: a release clause in force */
+
+/* The value of option 0 when a human manager on holiday runs the club, else 0. The test is the one that
+ * `shortlist_manager_predict_selling_club_response` 0x84af00 makes at 0x84b05e..0x84b096, but with the human test of
+ * `ai_respond_to_bid` 0x8c81ea (0x600a50 with ignore_holiday 1), so that a club on holiday passes it. A contract with
+ * a release clause in force keeps the original's answer (0x84b05e), and so does every club while no human is on
+ * holiday (the count at [0xb63c98] + 0xc, kept by `set_on_holiday` 0x5fd2f0). */
+static uint32_t holiday_option(uint32_t club, uint32_t contract)
+{
+    if (!fixes_on_group(HOLIDAY) || !club || !rd32(g_mem, rd32(g_mem, HUMANS) + 0xcu)) return 0;
+    Cpu saved = cpu;
+    uint32_t r = 0;
+    uint32_t a[5] = {club, 1u, 1u, 0u, 0u};
+    if (!rt_callback(IS_HUMAN_CLUB, 5, a) || rt_unwinding) goto done;
+    if (contract) {
+        cpu.ecx = contract;
+        if (rt_callback(RELEASE_CLAUSE, 0, NULL) || rt_unwinding) goto done;
+    }
+    uint32_t m[1] = {club};
+    uint32_t manager = rt_callback(CLUB_MANAGER, 1, m);
+    if (rt_unwinding) goto done;
+    uint32_t h[1] = {manager};
+    cpu.ecx = rd32(g_mem, HUMANS);
+    if (!rt_callback(ON_HOLIDAY, 1, h) || rt_unwinding) goto done;
+    uint32_t o[2] = {0u, manager};
+    cpu.ecx = rd32(g_mem, HUMANS);
+    r = rt_callback(HOLIDAY_OPTION, 2, o) & 0xffu;
+done:
+    if (rt_unwinding) return 0;
+    cpu = saved;
+    return r == 1u || r == 2u ? r : 0;
+}
+
+/* The predictor 0x84af00 for a transfer (0x84b02f, the computer path of a club on holiday): 1 for "Reject all
+ * offers" (the answer 2, reject, at 0x84b01c), 2 for "below asking price" when the player has an asking price
+ * (staff +0x52 above 0, the price that the dead test takes at 0x84b0a8), else 0: the original's computer path at
+ * 0x84b0ad. */
+uint32_t rt_holiday_predict(uint32_t club, uint32_t contract, uint32_t player)
+{
+    uint32_t opt = holiday_option(club, contract);
+    if (opt == 2u && (int32_t)rd32(g_mem, player + 0x52u) <= 0) return 0;
+    return opt;
+}
+
+/* The predictor 0x84af00 for a loan (0x84af77): 1 when the club is on holiday with "Reject all offers" (the answer 2
+ * at 0x84b162). */
+uint32_t rt_holiday_refuses_loan(uint32_t club)
+{
+    return holiday_option(club, 0) == 1u;
+}
+
+/* The bid reply 0x8c8090 at 0x8c8264, after its human and holiday tests (0x8c81ea..0x8c8216): 1 when option 0 (al) is
+ * "below asking price" and the bid's fee (offer +0x1b) is below the player's asking price, so the bid takes the
+ * reject of "Reject all offers" at 0x8c8266. esi holds the offer slot. */
+uint32_t rt_holiday_below_asking(uint32_t option, uint32_t slot)
+{
+    if (!fixes_on_group(HOLIDAY) || (option & 0xffu) != 2u) return 0;
+    uint32_t offer = rd32(g_mem, slot);
+    if (!offer) return 0;
+    uint32_t player = rd32(g_mem, STAFF_RECORDS) + rd32(g_mem, offer + 0xcu) * 0x6eu;
+    int32_t ask = (int32_t)rd32(g_mem, player + 0x52u), fee = (int32_t)rd32(g_mem, offer + 0x1bu);
+    return ask > 0 && fee < ask;
 }

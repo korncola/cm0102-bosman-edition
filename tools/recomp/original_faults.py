@@ -1,7 +1,7 @@
 """Faults of the original that long games reach (0.6.2 slice 11, Q23, Q24, Q27, open item 102;
 src/recomp_rt/win/original_faults.c). The fixes act in every game, the base game too. The test switch
-RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age" or "keep:olympics" (or a
-list: "keep:money,age") turns off one group or more.
+RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age", "keep:olympics" or
+"keep:holiday" (or a list: "keep:money,age") turns off one group or more.
 
 National managers (fault 26, Q23). `club_can_be_managed` 0x544820 takes a senior national team (club id from club
 count - 2 x nation count to club count - nation count, 0x544835..0x544857) only when its nation had more than 150
@@ -73,6 +73,35 @@ squad's young players, and in a Tier A game Holland played a World Cup qualifier
 At 0x76ce1c, the jump that skips a candidate, the Olympic pick also skips a player of a senior squad whose window ends
 today or later (rt_olympic_keeps_senior; the Olympics: fixture +0 is the key at 0x9cf7a0, as at 0x76ce2d). Other
 picks of slot 1 or 2 skip such a player anyway (0x76ce38).
+
+Holiday offers (open item 132). "Go on holiday ?" keeps its settings in the human record (+0x9b23,
+`HUMAN_MANAGER::get_holiday_option` 0x5fea50). Option 0 is 1 for "Reject all offers for players" and 2 for "Reject
+all offers below asking price" (the build 0x6b2d80 draws the row bright for that value, the input 0x6b35c1 sets it).
+A player's asking price is staff +0x52 (`TRANSFER_MANAGER::set_player_squad_status` 0x8ce1e9). Two faults:
+- `TRANSFER_MANAGER::ai_respond_to_bid` 0x8c8090 answers a bid for a club on holiday. With option 1 it rejects
+  (0x8c8266). With option 2 it rejects only a bid with part-exchange players (0x8c8233) and otherwise gives the
+  computer's answer (0x8c8277), which accepts bids down to about 70% of the asking price. So "below asking price" did
+  the same as no setting. At 0x8c8264 a bid whose fee (offer +0x1b) is below the asking price now takes the reject
+  of option 1 (rt_holiday_below_asking). A player with no asking price (0) keeps the computer's answer.
+- `shortlist_manager_predict_selling_club_response` 0x84af00 holds the tests of both options (0x84b05e..0x84b0a8: 1
+  answers 2, reject; 2 takes the asking price), but only in its branch for a human club, which it finds with
+  0x600a50 and ignore_holiday 0 (0x84b025). That call counts a club on holiday as a computer club, so the tests never
+  run. The predictor decides loan requests for a club on holiday (`NewsItem::auto_respond` 0x784100 for news 4000,
+  `TRANSFER_MANAGER::process_due_offer` 0x8c63a0 state 0) and the bids that computer clubs plan
+  (0x83f3a0, 0x842e10). At 0x84b02f the computer branch now makes the same tests for a club whose manager is on
+  holiday (rt_holiday_predict, with the human test of 0x8c81ea: ignore_holiday 1), and at 0x84af77 a loan request
+  for such a club with option 1 gets the answer 2 (rt_holiday_refuses_loan). A release clause in force keeps the
+  original's answer, as in the dead test (0x84b05e), and the bid reply accepts a bid that meets it before any setting
+  (`transfer_manager_selling_club_must_accept` 0x8cd240 at 0x8c81bb), as a real club must. With no human on holiday
+  (the count at [0xb63c98] + 0xc) and with the settings off, every answer is the original's.
+Three callers (0x8c0527, 0x8c2e3d, 0x8c42fa) call 0x8c8090 with dry_run 1, and the reject at 0x8c8266 acts in a dry
+run too. The original does this for "Reject all offers", and the fix does it for a bid below the asking price. In
+`process_due_offer` 0x8c63a0, an offer in state 0x11 or 0x12 goes to 0x8c2f50 when offer +0x10 is set (0x8c6983), and
+news 0xfa5 confirms an offer through 0x8c3310 (0x784cbc). Both come after a bid was accepted, so with "Reject all
+offers" an offer for the club can reach them only when a release clause or the receivers made the club accept it.
+Every player of a game has an asking price: none of 6,860 at the start, 6,842 a year later and 10,679 in a game of
+2026 has 0 (tests/seasons/holiday_offers_run.py, RECOMP_TEST_LIST=census), so listed and unlisted players meet the
+same rule.
 """
 
 # address: (the instruction in the original, C code)
@@ -117,4 +146,9 @@ INSNS = {
     0x76CE1C: ("je 0x76cf82", "if (cc_e(F) || rt_olympic_keeps_senior(esi, ebp, ebx, R32(esp + 0x8ecu))) goto L_76cf82;"),
     0x5968E8: ("mov edx, dword ptr [0xae23b4]", "rt_max_wage_high(edx, eax); edx = R32(0xae23b4u);"),
     0x597019: ("add ecx, edx", "ecx = rt_max_wage_sum(ecx, edx);"),
+    0x84B02F: ("je 0x84b0ad", "if (cc_e(F)) { SYNC(); t0 = rt_holiday_predict(ebx, edi, ebp); RT_AFTER_CALL(); if (t0 == 1u) goto L_84b01c; "
+                              "if (t0 == 2u) { esi = R32(ebp + 0x52u); goto L_84b0e7; } goto L_84b0ad; }"),
+    0x84AF77: ("jne 0x84b174", "if (!cc_e(F)) goto L_84b174; SYNC(); t0 = rt_holiday_refuses_loan(ebx); RT_AFTER_CALL(); "
+                               "if (t0) goto L_84b162;"),
+    0x8C8264: ("jne 0x8c8277", "if (!cc_e(F) && !rt_holiday_below_asking(eax, esi)) goto L_8c8277;"),
 }
