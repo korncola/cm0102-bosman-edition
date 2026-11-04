@@ -11,9 +11,9 @@ the table code works it out once from the rows and the meetings, (rows - 1) x me
 to one of 6 (groups of 3: 2 matches) kept the 3 of the edition before.
 
 One new game, Tier A, England's leagues (the national sides of every nation play), seed 1, changing rules on: the
-3.9.68 database, a 2001/02 start, 1100 days, past the 2002 edition (8 teams, November 2002 in a 2001 game) and the 2004
-edition (6 teams, from 29 May 2004). With RECOMP_SEASON_INTL_LOG=1 the class logs at each edition's end its group A
-rows, meetings and +0xa7 (season_intl_ofc_honours).
+3.9.68 database, a 2001/02 start, 1250 days, past the 2002 edition (8 teams, November 2002 in a 2001 game) and the
+2004 edition (6 teams, groups from 31 May 2004, the knockout later in 2004). With RECOMP_SEASON_INTL_LOG=1 the class
+logs at each edition's end its group A rows, meetings and +0xa7 (season_intl_ofc_honours).
 
 The checks: the program ends with code 0 and shows no message box; the log names the editions 2002 and 2004; in each,
 +0xa7 is (rows - 1) x meetings.
@@ -42,7 +42,7 @@ def main(argv):
     o = {"program": program, "game": game, "rules": "on", "database": None, "seed": 1, "start": 2001, "last": 2011,
          "nations": ["England"], "extra": [], "timeout": 5400}
     work = os.path.join(keep, "leg")
-    code, took, box = soak_run.new_game_leg(o, work, 1100)
+    code, took, box = soak_run.new_game_leg(o, work, 1250)
     fails = []
     if code != 0 or box:
         fails.append(f"the run ended with code {code}{', box ' + box if box else ''} ({work})")
