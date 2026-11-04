@@ -13,6 +13,7 @@
 #define RETRY_FIRST_MS 2000
 #define RETRY_MAX_MS 30000
 #define CLOSE_FLUSH_MS 1000        /* what an ended link waits to give the game its last bytes */
+#define LINGER_MS 10000            /* what a joiner's ended stream waits for its game to close (see "Ends") */
 
 /* A byte queue. */
 typedef struct {
@@ -80,14 +81,64 @@ static int take(Queue *q, hn_sock s)
     return got;
 }
 
-/* Reads and drops what s still holds, then closes it. A socket closed with unread bytes resets the connection,
- * and the game's end then loses the bytes that it has not read yet: a joiner saw "the connection was lost" in
- * place of the host's QUIT (net_core.c) when the host quit (test 4 of the spec, 2026-10-29). */
-static void close_quietly(hn_sock s)
+/* ---- Ends (0.6.2 open item 130) ----
+ * The game's end of a stream is a loopback TCP connection (hn_pair). The game can still write when the relay ends
+ * the stream: the host's PING of net_core.c goes at the game's next call (control_tick), a joiner's PONG at its
+ * next read. A write into a socket that is already closed gets a reset. The game then reads "connection reset"
+ * (10054) in place of the end and loses the bytes that it has not read yet: a joiner saw "the connection was
+ * lost" in place of the host's QUIT (test 4 of the online spec, 2026-10-29). So the relay ends
+ * its send side only (the game reads the end after the last bytes), reads and drops what the game still writes,
+ * and closes when the game has closed its end (a joiner's stream: or after LINGER_MS, as its game writes nothing
+ * after it read the end, net_core.c's quit packet). */
+
+/* 1 when s is done: the game closed its end, or s broke. */
+static int drained(hn_sock s)
 {
     uint8_t buf[4096];
-    for (int i = 0; i < 1024 && hn_recv(s, buf, sizeof buf) > 0; i++) {}
-    hn_close(s);
+    for (int i = 0; i < 1024; i++) {
+        long r = hn_recv(s, buf, sizeof buf);
+        if (r > 0) continue;
+        return r == 0 || hn_error() != HN_WOULDBLOCK;
+    }
+    return 0;
+}
+
+/* The host thread's ended streams that wait for the game. The host's game can go a long time without a read of
+ * one human manager's stream (nc_hold_others in net_core.c, while it serves another one's screen), and its PINGs
+ * go on, so these wait with no time limit until the game closes its end. Two slots for each channel; with no free
+ * slot the oldest closes. */
+#define LINGER_SLOTS (2 * RELAY_CHANNELS)
+static struct {
+    hn_sock s;
+    uint64_t since;                /* 0: a free slot */
+} lingering[LINGER_SLOTS];
+
+static void tend_lingering(void)
+{
+    for (int i = 0; i < LINGER_SLOTS; i++)
+        if (lingering[i].since && drained(lingering[i].s)) {
+            hn_close(lingering[i].s);
+            lingering[i].since = 0;
+        }
+}
+
+/* Ends a stream of the host thread: the end goes to the game, and the socket waits in lingering. */
+static void end_stream(hn_sock s)
+{
+    if (hn_shutdown_send(s) < 0) {
+        hn_close(s);               /* the stream broke already: no end to give */
+        return;
+    }
+    int at = 0;
+    for (int i = 0; i < LINGER_SLOTS; i++) {
+        if (!lingering[i].since) {
+            at = i;
+            break;
+        }
+        if (lingering[i].since < lingering[at].since) at = i;
+    }
+    if (lingering[at].since) hn_close(lingering[at].s);
+    lingering[at].s = s, lingering[at].since = hn_ms();
 }
 
 int relay_url(char *out, size_t room, const char *lobby, const char *code, const char *query)
@@ -145,7 +196,7 @@ static void close_channel(Channel *c)
             "bytes\n", (int)(c - host_channels), (unsigned long long)((hn_ms() - c->opened) / 1000), c->frames_out,
             (unsigned long long)c->bytes_out, c->frames_in, (unsigned long long)c->bytes_in);
     give(&c->to_game, c->mine);
-    close_quietly(c->mine);
+    end_stream(c->mine);
     drop(&c->batch), drop(&c->to_game);
     memset(c, 0, sizeof *c);
 }
@@ -238,6 +289,7 @@ static void host_thread(void *unused)
     uint64_t retry_at = 0, last_sent = 0, connected_at = 0;
     char lobby[256], code[9], token[96], url[512], query[160];
     for (;;) {
+        tend_lingering();
         hn_lock();
         int active = host.active && !host.replaced, want = host.gen;
         memcpy(lobby, host.lobby, sizeof lobby), memcpy(code, host.code, sizeof code);
@@ -475,7 +527,10 @@ static void joiner_thread(void *arg)
             "%llu bytes\n", (unsigned long long)((hn_ms() - opened) / 1000), frames_out,
             (unsigned long long)bytes_out, frames_in, (unsigned long long)bytes_in);
     ws_close(l->w, code ? 0 : 1000);
-    close_quietly(l->mine);
+    uint64_t until = hn_ms() + LINGER_MS;   /* see "Ends" */
+    if (hn_shutdown_send(l->mine) == 0)
+        while (!drained(l->mine) && hn_ms() < until) hn_wait(l->mine, 1, 20);
+    hn_close(l->mine);
     drop(&batch), drop(&to_game);
     free(l);
 }

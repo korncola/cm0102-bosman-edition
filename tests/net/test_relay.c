@@ -402,10 +402,22 @@ static void test_relay(void)
     fr_close_manager = 1;
     n = read_for(s, buf, sizeof buf, 1, 3000);
     CHECK(n == 0, "the relay's close ends the human manager's socket (%ld)", n);
+    /* Open item 130: a game that writes after the end (a joiner's PONG, the host's PING) still reads the end, not a
+     * reset (relay.c, "Ends"). */
+    hn_send(s, "late", 4);
+    hn_sleep(200);
+    n = hn_recv(s, buf, sizeof buf);
+    CHECK(n == 0, "a write after the end, and the human manager's socket still ends (%ld, %d)", n,
+          n < 0 ? hn_error() : 0);
     hn_close(s);
     until = hn_ms() + 2000;
     while (hn_ms() < until && nc_recv(a, buf, sizeof buf) != 0) hn_sleep(10);
     CHECK(nc_recv(a, buf, sizeof buf) == 0, "and the host's socket of it");
+    uint8_t late[4 + 5] = {5, 0, 0, 0, 7, 1, 2, 3, 4};
+    nc_send(a, late, sizeof late);
+    hn_sleep(200);
+    n = nc_recv(a, buf, sizeof buf);
+    CHECK(n == 0, "a write after the end, and the host's socket still ends (%ld, %d)", n, n < 0 ? nc_error() : 0);
     nc_close(a);
 
     /* The host's last bytes before its end (net_core.c's QUIT at a window close) reach the human manager, and its
