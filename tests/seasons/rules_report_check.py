@@ -53,7 +53,9 @@ The checks that fail the test (exit code 1):
       text). A slice that brings a rule removes its lines with --update-expected; a difference that has gone
       is listed, and does not fail the check.
     - (--run, changing rules on, which logs the news with RECOMP_SEASON_CHANGE_LOG=1) no competition gets both
-      "The X is played for the first time." and "The X is played again ..." in one season (0.6.2 item 135)
+      "The X is played for the first time." and "The X is played again ..." in one season, and the cups of
+      NEWS_KIND get their sentence (the Conference Cup of 2004/05 and the Setanta Sports Cup of 2010/11 again, the
+      Superfinalen of 2009 for the first time) (0.6.2 item 135)
 
 The differences, by kind:
     clubs, subs_used, bench     the game's value at the start and at the end differ from the count of the row
@@ -677,8 +679,24 @@ def first_and_again(log):
     said = collections.defaultdict(set)
     for m in re.finditer(r"season change: news (\d{4}/\d\d): The (.+?) is played (for the first time|again)", log):
         said[(m.group(1), m.group(2))].add(m.group(3))
-    return [f"{s}: the {name} is played for the first time and again" for (s, name), kinds in sorted(said.items())
-            if len(kinds) > 1]
+    fails = [f"{s}: the {name} is played for the first time and again" for (s, name), kinds in sorted(said.items())
+             if len(kinds) > 1]
+    # The lead's ruling on Max's rule of real life (5 November 2026): a cup with real editions before says
+    # "played again", one held for the first time ever says "for the first time". Checked when the run logs the
+    # cup's sentence: a run without the nation or the season has none. A run that must have it checks that itself
+    # (uefa_formats_run "change": the Conference Cup).
+    for (s, name), want in NEWS_KIND.items():
+        got = said.get((s, name))
+        if got and got != {want}:
+            fails.append(f"{s}: the {name} is played {'/'.join(sorted(got))}, not {want}")
+    return fails
+
+
+# 0.6.2 item 135: the sentence of a new competition's first season in the game. The Conference League Cup ran
+# from 1979/80 to 2000/01 and came back in 2004/05; the Superfinalen of 2009 was the first official edition.
+# The game first makes the All-Ireland cup in 2010/11: the Setanta Sports Cup ran from 2005.
+NEWS_KIND = {("2004/05", "Conference Cup"): "again", ("2009/10", "Superfinalen"): "for the first time",
+             ("2010/11", "Setanta Sports Cup"): "again"}
 
 
 def check(report, game=None, last=None, expected=None, update=False, data_dir=None, start_only=False):

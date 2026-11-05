@@ -458,14 +458,15 @@ static void new_before(const SeasonChange *c)
     }
 }
 
-/* One sentence when a new cup stops or comes back (Q258); the module says when it is played for the first time. */
+/* One sentence when a new cup stops or comes back (Q258). The module writes the sentence of the change that makes
+ * it. */
 static void new_after(const SeasonChange *c)
 {
     if (!season_game() || !new_file(c->file)) return;
     int s = c->season, now = season_new_cup_held(c->file, s), before = season_new_cup_held(c->file, s - 1);
     if (now < 0 || before < 0 || now == before) return;
-    /* 0.6.2 item 135: the module made the object at this change and wrote its sentence. The table not holding
-     * s - 1 then means the cup was not in the game yet, not a gap (the Conference Cup of 2004/05 got both). */
+    /* 0.6.2 item 135: the module made the object at this change and wrote its one sentence (first time, or again
+     * for a cup with real editions before). The Conference Cup of 2004/05 got two. */
     if (season_comps_made_in(c->comp) == s) return;
     uint32_t rec = rd32(g_mem, c->comp + 4);
     char name[64];
