@@ -123,7 +123,10 @@ int season_super_four_pick(const uint32_t *league, int count, uint32_t cw, uint3
  *   League Cup has 16 Premier League 2 under-21 sides, which the game does not hold (Q336): not played. A game with
  *   changing rules off plays every edition in its start season's format (season_new_cup_played, open item 131).
  * - All-Ireland cup (wal-nir-irl.tsv): 2010/11 to 2012/13 12 clubs (two-legged first round, quarter-finals and
- *   semi-finals, one-match final), 2013/14 8 clubs (4 from each league). Item 145: the group editions of 2004/05
+ *   semi-finals, one-match final), 2013/14 8 clubs (4 from each league). Item 148: in each of these editions every
+ *   tie of the first round drawn paired a League of Ireland club with an Irish League club (the 2011 and 2013 rule in
+ *   two sources each, the 2012 and 2014 ties in two sources each; docs/research/2026-11-05-setanta-cup.md), so these
+ *   rows have NEW_CUP_PAIRED. The later rounds were open draws. Item 145: the group editions of 2004/05
  *   (the Setanta Cup of 2005) to 2007/08 and 2009/10, with the groups in group_formats below; none in 2008/09 (the
  *   2009 draw was put back and made on 28 July 2009 for the edition of 2009/10). Their rows give the clubs (picks,
  *   extra) and the rounds of the class's table, which a group season does not play (Cup::update_for_date 0x51f890
@@ -159,8 +162,9 @@ static const SeasonNewCup new_cups[] = {
     {"new_all_ireland", 2009, 0, 9, {{1, ET_PENS, 15, 4, 1, 0}, {2, ET_PENS, 3, 3, 1, 14}, {1, ET_PENS, 13, 2, 1, 0},
                                      {1, ET_PENS, 29, 7, 0, 0}}, {4, 4}, NEW_CUP_HOLDERS},
     {"new_all_ireland", 2010, 0, 12, {{1, ET_PENS, 21, 4, 1, 0}, {2, ET_PENS, 9, 3, 1, 7}, {2, ET_PENS, 7, 2, 1, 7},
-                                      {2, ET_PENS, 14, 1, 1, 7}}},
-    {"new_all_ireland", 2013, 0, 8, {{1, ET_PENS, 17, 4, 1, 0}, {2, ET_PENS, 5, 3, 1, 7}, {2, ET_PENS, 1, 2, 1, 7}}},
+                                      {2, ET_PENS, 14, 1, 1, 7}}, {0, 0}, NEW_CUP_PAIRED},
+    {"new_all_ireland", 2013, 0, 8, {{1, ET_PENS, 17, 4, 1, 0}, {2, ET_PENS, 5, 3, 1, 7}, {2, ET_PENS, 1, 2, 1, 7}},
+     {0, 0}, NEW_CUP_PAIRED},
 };
 #define NEW_CUP_COUNT ((int)(sizeof new_cups / sizeof new_cups[0]))
 

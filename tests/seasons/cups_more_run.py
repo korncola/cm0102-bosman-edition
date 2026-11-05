@@ -45,8 +45,8 @@ The runs:
     a2009   open item 148: 2009/10 (the original data moved to 2009), changing rules on, Northern Ireland and the
             Republic of Ireland, Tier A, to the end of 2011/12: the knockout editions of 2010/11 and 2011/12 (12
             clubs, 6 of each league) pick their clubs again on the draw day of the first round, so the clubs of each
-            league are its places 1 to 6 of the season just ended, the byes go to the first two of each league;
-            each edition has a winner
+            league are its places 1 to 6 of the season just ended, the byes go to the first two of each league,
+            each first-round tie is one club of each league (the 2011 to 2014 rule); each edition has a winner
     r2002   start run, 2002/03 (the original data), changing rules off, Select All without France: the start hook
             makes the editions that the row of 2002/03 holds, the Russian Premier League Cup of 2003 (first round in
             March 2003) with 16 clubs and the Russian Super Cup of March 2003 with two clubs (log lines)
@@ -295,6 +295,18 @@ def check_a2009(lines, log, fails, name):
         if byes != [(1, 1), (1, 2), (2, 1), (2, 2)]:
             fails.append(f"{name}: new_all_ireland {season}: the byes are {byes} (league, place), expected the first two "
                          f"of each league")
+        # Open item 148, the 2011 to 2014 rule: each tie of the first round is one club of each league, and the ties
+        # hold the 8 clubs of the first round (the first 8 of the list).
+        need_log(log, f"new cups: new_all_ireland {season}: first round paired by league", fails, name)
+        league = {c: d for c, d, _ in listed}
+        ties = re.findall(rf"new cups: new_all_ireland {season} tie \d+: (.+) v (.+)", log)[-4:]
+        if len(ties) != 4:
+            fails.append(f"{name}: new_all_ireland {season}: {len(ties)} first-round ties logged, expected 4")
+        for h, a in ties:
+            if sorted((league.get(h, -1), league.get(a, -1))) != [1, 2]:
+                fails.append(f"{name}: new_all_ireland {season}: the tie {h} v {a} is not one club of each league")
+        if ties and sorted(c for t in ties for c in t) != sorted(c for c, _, _ in listed[:8]):
+            fails.append(f"{name}: new_all_ireland {season}: the ties do not hold the 8 clubs of the first round")
         need_winner(lines, "new_all_ireland", season, fails, name)
 
 

@@ -567,22 +567,138 @@ static void draw_day_pick(uint32_t cup, int round)
     }
 }
 
+/* ---- The paired first round (open item 148, the 2011 to 2014 rule) ----
+ *
+ * In the All-Ireland editions of 2010/11 to 2013/14 each tie of the first round drawn paired a League of Ireland club
+ * with an Irish League club; the later rounds were open (docs/research/2026-11-05-setanta-cup.md). The first round of
+ * these rows is an open draw: Cup::draw_round 0x51c410 calls Cup::randomize_round_teams 0x51e220 (no 0x400 seeding at
+ * +0xd, no nation rule at +0xb, no 0x200 keep), which takes every side out, shuffles them with utils_random 0x90cfc0
+ * and puts each in a random tie. The nation draw 0x51d9f0 does not fit: it keeps clubs of one nation apart by club
+ * +0x53, and Derry City, a League of Ireland club, is of Northern Ireland. So, for a row with NEW_CUP_PAIRED, the
+ * wrap of 0x51c410 draws round 0 by division before the original runs: the clubs of each league in a random order
+ * (0x90cfc0, as the original), tie t gets the t-th club of each league, the side at random. Then the wrap of 0x51e220
+ * skips its shuffle for that one call, and draw_round goes on as before (home sides 0x51e870, second legs 0x522610,
+ * the draw news). Round 0 has no source ties (+0xa, +0xc, +0xe, +0x10 all -1), so no winner link moves. A round whose
+ * sides are not 2 x ties known clubs, half from each league (a game with one of the two nations), keeps the open
+ * draw. */
+#define TIE_SIZE 0x35u
+#define F_RANDOM 0x0090cfc0u            /* utils_random, cdecl (n): 0 to n - 1 */
+
+static uint32_t paired_cup;             /* the cup and round that paired_draw drew, for the wrap of 0x51e220 */
+static int paired_round = -1;
+
+static int game_random(int n)
+{
+    uint32_t a[1] = {(uint32_t)n};
+    return (int)call_cdecl(F_RANDOM, 1, a);
+}
+
+static void shuffle(int16_t *v, int n)
+{
+    for (int i = 0; i < n && !rt_unwinding; i++) {
+        int j = game_random(n);
+        if (rt_unwinding) return;
+        int16_t t = v[i];
+        v[i] = v[j], v[j] = t;
+    }
+}
+
+/* Returns 1 when round 0 is drawn. */
+static int paired_draw(uint32_t cup, int round)
+{
+    if (round != 0) return 0;
+    const char *file = season_change_file(cup);
+    const NewCupClubs *k = file && !strncmp(file, "new_", 4) ? two_leagues(file) : NULL;
+    if (!k) return 0;
+    const SeasonNewCup *f = played_format(file, (int16_t)rd16(g_mem, cup + CUP_YEAR));
+    if (!f || !(f->extra & NEW_CUP_PAIRED)) return 0;
+    if (g_mem[cup + CUP_BASE_DONE] || (int32_t)rd32(g_mem, cup + CUP_STAGE_COUNT) != 0) return 0;
+    uint32_t recs = rd32(g_mem, cup + 0xa3u), arr = rd32(g_mem, cup + CUP_TIES);
+    uint32_t list = rd32(g_mem, cup + CUP_TEAM_LIST);
+    if (!readable(recs) || !readable(arr) || !readable(list)) return 0;
+    uint32_t ties = rd32(g_mem, arr);
+    int n = (int16_t)rd16(g_mem, recs + 0x1au), count = (int16_t)rd16(g_mem, cup + CUP_TEAMS);
+    if (!readable(ties) || n < 1 || n > 16) return 0;
+    int16_t a[16], b[16];
+    int na = 0, nb = 0;
+    for (int t = 0; t < n; t++) {
+        uint32_t tie = ties + TIE_SIZE * (uint32_t)t;
+        if (g_mem[tie + TIE_STATE] != 0) return 0;
+        for (int side = 0; side < 2; side++) {
+            int16_t idx = (int16_t)rd16(g_mem, tie + 2u * (uint32_t)side);
+            if ((int16_t)rd16(g_mem, tie + 0xau + 2u * (uint32_t)side) != -1 ||
+                (int16_t)rd16(g_mem, tie + 0xeu + 2u * (uint32_t)side) != -1)
+                return 0;                                       /* a winner to come */
+            if (idx < 0 || idx >= count) return 0;
+            uint32_t club = rd32(g_mem, list + 6u * (uint32_t)idx);
+            if (!readable(club)) return 0;
+            if (division_is(club, CLUB_DIVISION, k->division[0])) {
+                if (na == n) return 0;
+                a[na++] = idx;
+            } else if (division_is(club, CLUB_DIVISION, k->division[1])) {
+                if (nb == n) return 0;
+                b[nb++] = idx;
+            } else {
+                return 0;
+            }
+        }
+    }
+    if (na != n || nb != n) return 0;
+    shuffle(a, n);
+    shuffle(b, n);
+    for (int t = 0; t < n && !rt_unwinding; t++) {
+        int swap = game_random(2);
+        if (rt_unwinding) return 0;
+        uint32_t tie = ties + TIE_SIZE * (uint32_t)t;
+        wr16(g_mem, tie, (uint16_t)(swap ? b[t] : a[t]));
+        wr16(g_mem, tie + 2u, (uint16_t)(swap ? a[t] : b[t]));
+    }
+    if (rt_unwinding) return 0;
+    int edition = (int16_t)rd16(g_mem, cup + CUP_YEAR);
+    fprintf(stderr, "recomp: new cups: %s %d: first round paired by league\n", file, edition);
+    for (int t = 0; t < n; t++) {
+        uint32_t tie = ties + TIE_SIZE * (uint32_t)t;
+        uint32_t h = rd32(g_mem, list + 6u * rd16(g_mem, tie)), w = rd32(g_mem, list + 6u * rd16(g_mem, tie + 2u));
+        fprintf(stderr, "recomp: new cups: %s %d tie %d: %.50s v %.50s\n", file, edition, t + 1, win_str(h + 4),
+                win_str(w + 4));
+    }
+    return 1;
+}
+
 static int season_game(void);
 
 void o_0051c410(void);
 
-/* Cup::draw_round, thiscall (round) ret 4: a new cup of two leagues picks its clubs again before its first draw. */
+/* Cup::draw_round, thiscall (round) ret 4: a new cup of two leagues picks its clubs again before its first draw, and
+ * a row with NEW_CUP_PAIRED draws its first round by league. */
 RT_WRAP(0051c410, new_cups_draw_round)
 {
     uint32_t cup = cpu.ecx;
+    int drawn = 0, round = (int)rt_arg(0);
     if (season_game() && readable(cup)) {
-        int round = (int)rt_arg(0);
         Cpu saved = cpu;
         draw_day_pick(cup, round);
         if (rt_unwinding) return;
+        drawn = paired_draw(cup, round);
+        if (rt_unwinding) return;
         cpu = saved;
     }
+    if (drawn) paired_cup = cup, paired_round = round;
     o_0051c410();
+    paired_cup = 0, paired_round = -1;
+}
+
+void o_0051e220(void);
+
+/* Cup::randomize_round_teams, thiscall (round) ret 4: the round that paired_draw drew keeps its ties. */
+RT_WRAP(0051e220, new_cups_open_draw)
+{
+    if (paired_cup && cpu.ecx == paired_cup && (int16_t)rt_arg(0) == paired_round) {
+        paired_cup = 0, paired_round = -1;
+        rt_ret_stdcall(0, 1);
+        return;
+    }
+    o_0051e220();
 }
 
 /* ---- The season change: kind "new_cups" ---- */
