@@ -591,6 +591,18 @@ int season_intl_uefa_from(const char *name)
     return 0;
 }
 
+int season_intl_concacaf_from(const char *name)
+{
+    /* Martinique: a CONCACAF member, not a FIFA member (an overseas department of France). Associate member from
+     * 1991 and full member from 2013 (https://concacaf.com/inside-concacaf/member-associations/martinique; Wikipedia
+     * gives 1964 or 1978 for the associate membership, read 2026-11-05): a member in every season of the game. It
+     * played the Gold Cup of 2002, 2003, 2013, 2017, 2019, 2021 and 2023 and League A of the CONCACAF Nations League
+     * in 2019-20, 2022-23 and 2023-24. The databases from October 2016 hold it with no continent (open item 141). */
+    if (!name) return 0;
+    if (!strcasecmp(name, "Martinique")) return 1991;
+    return 0;
+}
+
 /* ---- The real draws of finals whose qualifying began before the game (O259 rows A9 and A16) ---- */
 
 /* The finalists of each World Cup and European Championship that a game can start into after its qualifying began (a

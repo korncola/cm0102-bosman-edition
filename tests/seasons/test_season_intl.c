@@ -395,6 +395,11 @@ int main(void)
     CHECK(!season_intl_later_held(-1, held_in, (void *)sep2011), "no row");
     /* Kosovo: UEFA from 2016/17 (no continent in the April 2015, October 2015 and April 2016 databases). */
     CHECK(season_intl_uefa_from("Kosovo") == 2016, "Kosovo joins UEFA in 2016");
+    /* Martinique: CONCACAF in every season of the game, though the databases from October 2016 give no continent. */
+    CHECK(season_intl_concacaf_from("Martinique") == 1991 && season_intl_concacaf_from("martinique") == 1991,
+          "Martinique plays in CONCACAF");
+    CHECK(!season_intl_concacaf_from("Suriname") && !season_intl_concacaf_from("Guadeloupe") &&
+          !season_intl_concacaf_from(NULL), "no other nation");
     CHECK(!season_intl_uefa_from("Gibraltar") && !season_intl_uefa_from("Serbia") && !season_intl_uefa_from(NULL),
           "no other nation");
 

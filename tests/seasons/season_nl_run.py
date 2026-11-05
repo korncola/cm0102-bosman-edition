@@ -13,6 +13,8 @@ test log RECOMP_SEASON_NL_LOG=1. The runs:
     2020    November 2020, 2020/21 to 2021/22, changing rules on: the 2020-21 edition, finals in June 2021 (Q277),
             the 2022 World Cup qualifying on its 2021 matchdays and its three paths in March 2022
     2022    October 2022, 2022/23 to 2023/24, changing rules on: the 2024-25 edition (draw February 2024)
+            (2018 and 2022: Martinique, with no continent in the data, plays in CONCACAF and its first CONCACAF draw
+            puts it in League A, open item 141)
     2024    October 2024, 2024/25, changing rules on: the 2024-25 edition and its finals
     off     October 2018, 2018/19 to 2019/20, changing rules off: the 2018-19 shape again for 2020
     2010    September 2010, 2010/11, changing rules on: the 2011 Gold Cup of 12 teams (no Nations League)
@@ -115,6 +117,7 @@ CONCACAF = {"2018": ["CONCACAF-2019-20"], "2020": ["CONCACAF-2022-23"],
             "2022": ["CONCACAF-2023-24", "CONCACAF-2024-25"], "2024": ["CONCACAF-2024-25"],
             "off": ["CONCACAF-2019-20"], "2010": []}
 SAVE_AFTER = 430
+MARTINIQUE_A = {"2018", "2022"}     # runs whose first CONCACAF draw has Martinique in League A (open item 141)
 # Log lines each run must hold: the play-off paths (season_nl_euro.c, season_nl_wc.c).
 LINES = {"2018": ["euro 2020 qualifying groups from 21 March 2019", "euro 2020 path A (", "euro 2020 path D (",
                   "euro 2020 seeding on day", "season nl: CONCACAF-2019-20 finals:", "season gold cup 2019: 16 teams:",
@@ -240,6 +243,13 @@ def check(name, work):
                         if want and want[0] != league:
                             fails.append(f"{name}: {ed}: {nation} in league {league}, the real league is {want[0]}")
     league_a = {ed: {n for g in leagues.get("A", []) for n in g} for ed, leagues in seen + seen_c}
+    # Open item 141: Martinique plays in CONCACAF (season_intl_concacaf_from), though the databases from October 2016
+    # give it no continent. Its first draw puts it in League A, as in 2019-20 and 2023-24.
+    if name in MARTINIQUE_A:
+        if any("Martinique has no continent" in x for x in log):
+            fails.append(f"{name}: Martinique is left out (no continent)")
+        if seen_c and "Martinique" not in league_a.get(seen_c[0][0], set()):
+            fails.append(f"{name}: Martinique is not in League A of {seen_c[0][0]}")
     finals = [m.groups() for m in (FINALS.search(x) for x in log) if m]
     for ed, names in finals:
         nations = [n.strip() for n in names.split(";") if n.strip()]
