@@ -52,6 +52,8 @@ The checks that fail the test (exit code 1):
       tests/seasons/rules_report_expected/<start year>-<nations>.tsv: one line per difference (season, kind,
       text). A slice that brings a rule removes its lines with --update-expected; a difference that has gone
       is listed, and does not fail the check.
+    - (--run, changing rules on, which logs the news with RECOMP_SEASON_CHANGE_LOG=1) no competition gets both
+      "The X is played for the first time." and "The X is played again ..." in one season (0.6.2 item 135)
 
 The differences, by kind:
     clubs, subs_used, bench     the game's value at the start and at the end differ from the count of the row
@@ -92,6 +94,7 @@ object of the same file (the Regionalliga groups).
 """
 import collections
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -667,6 +670,17 @@ def write_expected(name, diffs, seasons):
     print(f"expected differences written: {expected_path(name)}")
 
 
+def first_and_again(log):
+    """0.6.2 item 135: the competitions with both news sentences in one season, the first edition of the new
+    competitions module (season_comps.c) and the return after a gap (season_new_cups.c), as the Conference Cup of
+    2004/05 had. A list of failure texts."""
+    said = collections.defaultdict(set)
+    for m in re.finditer(r"season change: news (\d{4}/\d\d): The (.+?) is played (for the first time|again)", log):
+        said[(m.group(1), m.group(2))].add(m.group(3))
+    return [f"{s}: the {name} is played for the first time and again" for (s, name), kinds in sorted(said.items())
+            if len(kinds) > 1]
+
+
 def check(report, game=None, last=None, expected=None, update=False, data_dir=None, start_only=False):
     """Prints the checks and the differences. Returns the failure texts."""
     clubs = []
@@ -961,8 +975,13 @@ def main(argv):
             database = run_database(argv, year, unpacked)
             print(f"database: {database or 'the base data (3.9.68)'}")
             code, report = run(program, game, last, year, database, nations, extra, keep, timeout,
-                               options_more={"changing_rules": rules}, start_only=start_only)
+                               options_more={"changing_rules": rules}, start_only=start_only,
+                               env_more={"RECOMP_SEASON_CHANGE_LOG": "1"} if rules == "on" else None)
             failed = [] if code == 0 else [f"the run ended with code {code}"]
+            log = os.path.join(os.path.dirname(report), "stderr.txt")
+            if os.path.exists(log):
+                with open(log, encoding="latin-1") as f:
+                    failed += first_and_again(f.read())
             if os.path.exists(report):
                 failed += check(report, game if not database else None, last, name, update,
                                 data_dir=database or os.path.join(game, "Data"), start_only=start_only)

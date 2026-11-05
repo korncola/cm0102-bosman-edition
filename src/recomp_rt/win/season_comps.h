@@ -120,6 +120,10 @@ int season_comps_held(const char *comp, int s);
 /* The first season from s on that the table holds the competition, 2999 when none, 0 with no row. */
 int season_comps_next_edition(const char *comp, int s);
 
+/* The season whose change made the object (the entry hook, which writes "The X is played for the first time."),
+ * or 0: not a def's object, or made at a load or before this run's season changes (0.6.2 item 135). */
+int season_comps_made_in(uint32_t comp);
+
 /* The object of a def in the game that runs, or 0 (not made, or the game has none). */
 uint32_t season_comps_object(const SeasonCompDef *d);
 /* The record of a def's competition: its object's, or at a load before the objects exist, the record whose saved

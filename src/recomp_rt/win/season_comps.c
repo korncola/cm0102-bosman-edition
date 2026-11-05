@@ -149,6 +149,7 @@ static const SeasonCompDef *def_at(int i)
 
 #define MAX_DEFS 64
 static uint32_t objects[MAX_DEFS];      /* the object of each def, 0 when not made */
+static int made_season[MAX_DEFS];        /* the season whose change made the object (comps_entry), 0 otherwise */
 
 static uint32_t loading_records[MAX_DEFS];   /* season_comps_record_of before the objects of a load exist */
 static int loading_known;                    /* loading_records is filled */
@@ -157,6 +158,7 @@ static int objects_made;                     /* season_comps_before_comp_table h
 static void reset(void)
 {
     memset(objects, 0, sizeof objects);
+    memset(made_season, 0, sizeof made_season);
     loading_known = 0;
     objects_made = 0;
 }
@@ -451,11 +453,19 @@ static void comps_entry(const SeasonChange *c)
                          * season does not hold stays off); slice 21c: the def's own `held` */
         uint32_t obj = make(d, i, c->season, 0);
         if (!obj) continue;
+        made_season[i] = c->season;
         char name[64];
         table_name(d, c->season, name, sizeof name);
         if (*name) season_change_rename(rd32(g_mem, obj + NAME_AT), name);
         if (*name) season_change_news("The %s is played for the first time.", name);
     }
+}
+
+int season_comps_made_in(uint32_t comp)
+{
+    for (int i = 0; i < season_comp_def_count && i < MAX_DEFS; i++)
+        if (comp && objects[i] == comp) return made_season[i];
+    return 0;
 }
 
 /* A later name of the table (Q226, Q238). */
