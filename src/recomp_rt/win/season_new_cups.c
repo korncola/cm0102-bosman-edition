@@ -576,11 +576,12 @@ static void draw_day_pick(uint32_t cup, int round)
  * and puts each in a random tie. The nation draw 0x51d9f0 does not fit: it keeps clubs of one nation apart by club
  * +0x53, and Derry City, a League of Ireland club, is of Northern Ireland. So, for a row with NEW_CUP_PAIRED, the
  * wrap of 0x51c410 draws round 0 by division before the original runs: the clubs of each league in a random order
- * (0x90cfc0, as the original), tie t gets the t-th club of each league, the side at random. Then the wrap of 0x51e220
+ * (0x90cfc0, as the original), tie t gets the t-th club of each league (the home sides come from 0x51e870 after the
+ * draw). Then the wrap of 0x51e220
  * skips its shuffle for that one call, and draw_round goes on as before (home sides 0x51e870, second legs 0x522610,
  * the draw news). Round 0 has no source ties (+0xa, +0xc, +0xe, +0x10 all -1), so no winner link moves. A round whose
  * sides are not 2 x ties known clubs, half from each league (a game with one of the two nations), keeps the open
- * draw. */
+ * draw and says so in the log. */
 #define TIE_SIZE 0x35u
 #define F_RANDOM 0x0090cfc0u            /* utils_random, cdecl (n): 0 to n - 1 */
 
@@ -595,8 +596,8 @@ static int game_random(int n)
 
 static void shuffle(int16_t *v, int n)
 {
-    for (int i = 0; i < n && !rt_unwinding; i++) {
-        int j = game_random(n);
+    for (int i = 0; i < n - 1 && !rt_unwinding; i++) {
+        int j = i + game_random(n - i);
         if (rt_unwinding) return;
         int16_t t = v[i];
         v[i] = v[j], v[j] = t;
@@ -619,7 +620,7 @@ static int paired_draw(uint32_t cup, int round)
     uint32_t ties = rd32(g_mem, arr);
     int n = (int16_t)rd16(g_mem, recs + 0x1au), count = (int16_t)rd16(g_mem, cup + CUP_TEAMS);
     if (!readable(ties) || n < 1 || n > 16) return 0;
-    int16_t a[16], b[16];
+    int16_t a[32], b[32];
     int na = 0, nb = 0;
     for (int t = 0; t < n; t++) {
         uint32_t tie = ties + TIE_SIZE * (uint32_t)t;
@@ -633,36 +634,47 @@ static int paired_draw(uint32_t cup, int round)
             uint32_t club = rd32(g_mem, list + 6u * (uint32_t)idx);
             if (!readable(club)) return 0;
             if (division_is(club, CLUB_DIVISION, k->division[0])) {
-                if (na == n) return 0;
                 a[na++] = idx;
             } else if (division_is(club, CLUB_DIVISION, k->division[1])) {
-                if (nb == n) return 0;
                 b[nb++] = idx;
             } else {
+                fprintf(stderr, "recomp: new cups: %s: a first-round club of neither league, an open draw\n", file);
                 return 0;
             }
         }
     }
-    if (na != n || nb != n) return 0;
+    if (na != n || nb != n) {
+        fprintf(stderr, "recomp: new cups: %s %d: %d and %d clubs of the two leagues in the first round, an open draw\n",
+                file, (int16_t)rd16(g_mem, cup + CUP_YEAR), na, nb);
+        return 0;
+    }
     shuffle(a, n);
     shuffle(b, n);
-    for (int t = 0; t < n && !rt_unwinding; t++) {
-        int swap = game_random(2);
-        if (rt_unwinding) return 0;
-        uint32_t tie = ties + TIE_SIZE * (uint32_t)t;
-        wr16(g_mem, tie, (uint16_t)(swap ? b[t] : a[t]));
-        wr16(g_mem, tie + 2u, (uint16_t)(swap ? a[t] : b[t]));
-    }
     if (rt_unwinding) return 0;
-    int edition = (int16_t)rd16(g_mem, cup + CUP_YEAR);
-    fprintf(stderr, "recomp: new cups: %s %d: first round paired by league\n", file, edition);
     for (int t = 0; t < n; t++) {
         uint32_t tie = ties + TIE_SIZE * (uint32_t)t;
-        uint32_t h = rd32(g_mem, list + 6u * rd16(g_mem, tie)), w = rd32(g_mem, list + 6u * rd16(g_mem, tie + 2u));
-        fprintf(stderr, "recomp: new cups: %s %d tie %d: %.50s v %.50s\n", file, edition, t + 1, win_str(h + 4),
-                win_str(w + 4));
+        wr16(g_mem, tie, (uint16_t)a[t]);
+        wr16(g_mem, tie + 2u, (uint16_t)b[t]);
     }
     return 1;
+}
+
+/* The ties of round 0 as draw_round left them (after the home sides), for the run checks. */
+static void log_first_round(uint32_t cup)
+{
+    const char *file = season_change_file(cup);
+    uint32_t recs = rd32(g_mem, cup + 0xa3u), arr = rd32(g_mem, cup + CUP_TIES), list = rd32(g_mem, cup + CUP_TEAM_LIST);
+    if (!file || !readable(recs) || !readable(arr) || !readable(list) || !readable(rd32(g_mem, arr))) return;
+    uint32_t ties = rd32(g_mem, arr);
+    int n = (int16_t)rd16(g_mem, recs + 0x1au), edition = (int16_t)rd16(g_mem, cup + CUP_YEAR);
+    fprintf(stderr, "recomp: new cups: %s %d: first round paired by league\n", file, edition);
+    for (int t = 0; t < n && t < 16; t++) {
+        uint32_t tie = ties + TIE_SIZE * (uint32_t)t;
+        int16_t hi = (int16_t)rd16(g_mem, tie), wi = (int16_t)rd16(g_mem, tie + 2u);
+        uint32_t h = hi >= 0 ? rd32(g_mem, list + 6u * (uint32_t)hi) : 0, w = wi >= 0 ? rd32(g_mem, list + 6u * (uint32_t)wi) : 0;
+        fprintf(stderr, "recomp: new cups: %s %d tie %d: %.50s v %.50s\n", file, edition, t + 1,
+                readable(h) ? win_str(h + 4) : "?", readable(w) ? win_str(w + 4) : "?");
+    }
 }
 
 static int season_game(void);
@@ -674,7 +686,7 @@ void o_0051c410(void);
 RT_WRAP(0051c410, new_cups_draw_round)
 {
     uint32_t cup = cpu.ecx;
-    int drawn = 0, round = (int)rt_arg(0);
+    int drawn = 0, round = (int16_t)rt_arg(0);
     if (season_game() && readable(cup)) {
         Cpu saved = cpu;
         draw_day_pick(cup, round);
@@ -686,6 +698,7 @@ RT_WRAP(0051c410, new_cups_draw_round)
     if (drawn) paired_cup = cup, paired_round = round;
     o_0051c410();
     paired_cup = 0, paired_round = -1;
+    if (drawn && !rt_unwinding) log_first_round(cup);
 }
 
 void o_0051e220(void);

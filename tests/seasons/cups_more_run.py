@@ -43,9 +43,10 @@ The runs:
             semi-finals, then the final. 2010/11: the knockout of 12 clubs. Each edition has a winner in the history,
             the news says "for the first time" in 2004/05 and "again" in 2009/10, and no error box
     a2009   open item 148: 2009/10 (the original data moved to 2009), changing rules on, Northern Ireland and the
-            Republic of Ireland, Tier A, to the end of 2011/12: the knockout editions of 2010/11 and 2011/12 (12
-            clubs, 6 of each league) pick their clubs again on the draw day of the first round, so the clubs of each
-            league are its places 1 to 6 of the season just ended, the byes go to the first two of each league,
+            Republic of Ireland, Tier A, to the end of 2013/14: the knockout editions of 2010/11 to 2012/13 (12
+            clubs, 6 of each league) and 2013/14 (8 clubs, 4 of each league) pick their clubs again on the draw
+            day of the first round, so the clubs of each league are its first places of the season just ended, the
+            byes go to the first two of each league,
             each first-round tie is one club of each league (the 2011 to 2014 rule); each edition has a winner
     r2002   start run, 2002/03 (the original data), changing rules off, Select All without France: the start hook
             makes the editions that the row of 2002/03 holds, the Russian Premier League Cup of 2003 (first round in
@@ -283,20 +284,23 @@ def check_a2003(lines, log, fails, name):
 def check_a2009(lines, log, fails, name):
     if "message box from" in log:
         fails.append(f"{name}: a message box: {log[log.index('message box from'):].splitlines()[0]}")
-    for season in (2010, 2011):
+    for season in (2010, 2011, 2012, 2013):
+        each = 6 if season < 2013 else 4            # 12 clubs to 2012/13, 8 clubs (no byes) in 2013/14
         need_log(log, f"new cups: new_all_ireland {season}: clubs picked again on the draw day", fails, name)
         listed = setanta_clubs(log, season)
         for k in (1, 2):
             places = sorted(p for _, d, p in listed if d == k)
-            if places != list(range(1, 7)):
-                fails.append(f"{name}: new_all_ireland {season}: the places of league {k} are {places}, expected 1 to 6")
+            if places != list(range(1, each + 1)):
+                fails.append(f"{name}: new_all_ireland {season}: the places of league {k} are {places}, expected 1 to "
+                             f"{each}")
         # The byes (the last 4 of the 12 slots): the first two of each league, the champions among them.
         byes = sorted((d, p) for _, d, p in listed[8:])
-        if byes != [(1, 1), (1, 2), (2, 1), (2, 2)]:
+        if each == 6 and byes != [(1, 1), (1, 2), (2, 1), (2, 2)]:
             fails.append(f"{name}: new_all_ireland {season}: the byes are {byes} (league, place), expected the first two "
                          f"of each league")
         # Open item 148, the 2011 to 2014 rule: each tie of the first round is one club of each league, and the ties
-        # hold the 8 clubs of the first round (the first 8 of the list).
+        # hold the 8 clubs of the first round (the first 8 of the list). The game logs the ties after Cup::draw_round
+        # 0x51c410 has run, so a later shuffle would show here.
         need_log(log, f"new cups: new_all_ireland {season}: first round paired by league", fails, name)
         league = {c: d for c, d, _ in listed}
         ties = re.findall(rf"new cups: new_all_ireland {season} tie \d+: (.+) v (.+)", log)[-4:]
@@ -334,7 +338,7 @@ RUNS = {
     "t2010": (2010, os.path.join(DB, "September 2010 ODB"), "off", 2010, ALL_BUT_FRANCE, True, 1800, check_t2010,
               {}),
     "r2002": (2002, None, "off", 2002, ALL_BUT_FRANCE, True, 1800, check_r2002, {}),
-    "a2009": (2009, None, "on", 2011, ["Northern Ireland", "Republic of Ireland"], False, 3600, check_a2009,
+    "a2009": (2009, None, "on", 2013, ["Northern Ireland", "Republic of Ireland"], False, 3600, check_a2009,
               {"env": {"RECOMP_TIER_A": "1"}}),
     "a2003": (2003, None, "on", 2010, ["Northern Ireland", "Republic of Ireland"], False, 3600, check_a2003,
               {"env": {"RECOMP_TIER_A": "1"}}),
