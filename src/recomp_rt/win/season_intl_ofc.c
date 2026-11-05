@@ -676,8 +676,12 @@ static int six_template(uint32_t self)
 
 /* The final's round record (one round of 0x68 bytes, as the original's knockout template 0x798d92..0x798e2f and its
  * final 0x798e35..0x798ebb): the round value 0x96 of a final, 2 teams, two legs (+0x21) SECOND_LEG days apart
- * (+0x22), the first leg with no extra time (+0x0d 0), the second with extra time and penalties (+0x0f 3; the flags
- * of season_cups.c type 'L': away goals count). The draw on the first of the month of the first leg. */
+ * (+0x22), the first leg with no extra time, the second with extra time and penalties (+0x0f 3; the flags of
+ * season_cups.c type 'L': away goals count). +0x0d holds only the draw bit 0x200: Cup::draw_round 0x51c410 then
+ * neither sorts (0x400, 0x51c4cd), nor draws by nation (+0x0b bit 4, 0x51c5d4), nor shuffles (0x51e220, skipped at
+ * 0x51c5e4..0x51c5ec), so the tie keeps the list's order, first team at home (as season_cup_groups.c for its first
+ * round). Cup::set_home_teams_for_round 0x51e870 swaps only for +0x0b bits 1 and 8 or a host nation (+0x24, 0x51eac3),
+ * none of which this cup has (+0x24 is -1 in a 2004 run). The draw on the first of the month of the first leg. */
 static uint32_t final_round(int year, SeasonNlDate leg)
 {
     uint32_t rec = game_malloc(CUP_ROUND_SIZE);
@@ -692,7 +696,7 @@ static uint32_t final_round(int year, SeasonNlDate leg)
     wr16(g_mem, rec + 7u, 0x96);
     wr16(g_mem, rec + 9u, 0);
     wr16(g_mem, rec + 0xbu, 0);
-    wr16(g_mem, rec + 0xdu, 0);
+    wr16(g_mem, rec + 0xdu, 0x200);
     wr16(g_mem, rec + 0xfu, 3);
     wr8(g_mem, rec + 0x17u, 0xa);
     wr16(g_mem, rec + 0x18u, 2);
@@ -722,8 +726,8 @@ void o_007999d0(void);
  * and at stage 1 calls create_knockout_stage 0x799c50, which takes rows 0 and 1 of both groups. The edition of the
  * group of 6 has no group B (+0x30 stays -1, set at 0x799947; create_group_stage 0x799c1d sets it) and one stage: the
  * final of the group's first two, made here as the original makes its knockout (0x799cb2..0x799e15): a Cup_Stage of 2
- * teams (the group's second first in the list, as the real first leg was at the runner-up's home; whether
- * Cup::set_up_round keeps that order for the home side was not traced), its round record, Cup::set_up_round, in
+ * teams (the group's second first in the list, so at home in the first leg, as the real first leg was in Honiara,
+ * the runner-up's home; see final_round), its round record, Cup::set_up_round, in
  * stage[0], and +0x30 0. The stage number (Cup_Stage +0x44, 0x522e5b) is 0, its index: a fixture keeps it (+0x42), and
  * League::add_result takes the stage of a result from the array by it, with an error box when it is above +0x30
  * (0x685dd0..0x685e5e). The class's callbacks read a stage number below 1 as a group (set_club_progress 0x79a49e,
@@ -740,11 +744,14 @@ RT_WRAP(007999d0, ofc_advance)
     int year = year_of(self);
     SeasonNlDate leg = first_leg;
     if (abs_of(leg, year) < today_abs() + LEAD_DAYS) leg = date_of(today_abs() + LEAD_DAYS, year);
-    uint32_t teams = game_malloc(8), rec = 0, cup = 0;
+    uint32_t teams = game_malloc(8), rec = 0, cup = 0, second = 0, first = 0;
     if (rt_unwinding) return;
     if (teams) {
-        wr32(g_mem, teams, table_club(self, 1));
-        if (!rt_unwinding) wr32(g_mem, teams + 4u, table_club(self, 0));
+        second = table_club(self, 1);
+        if (!rt_unwinding) first = table_club(self, 0);
+        if (rt_unwinding) return;
+        wr32(g_mem, teams, second);
+        wr32(g_mem, teams + 4u, first);
         if (!rt_unwinding) rec = final_round(year, leg);
     }
     if (rt_unwinding) return;
@@ -776,8 +783,9 @@ RT_WRAP(007999d0, ofc_advance)
     if (rt_unwinding) return;
     wr32(g_mem, self + CURRENT_STAGE, 0);
     if (logging())
-        fprintf(stderr, "recomp: season intl: oceania_nations %d: final of two legs from %d/%d/%d\n", year, leg.day,
-                leg.month, year + leg.year);
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: final of two legs from %d/%d/%d, club %d (second, "
+                        "home first) v club %d (first)\n", year, leg.day, leg.month, year + leg.year,
+                readable(second) ? (int)rd32(g_mem, second) : -1, readable(first) ? (int)rd32(g_mem, first) : -1);
     rt_ret_cdecl(0);
 }
 
