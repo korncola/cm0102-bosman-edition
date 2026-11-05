@@ -319,6 +319,11 @@ void rt_ire_super_forget(void);
 /* AusNsl::start_new_season frees the stages and sets the stage index to -1 (open item 128; win/original_faults.c,
  * tools/recomp/original_faults.py at 0x411e1c). */
 void rt_aus_nsl_new_season(uint32_t self);
+/* The holiday settings "Reject all offers" and "below asking price" (open item 132; win/original_faults.c,
+ * tools/recomp/original_faults.py at 0x84b02f, 0x84af77 and 0x8c8264). */
+uint32_t rt_holiday_predict(uint32_t club, uint32_t contract, uint32_t player);
+uint32_t rt_holiday_refuses_loan(uint32_t club);
+uint32_t rt_holiday_below_asking(uint32_t option, uint32_t slot);
 /* Money above 2,147,483,647 (0.6.2 slice 11, Q24; win/original_faults.c, tools/recomp/original_faults.py). */
 uint32_t rt_budget_hi(uint32_t lo, uint32_t hi);          /* get_transfer_budget: the high word in place of cdq */
 uint32_t rt_budget_floor(uint32_t finance, uint32_t less); /* the balance less 10m or 15m (0x599135, 0x599185) */
