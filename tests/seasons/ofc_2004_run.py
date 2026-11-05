@@ -17,7 +17,8 @@ moves on to the next edition of the table (2008: one group of 4, home and away, 
 
 The checks: each leg ends with code 0 and shows no message box; the 2004 edition's matches from May to June are one
 round robin of 6 teams (15 matches, each pair once) from 29 May to 6 June 2004; its later matches are two, from 9 and
-12 October 2004, between two teams of the group, home and away; the history row of 2004 has those two as winner and
+12 October 2004, between two teams of the group, home and away, the group's second at home in the first (the log
+line of the final, RECOMP_SEASON_INTL_LOG, names the second and the first); the history row of 2004 has those two as winner and
 runner-up; no match of the class is played from November 2004 to September 2007 (the table holds no edition of
 2006); the 2008 edition has 4 teams and 12 matches and a history row. A day may be up to LATE days later than the real one, for a match that a clash moves (add_fixture
 0x5aa680), as tests/seasons/ofc_2008_run.py allows.
@@ -25,6 +26,7 @@ runner-up; no match of the class is played from November 2004 to September 2007 
 import collections
 import datetime
 import os
+import re
 import sys
 import tempfile
 
@@ -40,6 +42,7 @@ END = datetime.date(2008, 12, 31)
 GROUP = (datetime.date(2004, 5, 29), datetime.date(2004, 6, 6))
 LEGS = (datetime.date(2004, 10, 9), datetime.date(2004, 10, 12))
 LATE = 21
+FINAL = re.compile(r"oceania_nations 2004: final of two legs .*club (-?\d+) \(second, home first\) v club (-?\d+)")
 
 
 def late(day, real):
@@ -64,7 +67,7 @@ def edition_2004(save):
     return group, final, row, name, between, later, row08
 
 
-def check(group, final, row, name, between, later, row08):
+def check(group, final, row, name, between, later, row08, finalists):
     fails = []
     teams = {t for _, h, a in group for t in (h, a)}
     pairs = collections.Counter(frozenset((h, a)) for _, h, a in group)
@@ -85,6 +88,8 @@ def check(group, final, row, name, between, later, row08):
         (_, h1, a1), (_, h2, a2) = final
         if (h1, a1) != (a2, h2) or h1 not in teams or a1 not in teams:
             fails.append(f"the two legs are not home and away between two teams of the group: {legs}")
+        elif finalists != (h1, a1):
+            fails.append(f"the first leg is not at the group's second: log {finalists}, legs {legs}")
         elif not row or {row[0], row[1]} != {h1, a1}:
             fails.append(f"the history row {row} does not name the finalists as winner and runner-up")
     teams08 = {t for _, h, a in later for t in (h, a)}
@@ -112,6 +117,14 @@ def main(argv):
     work = os.path.join(keep, "leg")
     code, took, box = soak_run.new_game_leg(o, work, (PAUSE - START).days)
     fails = []
+    finalists = None
+    try:
+        with open(os.path.join(work, "stderr.txt"), errors="replace") as f:
+            m = next((m for m in map(FINAL.search, f) if m), None)
+        finalists = m and (int(m.group(1)), int(m.group(2)))
+    except OSError:
+        pass
+    print(f"      log: final {finalists} (second, first)")
     if code != 0 or box:
         fails.append(f"the run ended with code {code}{', box ' + box if box else ''} ({work})")
     save = os.path.join(work, "user", "samesave.sav")
@@ -126,7 +139,7 @@ def main(argv):
         fails.append("no save after the days")
     else:
         print(f"      run {took:.0f} s")
-        fails += check(*edition_2004(save))
+        fails += check(*edition_2004(save), finalists)
     for f in fails:
         print("FAIL ", f)
     print("PASS" if not fails else f"FAILED: {len(fails)}")
