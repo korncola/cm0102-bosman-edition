@@ -50,6 +50,33 @@ int season_fifa_meets(int y, int m, int d)
     return next - prev <= 6;
 }
 
+/* The first leg on weekday 3 (Thursday) nearest day d of month m (1 to 12) of season, a week later while a leg
+ * meets a FIFA day (at most 4 weeks). */
+static void two_legs(int season, int m0, int d0, int *y, int *m, int *d)
+{
+    int mm;
+    season_weekday_date(season, m0 - 1, d0, 3, y, &mm, d);
+    *m = mm + 1;
+    long z = season_abs_day(*y, *m, *d);
+    for (int week = 0; week < 4; week++) {
+        int y2, m2, d2;
+        season_from_abs_day(z + 14, &y2, &m2, &d2);
+        if (!season_fifa_meets(*y, *m, *d) && !season_fifa_meets(y2, m2, d2)) return;
+        z += 7;
+        season_from_abs_day(z, y, m, d);
+    }
+}
+
+void season_uefa_cup_q2_day(int season, int *y, int *m, int *d) { two_legs(season, 8, 10, y, m, d); }
+
+void season_uefa_cup_r1_day(int season, int *y, int *m, int *d) { two_legs(season, 9, 14, y, m, d); }
+
+void season_uefa_cup_r1_draw(int season, int *y, int *m, int *d)
+{
+    season_uefa_cup_q2_day(season, y, m, d);
+    season_from_abs_day(season_abs_day(*y, *m, *d) + 15, y, m, d);
+}
+
 /* ---- The league phase (2024/25 on) ----
  *
  * The real match days of each published season, and for a later season those of the last published one on the

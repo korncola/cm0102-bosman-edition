@@ -338,9 +338,12 @@ static uint32_t qual_table(uint32_t uc, int q1, int q2, int r1)
     set_round(t, 0, 250, q1, q1, 0, 0, 0);
     set_round(t + ROUND_SIZE, 1, 260, q2, q2 - q1 / 2, q1, 0, 0);
     set_round(t + 2 * ROUND_SIZE, 2, 10, r1, r1 - q2 / 2, q1 + q2 - q1 / 2, 0x400, 0);
-    /* Q1 on 13 July, Q2 on the original's qualifying round dates (draw 28 July, 10 August, 0x902720..0x902740),
-     * R1 on its first round dates (14 September); each second leg 14 days later (+0x22). */
-    set_date(t, 0, 1, 6, 0, 13, 6, 0, 0, (uint32_t)(int16_t)rd16(g_mem, uc + 0x40));
+    /* Q1 on 13 July. Q2 drawn on the original's 28 July, R1 on the original's first round: their first legs on the
+     * Thursday nearest the original's day whose legs meet no FIFA day, the R1 draw the day after Q2
+     * (season_uefa_cup_qual_dates); each second leg 14 days later (+0x22). */
+    int year = (int16_t)rd16(g_mem, uc + 0x40);
+    set_date(t, 0, 1, 6, 0, 13, 6, 0, 0, (uint32_t)year);
+    if (!rt_unwinding) season_uefa_cup_qual_dates(t + ROUND_SIZE, t + 2 * ROUND_SIZE, year);
     return rt_unwinding ? 0 : t;
 }
 
