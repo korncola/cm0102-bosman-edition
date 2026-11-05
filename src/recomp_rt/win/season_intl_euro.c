@@ -717,7 +717,8 @@ void o_0076c120(void);
 
 /* NationalTeams::select_squad, thiscall (nation, flag, date, fixture, flag), ret 0x14 (from 0x76bc23 with the
  * home team's nation; 0x76c266 inside). Test log only (RECOMP_SEASON_INTL_LOG=1): with no nation it logs the
- * fixture and the clubs of each Euro group table, then calls the original. */
+ * fixture and the clubs of each Euro group table, then calls the original. After the original, the test log of the
+ * senior picks (squad_log_pick, RECOMP_SQUAD_LOG=1, open item 143) and the under-21 rule O304. */
 void season_national_after_pick(uint32_t nation, int slot);     /* season_national_fill.c (rule O304) */
 void squad_log_pick(uint32_t nation, int slot, uint32_t fixture, uint32_t teams); /* squad_log.c, item 143 */
 

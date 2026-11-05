@@ -1,4 +1,4 @@
-/* Test log of the national squad picks (open item 143). RECOMP_SQUAD_LOG=1 logs, and changes no game state.
+/* Test log of the national squad picks (open item 143). RECOMP_SQUAD_LOG=1 logs and only reads memory.
  *
  * After each senior pick of NationalTeams::select_squad 0x76c120 (slot 0), one line: the nation, the fixture's key
  * (fixture +0: the friendly 0x9cf668, 'B' 0x9cf794, Under 21 0x9cf798, else another record), the reputation of
@@ -9,7 +9,10 @@
  * Under 21 every one (0x76ccc3), else a division (club +0x57) reputation +0x69 x 0.7 over the competition's
  * (0x76cc61..0x76cc9a, 0x968e40). The count is the original's rule: with the fix of group callups
  * (original_faults.py) the senior pick takes them all the same. RECOMP_SQUAD_LOG_NATION=<name> also logs, for that
- * nation, the gate that stops each player with a club who is not in the squad (gate_of). */
+ * nation, the gate that stops each player with a club who is not in the squad (gate_of). It calls five queries of the
+ * original that the pick calls too (Injury::get_player_injury_status 0x62c400, player_regen_get_retirement_status
+ * 0x7a7eb0, staff_dislikes_club 0x547d30, CONTRACT_MANAGER::get_contract 0x4cf5a0, Discipline::is_player_banned
+ * 0x55d270). That they change nothing is not proven, so a run with it is a diagnosis, never a same-save run. */
 #include "win.h"
 
 #include <stdio.h>
@@ -73,22 +76,29 @@ static uint32_t call(uint32_t fn, uint32_t self, int n, uint32_t *a)
 static const char *gate_of(uint32_t sp, uint32_t side, uint32_t teams, uint32_t comp)
 {
     uint32_t a[4] = {sp, 0, 0, 0};
-    if (call(0x62c400u, rd32(g_mem, 0xb63d28u), 1, a) & 0xffu) return "injured";
+    uint32_t r = call(0x62c400u, rd32(g_mem, 0xb63d28u), 1, a);
     if (rt_unwinding) return "-";
+    if (r & 0xffu) return "injured";
     uint32_t m = rd32(g_mem, 0xb7434cu);
-    if (m && (call(0x7a7eb0u, m, 1, a) & 0xffu)) return "0x7a7eb0";
+    r = m ? call(0x7a7eb0u, m, 1, a) : 0;
+    if (rt_unwinding) return "-";
+    if (r & 0xffu) return "0x7a7eb0";
     a[1] = side;
-    if (call(0x547d30u, 0, 2, a)) return "0x547d30";
+    r = call(0x547d30u, 0, 2, a);
+    if (rt_unwinding) return "-";
+    if (r) return "0x547d30";
     uint32_t other = rd32(g_mem, sp + 0x24);
     if (other && other != side) return "other squad";
     uint32_t table = readable(teams) ? rd32(g_mem, teams + 0x24) : 0, club = rd32(g_mem, sp + 0x39);
     if (readable(table) && g_mem[table + rd32(g_mem, club)]) {
         uint32_t c = call(0x4cf5a0u, rd32(g_mem, 0xae1050u), 1, a);
+        if (rt_unwinding) return "-";
         if (readable(c) && (int8_t)g_mem[c + 0x3d] > -10) return "club table";
     }
     a[1] = comp, a[2] = 1, a[3] = 0;
-    if (readable(comp) && call(0x55d270u, rd32(g_mem, 0xae28f0u), 4, a)) return "0x55d270";
-    return "none";
+    r = readable(comp) ? call(0x55d270u, rd32(g_mem, 0xae28f0u), 4, a) : 0;
+    if (rt_unwinding) return "-";
+    return r ? "0x55d270" : "none";
 }
 
 static int in_side(uint32_t side, uint32_t sp)

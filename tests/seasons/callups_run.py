@@ -14,8 +14,9 @@ the friendlies of 30.9.01 come on 15.9.01 (day 258), so 66 days hold them. The c
     - the senior picks of Mali, Senegal, Guinea, Cape Verde Islands and Guinea-Bissau came. The original's rule
       refuses most of their players (Mali 35 of 38, Senegal 85 of 103), and their squads held 1, 7, 4, 1 and 1
       players (on the fix 12, 26, 24, 17 and 14)
-    - each of them picked at least MIN_SQUAD (11, a side that can play with no virtual player), and so did every
-      senior pick of a nation with 26 or more players with a club
+    - each of them picked at least MIN_SQUAD (11, a side that can play with no virtual player). The other senior
+      picks below MIN_SQUAD of a nation with 26 or more players with a club are listed, not failed: other gates of
+      the pick can cause them
 The pick keeps its other gates. With the fix, Mali's 26 players with a club that it does not pick are 12 regular
 players of clubs with a competitive match on the friendly's date (the club table of
 NationalTeams::mark_clubs_with_fixtures 0x7775c0 and the playing-time mood, contract +0x3d, over -10: 0x76cd44..
@@ -67,7 +68,10 @@ def check(log):
             seen.add(nation)
             print(f"{nation} {day}/{year} {kind} v {opp}: {picked} picked of {players} with a club, {away} abroad, "
                   f"{refused} that the original's rule refuses")
-        if (nation in NATIONS or players >= 26) and picked < MIN_SQUAD:
+        if players >= 26 and picked < MIN_SQUAD and nation not in NATIONS:
+            print(f"note: {nation} on day {day}/{year} ({kind} v {opp}) picked {picked} of {players} players with a "
+                  f"club ({away} abroad, {refused} refused by the original's rule)")
+        if nation in NATIONS and picked < MIN_SQUAD:
             squad.append(f"{nation} on day {day}/{year} ({kind} v {opp}) picked {picked} of {players} players with a "
                          f"club ({away} abroad, {refused} refused by the original's rule)")
     for nation in NATIONS:

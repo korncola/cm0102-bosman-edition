@@ -140,12 +140,18 @@ and 0x76cc9f..0x76ccbd) it applies a release rule:
   is over the competition's (0x76cc61..0x76cc9a)
 A nation with its players abroad and weak opponents then picks almost nobody. In a game with every league (14.7.01,
 the picks for 30.9.01) Mali refused 35 of 38 players and picked 1, Senegal 85 of 103 (7 picked), Guinea 45 of 49 (4),
-Cape Verde Islands 27 of 31 (1). The next fixture within 28 days of a pick keeps that squad (0x76bb94..0x76bc09), so
-a short squad plays on, and the top-up fills it with virtual players. Real clubs must release their players to the
-senior national team (FIFA Regulations on the Status and Transfer of Players, annex 1). So for the senior slot (0,
-the byte argument at [esp + 0x8e4], 0x76cd9c) the refusals at 0x76cc9a, 0x76cd0b and 0x76cd3e now let the candidate
-go on, as a player at a club of his own continent does (rt_callup_released). 'B' and under-21 picks (and the Olympic
-squad in slot 2) keep the original's rule.
+Cape Verde Islands 27 of 31 (1). A pick sets the window end (record +0x3a) to its fixture's date. The next fixture
+is checked 14 days before it, and it keeps the squad when that check comes at most 14 days after the window end
+(0x54cdb0 at 0x76bb94, cmp 0xe at 0x76bb9e; the window moves on at 0x76bbe6..0x76bc09). So a fixture at most 28 days
+after the last one keeps a short squad, and the top-up fills it with virtual players. Real clubs must release their
+players to the senior national team for the matches on the dates of the international match calendar (FIFA
+Regulations on the Status and Transfer of Players, annex 1). The game's rule has no such dates, so for the senior
+slot (0, the byte argument at [esp + 0x8e4], 0x76cd9c) the refusals at 0x76cc9a, 0x76cd0b and 0x76cd3e now let the
+candidate go on, as a player at a club of his own continent does (rt_callup_released). This holds for the human
+manager's pick too (0x784630, forced 1). The pick keeps its other gates, among them a regular player of a club with a
+competitive match on the date (NationalTeams::mark_clubs_with_fixtures 0x7775c0, the playing-time mood contract
++0x3d over -10, 0x76cd44..0x76cd73). 'B' and under-21 picks (and the Olympic squad in slot 2) keep the original's
+rule.
 """
 
 # address: (the instruction in the original, C code)

@@ -211,7 +211,7 @@ def with_set_keep(env):
     """A run's environment with RECOMP_ORIGINAL_FAULTS of the whole set (keep or keep:<groups>) added to the run's own
     keep list, so that a set with keep:callups keeps that group in every run, original-faults-keep too."""
     outer, inner = os.environ.get("RECOMP_ORIGINAL_FAULTS", ""), env.get("RECOMP_ORIGINAL_FAULTS")
-    if inner is None or not outer.startswith("keep"):
+    if inner is None or not (outer == "keep" or outer.startswith("keep:")):
         return env
     if "keep" in (outer, inner):
         return dict(env, RECOMP_ORIGINAL_FAULTS="keep")

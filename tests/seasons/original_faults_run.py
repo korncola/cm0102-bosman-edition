@@ -27,9 +27,8 @@ both saves (nat_club.dat: the first nation-count rows; the manager at club +0xcf
 --keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:managers (the original's rule for this group only; money, age,
 olympics, ire_super, nsl, holiday and callups keep theirs: keep:money, keep:age, keep:olympics, keep:ire_super,
 keep:nsl, keep:holiday, keep:callups). The checks must then fail: this is the proof that they find the fault (the same
-holds for money). The
-suggested save: the 2011 leg of the 0.6.0 soak seed 6 (run-logs/release-test-0.6.0/long-games/soak-seed6/leg09/user/
-samesave.sav), where 161 of 213 teams have no manager.
+holds for money). The suggested save: the 2011 leg of the 0.6.0 soak seed 6
+(run-logs/release-test-0.6.0/long-games/soak-seed6/leg09/user/samesave.sav), where 161 of 213 teams have no manager.
 The group nsl (open item 128) has its own test: tests/seasons/aus_nsl_stages_run.py. The group holiday (open item 132)
 has its own test: tests/seasons/holiday_offers_run.py. The group callups (open item 143) has its own test:
 tests/seasons/callups_run.py.
