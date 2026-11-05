@@ -62,10 +62,11 @@
  * club named by the name without that last word, or by the table. No fuzzy match is made. Not in the table:
  * Atlantis Akatemia and KPV juniorit, the first teams of Atlantis FC and KPV in the old data (rules research
  * nor-fin.md); FC Jazz-juniorit, the youth club of FC Jazz that took the name FC Jazz in 2010 (en.wikipedia.org/
- * wiki/FC_Jazz); Oulun Palloseura Juniorit, Vaasan Palloseura-Juniorit and the Kerho 07 of the 2017 to 2021 data, for
- * which no source says whether they are a reserve or a farm club (open item 118). A second team with no first team
- * found keeps only the bar from the Premier Division and its play-off. In the 50 test databases every linked second
- * team of the First and Second Divisions finds its first team. The entries for SJK Seinäjoki II and III are needed
+ * wiki/FC_Jazz; FC Jazz-juniorit ry runs the first team, fi.wikipedia.org/wiki/FC_Jazz); Oulun Palloseura Juniorit
+ * and the Kerho 07 of the 2017 to 2021 data, for which no source says whether they are a reserve or a farm club
+ * (open item 118). A second team with no first team found keeps only the bar from the Premier Division and its
+ * play-off. In the 50 test databases every linked second team of the First and Second Divisions finds its first
+ * team. The entries for SJK Seinäjoki II and III are needed
  * where the data names the first team Seinäjoen Jalkapallokerho.
  *
  * Test switches (tests/seasons/fin_second_run.py): RECOMP_FIN_SECOND=off plays as the original; RECOMP_FIN_SECOND_LOG
@@ -244,16 +245,23 @@ static int finnish(uint32_t club)
 /* Second teams that the name rule does not read, and their first teams (no fuzzy match). Names in latin-1, as the
  * data. Sources, read on 3 November 2026: HJK's reserve is Klubi 04 (fi.wikipedia.org/wiki/Klubi_04); SJK Akatemia,
  * Kerho 07 in 2013 to 2015, is SJK's reserve (en.wikipedia.org/wiki/SJK_Akatemia); FC Lahti's reserve side is its
- * Akatemia (en.wikipedia.org/wiki/FC_Lahti). */
+ * Akatemia (en.wikipedia.org/wiki/FC_Lahti). Read on 4 November 2026: Vaasan Palloseura-Juniorit (Second Division
+ * West in the 2015 to 2017 data) is the men's side of VPS Juniorit ry, VPS J Akatemia, which played the Kakkonen
+ * until 2019 and is "Vaasan Palloseuran farmijoukkue", VPS's farm team (fi.wikipedia.org/wiki/VPS_Akatemia,
+ * fi.wikipedia.org/wiki/VPS_Juniorit). Palloliitto rules 2024, section 6.12, bar a farm club of a top-tier club
+ * from the top tier and its play-off, as a reserve. */
 static const char *const HJK[] = {"HJK Helsinki", "Helsingin Jalkapalloklubi", "Helsingen Jalkapalloklubi", "HJK", 0};
 static const char *const SJK[] = {"SJK Sein\xe4joki", "Sein\xe4joen Jalkapallokerho", "SJK", 0};
 static const char *const LAHTI[] = {"FC Lahti", 0};
+static const char *const VPS[] = {"Vaasan Palloseura", "VPS Vaasa", "VPS", 0};
 static const struct { const char *name; const char *const *first; } LINKS[] = {
     {"HJK Reserves", HJK}, {"Klubi 04", HJK}, {"Klubi 04 Helsinki", HJK}, {"Klubi-04", HJK},
     {"Klubi-04 Helsinki", HJK}, {"HJK Klubi 04 Helsinki", HJK}, {"Talenttiklubi Klubi-04", HJK},
     {"SJK Sein\xe4joki II", SJK}, {"SJK Sein\xe4joki III", SJK}, {"SJK Akatemia", SJK}, {"SJK Kerho 07", SJK},
     {"FC Kerho 07", SJK},
     {"FC Lahti Akatemia", LAHTI}, {"Lahti Akatemia", LAHTI},
+    {"Vaasan Palloseura-Juniorit", VPS}, {"VPS-Juniorit", VPS}, {"VPS-J", VPS}, {"VPS J Akatemia", VPS},
+    {"VPS Akatemia", VPS},
 };
 
 /* The last word of a name, lower case, and the length of the name before it (0 when one word). */

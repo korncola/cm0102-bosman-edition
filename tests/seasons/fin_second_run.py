@@ -37,6 +37,8 @@ The runs, each with what it must also show:
           again, its place taken by a club of the groups
     names the September 2005 database, 2005 start, to 1 June 2006: HJK Reserves is read as HJK Helsinki's second
           team, Atlantis Akatemia and KPV juniorit as first teams
+    vps   the April 2016 database, 2016 start, to 1 June 2017: Vaasan Palloseura-Juniorit is read as the farm side
+          (second team) of Vaasan Palloseura, FC Jazz Pori as a first team, and the rule's state holds
 --fix-off adds RECOMP_FIN_SECOND=off to every run, as a build without the fix: on, drop, late and hold must then FAIL
 (the test first, item 118). All runs end with code 0 and show no message box of the game.
 """
@@ -238,8 +240,20 @@ def run_names(program, game, work):
     return fails
 
 
+def run_vps(program, game, work):
+    """April 2016: Vaasan Palloseura-Juniorit (Second Division West) is VPS's farm side."""
+    fails, log = jump("vps", program, game, work, {}, 2016, 2016, "April 2016")
+    more, _ = common("vps", log, 1)
+    fails += more
+    want = {"Vaasan Palloseura-Juniorit": "second team of Vaasan Palloseura", "FC Jazz Pori": "first team"}
+    for club, what in want.items():
+        if f"recomp: fin second: name: {club}: {what}" not in log:
+            fails.append(f"vps: {club} is not read as: {what}")
+    return fails
+
+
 RUNS = {"on": run_on, "off": run_off, "drop": run_drop, "old": run_old, "late": run_late, "hold": run_hold,
-        "names": run_names}
+        "names": run_names, "vps": run_vps}
 
 
 def main(argv):
