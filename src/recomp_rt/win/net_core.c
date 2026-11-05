@@ -472,7 +472,8 @@ static void control_tick(void)
     uint64_t now = hn_ms();
     for (int i = 0; i < MAX_SOCKS; i++) {
         Sock *k = &socks[i];
-        if (!k->handle || !k->control || !k->connected || k->dead || k->kicked) continue;
+        /* Not after the game read the end (told): a write into a closed connection gets a reset (open item 130). */
+        if (!k->handle || !k->control || !k->connected || k->dead || k->kicked || k->told) continue;
         send_waiting(k);
         if (!k->accepted || now < k->ping_at) continue;
         if (k->ping_sent && now - k->ping_sent < NC_PING_LOST_MS) continue;     /* its PONG is still on the way */
