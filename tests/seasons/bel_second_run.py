@@ -157,6 +157,8 @@ def run_on(program, game, work):
             fails.append(f"on: no promotion of the Third Division dropped for the shield: {shield[0]}")
     if any("goes down in its place" in l and "no club goes down in its place" not in l for l in lines):
         fails.append("on: a club went down in the U23 side's place in 2024/25")
+    if "plays the relegation play-off of level 3" not in log:
+        fails.append("on: no barred U23 side played the Third Division's relegation play-off (the test sees no case)")
     # 2025/26: the shield was abolished (May 2026), so KRC Genk B at the bottom goes down.
     if len(seen) < 2 or seen[1][1] is None:
         return fails + [f"on: {len(seen)} Belgian season changes seen, want 2"]
