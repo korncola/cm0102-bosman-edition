@@ -531,7 +531,7 @@ def club_differences(seasons, comps, clubs, data_dir, rows=()):
     for n in held:
         plain_to[make_clubs.plain_name(n)].add(n)
     lists = collections.OrderedDict()
-    # Slice 15b: the new club records of the start season. Its own name: merge c6db92c0 gave it the name of the
+    # Slice 15b: the new club records of the start season. Its own name: cf6e4633 gave it the name of the
     # division records above, so no division had a record and no club_list line came (0.6.2 open item 142).
     new_records = club_record_names(season)
     for s, division, club_id, club, _ in make_clubs.build()[0]:
