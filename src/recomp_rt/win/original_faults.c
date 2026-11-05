@@ -1,7 +1,7 @@
 /* Faults of the original that long games reach (0.6.2 slice 11, tools/recomp/original_faults.py). The fixes act in
  * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS turns them off: "keep" all
  * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age,
- * olympics, ire_super, nsl and holiday. */
+ * olympics, ire_super, nsl, holiday and callups. */
 #include "win.h"
 #include "../rt.h"
 
@@ -12,14 +12,14 @@
 #define CLUB_COUNT 0xae235cu     /* clubs, national teams and under-21 teams */
 #define NATION_COUNT 0xae2350u
 
-enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, NSL, HOLIDAY, GROUPS };
+enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, NSL, HOLIDAY, CALLUPS, GROUPS };
 
 static int fixes_on_group(int group)
 {
     static int on[GROUPS] = {-1};
     if (on[0] < 0) {
         static const char *const names[GROUPS] = {"managers", "money", "age", "olympics", "ire_super", "nsl",
-                                                   "holiday"};
+                                                   "holiday", "callups"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
         if (v && strcmp(v, "keep") && strncmp(v, "keep:", 5))
             fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS=%s is not keep or keep:<groups>: every fix acts\n", v);
@@ -31,7 +31,7 @@ static int fixes_on_group(int group)
             if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
                 fprintf(stderr,
                         "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics, "
-                        "ire_super, nsl, holiday)\n",
+                        "ire_super, nsl, holiday, callups)\n",
                         (int)n, p);
         }
         for (int g = 0; g < GROUPS; g++) {
@@ -522,4 +522,16 @@ uint32_t rt_holiday_below_asking(uint32_t option, uint32_t slot)
     uint32_t player = rd32(g_mem, STAFF_RECORDS) + rd32(g_mem, offer + 0xcu) * 0x6eu;
     int32_t ask = (int32_t)rd32(g_mem, player + 0x52u), fee = (int32_t)rd32(g_mem, offer + 0x1bu);
     return ask > 0 && fee < ask;
+}
+
+/* Senior call-ups (open item 143, original_faults.py). `NationalTeams::select_squad` 0x76c120 refuses a candidate at a
+ * club on another continent (club +0x53 nation, nation +0x71 continent, 0x76cc3d..0x76cc59 and 0x76cc9f..0x76ccbd):
+ * for a friendly (fixture +0 the key at 0x9cf668) when his club's reputation (+0x80) x 0.8 (0x9689b0) is over the
+ * opponent's (0x76ccdd..0x76cd3e), for another record when his division's reputation (club +0x57, +0x69) x 0.7
+ * (0x968e40) is over the competition's (0x76cc61..0x76cc9a). 1 when the pick is for a senior squad (slot 0, the
+ * byte argument at [esp + 0x8e4], 0x76cd9c) and the fix acts: the candidate then goes on as a player at a club of his
+ * own continent does. 'B' and under-21 picks keep the original's rule. */
+uint32_t rt_callup_released(uint32_t slot)
+{
+    return fixes_on_group(CALLUPS) && (slot & 0xffu) == 0u;
 }
