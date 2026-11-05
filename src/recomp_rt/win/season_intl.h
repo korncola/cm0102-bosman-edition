@@ -267,10 +267,12 @@ int season_intl_ofc_kept(uint32_t team);
  * draw of 8 gets a second kick-off slot on each match day. */
 void season_intl_ofc_template(void (*original)(void));
 /* After the OFC Nations Cup's set_up_rules 0x799690 (the wrap in season_intl.c): the stage count and draw date of the
- * edition of one group, home and away (2008), and the stage count of 2 again after it. */
+ * edition of one group, home and away (2008), the stage count of the group of 6 and its final (2004), and the stage
+ * count of 2 again after them. */
 void season_intl_ofc_rules(uint32_t self);
 /* Slot +0x30 0x595160 of the OFC Nations Cup's edition of one group: League::record_season_honours 0x684640 in place
- * of the knockout's, then the return. 1 when it ran (season_cup_groups.c). */
+ * of the knockout's; of the group of 6: the final's in stage[0]; then the return. 1 when it ran
+ * (season_cup_groups.c). */
 int season_intl_ofc_honours(uint32_t self);
 
 /* 1 while the Oceania section must not advance from its final to the play-off: the cycle's tie has a CONCACAF
