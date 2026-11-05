@@ -54,7 +54,7 @@
 2009	not_held	fifa_confed (FIFA Confederations Cup), row int-world-106: the game holds 2009, the table says not held
 2009	not_held	intertoto_cup (UEFA Intertoto Cup), row uefa-71: the game holds 2009, the table says not held
 2009	not_held	new_conf_cup (Conference League Cup (Setanta Shield)), row eng-351: the game holds 2009, the table says not held
-2009	not_held	oceania_nations (OFC Nations Cup), row int-continental-98: the game holds 2010, the table says not held
+2009	not_held	oceania_nations (OFC Nations Cup), row int-continental-98: the game holds 2008, the table says not held
 2009	not_held	olympics (Football at the Summer Olympics), row int-world-107: the game holds 2008, the table says not held
 2009	not_in_game	eng-112 eng_conf 'Conference Premier' (England)
 2009	not_in_game	eng-349 eng_fa_trophy 'FA Trophy' (England)
