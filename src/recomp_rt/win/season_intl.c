@@ -1627,8 +1627,8 @@ static int uefa_members(int season, int news)
     return done;
 }
 
-/* A CONCACAF member that the data holds with no continent (season_intl_concacaf_from: Martinique in the databases
- * from October 2016, open item 141) gets the continent pointer of a North American nation, as a UEFA member gets
+/* A CONCACAF member that the data holds with no continent (season_intl_concacaf_from: the six members that are not
+ * FIFA members, in the databases from October 2016, open item 141) gets the continent pointer of a North American nation, as a UEFA member gets
  * Europe's. It then plays the CONCACAF Nations League and the Gold Cup qualifying (season_nl_nation_can_play,
  * season_gold_cup.c), and its national team gets squad sizes. The FIFA World Cup qualifying is not changed by it:
  * WcConcacafCup::select_entrants 0x916250 takes a nation whose continent is null or North America alike (0x9169bc:

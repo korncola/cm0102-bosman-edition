@@ -16,3 +16,8 @@ confed	2002	09-01	Kazakhstan	UEFA	UEFA member from April 2002 (UEFA Congress, St
 confed	2006	02-01	Australia	AFC	int-world-49, AFC member from 1 January 2006 (season_intl.c AUSTRALIA_TO_ASIA); due from 1 February, as the move waits for the first league table update day from 1 January (intl_entry)
 confed	2016	09-01	Kosovo	UEFA	UEFA Congress of 3 May 2016 (season_intl_uefa_from)
 confed	1991	09-01	Martinique	CONCACAF	CONCACAF associate member from 1991, full member from 2013, not in FIFA (season_intl_concacaf_from, open item 141); the databases from October 2016 hold it with no continent
+confed	1964	09-01	Guadeloupe	CONCACAF	CONCACAF associate member from 1964, full member from 2013, not in FIFA (season_intl_concacaf_from, open item 141)
+confed	2001	09-01	French Guiana	CONCACAF	CONCACAF associate member before 2001, full member from 2013, not in FIFA (season_intl_concacaf_from, open item 141)
+confed	2002	09-01	Saint-Martin	CONCACAF	CONCACAF associate member from 21 April 2002, full member from 2013, not in FIFA (season_intl_concacaf_from, open item 141)
+confed	2002	09-01	Sint Maarten	CONCACAF	CONCACAF associate member from 21 April 2002, full member from 2013, not in FIFA (season_intl_concacaf_from, open item 141)
+confed	2013	09-01	Bonaire	CONCACAF	CONCACAF associate member from April 2013, full member from 10 June 2014, not in FIFA (season_intl_concacaf_from, open item 141)

@@ -600,6 +600,17 @@ int season_intl_concacaf_from(const char *name)
      * in 2019-20, 2022-23 and 2023-24. The databases from October 2016 hold it with no continent (open item 141). */
     if (!name) return 0;
     if (!strcasecmp(name, "Martinique")) return 1991;
+    /* The other CONCACAF members that are not FIFA members (Wikipedia, CONCACAF; read 2026-11-05). The congress of
+     * 19 April 2013 made French Guiana, Guadeloupe, Martinique, Saint-Martin and Sint Maarten full members.
+     * Guadeloupe: associate member from 1964. French Guiana: associate member for more than two decades before
+     * 2013 (CONCACAF), so before the game's first season (the year 2001 is the game's first, not the joining year).
+     * Saint-Martin and Sint Maarten: associate members from 21 April 2002, so from 2002/03. Bonaire: associate member
+     * from April 2013, full member from 10 June 2014, so from 2013/14. The databases from October 2016 hold all five
+     * with no continent. */
+    if (!strcasecmp(name, "Guadeloupe")) return 1964;
+    if (!strcasecmp(name, "French Guiana")) return 2001;
+    if (!strcasecmp(name, "Saint-Martin") || !strcasecmp(name, "Sint Maarten")) return 2002;
+    if (!strcasecmp(name, "Bonaire")) return 2013;
     return 0;
 }
 

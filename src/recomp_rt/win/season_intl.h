@@ -246,7 +246,8 @@ int season_intl_later_held(int i, int (*held)(const char *name, void *ctx), void
 int season_intl_uefa_from(const char *name);
 
 /* The season from which a nation is a CONCACAF member, for a nation that a database holds with no continent though
- * it plays CONCACAF's own competitions (Martinique, not a FIFA member: the databases from October 2016), or 0. */
+ * it plays CONCACAF's own competitions (the members that are not FIFA members: Martinique, Guadeloupe, French Guiana,
+ * Saint-Martin, Sint Maarten and Bonaire in the databases from October 2016), or 0. */
 int season_intl_concacaf_from(const char *name);
 
 /* The real draw of a finals edition whose qualifying began before the game (O259 A9): the names of its

@@ -118,6 +118,7 @@ CONCACAF = {"2018": ["CONCACAF-2019-20"], "2020": ["CONCACAF-2022-23"],
             "off": ["CONCACAF-2019-20"], "2010": []}
 SAVE_AFTER = 430
 MARTINIQUE_A = {"2018", "2022"}     # runs whose first CONCACAF draw has Martinique in League A (open item 141)
+NON_FIFA = ["Martinique", "Guadeloupe", "French Guiana", "Saint-Martin", "Sint Maarten", "Bonaire"]
 # Log lines each run must hold: the play-off paths (season_nl_euro.c, season_nl_wc.c).
 LINES = {"2018": ["euro 2020 qualifying groups from 21 March 2019", "euro 2020 path A (", "euro 2020 path D (",
                   "euro 2020 seeding on day", "season nl: CONCACAF-2019-20 finals:", "season gold cup 2019: 16 teams:",
@@ -243,11 +244,13 @@ def check(name, work):
                         if want and want[0] != league:
                             fails.append(f"{name}: {ed}: {nation} in league {league}, the real league is {want[0]}")
     league_a = {ed: {n for g in leagues.get("A", []) for n in g} for ed, leagues in seen + seen_c}
-    # Open item 141: Martinique plays in CONCACAF (season_intl_concacaf_from), though the databases from October 2016
-    # give it no continent. Its first draw puts it in League A, as in 2019-20 and 2023-24.
+    # Open item 141: the CONCACAF members that are not FIFA members play in CONCACAF (season_intl_concacaf_from),
+    # though the databases from October 2016 give them no continent. Martinique's first draw puts it in League A, as
+    # in 2019-20 and 2023-24.
     if name in MARTINIQUE_A:
-        if any("Martinique has no continent" in x for x in log):
-            fails.append(f"{name}: Martinique is left out (no continent)")
+        for nation in NON_FIFA:
+            if any(f"{nation} has no continent" in x for x in log):
+                fails.append(f"{name}: {nation} is left out (no continent)")
         if seen_c and "Martinique" not in league_a.get(seen_c[0][0], set()):
             fails.append(f"{name}: Martinique is not in League A of {seen_c[0][0]}")
     finals = [m.groups() for m in (FINALS.search(x) for x in log) if m]
