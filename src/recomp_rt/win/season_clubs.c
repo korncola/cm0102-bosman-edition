@@ -300,6 +300,26 @@ static const char *class_file(const char *name)
     return NULL;
 }
 
+/* Open item 123: the least count of n or more that the class of a division takes, for a class that counts the
+ * clubs of the data and takes only some counts. The club moves leave the place of a listed club that the data
+ * lacks open in the top two tiers (below), and the count that is left must be one that the class takes:
+ * - IrePrm::create_table 0x63a740 takes 10 (+0x3c 4) or 12 (+0x3c 3) (0x63a79f..0x63a7c6) and returns 0 for any
+ *   other count, so IrePrm::IrePrm 0x639bb0 stops at ire_prm..cpp 82 (push 0x52 at 0x639ca7). In a 2008 start on
+ *   3.9.68 one open place (Bray Wanderers, held as "Bray Wanderers A.F.C.") left the Premier Division with 11;
+ * - IreFirst::create_table 0x635910 takes 9 to 12 (0x63596f..0x63597d). The 3.9.60 and 3.9.65 data hold 9 First
+ *   Division clubs, so one open place left 8;
+ * - NorFirst::create_table 0x7909a0 takes 14 (0x790a6e..0x790a73) and sets 16 for any other count, and returns 1
+ *   only when it adds that many clubs (0x790add..0x790aeb), so 15 or fewer than 14 fail.
+ * Any other division gives n. */
+static int data_class_count(const char *name, int n)
+{
+    if (n <= 0) return n;
+    if (!strncmp(name, "Irish Premier Division", 52) && n < 12) return n <= 10 ? 10 : 12;
+    if (!strncmp(name, "Irish First Division", 52) && n < 9) return 9;
+    if (!strncmp(name, "Norwegian First Division", 52) && n < 16 && n != 14) return n < 14 ? 14 : 16;
+    return n;
+}
+
 /* The count of a class after 2001. */
 static int class_size_of(const char *file)
 {
@@ -657,7 +677,9 @@ static void move_clubs(int season)
          *   every tier. In the top two tiers the place of another missing club stays open for slice 15b when the
          *   class counts the clubs of the data. A class with a fixed count needs every place, so there it takes a
          *   club with no division too, and the log calls it a stand-in. With no such club, a class of CLASS_SIZE
-         *   gives the place to the groups of the other places (open item 105, below);
+         *   gives the place to the groups of the other places (open item 105, below). When the open places would
+         *   leave a count that the class does not take, as many of them as it needs go to those groups too (open
+         *   item 123, data_class_count);
          * - any other place (a club that moved up, or a class that takes more clubs than the real division has,
          *   slice 18): first a club that left a division of a higher rank (step "Leave"; no reserve or B side,
          *   and no move between two divisions of one rank such as German Regional North and South), so the
@@ -685,6 +707,16 @@ static void move_clubs(int season)
         int whole = fixed && class_file(d->name) && season_divisions_class_size(d->name, season) < 0;
         int reserve_places = missing_places < d->missing_reserve ? missing_places : d->missing_reserve;
         int places[2] = {d->tier > 2 || fixed ? missing_places : reserve_places, need - missing_places};
+        /* Open item 123: the places that stay open must leave a count that the class takes. */
+        int open_places = missing_places - places[0];
+        int ends = d->want - open_places;
+        int extra = data_class_count(d->name, ends) - ends;
+        if (extra > open_places) extra = open_places;
+        if (extra > 0) {
+            places[1] += extra;
+            if (log) fprintf(stderr, "recomp: club moves: %s would hold %d clubs, its class takes %d: %d open places "
+                                     "fill\n", d->name, ends, ends + extra, extra);
+        }
         /* The groups of a kind 1 place, in this order: 0 a club that left a higher division, 4 a club that left a
          * lower division with a list, 1 a club with no division, 2 a club of a spare division, 3 a club of a lower
          * division with no list. Groups 4 and 2 take the club with the highest reputation first (see FILL_BY_REP). */
