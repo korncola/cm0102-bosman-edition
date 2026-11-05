@@ -15,8 +15,12 @@
  * docs/research/2026-10-17-competition-history-fill.md).
  *
  * It runs from season_dates.c, right after the shift, and it is undone with the shift when the shift is made
- * again for another year. The researched rows come only for a start year that is the season of the database,
- * not for a Custom database. Nothing runs with RECOMP_SEASON_CODE=off.
+ * again for another year. The researched rows come for a start year that is the season of the database, and for
+ * the official data sets (3.9.60, 3.9.65, 3.9.68) in every start year from 2002 (0.6.2 open item 149): their
+ * history is that of 2001 in every start year (the shift leaves it), so a game from 2004 shows Euro 2004 and the
+ * OFC Nations Cups of 2002 and 2004. Each such row holds from the first start year after its edition ended
+ * (plan-official.tsv). An Update Team database in another season moves its whole history (season_dates.c), so it
+ * gets no rows there; nor does a Custom database. Nothing runs with RECOMP_SEASON_CODE=off.
  *
  * The records that the season code adds (open item 74, 0.6.2). No database holds the history of a competition
  * whose record the season code adds (season_comps.h, `like`), such as the Finalissima. In every season game,
@@ -51,9 +55,12 @@
 
 #include <stdint.h>
 
+/* from, to: the start years for which a row of an official data set holds (plan-official.tsv; to 0xffff: every
+ * later start year). to 0: the row holds for the start year of its entry (plan.tsv, new_comp_rows). */
 typedef struct {
     const char *comp;               /* competition name (Latin-1, as the data writes it) */
     uint16_t label;                 /* label year whose rows the database loses */
+    uint16_t from, to;
 } SeasonHistClear;
 
 typedef struct {
@@ -61,11 +68,14 @@ typedef struct {
     uint16_t label;
     const char *place[4];           /* first, second, third, host: full club or national side names, "" for none */
     const char *nation[4];          /* the nation of each, to choose between clubs of the same name */
+    uint16_t from, to;
 } SeasonHistRow;
 
 typedef struct {
     const char *db;                 /* the neutral name of the database (seasons_db.h, season_dates.h) */
     uint16_t start;                 /* the start year that the rows are for: the season of the database */
+    uint16_t last;                  /* 0: start only; else the entry holds for start to last (an official data set,
+                                     * open item 149), and each row for its own from and to */
     const SeasonHistClear *clears;
     uint32_t n_clears;
     const SeasonHistRow *rows;

@@ -30,8 +30,15 @@ Argentina, as the 2019 US Open Cup winner in place of Atlanta United FC, and the
 field there). Note: a --write run on a database folder that lacks some databases of the first run leaves their
 rows out of plan.tsv; the rows of item 49 were added from this function's output on test-fixtures/databases.
 
+Official data sets (0.6.2 open item 149): 3.9.60, 3.9.65 and 3.9.68 keep the history of 2001 in every start year,
+so the same rules give their plan for every start year from 2002 (3.9.68: 2003, after its 2002/03 tile) to the
+year after the last researched edition ended. plan-official.tsv gives each row once, with the first and the last
+start year for which it holds (last_start empty: every later one). 3.9.60 and 3.9.65 come from the folder of
+databases (official versions, by signature).
+
 --write writes docs/research/history-0.6.0/fill-report.tsv (counts per database) and unmatched.tsv (names that do
-not match in a database). The files hold competition and club names only.
+not match in a database), plan.tsv, plan-official.tsv and no-winner.tsv. The files hold competition and club names
+only.
 """
 import collections
 import difflib
@@ -47,17 +54,29 @@ import history_gaps as hg  # noqa: E402
 from history_gaps import s32  # noqa: E402
 
 HIST = os.path.join(hg.ROOT, "docs", "research", "history-0.6.0")
-NOT_PARTS = {"gaps.tsv", "targets.tsv", "fill-report.tsv", "unmatched.tsv", "matched-by-id.tsv", "aliases.tsv", "plan.tsv", "not-same.tsv", "reconcile.tsv", "skip.tsv", "no-winner.tsv"}
+NOT_PARTS = {"gaps.tsv", "targets.tsv", "fill-report.tsv", "unmatched.tsv", "matched-by-id.tsv", "aliases.tsv", "plan.tsv", "not-same.tsv", "reconcile.tsv", "skip.tsv", "no-winner.tsv", "july-days.tsv", "plan-official.tsv"}
 FIRST_FILL = 2001        # the first label year that the research fills: 2000/01 (Q354), then 2001/02 on
 START_MONTH = 7          # a new game starts in July of its start year
 CALENDAR_LAST_MONTH = 9  # a calendar-year edition of the start year that ends in this month or later counts
 # Editions whose final is in July of a start year before the game's first day, with the day of the final. The
 # research gives the month only. A new game's first news day is 10 July or later (seen: 10.7.2004 in Summer 2004,
-# 15.7.2006 in Summer 2006), so a final on 9 July or earlier is before the start. Only start years 2004 and 2006
-# have such a final (Euro 2004, World Cup 2006); for the other databases nothing changes.
+# 15.7.2006 in Summer 2006), so a final on 9 July or earlier is before the start.
 FIRST_DAY_MIN = 10
 EARLY_JULY = {("European Football Championship", 2004): 4,   # https://en.wikipedia.org/wiki/UEFA_Euro_2004_final
               ("FIFA World Cup", 2006): 9}                    # https://en.wikipedia.org/wiki/2006_FIFA_World_Cup_final
+# The day of the deciding match of every other researched edition that ended in July (0.6.2 open item 149):
+# july-days.tsv, one source each (RSSSF, RSSSF Brasil, Wikipedia). Since every start year of an official data set
+# gets rows, the final of 1 to 9 July of any such edition decides its first start year.
+JULY_DAYS = os.path.join(HIST, "july-days.tsv")
+for _r in hg.read_tsv(JULY_DAYS) if os.path.isfile(JULY_DAYS) else []:
+    _m = re.fullmatch(r"\d{4}-07-(\d{2})", _r["final_date"])
+    if _m:
+        EARLY_JULY.setdefault((_r["competition"], int(_r["label"])), int(_m.group(1)))
+# Finals that the game does not play in the July of its start year: the World Cup and the Euro. The finals code fills
+# an edition only for a start in the finals' season or the one before (real_draws, season_intl_rules.c; Q388), and
+# the 2010 gate saves of 0.6.0 hold no game row of the 2010 World Cup (GAP_FINALS below). So such an edition whose
+# final is in July of the start year counts at that start (0.6.2 open item 149: World Cup 2010 in a 2010 game).
+JULY_FINALS = ("FIFA World Cup", "European Football Championship")
 
 
 def research_rows():
@@ -100,6 +119,8 @@ def kept(r, start):
         return True
     day = EARLY_JULY.get((r.get("competition"), label))
     if (y, m) == (start, START_MONTH) and day is not None and day < FIRST_DAY_MIN:
+        return True
+    if (y, m) == (start, START_MONTH) and r.get("competition") in JULY_FINALS:
         return True
     single = re.fullmatch(r"\s*(\d{4})\s*", r.get("real_season", ""))
     return bool(single) and int(single.group(1)) == label == start == y and m >= CALENDAR_LAST_MONTH
@@ -368,8 +389,96 @@ def gap_rows(name, start, folder, rows, ref, alias, plan, report, shift, nshift)
         print(report[-1], flush=True)
 
 
+def database_plan(name, start, folder, rows, ref, alias, skip, shifts, last, nshifts, official=False):
+    """The plan rows of one database before 2010/11 (or an official data set) at a new game in start year `start`:
+    (plan lines, report line, no-winner lines, unmatched names, names matched by id). official: the data of 2001,
+    whose history the shift of slice 11b leaves in place in every start year (season_dates.c, plan_for_folder)."""
+    plan, nowin, unmatched = [], [], collections.Counter()
+    d = hg.Data(folder)
+    comps = {}                      # the competitions that hold history rows in this database, by name
+    for cid, *_ in d.history():
+        c = d.comp(cid)
+        if comps.get(c[1], cid) != cid:
+            raise SystemExit(f"{name}: two competitions named {c[1]!r} hold history rows")
+        comps[c[1]] = cid
+    sh = {} if official else shifts.get(name, {})
+    cs, ls = int(sh.get("comp_history", 0) or 0), int(sh.get("last_rows", 0) or 0)
+    held = collections.defaultdict(list)
+    ns, own = (0, {}) if official else nshifts.get(name, (cs, {}))
+    for cid, y, a, b, c, h in d.history():
+        if d.comp(cid)[0] == "nation":
+            cs_row = own.get(cid, ns)
+            yy = y + cs_row if cs_row else (y + ls if (y == hg.LAST_ROW and cid in last.get(name, ())) else y)
+        else:
+            yy = y + cs if cs else (y + ls if (y == hg.LAST_ROW and cid in last.get(name, ())) else y)
+        held[(cid, yy)].append((d.club(a), d.club(b)))
+    names = Names(d, ref if name != "3.9.68" else None, alias)
+    n = collections.Counter()
+    covered, keep_db = set(), set()
+    for r in rows:
+        if not (r.get("label", "").isdigit() and FIRST_FILL <= int(r["label"]) <= start):
+            continue
+        n["range"] += 1
+        cid = comps.get(r["competition"])
+        # the nation of the research row must be the nation of the competition in this database ("China"
+        # and "China PR" are one nation under two names in different databases, each with its own rows)
+        if cid is not None and d.comp(cid)[2] != r["nation"]:
+            cid = None
+        if cid is None or (name, r["competition"]) in skip:
+            n["nocomp"] += 1
+            continue
+        covered.add((r["competition"], int(r["label"])))
+        if not kept(r, start):
+            continue
+        n["kept"] += 1
+        places = [resolve(names, r.get(f, ""), r["nation"], r["kind"]) for f in ("first", "second", "third", "host")]
+        for f, v in zip(("first", "second", "third", "host"), places):
+            if v is None:
+                unmatched[(name, r["nation"], r[f])] += 1
+                n["um_first" if f == "first" else "um_other"] += 1
+        if places[0] is None or not places[0][0]:
+            # no winner in this database: the row is not added and the database keeps its rows of that year
+            nowin.append("\t".join([name, r["competition"], r["label"], r.get("part", ""), r["first"], r["nation"]]))
+            keep_db.add((r["competition"], int(r["label"])))
+            continue
+        places = [v or ("", "") for v in places]
+        have = held.get((cid, int(r["label"])))
+        res = "add" if not have else "agree" if (r["first"], r["second"]) in have else "differ"
+        n[res] += 1
+        plan.append("\t".join([ "add", name, str(start), r["competition"], r["label"], r.get("part", ""), res]
+                              + [x for v in places for x in v]))
+    for comp, label in sorted(covered - keep_db):
+        plan.append("\t".join(["clear", name, str(start), comp, str(label)] + [""] * (len(PLAN_COLS) - 5)))
+        n["cleared"] += len(held.get((comps[comp], label), []))
+    n["kept_db"] = sum(len(v) for (cid, y), v in held.items() if FIRST_FILL <= y <= start) - n["cleared"]
+    via = {(name,) + x for x in names.via_id}
+    report_line = ("\t".join(map(str, [name, start, n["range"], n["kept"], n["add"], n["agree"], n["differ"],
+                                      n["nocomp"], n["um_first"], n["um_other"], n["cleared"], n["kept_db"]])))
+    return plan, report_line, nowin, unmatched, via
+
+
+OFFICIAL = ("3.9.60", "3.9.65", "3.9.68")     # the official data sets: history of 2001, not moved by the shift
+FIRST_OFFICIAL_START = 2002
+
+
+def official_databases(base, dbroot):
+    """[(name, folder)] of the official data sets: 3.9.68 from its Data folder, 3.9.60 and 3.9.65 from the folder
+    of databases (official versions, identified by their signatures)."""
+    sigs = {(int(r["club_size"]), r["club_sha256"], int(r["staff_size"]), r["staff_sha256"]): r
+            for r in hg.read_tsv(hg.SIGS)}
+    out = {"3.9.68": base}
+    for sub in sorted(os.listdir(dbroot)):
+        p = os.path.join(dbroot, sub)
+        r = hg.identify(p, sigs) if os.path.isdir(p) else None
+        if r and r["role"] == "official version" and r["database"] in OFFICIAL:
+            out.setdefault(r["database"], p)
+    return [(n, out[n]) for n in OFFICIAL if n in out]
+
+
 PLAN_COLS = ["action", "database", "start_year", "competition", "label", "part", "result", "first", "first_nation",
              "second", "second_nation", "third", "third_nation", "host", "host_nation"]
+# plan-official.tsv: start_year is the first start year of the row, last_start its last (empty: no last one)
+OFFICIAL_COLS = PLAN_COLS + ["last_start"]
 
 
 def main(argv):
@@ -396,76 +505,54 @@ def main(argv):
     nowin = ["database\tcompetition\tlabel\tpart\twinner\tnation"]
     unmatched = collections.Counter()
     for name, start, folder in dbs:
-        d = hg.Data(folder)
-        comps = {}                      # the competitions that hold history rows in this database, by name
-        for cid, *_ in d.history():
-            c = d.comp(cid)
-            if comps.get(c[1], cid) != cid:
-                raise SystemExit(f"{name}: two competitions named {c[1]!r} hold history rows")
-            comps[c[1]] = cid
-        sh = shifts.get(name, {})
-        cs, ls = int(sh.get("comp_history", 0) or 0), int(sh.get("last_rows", 0) or 0)
-        held = collections.defaultdict(list)
-        ns, own = nshifts.get(name, (cs, {}))
-        for cid, y, a, b, c, h in d.history():
-            if d.comp(cid)[0] == "nation":
-                cs_row = own.get(cid, ns)
-                yy = y + cs_row if cs_row else (y + ls if (y == hg.LAST_ROW and cid in last.get(name, ())) else y)
-            else:
-                yy = y + cs if cs else (y + ls if (y == hg.LAST_ROW and cid in last.get(name, ())) else y)
-            held[(cid, yy)].append((d.club(a), d.club(b)))
-        names = Names(d, ref if name != "3.9.68" else None, alias)
-        n = collections.Counter()
-        covered, keep_db = set(), set()
-        for r in rows:
-            if not (r.get("label", "").isdigit() and FIRST_FILL <= int(r["label"]) <= start):
-                continue
-            n["range"] += 1
-            cid = comps.get(r["competition"])
-            # the nation of the research row must be the nation of the competition in this database ("China"
-            # and "China PR" are one nation under two names in different databases, each with its own rows)
-            if cid is not None and d.comp(cid)[2] != r["nation"]:
-                cid = None
-            if cid is None or (name, r["competition"]) in skip:
-                n["nocomp"] += 1
-                continue
-            covered.add((r["competition"], int(r["label"])))
-            if not kept(r, start):
-                continue
-            n["kept"] += 1
-            places = [resolve(names, r.get(f, ""), r["nation"], r["kind"]) for f in ("first", "second", "third", "host")]
-            for f, v in zip(("first", "second", "third", "host"), places):
-                if v is None:
-                    unmatched[(name, r["nation"], r[f])] += 1
-                    n["um_first" if f == "first" else "um_other"] += 1
-            if places[0] is None or not places[0][0]:
-                # no winner in this database: the row is not added and the database keeps its rows of that year
-                nowin.append("\t".join([name, r["competition"], r["label"], r.get("part", ""), r["first"], r["nation"]]))
-                keep_db.add((r["competition"], int(r["label"])))
-                continue
-            places = [v or ("", "") for v in places]
-            have = held.get((cid, int(r["label"])))
-            res = "add" if not have else "agree" if (r["first"], r["second"]) in have else "differ"
-            n[res] += 1
-            plan.append("\t".join([ "add", name, str(start), r["competition"], r["label"], r.get("part", ""), res]
-                                  + [x for v in places for x in v]))
-        for comp, label in sorted(covered - keep_db):
-            plan.append("\t".join(["clear", name, str(start), comp, str(label)] + [""] * (len(PLAN_COLS) - 5)))
-            n["cleared"] += len(held.get((comps[comp], label), []))
-        n["kept_db"] = sum(len(v) for (cid, y), v in held.items() if FIRST_FILL <= y <= start) - n["cleared"]
-        via |= {(name,) + x for x in names.via_id}
-        report.append("\t".join(map(str, [name, start, n["range"], n["kept"], n["add"], n["agree"], n["differ"],
-                                          n["nocomp"], n["um_first"], n["um_other"], n["cleared"], n["kept_db"]])))
-        print(report[-1], flush=True)
+        p, r, nw, um_, v = database_plan(name, start, folder, rows, ref, alias, skip, shifts, last, nshifts,
+                                         official=name in OFFICIAL)
+        plan += p
+        report.append(r)
+        print(r, flush=True)
+        nowin += nw
+        unmatched.update(um_)
+        via |= v
     for name, start, folder in gap_databases(argv[1]):
         gap_rows(name, start, folder, rows, ref, alias, plan, report,
                  int(shifts.get(name, {}).get("comp_history", 0) or 0), nshifts.get(name, (0, {})))
+    # The official data sets in every later start year (0.6.2 open item 149). Their history is that of 2001 in every
+    # start year (the shift of slice 11b leaves it), so each plan row holds for a range of start years: from the first
+    # start year where the edition ended before the start, on. plan-official.tsv gives each row once, with its first
+    # and last start year (last empty: every later start year). The 2002/03 tile of 3.9.68 keeps its own entry above.
+    official = ["\t".join(OFFICIAL_COLS)]
+    last_start = max(ended_of(r)[0] for r in rows if r.get("held") == "yes" and r.get("label", "").isdigit()) + 1
+    for name, folder in official_databases(argv[0], argv[1]):
+        years = collections.defaultdict(list)       # plan row without its start year: the start years it holds
+        seen_nowin, um_max = set(), collections.Counter()
+        first = FIRST_OFFICIAL_START + (name == "3.9.68")
+        for start in range(first, last_start + 1):
+            p, r, nw, um_, v = database_plan(name, start, folder, rows, ref, alias, skip, shifts, last, nshifts,
+                                             official=True)
+            for line in p:
+                f = line.split("\t")
+                years["\t".join(f[:2] + f[3:])].append(start)
+            report.append(r)
+            for x in nw:
+                if x not in seen_nowin:
+                    seen_nowin.add(x)
+                    nowin.append(x)
+            for k, c in um_.items():
+                um_max[k] = max(um_max[k], c)
+            via |= v
+        print(f"{name}: {len(years)} plan rows for the start years {first} to {last_start}", flush=True)
+        unmatched.update(um_max)
+        for key, ys in years.items():
+            if ys != list(range(ys[0], ys[-1] + 1)):
+                raise SystemExit(f"{name}: the plan row {key!r} holds for start years that are not one range: {ys}")
+            f = key.split("\t")
+            official.append("\t".join(f[:2] + [str(ys[0])] + f[2:] + ["" if ys[-1] == last_start else str(ys[-1])]))
     um = ["database\tnation\tname\trows"] + ["\t".join([a, b, c, str(k)]) for (a, b, c), k in sorted(unmatched.items())]
     print(f"{len(unmatched)} unmatched names (database, name)")
     vl = ["database\tname\tdatabase_name"] + ["\t".join(x) for x in sorted(via)]
     if "--write" in argv:
         for fn, lines in (("fill-report.tsv", report), ("unmatched.tsv", um), ("matched-by-id.tsv", vl),
-                          ("plan.tsv", plan), ("no-winner.tsv", nowin)):
+                          ("plan.tsv", plan), ("no-winner.tsv", nowin), ("plan-official.tsv", official)):
             with open(os.path.join(HIST, fn), "w", encoding="utf-8") as f:
                 f.write("\n".join(lines) + "\n")
         print("wrote fill-report.tsv, unmatched.tsv, matched-by-id.tsv and plan.tsv in", HIST)
