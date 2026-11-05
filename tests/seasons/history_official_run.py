@@ -10,8 +10,9 @@ new game of such data in 2003 or later held no row of the label years 2002 to th
 Euro 2004, no OFC Nations Cup 2002 or 2004). The fill now writes the researched rows of
 docs/research/history-0.6.0/plan-official.tsv that hold for the start year. Each run is a new game (England, seed
 1) to the first news screen with the test log RECOMP_HISTORY_LOG (season_history.c). The runs:
-    3.9.68-2003, 3.9.68-2004, 3.9.68-2010  the game's own 3.9.68 data
-    3.9.65-2004, 3.9.60-2004                the official versions from the folder of databases
+    3.9.68-2003, -2004, -2006, -2010, -2014  the game's own 3.9.68 data (2006, 2010 and 2014: World Cup finals in
+                                             July of the start year)
+    3.9.65-2004, 3.9.60-2004, 3.9.60-2002    the official versions from the folder of databases
     Summer 2004                             a season database in its own season (plan.tsv): the rows it had
 The checks, at the database load and at the first turn (the game then keeps the rows of the selected nations,
 0x539ae0, so only the competitions it kept are checked there):
@@ -37,21 +38,22 @@ import season_history_run as shr  # noqa: E402
 HIST = os.path.join(ROOT, "docs", "research", "history-0.6.0")
 EURO, OFC, WC = "European Football Championship", "Oceania Nations Cup", "FIFA World Cup"
 COMPS = shr.COMPS + [EURO, OFC]
-# Real winners and the first start year after each edition (a new game starts in July; Euro 2004 ended on 4 July,
-# before the first day of a 2004 game). Sources: en.wikipedia.org, UEFA Euro 2004, UEFA Euro 2008, 2002 OFC
-# Nations Cup (final 14 July 2002), 2004 OFC Nations Cup (final 12 October 2004, played before the game's day only
-# for a 2005 start; the plan's calendar-year rule gives it to a 2004 start, as for Summer 2004), 2008 OFC Nations
-# Cup (last match 19 November 2008), 2002 and 2006 FIFA World Cup; Premier League and UEFA Champions League finals.
+# Real winners and the first start year that holds each edition. A new game's first day is about 10 July. The
+# World Cup and the Euro count in the start year of a July final too: the game does not play them then (history_fill.py,
+# JULY_FINALS). The OFC Nations Cup 2004 (final 12 October 2004) counts from 2004 by the plan's calendar-year rule, as
+# in Summer 2004. Sources: en.wikipedia.org, 2002 to 2014 FIFA World Cup, UEFA Euro 2004, 2008 and 2012, 2002, 2004
+# and 2008 OFC Nations Cup; the Premier League and UEFA Champions League finals of each season.
 FACTS = {  # competition: {label: (part of the winner's name, first start year that holds it)}
-    WC: {2002: ("Brazil", 2003), 2006: ("Italy", 2007)},
-    EURO: {2004: ("Greece", 2004), 2008: ("Spain", 2009)},
+    WC: {2002: ("Brazil", 2002), 2006: ("Italy", 2006), 2010: ("Spain", 2010), 2014: ("Germany", 2014)},
+    EURO: {2004: ("Greece", 2004), 2008: ("Spain", 2008), 2012: ("Spain", 2012)},
     OFC: {2002: ("New Zealand", 2003), 2004: ("Australia", 2004), 2008: ("New Zealand", 2009)},
     shr.EPL: {2002: ("Arsenal", 2002), 2003: ("Manchester United", 2003), 2004: ("Arsenal", 2004),
               2005: ("Chelsea", 2005), 2006: ("Chelsea", 2006), 2009: ("Manchester United", 2009)},
     "European Champions Cup": {2004: ("Porto", 2004), 2009: ("Barcelona", 2009)},
 }
-RUNS = [("3.9.68-2003", "3.9.68", 2003), ("3.9.68-2004", "3.9.68", 2004), ("3.9.68-2010", "3.9.68", 2010),
-        ("3.9.65-2004", "3.9.65", 2004), ("3.9.60-2004", "3.9.60", 2004), ("Summer 2004", "Summer 2004", 2004)]
+RUNS = [("3.9.68-2003", "3.9.68", 2003), ("3.9.68-2004", "3.9.68", 2004), ("3.9.68-2006", "3.9.68", 2006),
+        ("3.9.68-2010", "3.9.68", 2010), ("3.9.68-2014", "3.9.68", 2014), ("3.9.65-2004", "3.9.65", 2004),
+        ("3.9.60-2004", "3.9.60", 2004), ("3.9.60-2002", "3.9.60", 2002), ("Summer 2004", "Summer 2004", 2004)]
 
 
 def planned(db, start):

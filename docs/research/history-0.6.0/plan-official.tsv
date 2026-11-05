@@ -110,6 +110,7 @@ add	3.9.60	2002	German Regional Division South	2002		add	SV Wacker Burghausen	Ge
 add	3.9.60	2002	Austrian Premier Division	2002		add	FC Tirol Innsbruck	Austria	SK Sturm Graz	Austria					
 add	3.9.60	2002	Austrian First Division	2002		add	SV Pasching	Austria	SC Austria Lustenau	Austria					
 add	3.9.60	2002	Austrian FA Cup	2002		add	Grazer AK	Austria	SK Sturm Graz	Austria					
+add	3.9.60	2002	Austrian Super Cup	2002		add	Grazer AK	Austria	SK Sturm Graz	Austria					
 add	3.9.60	2002	Swiss National Division A	2002		add	FC Basel	Switzerland	Grasshopper Club Zurich	Switzerland					
 add	3.9.60	2002	Swiss Cup	2002		add	FC Basel	Switzerland	Grasshopper Club Zurich	Switzerland					
 add	3.9.60	2002	Luxembourg National Division	2002		add	F91 Dudelange	Luxembourg	CS Grevenmacher	Luxembourg					
@@ -834,6 +835,7 @@ clear	3.9.60	2002	Yugoslav Second Division South	2002
 clear	3.9.60	2002	Yugoslav Second Division West	2001											
 clear	3.9.60	2002	Yugoslav Second Division West	2002											
 add	3.9.60	2003	Argentine Premier Division	2002	Apertura	add	Independiente	Argentina	Boca Juniors	Argentina					
+add	3.9.60	2003	Argentine Premier Division	2002	Clausura	add	River Plate	Argentina	Boca Juniors	Argentina					
 add	3.9.60	2003	Argentine Second Division	2002		add	Atlético Rafaela	Argentina	Argentinos Juniors	Argentina					
 add	3.9.60	2003	American Major League	2003		add	San Jose Earthquakes	United States	Chicago Fire	United States					
 add	3.9.60	2003	US Open Cup	2003		add	Chicago Fire	United States	NYNJ Metrostars	United States					
@@ -856,6 +858,7 @@ add	3.9.60	2003	South African First Division Inland	2003		add	Tycoon Silver Star
 add	3.9.60	2003	South African Premier Division	2003		add	Orlando Pirates	South Africa	Supersport United	South Africa					
 add	3.9.60	2003	South African Top 8 Cup	2003		add	Jomo Cosmos	South Africa	Moroka Swallows	South Africa					
 add	3.9.60	2003	Brazilian Bahia State Championship	2003		add	Esporte Clube Vitória	Brazil	Associação Esportiva Catuense	Brazil					
+add	3.9.60	2003	Brazilian Gaúcho State Championship	2003		add	Sport Club Internacional	Brazil	Clube 15 de Novembro	Brazil					
 add	3.9.60	2003	Brazilian Goiás State Championship	2003		add	Goiás Esporte Clube	Brazil	Novo Horizonte Futebol Clube	Brazil					
 add	3.9.60	2003	Brazilian Minas Gerais State Championship	2003		add	Cruzeiro Esporte Clube	Brazil	Clube Atlético Mineiro	Brazil					
 add	3.9.60	2003	Brazilian Paraná State Championship	2003		add	Coritiba Football Club	Brazil							
@@ -953,7 +956,6 @@ add	3.9.60	2003	German Regional Division South	2003		add	SpVgg Unterhaching	Germ
 add	3.9.60	2003	Austrian Premier Division	2003		add	FK Austria Vienna	Austria	Grazer AK	Austria					
 add	3.9.60	2003	Austrian First Division	2003		add	SV Mattersburg	Austria	DSV Leoben	Austria					
 add	3.9.60	2003	Austrian FA Cup	2003		add	FK Austria Vienna	Austria	FC Austria Kärnten	Austria					
-add	3.9.60	2003	Austrian Super Cup	2002		add	Grazer AK	Austria	SK Sturm Graz	Austria					
 add	3.9.60	2003	Swiss National Division A	2003		add	Grasshopper Club Zurich	Switzerland	FC Basel	Switzerland					
 add	3.9.60	2003	Swiss Cup	2003		add	FC Basel	Switzerland	FC Neuchâtel Xamax	Switzerland					
 add	3.9.60	2003	Luxembourg National Division	2003		add	CS Grevenmacher	Luxembourg	F91 Dudelange	Luxembourg					
@@ -963,6 +965,7 @@ add	3.9.60	2003	European Champions Cup	2003		add	AC Milan	Italy	Juventus	Italy
 add	3.9.60	2003	European Super Cup	2002		add	Real Madrid C.F.	Spain	Feyenoord	Holland					
 add	3.9.60	2003	Intercontinental Cup	2002		add	Real Madrid C.F.	Spain	Club Olimpia	Paraguay					
 add	3.9.60	2003	South American Copa Libertadores	2002		add	Club Olimpia	Paraguay	Associação Desportiva São Caetano	Brazil					
+add	3.9.60	2003	South American Copa Libertadores	2003		add	Boca Juniors	Argentina	Santos Futebol Clube	Brazil					
 add	3.9.60	2003	South American Copa Mercosur	2002		add	San Lorenzo de Almagro	Argentina	Corporación Deportiva Club Atlético Nacional	Colombia					
 add	3.9.60	2003	UEFA Cup	2003		add	Futebol Clube do Porto	Portugal	Glasgow Celtic	Scotland					
 add	3.9.60	2003	African Champions League	2003		add	Enyimba FC	Nigeria	Ismaily Sporting Club	Egypt					
@@ -1300,7 +1303,6 @@ clear	3.9.60	2003	Yugoslav First Division	2003
 clear	3.9.60	2003	Yugoslav Second Division	2003											
 clear	3.9.60	2003	Yugoslav Second Division East	2003											
 clear	3.9.60	2003	Yugoslav Second Division North	2003											
-add	3.9.60	2004	Argentine Premier Division	2002	Clausura	add	River Plate	Argentina	Boca Juniors	Argentina					
 add	3.9.60	2004	Argentine Premier Division	2003	Apertura	add	Boca Juniors	Argentina	San Lorenzo de Almagro	Argentina					
 add	3.9.60	2004	Argentine Premier Division	2003	Clausura	add	River Plate	Argentina	Boca Juniors	Argentina					
 add	3.9.60	2004	Argentine Second Division	2003		add	Instituto de Córdoba	Argentina	Almagro	Argentina					
@@ -1327,7 +1329,6 @@ add	3.9.60	2004	South African First Division Inland	2004		add	Bloemfontein Celti
 add	3.9.60	2004	South African Premier Division	2004		add	Kaizer Chiefs	South Africa	Ajax Cape Town	South Africa					
 add	3.9.60	2004	South African Superbowl	2004		add	Moroka Swallows	South Africa	Manning Rangers	South Africa					
 add	3.9.60	2004	Brazilian Bahia State Championship	2004		add	Esporte Clube Vitória	Brazil	Esporte Clube Bahia	Brazil					
-add	3.9.60	2004	Brazilian Gaúcho State Championship	2003		add	Sport Club Internacional	Brazil	Clube 15 de Novembro	Brazil					
 add	3.9.60	2004	Brazilian Gaúcho State Championship	2004		add	Sport Club Internacional	Brazil							
 add	3.9.60	2004	Brazilian Goiás State Championship	2004		add	Clube Recreativo e Atlético Catalano	Brazil	Vila Nova Futebol Clube	Brazil					
 add	3.9.60	2004	Brazilian Minas Gerais State Championship	2004		add	Cruzeiro Esporte Clube	Brazil	Clube Atlético Mineiro	Brazil					
@@ -1420,6 +1421,7 @@ add	3.9.60	2004	German Regional Division South	2004		add	FC Bayern München Amat
 add	3.9.60	2004	Austrian Premier Division	2004		add	Grazer AK	Austria	FK Austria Vienna	Austria					
 add	3.9.60	2004	Austrian FA Cup	2004		add	Grazer AK	Austria	FK Austria Vienna	Austria					
 add	3.9.60	2004	Austrian Super Cup	2003		add	FK Austria Vienna	Austria	FC Austria Kärnten	Austria					
+add	3.9.60	2004	Austrian Super Cup	2004		add	FK Austria Vienna	Austria	Grazer AK	Austria					
 add	3.9.60	2004	Swiss National Division A	2004		add	FC Basel	Switzerland	BSC Young Boys Bern	Switzerland					
 add	3.9.60	2004	Swiss Cup	2004		add	FC Wil 1900	Switzerland	Grasshopper Club Zurich	Switzerland					
 add	3.9.60	2004	Luxembourg National Division	2004		add	AS La Jeunesse d'Esch-Alzette	Luxembourg	F91 Dudelange	Luxembourg					
@@ -1428,7 +1430,7 @@ add	3.9.60	2004	CONCACAF Champions Cup	2004		add	Liga Deportiva Alajuelense	Cost
 add	3.9.60	2004	European Champions Cup	2004		add	Futebol Clube do Porto	Portugal	AS Monaco	France					
 add	3.9.60	2004	European Super Cup	2003		add	AC Milan	Italy	Futebol Clube do Porto	Portugal					
 add	3.9.60	2004	Intercontinental Cup	2003		add	Boca Juniors	Argentina	AC Milan	Italy					
-add	3.9.60	2004	South American Copa Libertadores	2003		add	Boca Juniors	Argentina	Santos Futebol Clube	Brazil					
+add	3.9.60	2004	South American Copa Libertadores	2004		add	Corporación Deportiva Once Caldas	Colombia	Boca Juniors	Argentina					
 add	3.9.60	2004	South American Copa Mercosur	2003		add	ADFP Club Cienciano	Peru	River Plate	Argentina					
 add	3.9.60	2004	South American Recopa	2003		add	Club Olimpia	Paraguay	San Lorenzo de Almagro	Argentina					
 add	3.9.60	2004	South American Recopa	2004		add	ADFP Club Cienciano	Peru	Boca Juniors	Argentina					
@@ -1750,6 +1752,7 @@ clear	3.9.60	2004	Yugoslav Second Division North	2004
 clear	3.9.60	2004	Yugoslav Second Division South	2004											
 clear	3.9.60	2004	Yugoslav Second Division West	2004											
 add	3.9.60	2005	Argentine Premier Division	2004	Apertura	add	Newell's Old Boys	Argentina	Vélez Sarsfield	Argentina					
+add	3.9.60	2005	Argentine Premier Division	2004	Clausura	add	Vélez Sarsfield	Argentina	Banfield	Argentina					
 add	3.9.60	2005	Argentine Second Division	2004		add	Tiro Federal de Rosario	Argentina	Gimnasia y Esgrima de Jujuy	Argentina					
 add	3.9.60	2005	American Major League	2005		add	Los Angeles Galaxy	United States	New England Revolution	United States					
 add	3.9.60	2005	US Open Cup	2005		add	Los Angeles Galaxy	United States	Dallas Burn	United States					
@@ -1860,7 +1863,6 @@ add	3.9.60	2005	German Regional Division South	2005		add	Kickers Offenbach	Germa
 add	3.9.60	2005	Austrian Premier Division	2005		add	SK Rapid Vienna	Austria	Grazer AK	Austria					
 add	3.9.60	2005	Austrian First Division	2005		add	SV Ried	Austria	Kapfenberger SV	Austria					
 add	3.9.60	2005	Austrian FA Cup	2005		add	FK Austria Vienna	Austria	SK Rapid Vienna	Austria					
-add	3.9.60	2005	Austrian Super Cup	2004		add	FK Austria Vienna	Austria	Grazer AK	Austria					
 add	3.9.60	2005	Swiss National Division A	2005		add	FC Basel	Switzerland	FC Thun	Switzerland					
 add	3.9.60	2005	Swiss Cup	2005		add	FC Zürich	Switzerland	FC Lucerne	Switzerland					
 add	3.9.60	2005	Luxembourg National Division	2005		add	F91 Dudelange	Luxembourg	FC Etzella Ettelbruck	Luxembourg					
@@ -1869,13 +1871,13 @@ add	3.9.60	2005	CONCACAF Champions Cup	2005		add	Deportivo Saprissa	Costa Rica	C
 add	3.9.60	2005	European Champions Cup	2005		add	Liverpool	England	AC Milan	Italy					
 add	3.9.60	2005	European Super Cup	2004		add	Valencia C.F.	Spain	Futebol Clube do Porto	Portugal					
 add	3.9.60	2005	Intercontinental Cup	2004		add	Futebol Clube do Porto	Portugal	Corporación Deportiva Once Caldas	Colombia					
-add	3.9.60	2005	South American Copa Libertadores	2004		add	Corporación Deportiva Once Caldas	Colombia	Boca Juniors	Argentina					
 add	3.9.60	2005	South American Copa Mercosur	2004		add	Boca Juniors	Argentina	Club Bolívar	Bolivia					
 add	3.9.60	2005	UEFA Cup	2005		add	CSKA Moscow	Russia	Sporting Clube de Portugal	Portugal					
 add	3.9.60	2005	African Champions League	2005		add	Al-Ahly Sporting Club	Egypt	Etoile Sportive du Sahel	Tunisia					
 add	3.9.60	2005	African CAF Cup	2004		add	Hearts of Oak	Ghana	Asante Kotoko	Ghana					
 add	3.9.60	2005	African CAF Cup	2005		add	Forces Armées Royale Rabat	Morocco	Eagle Cement FC	Nigeria					
 add	3.9.60	2005	African Super Cup	2004		add	Enyimba FC	Nigeria	Hearts of Oak	Ghana					
+add	3.9.60	2005	Arab Club Champions Cup	2005		add	Al Ittihad (KSA)	Saudi Arabia	Club Sportif Sfaxien	Tunisia					
 add	3.9.60	2005	Asian Club Championship	2005		add	Al Ittihad (KSA)	Saudi Arabia	Al Ain	United Arab Emirates					
 add	3.9.60	2005	CIS Champions Cup	2005		add	Lokomotiv Moscow	Russia	SC Neftchi Baku	Azerbaijan					
 add	3.9.60	2005	Irish Premier Division	2005		add	Cork City	Republic of Ireland	Derry City	Republic of Ireland					
@@ -2191,7 +2193,6 @@ clear	3.9.60	2005	Yugoslav Second Division	2005
 clear	3.9.60	2005	Yugoslav Second Division North	2005											
 clear	3.9.60	2005	Yugoslav Second Division South	2005											
 clear	3.9.60	2005	Yugoslav Second Division West	2005											
-add	3.9.60	2006	Argentine Premier Division	2004	Clausura	add	Vélez Sarsfield	Argentina	Banfield	Argentina					
 add	3.9.60	2006	Argentine Premier Division	2005	Apertura	add	Boca Juniors	Argentina	Gimnasia y Esgrima de La Plata	Argentina					
 add	3.9.60	2006	Argentine Premier Division	2005	Clausura	add	Boca Juniors	Argentina	Lanús	Argentina					
 add	3.9.60	2006	Argentine Second Division	2005		add	Godoy Cruz Antonio Tomba	Argentina	Nueva Chicago	Argentina					
@@ -2287,7 +2288,6 @@ add	3.9.60	2006	UEFA Cup	2006		add	Sevilla C.F.	Spain	Middlesbrough	England
 add	3.9.60	2006	African Champions League	2006		add	Al-Ahly Sporting Club	Egypt	Club Sportif Sfaxien	Tunisia					
 add	3.9.60	2006	African CAF Cup	2006		add	Etoile Sportive du Sahel	Tunisia	Forces Armées Royale Rabat	Morocco					
 add	3.9.60	2006	African Super Cup	2005		add	Al-Ahly Sporting Club	Egypt	Forces Armées Royale Rabat	Morocco					
-add	3.9.60	2006	Arab Club Champions Cup	2005		add	Al Ittihad (KSA)	Saudi Arabia	Club Sportif Sfaxien	Tunisia					
 add	3.9.60	2006	Asian Club Championship	2006		add	Chonbuk Hyundai Motors	South Korea	Al Karama	Syria					
 add	3.9.60	2006	CIS Champions Cup	2006		add	SC Neftchi Baku	Azerbaijan	FBK Kaunas	Lithuania					
 add	3.9.60	2006	Irish Premier Division	2006		add	Shelbourne F.C.	Republic of Ireland	Derry City	Republic of Ireland					
@@ -2958,6 +2958,7 @@ add	3.9.60	2008	CONCACAF Champions Cup	2008		add	Club Deportivo Pachuca	Mexico	D
 add	3.9.60	2008	European Champions Cup	2008		add	Manchester United	England	Chelsea	England					
 add	3.9.60	2008	European Super Cup	2007		add	AC Milan	Italy	Sevilla C.F.	Spain					
 add	3.9.60	2008	FIFA Club World Championship	2007		add	AC Milan	Italy	Boca Juniors	Argentina					
+add	3.9.60	2008	South American Copa Libertadores	2008		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
 add	3.9.60	2008	South American Copa Mercosur	2007		add	Arsenal de Sarandí	Argentina	Club de Fútbol América	Mexico					
 add	3.9.60	2008	UEFA Cup	2008		add	Zenith St. Petersburg	Russia	Glasgow Rangers	Scotland					
 add	3.9.60	2008	African Champions League	2008		add	Al-Ahly Sporting Club	Egypt	Coton Sport	Cameroon					
@@ -3197,6 +3198,7 @@ clear	3.9.60	2008	Welsh League Cup	2008
 clear	3.9.60	2008	Welsh Premier Cup	2008											
 clear	3.9.60	2008	Welsh Premier Division	2008											
 add	3.9.60	2009	Argentine Premier Division	2008	Apertura	add	Boca Juniors	Argentina	Tigre	Argentina					
+add	3.9.60	2009	Argentine Premier Division	2008	Clausura	add	Vélez Sarsfield	Argentina	Huracán	Argentina					
 add	3.9.60	2009	Argentine Second Division	2008		add	Atlético Tucumán	Argentina	Chacarita Juniors	Argentina					
 add	3.9.60	2009	US Open Cup	2009		add	Seattle Sounders	United States	Washington DC United	United States					
 add	3.9.60	2009	Japanese Emperor's Cup	2008		add	Gamba Osaka	Japan	Kashiwa Reysol	Japan					
@@ -3215,6 +3217,7 @@ add	3.9.60	2009	Brazilian São Paulo State Championship	2009		add	Sport Club Cor
 add	3.9.60	2009	Brazilian National First Division	2009		add	Clube de Regatas do Flamengo	Brazil	Sport Club Internacional	Brazil					
 add	3.9.60	2009	Brazilian National Second Division	2009		add	Clube de Regatas Vasco da Gama	Brazil	Guarani Futebol Clube	Brazil					
 add	3.9.60	2009	Brazilian National Third Division	2009		add	América Futebol Clube (MG)	Brazil	Agremiação Sportiva Arapiraquense	Brazil					
+add	3.9.60	2009	Brazilian Cup	2009		add	Sport Club Corinthians Paulista	Brazil	Sport Club Internacional	Brazil					
 add	3.9.60	2009	Polish First Division	2009		add	Wisla Krakow	Poland	Legia Warszawa	Poland					
 add	3.9.60	2009	Polish FA Cup	2009		add	Lech Poznan	Poland	Ruch Chorzow	Poland					
 add	3.9.60	2009	Polish League Cup	2009		add	Slask Wroclaw	Poland	Odra Wodzislaw	Poland					
@@ -3273,9 +3276,9 @@ add	3.9.60	2009	CONCACAF Champions Cup	2009		add	Club de Fútbol Atlante	Mexico	
 add	3.9.60	2009	European Champions Cup	2009		add	F.C. Barcelona	Spain	Manchester United	England					
 add	3.9.60	2009	European Super Cup	2008		add	Zenith St. Petersburg	Russia	Manchester United	England					
 add	3.9.60	2009	FIFA Club World Championship	2008		add	Manchester United	England	Liga Universitaria de Quito	Ecuador					
-add	3.9.60	2009	South American Copa Libertadores	2008		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
 add	3.9.60	2009	South American Copa Mercosur	2008		add	Sport Club Internacional	Brazil	Estudiantes de La Plata	Argentina					
 add	3.9.60	2009	South American Recopa	2008		add	Boca Juniors	Argentina	Arsenal de Sarandí	Argentina					
+add	3.9.60	2009	South American Recopa	2009		add	Liga Universitaria de Quito	Ecuador	Sport Club Internacional	Brazil					
 add	3.9.60	2009	UEFA Cup	2009		add	Shakhtar Donetsk	Ukraine	SV Werder Bremen	Germany					
 add	3.9.60	2009	African Champions League	2009		add	TP Mazembe	Democratic Republic of Congo							
 add	3.9.60	2009	Asian Club Championship	2009		add	Pohang Steelers	South Korea	Al Ittihad (KSA)	Saudi Arabia					
@@ -3474,13 +3477,11 @@ clear	3.9.60	2009	Welsh Cup	2009
 clear	3.9.60	2009	Welsh League Cup	2009											
 clear	3.9.60	2009	Welsh Premier Cup	2009											
 clear	3.9.60	2009	Welsh Premier Division	2009											
-add	3.9.60	2010	Argentine Premier Division	2008	Clausura	add	Vélez Sarsfield	Argentina	Huracán	Argentina					
 add	3.9.60	2010	Argentine Premier Division	2009	Apertura	add	Banfield	Argentina	Newell's Old Boys	Argentina					
 add	3.9.60	2010	Argentine Premier Division	2009	Clausura	add	Argentinos Juniors	Argentina	Estudiantes de La Plata	Argentina					
 add	3.9.60	2010	Argentine Second Division	2009		add	Olimpo de Bahía Blanca	Argentina	Quilmes	Argentina					
 add	3.9.60	2010	US Open Cup	2010		add	Seattle Sounders	United States	Columbus Crew	United States					
 add	3.9.60	2010	Japanese Emperor's Cup	2009		add	Gamba Osaka	Japan							
-add	3.9.60	2010	Brazilian Cup	2009		add	Sport Club Corinthians Paulista	Brazil	Sport Club Internacional	Brazil					
 add	3.9.60	2010	Polish Super Cup	2009		add	Lech Poznan	Poland	Wisla Krakow	Poland					
 add	3.9.60	2010	Croatian First Division	2009		add	NK Dinamo	Croatia	HNK Hajduk	Croatia					
 add	3.9.60	2010	Croatian Cup	2009		add	HNK Hajduk	Croatia	HNK Sibenik	Croatia					
@@ -3499,35 +3500,34 @@ add	3.9.60	2010	European Super Cup	2009		add	F.C. Barcelona	Spain	Shakhtar Donet
 add	3.9.60	2010	FIFA Club World Championship	2009		add	F.C. Barcelona	Spain	Estudiantes de La Plata	Argentina					
 add	3.9.60	2010	South American Copa Libertadores	2009		add	Estudiantes de La Plata	Argentina	Cruzeiro Esporte Clube	Brazil					
 add	3.9.60	2010	South American Copa Mercosur	2009		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
-add	3.9.60	2010	South American Recopa	2009		add	Liga Universitaria de Quito	Ecuador	Sport Club Internacional	Brazil					
 add	3.9.60	2010	Italian Super Cup	2009		add	Lazio	Italy	Internazionale	Italy					
+add	3.9.60	2010	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa		
 add	3.9.60	2010	Scottish League Challenge Cup	2009		add	Dundee	Scotland	Inverness Caledonian Thistle	Scotland					
 clear	3.9.60	2010	FIFA World Cup	2010											
 clear	3.9.60	2010	US Open Cup	2010											
 add	3.9.60	2011	US Open Cup	2011		add	Seattle Sounders	United States	Chicago Fire	United States					
-add	3.9.60	2011	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa		
 clear	3.9.60	2011	US Open Cup	2011											
 add	3.9.60	2012	European Football Championship	2012		add	Spain		Italy				Poland		
 clear	3.9.60	2012	European Football Championship	2012											
+add	3.9.60	2014	FIFA World Cup	2014		add	Germany		Argentina		Holland		Brazil		
 clear	3.9.60	2014	FIFA World Cup	2014											
-add	3.9.60	2015	FIFA World Cup	2014		add	Germany		Argentina		Holland		Brazil		
+add	3.9.60	2016	European Football Championship	2016		add	Portugal		France				France		
 clear	3.9.60	2016	European Football Championship	2016											
-add	3.9.60	2017	European Football Championship	2016		add	Portugal		France				France		
+add	3.9.60	2018	FIFA World Cup	2018		add	France		Croatia		Belgium		Russia		
 clear	3.9.60	2018	FIFA World Cup	2018											
-add	3.9.60	2019	FIFA World Cup	2018		add	France		Croatia		Belgium		Russia		
 clear	3.9.60	2019	US Open Cup	2019											2019
 clear	3.9.60	2020	European Football Championship	2020											
-add	3.9.60	2022	European Football Championship	2020		add	Italy		England						
+add	3.9.60	2021	European Football Championship	2020		add	Italy		England						
 add	3.9.60	2022	FIFA World Cup	2022		add	Argentina		France		Croatia		Qatar		
 clear	3.9.60	2022	FIFA World Cup	2022											
+add	3.9.60	2024	European Football Championship	2024		add	Spain		England				Germany		
 clear	3.9.60	2024	European Football Championship	2024											
-add	3.9.60	2025	European Football Championship	2024		add	Spain		England				Germany		
 clear	3.9.60	2025	African Cup of Nations	2025											
 add	3.9.60	2026	Argentine Premier Division	2026	Apertura	add	Belgrano de Córdoba	Argentina	River Plate	Argentina					
 add	3.9.60	2026	African Cup of Nations	2025		add	Morocco		Senegal		Nigeria		Morocco		
+add	3.9.60	2026	FIFA World Cup	2026		add	Spain		Argentina		England		Canada		
 clear	3.9.60	2026	Argentine Premier Division	2026											
 clear	3.9.60	2026	FIFA World Cup	2026											
-add	3.9.60	2027	FIFA World Cup	2026		add	Spain		Argentina		England		Canada		
 add	3.9.65	2002	American Major League	2002		add	Los Angeles Galaxy	United States	New England Revolution	United States					
 add	3.9.65	2002	US Open Cup	2002		add	Columbus Crew	United States	Los Angeles Galaxy	United States					
 add	3.9.65	2002	American A-League	2002		add	Milwaukee Rampage	United States	Richmond Kickers	United States					
@@ -3563,8 +3563,10 @@ add	3.9.65	2002	Indian Dehli Senior Division	2002		add	Indian Air Force	India	Hi
 add	3.9.65	2002	Indian Bangalore Super Division	2002		add	Hindustan Aeronautics Limited	India							
 add	3.9.65	2002	Indian Guwahati Super Division	2002		add	Guwahati Town Club	India							
 add	3.9.65	2002	Indian Punjab State Soccer League	2002		add	Jagatjit Cotton and Textiles Mills	India	Border Security Force	India					
+add	3.9.65	2002	Indonesian Premier Division	2002		add	Petrokimia Putra Gresik	Indonesia	Persita Tangerang	Indonesia					
 add	3.9.65	2002	Malaysia Cup	2002		add	Selangor	Malaysia	Sabah	Malaysia					
 add	3.9.65	2002	Malaysian Charity Shield	2002		add	Selangor	Malaysia	Terengganu	Malaysia					
+add	3.9.65	2002	Malaysian League Premier One	2002		add	Perak	Malaysia	Selangor	Malaysia					
 add	3.9.65	2002	Malaysian League Premier Two	2002		add	Kedah	Malaysia	Melaka Telekom	Malaysia					
 add	3.9.65	2002	Singaporean League	2002		add	Singapore Armed Forces FC	Singapore	Home United	Singapore					
 add	3.9.65	2002	Singapore Cup	2002		add	Tampines Rovers	Singapore	Jurong FC	Singapore					
@@ -3663,6 +3665,7 @@ add	3.9.65	2002	German Regional Division South	2002		add	SV Wacker Burghausen	Ge
 add	3.9.65	2002	Austrian Premier Division	2002		add	FC Tirol Innsbruck	Austria	SK Sturm Graz	Austria					
 add	3.9.65	2002	Austrian First Division	2002		add	SV Pasching	Austria	SC Austria Lustenau	Austria					
 add	3.9.65	2002	Austrian FA Cup	2002		add	Grazer AK	Austria	SK Sturm Graz	Austria					
+add	3.9.65	2002	Austrian Super Cup	2002		add	Grazer AK	Austria	SK Sturm Graz	Austria					
 add	3.9.65	2002	Swiss National Division A	2002		add	FC Basel	Switzerland	Grasshopper Club Zurich	Switzerland					
 add	3.9.65	2002	Swiss Cup	2002		add	FC Basel	Switzerland	Grasshopper Club Zurich	Switzerland					
 add	3.9.65	2002	Luxembourg National Division	2002		add	F91 Dudelange	Luxembourg	CS Grevenmacher	Luxembourg					
@@ -4450,6 +4453,7 @@ clear	3.9.65	2002	Yugoslav Second Division South	2002
 clear	3.9.65	2002	Yugoslav Second Division West	2001											
 clear	3.9.65	2002	Yugoslav Second Division West	2002											
 add	3.9.65	2003	Argentine Premier Division	2002	Apertura	add	Independiente	Argentina	Boca Juniors	Argentina					
+add	3.9.65	2003	Argentine Premier Division	2002	Clausura	add	River Plate	Argentina	Boca Juniors	Argentina					
 add	3.9.65	2003	Argentine Second Division	2002		add	Atlético Rafaela	Argentina	Argentinos Juniors	Argentina					
 add	3.9.65	2003	American Major League	2003		add	San Jose Earthquakes	United States	Chicago Fire	United States					
 add	3.9.65	2003	US Open Cup	2003		add	Chicago Fire	United States	NYNJ Metrostars	United States					
@@ -4483,13 +4487,11 @@ add	3.9.65	2003	Indian Dehli Senior Division	2003		add	Indian Air Force	India	Ta
 add	3.9.65	2003	Indian Guwahati Super Division	2003		add	Assam State Election Board	India							
 add	3.9.65	2003	Indian Punjab State Soccer League	2003		add	Jagatjit Cotton and Textiles Mills	India	Railway Coach Factory	India					
 add	3.9.65	2003	Indian Chennai League	2003		add	Integral Coach Factory	India							
-add	3.9.65	2003	Indonesian Premier Division	2002		add	Petrokimia Putra Gresik	Indonesia	Persita Tangerang	Indonesia					
 add	3.9.65	2003	Indonesian Premier Division	2003		add	Persik Kodya Kediri	Indonesia	PSM Makassar	Indonesia					
 add	3.9.65	2003	Malaysia Cup	2003		add	Selangor MPPJ	Malaysia	Sabah	Malaysia					
 add	3.9.65	2003	Malaysian Charity Shield	2003		add	Pulau Pinang	Malaysia	Selangor	Malaysia					
 add	3.9.65	2003	Malaysian FA Cup	2002		add	Pulau Pinang	Malaysia	Perak	Malaysia					
 add	3.9.65	2003	Malaysian FA Cup	2003		add	Negeri Sembilan	Malaysia	Perlis	Malaysia					
-add	3.9.65	2003	Malaysian League Premier One	2002		add	Perak	Malaysia	Selangor	Malaysia					
 add	3.9.65	2003	Singaporean League	2003		add	Home United	Singapore	Geylang United	Singapore					
 add	3.9.65	2003	Singapore Cup	2003		add	Home United	Singapore	Geylang United	Singapore					
 add	3.9.65	2003	Singaporean Prime League	2003		add	Home United	Singapore							
@@ -4502,6 +4504,7 @@ add	3.9.65	2003	South African Premier Division	2003		add	Orlando Pirates	South A
 add	3.9.65	2003	South African Superbowl	2003		add	Santos (RSA)	South Africa	Ajax Cape Town	South Africa					
 add	3.9.65	2003	South African Top 8 Cup	2003		add	Jomo Cosmos	South Africa	Moroka Swallows	South Africa					
 add	3.9.65	2003	Brazilian Bahia State Championship	2003		add	Esporte Clube Vitória	Brazil	Associação Esportiva Catuense	Brazil					
+add	3.9.65	2003	Brazilian Gaúcho State Championship	2003		add	Sport Club Internacional	Brazil	Clube 15 de Novembro	Brazil					
 add	3.9.65	2003	Brazilian Goiás State Championship	2003		add	Goiás Esporte Clube	Brazil	Novo Horizonte Futebol Clube	Brazil					
 add	3.9.65	2003	Brazilian Minas Gerais State Championship	2003		add	Cruzeiro Esporte Clube	Brazil	Clube Atlético Mineiro	Brazil					
 add	3.9.65	2003	Brazilian Paraná State Championship	2003		add	Coritiba Football Club	Brazil							
@@ -4600,7 +4603,6 @@ add	3.9.65	2003	German Regional Division South	2003		add	SpVgg Unterhaching	Germ
 add	3.9.65	2003	Austrian Premier Division	2003		add	FK Austria Vienna	Austria	Grazer AK	Austria					
 add	3.9.65	2003	Austrian First Division	2003		add	SV Mattersburg	Austria	DSV Leoben	Austria					
 add	3.9.65	2003	Austrian FA Cup	2003		add	FK Austria Vienna	Austria	FC Austria Kärnten	Austria					
-add	3.9.65	2003	Austrian Super Cup	2002		add	Grazer AK	Austria	SK Sturm Graz	Austria					
 add	3.9.65	2003	Swiss National Division A	2003		add	Grasshopper Club Zurich	Switzerland	FC Basel	Switzerland					
 add	3.9.65	2003	Swiss Cup	2003		add	FC Basel	Switzerland	FC Neuchâtel Xamax	Switzerland					
 add	3.9.65	2003	Luxembourg National Division	2003		add	CS Grevenmacher	Luxembourg	F91 Dudelange	Luxembourg					
@@ -4610,6 +4612,7 @@ add	3.9.65	2003	European Champions Cup	2003		add	AC Milan	Italy	Juventus	Italy
 add	3.9.65	2003	European Super Cup	2002		add	Real Madrid C.F.	Spain	Feyenoord	Holland					
 add	3.9.65	2003	Intercontinental Cup	2002		add	Real Madrid C.F.	Spain	Club Olimpia	Paraguay					
 add	3.9.65	2003	South American Copa Libertadores	2002		add	Club Olimpia	Paraguay	Associação Desportiva São Caetano	Brazil					
+add	3.9.65	2003	South American Copa Libertadores	2003		add	Boca Juniors	Argentina	Santos Futebol Clube	Brazil					
 add	3.9.65	2003	South American Copa Mercosur	2002		add	San Lorenzo de Almagro	Argentina	Corporación Deportiva Club Atlético Nacional	Colombia					
 add	3.9.65	2003	UEFA Cup	2003		add	Futebol Clube do Porto	Portugal	Glasgow Celtic	Scotland					
 add	3.9.65	2003	African Champions League	2003		add	Enyimba FC	Nigeria	Ismaily Sporting Club	Egypt					
@@ -4998,7 +5001,6 @@ clear	3.9.65	2003	Yugoslav Second Division	2003
 clear	3.9.65	2003	Yugoslav Second Division East	2003											
 clear	3.9.65	2003	Yugoslav Second Division North	2003											
 clear	3.9.65	2003	Yugoslav Second Division West	2003											
-add	3.9.65	2004	Argentine Premier Division	2002	Clausura	add	River Plate	Argentina	Boca Juniors	Argentina					
 add	3.9.65	2004	Argentine Premier Division	2003	Apertura	add	Boca Juniors	Argentina	San Lorenzo de Almagro	Argentina					
 add	3.9.65	2004	Argentine Premier Division	2003	Clausura	add	River Plate	Argentina	Boca Juniors	Argentina					
 add	3.9.65	2004	Argentine Second Division	2003		add	Instituto de Córdoba	Argentina	Almagro	Argentina					
@@ -5042,7 +5044,6 @@ add	3.9.65	2004	South African First Division Inland	2004		add	Bloemfontein Celti
 add	3.9.65	2004	South African Premier Division	2004		add	Kaizer Chiefs	South Africa	Ajax Cape Town	South Africa					
 add	3.9.65	2004	South African Superbowl	2004		add	Moroka Swallows	South Africa	Manning Rangers	South Africa					
 add	3.9.65	2004	Brazilian Bahia State Championship	2004		add	Esporte Clube Vitória	Brazil	Esporte Clube Bahia	Brazil					
-add	3.9.65	2004	Brazilian Gaúcho State Championship	2003		add	Sport Club Internacional	Brazil	Clube 15 de Novembro	Brazil					
 add	3.9.65	2004	Brazilian Gaúcho State Championship	2004		add	Sport Club Internacional	Brazil							
 add	3.9.65	2004	Brazilian Goiás State Championship	2004		add	Clube Recreativo e Atlético Catalano	Brazil	Vila Nova Futebol Clube	Brazil					
 add	3.9.65	2004	Brazilian Minas Gerais State Championship	2004		add	Cruzeiro Esporte Clube	Brazil	Clube Atlético Mineiro	Brazil					
@@ -5135,6 +5136,7 @@ add	3.9.65	2004	German Regional Division South	2004		add	FC Bayern München Amat
 add	3.9.65	2004	Austrian Premier Division	2004		add	Grazer AK	Austria	FK Austria Vienna	Austria					
 add	3.9.65	2004	Austrian FA Cup	2004		add	Grazer AK	Austria	FK Austria Vienna	Austria					
 add	3.9.65	2004	Austrian Super Cup	2003		add	FK Austria Vienna	Austria	FC Austria Kärnten	Austria					
+add	3.9.65	2004	Austrian Super Cup	2004		add	FK Austria Vienna	Austria	Grazer AK	Austria					
 add	3.9.65	2004	Swiss National Division A	2004		add	FC Basel	Switzerland	BSC Young Boys Bern	Switzerland					
 add	3.9.65	2004	Swiss Cup	2004		add	FC Wil 1900	Switzerland	Grasshopper Club Zurich	Switzerland					
 add	3.9.65	2004	Luxembourg National Division	2004		add	AS La Jeunesse d'Esch-Alzette	Luxembourg	F91 Dudelange	Luxembourg					
@@ -5143,7 +5145,7 @@ add	3.9.65	2004	CONCACAF Champions Cup	2004		add	Liga Deportiva Alajuelense	Cost
 add	3.9.65	2004	European Champions Cup	2004		add	Futebol Clube do Porto	Portugal	AS Monaco	France					
 add	3.9.65	2004	European Super Cup	2003		add	AC Milan	Italy	Futebol Clube do Porto	Portugal					
 add	3.9.65	2004	Intercontinental Cup	2003		add	Boca Juniors	Argentina	AC Milan	Italy					
-add	3.9.65	2004	South American Copa Libertadores	2003		add	Boca Juniors	Argentina	Santos Futebol Clube	Brazil					
+add	3.9.65	2004	South American Copa Libertadores	2004		add	Corporación Deportiva Once Caldas	Colombia	Boca Juniors	Argentina					
 add	3.9.65	2004	South American Copa Mercosur	2003		add	ADFP Club Cienciano	Peru	River Plate	Argentina					
 add	3.9.65	2004	South American Recopa	2003		add	Club Olimpia	Paraguay	San Lorenzo de Almagro	Argentina					
 add	3.9.65	2004	South American Recopa	2004		add	ADFP Club Cienciano	Peru	Boca Juniors	Argentina					
@@ -5495,6 +5497,7 @@ clear	3.9.65	2004	Yugoslav Second Division North	2004
 clear	3.9.65	2004	Yugoslav Second Division South	2004											
 clear	3.9.65	2004	Yugoslav Second Division West	2004											
 add	3.9.65	2005	Argentine Premier Division	2004	Apertura	add	Newell's Old Boys	Argentina	Vélez Sarsfield	Argentina					
+add	3.9.65	2005	Argentine Premier Division	2004	Clausura	add	Vélez Sarsfield	Argentina	Banfield	Argentina					
 add	3.9.65	2005	Argentine Second Division	2004		add	Tiro Federal de Rosario	Argentina	Gimnasia y Esgrima de Jujuy	Argentina					
 add	3.9.65	2005	American Major League	2005		add	Los Angeles Galaxy	United States	New England Revolution	United States					
 add	3.9.65	2005	US Open Cup	2005		add	Los Angeles Galaxy	United States	Dallas Burn	United States					
@@ -5621,7 +5624,6 @@ add	3.9.65	2005	German Regional Division South	2005		add	Kickers Offenbach	Germa
 add	3.9.65	2005	Austrian Premier Division	2005		add	SK Rapid Vienna	Austria	Grazer AK	Austria					
 add	3.9.65	2005	Austrian First Division	2005		add	SV Ried	Austria	Kapfenberger SV	Austria					
 add	3.9.65	2005	Austrian FA Cup	2005		add	FK Austria Vienna	Austria	SK Rapid Vienna	Austria					
-add	3.9.65	2005	Austrian Super Cup	2004		add	FK Austria Vienna	Austria	Grazer AK	Austria					
 add	3.9.65	2005	Swiss National Division A	2005		add	FC Basel	Switzerland	FC Thun	Switzerland					
 add	3.9.65	2005	Swiss Cup	2005		add	FC Zürich	Switzerland	FC Lucerne	Switzerland					
 add	3.9.65	2005	Luxembourg National Division	2005		add	F91 Dudelange	Luxembourg	FC Etzella Ettelbruck	Luxembourg					
@@ -5630,13 +5632,13 @@ add	3.9.65	2005	CONCACAF Champions Cup	2005		add	Deportivo Saprissa	Costa Rica	C
 add	3.9.65	2005	European Champions Cup	2005		add	Liverpool	England	AC Milan	Italy					
 add	3.9.65	2005	European Super Cup	2004		add	Valencia C.F.	Spain	Futebol Clube do Porto	Portugal					
 add	3.9.65	2005	Intercontinental Cup	2004		add	Futebol Clube do Porto	Portugal	Corporación Deportiva Once Caldas	Colombia					
-add	3.9.65	2005	South American Copa Libertadores	2004		add	Corporación Deportiva Once Caldas	Colombia	Boca Juniors	Argentina					
 add	3.9.65	2005	South American Copa Mercosur	2004		add	Boca Juniors	Argentina	Club Bolívar	Bolivia					
 add	3.9.65	2005	UEFA Cup	2005		add	CSKA Moscow	Russia	Sporting Clube de Portugal	Portugal					
 add	3.9.65	2005	African Champions League	2005		add	Al-Ahly Sporting Club	Egypt	Etoile Sportive du Sahel	Tunisia					
 add	3.9.65	2005	African CAF Cup	2004		add	Hearts of Oak	Ghana	Asante Kotoko	Ghana					
 add	3.9.65	2005	African CAF Cup	2005		add	Forces Armées Royale Rabat	Morocco	Eagle Cement FC	Nigeria					
 add	3.9.65	2005	African Super Cup	2004		add	Enyimba FC	Nigeria	Hearts of Oak	Ghana					
+add	3.9.65	2005	Arab Club Champions Cup	2005		add	Al Ittihad (KSA)	Saudi Arabia	Club Sportif Sfaxien	Tunisia					
 add	3.9.65	2005	Asian Club Championship	2005		add	Al Ittihad (KSA)	Saudi Arabia	Al Ain	United Arab Emirates					
 add	3.9.65	2005	CIS Champions Cup	2005		add	Lokomotiv Moscow	Russia	SC Neftchi Baku	Azerbaijan					
 add	3.9.65	2005	Irish Premier Division	2005		add	Cork City	Republic of Ireland	Derry City	Republic of Ireland					
@@ -5980,7 +5982,6 @@ clear	3.9.65	2005	Yugoslav Second Division	2005
 clear	3.9.65	2005	Yugoslav Second Division North	2005											
 clear	3.9.65	2005	Yugoslav Second Division South	2005											
 clear	3.9.65	2005	Yugoslav Second Division West	2005											
-add	3.9.65	2006	Argentine Premier Division	2004	Clausura	add	Vélez Sarsfield	Argentina	Banfield	Argentina					
 add	3.9.65	2006	Argentine Premier Division	2005	Apertura	add	Boca Juniors	Argentina	Gimnasia y Esgrima de La Plata	Argentina					
 add	3.9.65	2006	Argentine Premier Division	2005	Clausura	add	Boca Juniors	Argentina	Lanús	Argentina					
 add	3.9.65	2006	Argentine Second Division	2005		add	Godoy Cruz Antonio Tomba	Argentina	Nueva Chicago	Argentina					
@@ -6078,7 +6079,6 @@ add	3.9.65	2006	UEFA Cup	2006		add	Sevilla C.F.	Spain	Middlesbrough	England
 add	3.9.65	2006	African Champions League	2006		add	Al-Ahly Sporting Club	Egypt	Club Sportif Sfaxien	Tunisia					
 add	3.9.65	2006	African CAF Cup	2006		add	Etoile Sportive du Sahel	Tunisia	Forces Armées Royale Rabat	Morocco					
 add	3.9.65	2006	African Super Cup	2005		add	Al-Ahly Sporting Club	Egypt	Forces Armées Royale Rabat	Morocco					
-add	3.9.65	2006	Arab Club Champions Cup	2005		add	Al Ittihad (KSA)	Saudi Arabia	Club Sportif Sfaxien	Tunisia					
 add	3.9.65	2006	Asian Club Championship	2006		add	Chonbuk Hyundai Motors	South Korea	Al Karama	Syria					
 add	3.9.65	2006	CIS Champions Cup	2006		add	SC Neftchi Baku	Azerbaijan	FBK Kaunas	Lithuania					
 add	3.9.65	2006	Irish Premier Division	2006		add	Shelbourne F.C.	Republic of Ireland	Derry City	Republic of Ireland					
@@ -6757,6 +6757,7 @@ add	3.9.65	2008	CONCACAF Champions Cup	2008		add	Club Deportivo Pachuca	Mexico	D
 add	3.9.65	2008	European Champions Cup	2008		add	Manchester United	England	Chelsea	England					
 add	3.9.65	2008	European Super Cup	2007		add	AC Milan	Italy	Sevilla C.F.	Spain					
 add	3.9.65	2008	FIFA Club World Championship	2007		add	AC Milan	Italy	Boca Juniors	Argentina					
+add	3.9.65	2008	South American Copa Libertadores	2008		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
 add	3.9.65	2008	South American Copa Mercosur	2007		add	Arsenal de Sarandí	Argentina	Club de Fútbol América	Mexico					
 add	3.9.65	2008	UEFA Cup	2008		add	Zenith St. Petersburg	Russia	Glasgow Rangers	Scotland					
 add	3.9.65	2008	African Champions League	2008		add	Al-Ahly Sporting Club	Egypt	Coton Sport	Cameroon					
@@ -7000,6 +7001,7 @@ clear	3.9.65	2008	Welsh League Cup	2008
 clear	3.9.65	2008	Welsh Premier Cup	2008											
 clear	3.9.65	2008	Welsh Premier Division	2008											
 add	3.9.65	2009	Argentine Premier Division	2008	Apertura	add	Boca Juniors	Argentina	Tigre	Argentina					
+add	3.9.65	2009	Argentine Premier Division	2008	Clausura	add	Vélez Sarsfield	Argentina	Huracán	Argentina					
 add	3.9.65	2009	Argentine Second Division	2008		add	Atlético Tucumán	Argentina	Chacarita Juniors	Argentina					
 add	3.9.65	2009	US Open Cup	2009		add	Seattle Sounders	United States	Washington DC United	United States					
 add	3.9.65	2009	Japanese Emperor's Cup	2008		add	Gamba Osaka	Japan	Kashiwa Reysol	Japan					
@@ -7018,6 +7020,7 @@ add	3.9.65	2009	Brazilian São Paulo State Championship	2009		add	Sport Club Cor
 add	3.9.65	2009	Brazilian National First Division	2009		add	Clube de Regatas do Flamengo	Brazil	Sport Club Internacional	Brazil					
 add	3.9.65	2009	Brazilian National Second Division	2009		add	Clube de Regatas Vasco da Gama	Brazil	Guarani Futebol Clube	Brazil					
 add	3.9.65	2009	Brazilian National Third Division	2009		add	América Futebol Clube (MG)	Brazil	Agremiação Sportiva Arapiraquense	Brazil					
+add	3.9.65	2009	Brazilian Cup	2009		add	Sport Club Corinthians Paulista	Brazil	Sport Club Internacional	Brazil					
 add	3.9.65	2009	Polish First Division	2009		add	Wisla Krakow	Poland	Legia Warszawa	Poland					
 add	3.9.65	2009	Polish FA Cup	2009		add	Lech Poznan	Poland	Ruch Chorzow	Poland					
 add	3.9.65	2009	Polish League Cup	2009		add	Slask Wroclaw	Poland	Odra Wodzislaw	Poland					
@@ -7076,9 +7079,9 @@ add	3.9.65	2009	CONCACAF Champions Cup	2009		add	Club de Fútbol Atlante	Mexico	
 add	3.9.65	2009	European Champions Cup	2009		add	F.C. Barcelona	Spain	Manchester United	England					
 add	3.9.65	2009	European Super Cup	2008		add	Zenith St. Petersburg	Russia	Manchester United	England					
 add	3.9.65	2009	FIFA Club World Championship	2008		add	Manchester United	England	Liga Universitaria de Quito	Ecuador					
-add	3.9.65	2009	South American Copa Libertadores	2008		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
 add	3.9.65	2009	South American Copa Mercosur	2008		add	Sport Club Internacional	Brazil	Estudiantes de La Plata	Argentina					
 add	3.9.65	2009	South American Recopa	2008		add	Boca Juniors	Argentina	Arsenal de Sarandí	Argentina					
+add	3.9.65	2009	South American Recopa	2009		add	Liga Universitaria de Quito	Ecuador	Sport Club Internacional	Brazil					
 add	3.9.65	2009	UEFA Cup	2009		add	Shakhtar Donetsk	Ukraine	SV Werder Bremen	Germany					
 add	3.9.65	2009	African Champions League	2009		add	TP Mazembe	Democratic Republic of Congo							
 add	3.9.65	2009	Asian Club Championship	2009		add	Pohang Steelers	South Korea	Al Ittihad (KSA)	Saudi Arabia					
@@ -7277,13 +7280,11 @@ clear	3.9.65	2009	Welsh Cup	2009
 clear	3.9.65	2009	Welsh League Cup	2009											
 clear	3.9.65	2009	Welsh Premier Cup	2009											
 clear	3.9.65	2009	Welsh Premier Division	2009											
-add	3.9.65	2010	Argentine Premier Division	2008	Clausura	add	Vélez Sarsfield	Argentina	Huracán	Argentina					
 add	3.9.65	2010	Argentine Premier Division	2009	Apertura	add	Banfield	Argentina	Newell's Old Boys	Argentina					
 add	3.9.65	2010	Argentine Premier Division	2009	Clausura	add	Argentinos Juniors	Argentina	Estudiantes de La Plata	Argentina					
 add	3.9.65	2010	Argentine Second Division	2009		add	Olimpo de Bahía Blanca	Argentina	Quilmes	Argentina					
 add	3.9.65	2010	US Open Cup	2010		add	Seattle Sounders	United States	Columbus Crew	United States					
 add	3.9.65	2010	Japanese Emperor's Cup	2009		add	Gamba Osaka	Japan							
-add	3.9.65	2010	Brazilian Cup	2009		add	Sport Club Corinthians Paulista	Brazil	Sport Club Internacional	Brazil					
 add	3.9.65	2010	Polish Super Cup	2009		add	Lech Poznan	Poland	Wisla Krakow	Poland					
 add	3.9.65	2010	Croatian First Division	2009		add	NK Dinamo	Croatia	HNK Hajduk	Croatia					
 add	3.9.65	2010	Croatian Cup	2009		add	HNK Hajduk	Croatia	HNK Sibenik	Croatia					
@@ -7302,36 +7303,36 @@ add	3.9.65	2010	European Super Cup	2009		add	F.C. Barcelona	Spain	Shakhtar Donet
 add	3.9.65	2010	FIFA Club World Championship	2009		add	F.C. Barcelona	Spain	Estudiantes de La Plata	Argentina					
 add	3.9.65	2010	South American Copa Libertadores	2009		add	Estudiantes de La Plata	Argentina	Cruzeiro Esporte Clube	Brazil					
 add	3.9.65	2010	South American Copa Mercosur	2009		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
-add	3.9.65	2010	South American Recopa	2009		add	Liga Universitaria de Quito	Ecuador	Sport Club Internacional	Brazil					
 add	3.9.65	2010	Italian Super Cup	2009		add	Lazio	Italy	Internazionale	Italy					
+add	3.9.65	2010	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa		
 add	3.9.65	2010	Scottish League Challenge Cup	2009		add	Dundee	Scotland	Inverness Caledonian Thistle	Scotland					
 clear	3.9.65	2010	FIFA World Cup	2010											
 clear	3.9.65	2010	US Open Cup	2010											
 add	3.9.65	2011	US Open Cup	2011		add	Seattle Sounders	United States	Chicago Fire	United States					
-add	3.9.65	2011	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa		
 clear	3.9.65	2011	US Open Cup	2011											
 add	3.9.65	2012	European Football Championship	2012		add	Spain		Italy				Poland		
 clear	3.9.65	2012	European Football Championship	2012											
+add	3.9.65	2014	FIFA World Cup	2014		add	Germany		Argentina		Holland		Brazil		
 clear	3.9.65	2014	FIFA World Cup	2014											
-add	3.9.65	2015	FIFA World Cup	2014		add	Germany		Argentina		Holland		Brazil		
+add	3.9.65	2016	European Football Championship	2016		add	Portugal		France				France		
 clear	3.9.65	2016	European Football Championship	2016											
-add	3.9.65	2017	European Football Championship	2016		add	Portugal		France				France		
+add	3.9.65	2018	FIFA World Cup	2018		add	France		Croatia		Belgium		Russia		
 clear	3.9.65	2018	FIFA World Cup	2018											
-add	3.9.65	2019	FIFA World Cup	2018		add	France		Croatia		Belgium		Russia		
 clear	3.9.65	2019	US Open Cup	2019											2019
 clear	3.9.65	2020	European Football Championship	2020											
-add	3.9.65	2022	European Football Championship	2020		add	Italy		England						
+add	3.9.65	2021	European Football Championship	2020		add	Italy		England						
 add	3.9.65	2022	FIFA World Cup	2022		add	Argentina		France		Croatia		Qatar		
 clear	3.9.65	2022	FIFA World Cup	2022											
+add	3.9.65	2024	European Football Championship	2024		add	Spain		England				Germany		
 clear	3.9.65	2024	European Football Championship	2024											
-add	3.9.65	2025	European Football Championship	2024		add	Spain		England				Germany		
 clear	3.9.65	2025	African Cup of Nations	2025											
 add	3.9.65	2026	Argentine Premier Division	2026	Apertura	add	Belgrano de Córdoba	Argentina	River Plate	Argentina					
 add	3.9.65	2026	African Cup of Nations	2025		add	Morocco		Senegal		Nigeria		Morocco		
+add	3.9.65	2026	FIFA World Cup	2026		add	Spain		Argentina		England		Canada		
 clear	3.9.65	2026	Argentine Premier Division	2026											
 clear	3.9.65	2026	FIFA World Cup	2026											
-add	3.9.65	2027	FIFA World Cup	2026		add	Spain		Argentina		England		Canada		
 add	3.9.68	2003	Argentine Premier Division	2002	Apertura	add	Independiente	Argentina	Boca Juniors	Argentina					
+add	3.9.68	2003	Argentine Premier Division	2002	Clausura	add	River Plate	Argentina	Boca Juniors	Argentina					
 add	3.9.68	2003	Argentine Second Division	2002		add	Atlético Rafaela	Argentina	Argentinos Juniors	Argentina					
 add	3.9.68	2003	Mexican First Division	2002	Apertura	add	Deportivo Toluca	Mexico	Club Monarcas Morelia	Mexico					
 add	3.9.68	2003	Mexican First Division	2002	Clausura	add	Club de Fútbol Monterrey	Mexico	Club Monarcas Morelia	Mexico					
@@ -7457,6 +7458,7 @@ add	3.9.68	2003	Brazilian North State Championship	2003		add	Agremiação Sporti
 add	3.9.68	2003	Brazilian Northeast State Championship	2002		add	Nacional Futebol Clube (AM)	Brazil	Atlético Clíper Clube	Brazil					
 add	3.9.68	2003	Brazilian Northeast State Championship	2003		add	Nacional Futebol Clube (AM)	Brazil	Atlético Rio Negro Clube (AM)	Brazil					
 add	3.9.68	2003	Brazilian Gaúcho State Championship	2002		add	Sport Club Internacional	Brazil	Clube 15 de Novembro	Brazil					
+add	3.9.68	2003	Brazilian Gaúcho State Championship	2003		add	Sport Club Internacional	Brazil	Clube 15 de Novembro	Brazil					
 add	3.9.68	2003	Brazilian Goiás State Championship	2002		add	Goiás Esporte Clube	Brazil	Novo Horizonte Futebol Clube	Brazil					
 add	3.9.68	2003	Brazilian Goiás State Championship	2003		add	Goiás Esporte Clube	Brazil	Novo Horizonte Futebol Clube	Brazil					
 add	3.9.68	2003	Brazilian Minas Gerais State Championship	2002		add	Associação Atlética Caldense	Brazil	Ipatinga Futebol Clube	Brazil					
@@ -7667,6 +7669,7 @@ add	3.9.68	2003	European Champions Cup	2003		add	AC Milan	Italy	Juventus	Italy
 add	3.9.68	2003	European Super Cup	2002		add	Real Madrid C.F.	Spain	Feyenoord	Holland					
 add	3.9.68	2003	Intercontinental Cup	2002		add	Real Madrid C.F.	Spain	Club Olimpia	Paraguay					
 add	3.9.68	2003	South American Copa Libertadores	2002		agree	Club Olimpia	Paraguay	Associação Desportiva São Caetano	Brazil					
+add	3.9.68	2003	South American Copa Libertadores	2003		add	Boca Juniors	Argentina	Santos Futebol Clube	Brazil					
 add	3.9.68	2003	South American Copa Mercosur	2002		add	San Lorenzo de Almagro	Argentina	Corporación Deportiva Club Atlético Nacional	Colombia					
 add	3.9.68	2003	UEFA Cup	2002		add	Feyenoord	Holland	BV Borussia Dortmund	Germany					
 add	3.9.68	2003	UEFA Cup	2003		add	Futebol Clube do Porto	Portugal	Glasgow Celtic	Scotland					
@@ -8900,7 +8903,6 @@ clear	3.9.68	2003	Yugoslav Second Division South	2003
 clear	3.9.68	2003	Yugoslav Second Division West	2001											
 clear	3.9.68	2003	Yugoslav Second Division West	2002											
 clear	3.9.68	2003	Yugoslav Second Division West	2003											
-add	3.9.68	2004	Argentine Premier Division	2002	Clausura	add	River Plate	Argentina	Boca Juniors	Argentina					
 add	3.9.68	2004	Argentine Premier Division	2003	Apertura	add	Boca Juniors	Argentina	San Lorenzo de Almagro	Argentina					
 add	3.9.68	2004	Argentine Premier Division	2003	Clausura	add	River Plate	Argentina	Boca Juniors	Argentina					
 add	3.9.68	2004	Argentine Second Division	2003		add	Instituto de Córdoba	Argentina	Almagro	Argentina					
@@ -8961,7 +8963,6 @@ add	3.9.68	2004	Brazilian Bahia State Championship	2004		add	Esporte Clube Vitó
 add	3.9.68	2004	Brazilian Central State Championship	2003		add	Rio Branco Football Club	Brazil	Associação Desportiva Vasco da Gama	Brazil					
 add	3.9.68	2004	Brazilian North State Championship	2004		add	Sport Club Corinthians Alagoano	Brazil							
 add	3.9.68	2004	Brazilian Northeast State Championship	2004		add	São Raimundo Esporte Clube (AM)	Brazil							
-add	3.9.68	2004	Brazilian Gaúcho State Championship	2003		add	Sport Club Internacional	Brazil	Clube 15 de Novembro	Brazil					
 add	3.9.68	2004	Brazilian Gaúcho State Championship	2004		add	Sport Club Internacional	Brazil							
 add	3.9.68	2004	Brazilian Goiás State Championship	2004		add	Clube Recreativo e Atlético Catalano	Brazil	Vila Nova Futebol Clube	Brazil					
 add	3.9.68	2004	Brazilian Minas Gerais State Championship	2004		add	Cruzeiro Esporte Clube	Brazil	Clube Atlético Mineiro	Brazil					
@@ -9060,6 +9061,7 @@ add	3.9.68	2004	German Regional Division South	2004		add	FC Bayern München Amat
 add	3.9.68	2004	Austrian Premier Division	2004		add	Grazer AK	Austria	FK Austria Vienna	Austria					
 add	3.9.68	2004	Austrian FA Cup	2004		add	Grazer AK	Austria	FK Austria Vienna	Austria					
 add	3.9.68	2004	Austrian Super Cup	2003		add	FK Austria Vienna	Austria	FC Austria Kärnten	Austria					
+add	3.9.68	2004	Austrian Super Cup	2004		add	FK Austria Vienna	Austria	Grazer AK	Austria					
 add	3.9.68	2004	Swiss National Division A	2004		add	FC Basel	Switzerland	BSC Young Boys Bern	Switzerland					
 add	3.9.68	2004	Swiss Cup	2004		add	FC Wil 1900	Switzerland	Grasshopper Club Zurich	Switzerland					
 add	3.9.68	2004	Luxembourg National Division	2004		add	AS La Jeunesse d'Esch-Alzette	Luxembourg	F91 Dudelange	Luxembourg					
@@ -9068,7 +9070,7 @@ add	3.9.68	2004	CONCACAF Champions Cup	2004		add	Liga Deportiva Alajuelense	Cost
 add	3.9.68	2004	European Champions Cup	2004		add	Futebol Clube do Porto	Portugal	AS Monaco	France					
 add	3.9.68	2004	European Super Cup	2003		add	AC Milan	Italy	Futebol Clube do Porto	Portugal					
 add	3.9.68	2004	Intercontinental Cup	2003		add	Boca Juniors	Argentina	AC Milan	Italy					
-add	3.9.68	2004	South American Copa Libertadores	2003		add	Boca Juniors	Argentina	Santos Futebol Clube	Brazil					
+add	3.9.68	2004	South American Copa Libertadores	2004		add	Corporación Deportiva Once Caldas	Colombia	Boca Juniors	Argentina					
 add	3.9.68	2004	South American Copa Mercosur	2003		add	ADFP Club Cienciano	Peru	River Plate	Argentina					
 add	3.9.68	2004	South American Recopa	2003		add	Club Olimpia	Paraguay	San Lorenzo de Almagro	Argentina					
 add	3.9.68	2004	South American Recopa	2004		add	ADFP Club Cienciano	Peru	Boca Juniors	Argentina					
@@ -9448,6 +9450,7 @@ clear	3.9.68	2004	Yugoslav Second Division North	2004
 clear	3.9.68	2004	Yugoslav Second Division South	2004											
 clear	3.9.68	2004	Yugoslav Second Division West	2004											
 add	3.9.68	2005	Argentine Premier Division	2004	Apertura	add	Newell's Old Boys	Argentina	Vélez Sarsfield	Argentina					
+add	3.9.68	2005	Argentine Premier Division	2004	Clausura	add	Vélez Sarsfield	Argentina	Banfield	Argentina					
 add	3.9.68	2005	Argentine Second Division	2004		add	Tiro Federal de Rosario	Argentina	Gimnasia y Esgrima de Jujuy	Argentina					
 add	3.9.68	2005	Mexican First Division	2004	Apertura	add	Club de Fútbol Universidad	Mexico	Club de Fútbol Monterrey	Mexico					
 add	3.9.68	2005	Mexican First Division	2004	Clausura	add	Club de Fútbol América	Mexico	Club Tecos de la UAG	Mexico					
@@ -9594,7 +9597,6 @@ add	3.9.68	2005	German Regional Division South	2005		add	Kickers Offenbach	Germa
 add	3.9.68	2005	Austrian Premier Division	2005		add	SK Rapid Vienna	Austria	Grazer AK	Austria					
 add	3.9.68	2005	Austrian First Division	2005		add	SV Ried	Austria	Kapfenberger SV	Austria					
 add	3.9.68	2005	Austrian FA Cup	2005		add	FK Austria Vienna	Austria	SK Rapid Vienna	Austria					
-add	3.9.68	2005	Austrian Super Cup	2004		add	FK Austria Vienna	Austria	Grazer AK	Austria					
 add	3.9.68	2005	Swiss National Division A	2005		add	FC Basel	Switzerland	FC Thun	Switzerland					
 add	3.9.68	2005	Swiss Cup	2005		add	FC Zürich	Switzerland	FC Lucerne	Switzerland					
 add	3.9.68	2005	Luxembourg National Division	2005		add	F91 Dudelange	Luxembourg	FC Etzella Ettelbruck	Luxembourg					
@@ -9603,13 +9605,13 @@ add	3.9.68	2005	CONCACAF Champions Cup	2005		add	Deportivo Saprissa	Costa Rica	C
 add	3.9.68	2005	European Champions Cup	2005		add	Liverpool	England	AC Milan	Italy					
 add	3.9.68	2005	European Super Cup	2004		add	Valencia C.F.	Spain	Futebol Clube do Porto	Portugal					
 add	3.9.68	2005	Intercontinental Cup	2004		add	Futebol Clube do Porto	Portugal	Corporación Deportiva Once Caldas	Colombia					
-add	3.9.68	2005	South American Copa Libertadores	2004		add	Corporación Deportiva Once Caldas	Colombia	Boca Juniors	Argentina					
 add	3.9.68	2005	South American Copa Mercosur	2004		add	Boca Juniors	Argentina	Club Bolívar	Bolivia					
 add	3.9.68	2005	UEFA Cup	2005		add	CSKA Moscow	Russia	Sporting Clube de Portugal	Portugal					
 add	3.9.68	2005	African Champions League	2005		add	Al-Ahly Sporting Club	Egypt	Etoile Sportive du Sahel	Tunisia					
 add	3.9.68	2005	African CAF Cup	2004		add	Hearts of Oak	Ghana	Asante Kotoko	Ghana					
 add	3.9.68	2005	African CAF Cup	2005		add	Forces Armées Royale Rabat	Morocco	Eagle Cement FC	Nigeria					
 add	3.9.68	2005	African Super Cup	2004		add	Enyimba FC	Nigeria	Hearts of Oak	Ghana					
+add	3.9.68	2005	Arab Club Champions Cup	2005		add	Al Ittihad (KSA)	Saudi Arabia	Club Sportif Sfaxien	Tunisia					
 add	3.9.68	2005	Asian Club Championship	2005		add	Al Ittihad (KSA)	Saudi Arabia	Al Ain	United Arab Emirates					
 add	3.9.68	2005	CIS Champions Cup	2005		add	Lokomotiv Moscow	Russia	SC Neftchi Baku	Azerbaijan					
 add	3.9.68	2005	Irish Premier Division	2005		add	Cork City	Republic of Ireland	Derry City	Republic of Ireland					
@@ -9973,7 +9975,6 @@ clear	3.9.68	2005	Yugoslav Second Division	2005
 clear	3.9.68	2005	Yugoslav Second Division North	2005											
 clear	3.9.68	2005	Yugoslav Second Division South	2005											
 clear	3.9.68	2005	Yugoslav Second Division West	2005											
-add	3.9.68	2006	Argentine Premier Division	2004	Clausura	add	Vélez Sarsfield	Argentina	Banfield	Argentina					
 add	3.9.68	2006	Argentine Premier Division	2005	Apertura	add	Boca Juniors	Argentina	Gimnasia y Esgrima de La Plata	Argentina					
 add	3.9.68	2006	Argentine Premier Division	2005	Clausura	add	Boca Juniors	Argentina	Lanús	Argentina					
 add	3.9.68	2006	Argentine Second Division	2005		add	Godoy Cruz Antonio Tomba	Argentina	Nueva Chicago	Argentina					
@@ -10082,7 +10083,6 @@ add	3.9.68	2006	UEFA Cup	2006		add	Sevilla C.F.	Spain	Middlesbrough	England
 add	3.9.68	2006	African Champions League	2006		add	Al-Ahly Sporting Club	Egypt	Club Sportif Sfaxien	Tunisia					
 add	3.9.68	2006	African CAF Cup	2006		add	Etoile Sportive du Sahel	Tunisia	Forces Armées Royale Rabat	Morocco					
 add	3.9.68	2006	African Super Cup	2005		add	Al-Ahly Sporting Club	Egypt	Forces Armées Royale Rabat	Morocco					
-add	3.9.68	2006	Arab Club Champions Cup	2005		add	Al Ittihad (KSA)	Saudi Arabia	Club Sportif Sfaxien	Tunisia					
 add	3.9.68	2006	Asian Club Championship	2006		add	Chonbuk Hyundai Motors	South Korea	Al Karama	Syria					
 add	3.9.68	2006	CIS Champions Cup	2006		add	SC Neftchi Baku	Azerbaijan	FBK Kaunas	Lithuania					
 add	3.9.68	2006	Irish Premier Division	2006		add	Shelbourne F.C.	Republic of Ireland	Derry City	Republic of Ireland					
@@ -10788,6 +10788,7 @@ add	3.9.68	2008	CONCACAF Champions Cup	2008		add	Club Deportivo Pachuca	Mexico	D
 add	3.9.68	2008	European Champions Cup	2008		add	Manchester United	England	Chelsea	England					
 add	3.9.68	2008	European Super Cup	2007		add	AC Milan	Italy	Sevilla C.F.	Spain					
 add	3.9.68	2008	FIFA Club World Championship	2007		add	AC Milan	Italy	Boca Juniors	Argentina					
+add	3.9.68	2008	South American Copa Libertadores	2008		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
 add	3.9.68	2008	South American Copa Mercosur	2007		add	Arsenal de Sarandí	Argentina	Club de Fútbol América	Mexico					
 add	3.9.68	2008	UEFA Cup	2008		add	Zenith St. Petersburg	Russia	Glasgow Rangers	Scotland					
 add	3.9.68	2008	African Champions League	2008		add	Al-Ahly Sporting Club	Egypt	Coton Sport	Cameroon					
@@ -11040,6 +11041,7 @@ clear	3.9.68	2008	Welsh League Cup	2008
 clear	3.9.68	2008	Welsh Premier Cup	2008											
 clear	3.9.68	2008	Welsh Premier Division	2008											
 add	3.9.68	2009	Argentine Premier Division	2008	Apertura	add	Boca Juniors	Argentina	Tigre	Argentina					
+add	3.9.68	2009	Argentine Premier Division	2008	Clausura	add	Vélez Sarsfield	Argentina	Huracán	Argentina					
 add	3.9.68	2009	Argentine Second Division	2008		add	Atlético Tucumán	Argentina	Chacarita Juniors	Argentina					
 add	3.9.68	2009	US Open Cup	2009		add	Seattle Sounders	United States	Washington DC United	United States					
 add	3.9.68	2009	Japanese Emperor's Cup	2008		add	Gamba Osaka	Japan	Kashiwa Reysol	Japan					
@@ -11061,6 +11063,7 @@ add	3.9.68	2009	Brazilian São Paulo State Championship	2009		add	Sport Club Cor
 add	3.9.68	2009	Brazilian National First Division	2009		add	Clube de Regatas do Flamengo	Brazil	Sport Club Internacional	Brazil					
 add	3.9.68	2009	Brazilian National Second Division	2009		add	Clube de Regatas Vasco da Gama	Brazil	Guarani Futebol Clube	Brazil					
 add	3.9.68	2009	Brazilian National Third Division	2009		add	América Futebol Clube (MG)	Brazil	Agremiação Sportiva Arapiraquense	Brazil					
+add	3.9.68	2009	Brazilian Cup	2009		add	Sport Club Corinthians Paulista	Brazil	Sport Club Internacional	Brazil					
 add	3.9.68	2009	Polish First Division	2009		add	Wisla Krakow	Poland	Legia Warszawa	Poland					
 add	3.9.68	2009	Polish FA Cup	2009		add	Lech Poznan	Poland	Ruch Chorzow	Poland					
 add	3.9.68	2009	Polish League Cup	2009		add	Slask Wroclaw	Poland	Odra Wodzislaw	Poland					
@@ -11122,9 +11125,9 @@ add	3.9.68	2009	CONCACAF Champions Cup	2009		add	Club de Fútbol Atlante	Mexico	
 add	3.9.68	2009	European Champions Cup	2009		add	F.C. Barcelona	Spain	Manchester United	England					
 add	3.9.68	2009	European Super Cup	2008		add	Zenith St. Petersburg	Russia	Manchester United	England					
 add	3.9.68	2009	FIFA Club World Championship	2008		add	Manchester United	England	Liga Universitaria de Quito	Ecuador					
-add	3.9.68	2009	South American Copa Libertadores	2008		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
 add	3.9.68	2009	South American Copa Mercosur	2008		add	Sport Club Internacional	Brazil	Estudiantes de La Plata	Argentina					
 add	3.9.68	2009	South American Recopa	2008		add	Boca Juniors	Argentina	Arsenal de Sarandí	Argentina					
+add	3.9.68	2009	South American Recopa	2009		add	Liga Universitaria de Quito	Ecuador	Sport Club Internacional	Brazil					
 add	3.9.68	2009	UEFA Cup	2009		add	Shakhtar Donetsk	Ukraine	SV Werder Bremen	Germany					
 add	3.9.68	2009	African Champions League	2009		add	TP Mazembe	Democratic Republic of Congo							
 add	3.9.68	2009	Asian Club Championship	2009		add	Pohang Steelers	South Korea	Al Ittihad (KSA)	Saudi Arabia					
@@ -11332,13 +11335,11 @@ clear	3.9.68	2009	Welsh Cup	2009
 clear	3.9.68	2009	Welsh League Cup	2009											
 clear	3.9.68	2009	Welsh Premier Cup	2009											
 clear	3.9.68	2009	Welsh Premier Division	2009											
-add	3.9.68	2010	Argentine Premier Division	2008	Clausura	add	Vélez Sarsfield	Argentina	Huracán	Argentina					
 add	3.9.68	2010	Argentine Premier Division	2009	Apertura	add	Banfield	Argentina	Newell's Old Boys	Argentina					
 add	3.9.68	2010	Argentine Premier Division	2009	Clausura	add	Argentinos Juniors	Argentina	Estudiantes de La Plata	Argentina					
 add	3.9.68	2010	Argentine Second Division	2009		add	Olimpo de Bahía Blanca	Argentina	Quilmes	Argentina					
 add	3.9.68	2010	US Open Cup	2010		add	Seattle Sounders	United States	Columbus Crew	United States					
 add	3.9.68	2010	Japanese Emperor's Cup	2009		add	Gamba Osaka	Japan							
-add	3.9.68	2010	Brazilian Cup	2009		add	Sport Club Corinthians Paulista	Brazil	Sport Club Internacional	Brazil					
 add	3.9.68	2010	Polish Super Cup	2009		add	Lech Poznan	Poland	Wisla Krakow	Poland					
 add	3.9.68	2010	Croatian First Division	2009		add	NK Dinamo	Croatia	HNK Hajduk	Croatia					
 add	3.9.68	2010	Croatian Cup	2009		add	HNK Hajduk	Croatia	HNK Sibenik	Croatia					
@@ -11357,32 +11358,31 @@ add	3.9.68	2010	European Super Cup	2009		add	F.C. Barcelona	Spain	Shakhtar Donet
 add	3.9.68	2010	FIFA Club World Championship	2009		add	F.C. Barcelona	Spain	Estudiantes de La Plata	Argentina					
 add	3.9.68	2010	South American Copa Libertadores	2009		add	Estudiantes de La Plata	Argentina	Cruzeiro Esporte Clube	Brazil					
 add	3.9.68	2010	South American Copa Mercosur	2009		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
-add	3.9.68	2010	South American Recopa	2009		add	Liga Universitaria de Quito	Ecuador	Sport Club Internacional	Brazil					
 add	3.9.68	2010	Italian Super Cup	2009		add	Lazio	Italy	Internazionale	Italy					
+add	3.9.68	2010	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa		
 add	3.9.68	2010	Scottish League Challenge Cup	2009		add	Dundee	Scotland	Inverness Caledonian Thistle	Scotland					
 clear	3.9.68	2010	FIFA World Cup	2010											
 clear	3.9.68	2010	US Open Cup	2010											
 add	3.9.68	2011	US Open Cup	2011		add	Seattle Sounders	United States	Chicago Fire	United States					
-add	3.9.68	2011	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa		
 clear	3.9.68	2011	US Open Cup	2011											
 add	3.9.68	2012	European Football Championship	2012		add	Spain		Italy				Poland		
 clear	3.9.68	2012	European Football Championship	2012											
+add	3.9.68	2014	FIFA World Cup	2014		add	Germany		Argentina		Holland		Brazil		
 clear	3.9.68	2014	FIFA World Cup	2014											
-add	3.9.68	2015	FIFA World Cup	2014		add	Germany		Argentina		Holland		Brazil		
+add	3.9.68	2016	European Football Championship	2016		add	Portugal		France				France		
 clear	3.9.68	2016	European Football Championship	2016											
-add	3.9.68	2017	European Football Championship	2016		add	Portugal		France				France		
+add	3.9.68	2018	FIFA World Cup	2018		add	France		Croatia		Belgium		Russia		
 clear	3.9.68	2018	FIFA World Cup	2018											
-add	3.9.68	2019	FIFA World Cup	2018		add	France		Croatia		Belgium		Russia		
 clear	3.9.68	2019	US Open Cup	2019											2019
 clear	3.9.68	2020	European Football Championship	2020											
-add	3.9.68	2022	European Football Championship	2020		add	Italy		England						
+add	3.9.68	2021	European Football Championship	2020		add	Italy		England						
 add	3.9.68	2022	FIFA World Cup	2022		add	Argentina		France		Croatia		Qatar		
 clear	3.9.68	2022	FIFA World Cup	2022											
+add	3.9.68	2024	European Football Championship	2024		add	Spain		England				Germany		
 clear	3.9.68	2024	European Football Championship	2024											
-add	3.9.68	2025	European Football Championship	2024		add	Spain		England				Germany		
 clear	3.9.68	2025	African Cup of Nations	2025											
 add	3.9.68	2026	Argentine Premier Division	2026	Apertura	add	Belgrano de Córdoba	Argentina	River Plate	Argentina					
 add	3.9.68	2026	African Cup of Nations	2025		add	Morocco		Senegal		Nigeria		Morocco		
+add	3.9.68	2026	FIFA World Cup	2026		add	Spain		Argentina		England		Canada		
 clear	3.9.68	2026	Argentine Premier Division	2026											
 clear	3.9.68	2026	FIFA World Cup	2026											
-add	3.9.68	2027	FIFA World Cup	2026		add	Spain		Argentina		England		Canada		

@@ -54,19 +54,29 @@ import history_gaps as hg  # noqa: E402
 from history_gaps import s32  # noqa: E402
 
 HIST = os.path.join(hg.ROOT, "docs", "research", "history-0.6.0")
-NOT_PARTS = {"gaps.tsv", "targets.tsv", "fill-report.tsv", "unmatched.tsv", "matched-by-id.tsv", "aliases.tsv", "plan.tsv", "not-same.tsv", "reconcile.tsv", "skip.tsv", "no-winner.tsv"}
+NOT_PARTS = {"gaps.tsv", "targets.tsv", "fill-report.tsv", "unmatched.tsv", "matched-by-id.tsv", "aliases.tsv", "plan.tsv", "not-same.tsv", "reconcile.tsv", "skip.tsv", "no-winner.tsv", "july-days.tsv", "plan-official.tsv"}
 FIRST_FILL = 2001        # the first label year that the research fills: 2000/01 (Q354), then 2001/02 on
 START_MONTH = 7          # a new game starts in July of its start year
 CALENDAR_LAST_MONTH = 9  # a calendar-year edition of the start year that ends in this month or later counts
 # Editions whose final is in July of a start year before the game's first day, with the day of the final. The
 # research gives the month only. A new game's first news day is 10 July or later (seen: 10.7.2004 in Summer 2004,
-# 15.7.2006 in Summer 2006), so a final on 9 July or earlier is before the start. Of the researched editions only
-# Euro 2004, World Cup 2006 and Euro 2012 have such a final (the start years 2004, 2006 and 2012 of an official data
-# set, open item 149; the season databases of other start years are not changed).
+# 15.7.2006 in Summer 2006), so a final on 9 July or earlier is before the start.
 FIRST_DAY_MIN = 10
 EARLY_JULY = {("European Football Championship", 2004): 4,   # https://en.wikipedia.org/wiki/UEFA_Euro_2004_final
-              ("FIFA World Cup", 2006): 9,                    # https://en.wikipedia.org/wiki/2006_FIFA_World_Cup_final
-              ("European Football Championship", 2012): 1}   # https://en.wikipedia.org/wiki/UEFA_Euro_2012_final
+              ("FIFA World Cup", 2006): 9}                    # https://en.wikipedia.org/wiki/2006_FIFA_World_Cup_final
+# The day of the deciding match of every other researched edition that ended in July (0.6.2 open item 149):
+# july-days.tsv, one source each (RSSSF, RSSSF Brasil, Wikipedia). Since every start year of an official data set
+# gets rows, the final of 1 to 9 July of any such edition decides its first start year.
+JULY_DAYS = os.path.join(HIST, "july-days.tsv")
+for _r in hg.read_tsv(JULY_DAYS) if os.path.isfile(JULY_DAYS) else []:
+    _m = re.fullmatch(r"\d{4}-07-(\d{2})", _r["final_date"])
+    if _m:
+        EARLY_JULY.setdefault((_r["competition"], int(_r["label"])), int(_m.group(1)))
+# Finals that the game does not play in the July of its start year: the World Cup and the Euro. The finals code fills
+# an edition only for a start in the finals' season or the one before (real_draws, season_intl_rules.c; Q388), and
+# the 2010 gate saves of 0.6.0 hold no game row of the 2010 World Cup (GAP_FINALS below). So such an edition whose
+# final is in July of the start year counts at that start (0.6.2 open item 149: World Cup 2010 in a 2010 game).
+JULY_FINALS = ("FIFA World Cup", "European Football Championship")
 
 
 def research_rows():
@@ -109,6 +119,8 @@ def kept(r, start):
         return True
     day = EARLY_JULY.get((r.get("competition"), label))
     if (y, m) == (start, START_MONTH) and day is not None and day < FIRST_DAY_MIN:
+        return True
+    if (y, m) == (start, START_MONTH) and r.get("competition") in JULY_FINALS:
         return True
     single = re.fullmatch(r"\s*(\d{4})\s*", r.get("real_season", ""))
     return bool(single) and int(single.group(1)) == label == start == y and m >= CALENDAR_LAST_MONTH
