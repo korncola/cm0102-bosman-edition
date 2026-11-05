@@ -17,7 +17,9 @@ census of the U23 sides at each season change. The runs:
             Second Division plays the play-off (proves that the test sees both faults)
     on      the shipped code: no U23 side goes up to the First Division, KAA Gent B (its first team in the First
             Division) may go up from the Third Division, the 16th goes down directly in both play-offs and a
-            third-tier club takes its place, and the shield of 2024/25 keeps KRC Genk B (put at the bottom) up
+            third-tier club takes its place, the shield of 2024/25 keeps KRC Genk B (put at the bottom) up with no
+            club down in its place and one third-tier promotion dropped, and with no shield in 2025/26 (abolished
+            in May 2026) KRC Genk B goes down. To 1 June 2027
     parent  as on, and RECOMP_TEST_BEL_DOWN relegates Club Brugge KV and KAA Gent from the First Division in summer
             2025: Club Brugge KV II goes down from the Second Division and KAA Gent B (on top of the Third
             Division) does not go up to its first team's division
@@ -131,7 +133,7 @@ def check_on(name, log, seen):
 
 def run_on(program, game, work):
     fails, log = jump("on", program, game, work, {"RECOMP_TEST_BEL_POINTS": ENV["RECOMP_TEST_BEL_POINTS"] +
-                                                  ";KRC Genk B=-"})
+                                                  ";KRC Genk B=-"}, last=2026)
     seen = changes(log)
     got = check_on("on", log, seen)
     if isinstance(got, list):
@@ -145,8 +147,22 @@ def run_on(program, game, work):
         fails.append("on: Beerschot V.A U23 is not linked to Beerschot VA in the First Division (the case is not seen)")
     if any("may not go up into its first team's division" in l and "Beerschot" in l for l in log.splitlines()):
         fails.append("on: Beerschot V.A U23 (first team in the First Division) was held in the Fourth Division")
-    if not any("the shield of 2024/25 keeps KRC Genk B up" in l for l in lines) or lv.get("KRC Genk B") != 2:
+    # 2024/25 as in real life: the U23 side stays up, no club goes down in its place, one fewer third-tier club
+    # goes up (the sizes check above holds the divisions at their counts).
+    shield = [l for l in lines if "the shield of 2024/25 keeps KRC Genk B up, no club goes down in its place" in l]
+    if not shield or lv.get("KRC Genk B") != 2:
         fails.append(f"on: the shield did not keep KRC Genk B up (level {lv.get('KRC Genk B')})")
+    else:
+        if not re.search(r"place, .* \(status [05]\) stays in the Third Division", shield[0]):
+            fails.append(f"on: no promotion of the Third Division dropped for the shield: {shield[0]}")
+    if any("goes down in its place" in l and "no club goes down in its place" not in l for l in lines):
+        fails.append("on: a club went down in the U23 side's place in 2024/25")
+    # 2025/26: the shield was abolished (May 2026), so KRC Genk B at the bottom goes down.
+    if len(seen) < 2 or seen[1][1] is None:
+        return fails + [f"on: {len(seen)} Belgian season changes seen, want 2"]
+    lv2, lines2 = seen[1][3], seen[1][4]
+    if any("the shield of" in l for l in lines2) or lv2.get("KRC Genk B") != 3:
+        fails.append(f"on: KRC Genk B (bottom, 2025/26, no shield) is at level {lv2.get('KRC Genk B')}, want 3")
     return fails
 
 
