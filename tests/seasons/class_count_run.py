@@ -3,7 +3,7 @@
 clubs starts with that number after the club moves, and Belgium's leagues move on at the 2026 season change.
 
 Usage:
-    python3 tests/seasons/class_count_run.py <cm0102_recomp> <game folder> [--only start,season,irish] [--keep <folder>]
+    python3 tests/seasons/class_count_run.py <cm0102_recomp> <game folder> [--only start,season,irish,galway] [--keep <folder>]
 
 The runs, each a season game with all nations, changing rules on, as a Tier A run, with no season database. Start
 and season use data set 3.9.68 and start in 2025 (the dates of the data move to 2025). Irish starts four games:
@@ -35,7 +35,10 @@ and season use data set 3.9.68 and start in 2025 (the dates of the data move to 
             hold 3.9.68 club ids, so on 3.9.65 only names whose initials share a word match by initials, and Bray
             Wanderers (club 1522 there) is found by its exception row. No start leaves a listed Bray Wanderers
             missing. The count fill stays for clubs that the data lacks, and its log line names them. No start
-            fills (FILLS): the 3.9.65 start once filled for Salthill Devon, which the data hold.
+            fills (FILLS): the 3.9.65 start once filled for Salthill Devon, which the data hold. A second 2013 start
+            makes no club record (VARIANTS), so the exception row finds the list's "Galway" as Galway United.
+    galway  a 2013/14 start that plays to the end of 2014/15 (about 15 minutes, run_galway): the record Galway F.C.
+            stays the one Galway club of the Irish divisions in 2014/15.
 Without --keep the runs play in a temporary folder that the script deletes when every run passes.
 """
 import os
@@ -104,14 +107,27 @@ def run_season(program, game, work):
 # The irish starts: (year, database folder or None for 3.9.68, exact counts or None). Every start checks that the
 # counts are ones the classes take: IrePrm 10 or 12, IreFirst 9 to 12.
 DATA_3965 = "/Users/max/Projects/cm0102/data-3965"
+# A fourth item names a variant with its own environment (VARIANTS).
 IRISH = [(2008, None, {"ire_prm": 12, "ire_first": 10}), (2010, None, None), (2017, None, None),
-         (2018, None, None), (2012, DATA_3965, None)]
+         (2018, None, None), (2013, None, None), (2013, None, None, "records-off"), (2014, None, None),
+         (2012, DATA_3965, None)]
+# records-off: the start makes no slice 15b club record (the test switch of season_records.c), as when the source
+# database of a record is missing. The list's "Galway" of 2013/14 then has no record, and its exception row finds it.
+VARIANTS = {"records-off": {"RECOMP_CLUB_RECORDS": "off"}}
 # The count fills that each start logs (division, places, missing clubs): none, as the data hold every listed club.
 FILLS = {}
 TAKES = {"ire_prm": {10, 12}, "ire_first": {9, 10, 11, 12}}
 # Item 123b: the list clubs that each start finds by the joined initials (list name, database name and id), found
 # by the rule of season_clubs.c over the lists of these seasons (model cmp2.py mode 5 in run-logs/0.6.2-s123b).
 BY_INITIALS = {
+    **{key: {("Irish Premier Division", "Bray Wanderers", "Bray Wanderers A.F.C. (1855)"),
+             ("Italian Serie A", "A.C. Milan", "AC Milan (7369)"),
+             ("Spanish Second Division B1", "Zamora CF", "Zamora C.F. (13080)"),
+             ("Turkish 2. Division Category A", "Kahramanmarasspor A.S.", "Kahramanmarasspor (5704)")}
+       for key in (2013, "2013 records-off")},
+    2014: {("Irish Premier Division", "Bray Wanderers", "Bray Wanderers A.F.C. (1855)"),
+           ("Italian Serie A", "A.C. Milan", "AC Milan (7369)"),
+           ("Greek Second Division Group 2", "Paniliakos", "I.S. Paniliakos (8565)")},
     2008: {("Italian Serie A", "S.S. Lazio", "Lazio (6411)"), ("Italian Serie A", "S.S.C. Napoli", "Napoli (7752)"),
            ("Italian Serie A", "Bologna F.C. 1909", "Bologna 1909 (1728)"),
            ("Irish Premier Division", "Bray Wanderers", "Bray Wanderers A.F.C. (1855)")},
@@ -135,6 +151,9 @@ BY_INITIALS = {
 }
 # The list names that each start finds by the exception rows of season_clubs.c (NAME_EXCEPTIONS).
 BY_EXCEPTION = {
+    # 2013: the list's "Galway" (no id) is the slice 15b record Galway F.C. of this load, not an exception
+    "2013 records-off": {("Irish First Division", "Galway", "Galway United (4287)")},
+    2014: {("Irish Premier Division", "Galway FC", "Galway United (4287)")},
     2010: {("Irish First Division", "Cork City FORAS Co-op", "Cork City (2741)")},
     2017: {("Irish Premier Division", "St. Patrick's Athletic", "Saint Patrick's Athletic (11003)")},
     2018: {("Irish Premier Division", "Bohemian Football Club Dublin", "Bohemian F.C. (1710)"),
@@ -148,13 +167,15 @@ BY_EXCEPTION = {
 def run_irish(program, game, work):
     env = dict(ENV, RECOMP_CLUB_LOG="1")
     fails = []
-    for year, database, exact in IRISH:
-        name = f"irish {year}" + (f" {os.path.basename(database)}" if database else "")
+    for year, database, exact, *variant in IRISH:
+        suffix = os.path.basename(database) if database else (variant[0] if variant else None)
+        name = f"irish {year}" + (f" {suffix}" if suffix else "")
         if database and not os.path.isdir(database):
             print(f"note  {name}: no database folder {database}, not run")
             continue
         sub = os.path.join(work, name.replace(" ", "-"))
-        code, report = rrc.run(program, game, year, year, database, ["all"], [], sub, 3600, OPTIONS, env,
+        code, report = rrc.run(program, game, year, year, database, ["all"], [], sub, 3600, OPTIONS,
+                               dict(env, **VARIANTS.get(suffix, {})),
                                start_only=True, stop_on_box=True)
         if code != 0:
             fails.append(f"{name}: the game ended with code {code}")
@@ -165,7 +186,7 @@ def run_irish(program, game, work):
         fails += [f"{name}: {line}" for line in short_divisions(log) if line.startswith(("Irish", "Norwegian"))]
         tag = f"{year}/{(year + 1) % 100:02d}"
         got = set(re.findall(rf"recomp: club moves: by initials: {tag}\t(.+?)\t(.+?)\t(.+)", log))
-        key = f"{year} {os.path.basename(database)}" if database else year
+        key = f"{year} {suffix}" if suffix else year
         want = BY_INITIALS.get(key, set())
         fails += [f"{name}: not found by initials: {w}" for w in sorted(want - got)]
         fails += [f"{name}: found by initials, not expected: {g}" for g in sorted(got - want)]
@@ -202,7 +223,34 @@ def run_irish(program, game, work):
     return fails
 
 
-RUNS = {"start": run_start, "season": run_season, "irish": run_irish}
+def run_galway(program, game, work):
+    """Item 123b: a 2013/14 start that plays to the end of 2014/15 (about 15 minutes). The club moves run only at a
+    new game (season_clubs.c), so the 2014/15 list ("Galway FC", exception row to Galway United) does not act in
+    this game. The slice 15b record Galway F.C. of the load must stay the one Galway club of the Irish divisions at
+    the start of 2014/15, with Galway United (4287) in none."""
+    code, report = rrc.run(program, game, 2014, 2013, None, ["all"], [], work, 4 * 3600, OPTIONS,
+                           dict(ENV, RECOMP_CLUB_LOG="1"), stop_on_box=True)
+    fails = [] if code == 0 else [f"galway: the game ended with code {code}"]
+    found, log = boxes("galway", work)
+    fails += found
+    moves = re.findall(r"recomp: club moves of (\d+)/", log)
+    if moves != ["2013"]:
+        fails.append(f"galway: club moves of {moves}, expected only the 2013/14 load")
+    if not os.path.exists(report):
+        return fails + [f"galway: no report ({work})"]
+    clubs = []
+    _, comps = rrc.read_report(report, clubs)
+    irish = {int(c["slot"].lstrip("t")) for c in comps if c["file"] in TAKES and c["phase"] == "start"}
+    for season in (2013, 2014):
+        got = sorted((c["name"], c["club"]) for c in clubs if c["season"] == season and c["phase"] == "start"
+                     and c["division"] in irish and ("galway" in c["name"].lower() or c["club"] == 4287))
+        if [n for n, _ in got] != ["Galway F.C."] or got[0][1] == 4287:
+            fails.append(f"galway: Galway clubs of the Irish divisions at the start of {season}: {got}, expected "
+                         "the record Galway F.C. only")
+    return fails
+
+
+RUNS = {"start": run_start, "season": run_season, "irish": run_irish, "galway": run_galway}
 
 
 def main(argv):
