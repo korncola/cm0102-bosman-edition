@@ -201,7 +201,7 @@ def differing_share(a, b, box=None, tol=0):
 
 
 # The runs of the same-save check: a name and the option lines of settings.txt (after the mode).
-# The groups of original_faults.c. The group callups acts in the first days of every game (open item 143), so the
+# The groups of original_faults.c. The group callups can act in the first days of a game (open item 143), so the
 # runs original-faults-keep keep only the others.
 ORIGINAL_FAULT_GROUPS = ["managers", "money", "age", "olympics", "ire_super", "nsl", "holiday", "callups"]
 KEEP_IN_RUNS = "keep:" + ",".join(g for g in ORIGINAL_FAULT_GROUPS if g != "callups")
@@ -281,8 +281,9 @@ SAME_SAVE_RUNS = [
     # outside the 14 days of each saved game), and for a club on holiday with "Reject all offers" or "below asking
     # price" (open item 132; these runs go on holiday with every setting off): in these runs none of that happens,
     # so with their test switch off the save is that of normal. A saved game whose days pass a month change keeps
-    # only the other groups (FAULTS_ACT). The senior call-ups (group callups, open item 143) act at the first senior
-    # pick of a nation with players abroad, in the first days of every game, so this run keeps every other group
+    # only the other groups (FAULTS_ACT). The senior call-ups (group callups, open item 143) act at a senior pick
+    # that meets a player abroad, which can come in the first days of a game (in a game with every league,
+    # Argentina's pick on 14.7.01 refuses 60 players with the original's rule), so this run keeps every other group
     # (KEEP_IN_RUNS). Its proof is a set with RECOMP_ORIGINAL_FAULTS=keep:callups for every run against --ref-build
     # (with_set_keep), and tests/seasons/callups_run.py.
     ("original-faults-keep", {"faster_days": "off", "_env": {"RECOMP_ORIGINAL_FAULTS": KEEP_IN_RUNS}}),
