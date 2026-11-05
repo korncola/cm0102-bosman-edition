@@ -4,6 +4,14 @@
 2016	bench	eng_fa_cup (FA Cup), row eng-388: game 5, table 7 (7)
 2016	bench	fifa_confed (FIFA Confederations Cup), row int-world-190: game 7, table 12 (12)
 2016	bench	world_club_champ (FIFA Club World Cup), row club-world-287: game 7, table 12 (12)
+2016	club_list	American Major League: 12 of 20 listed clubs that the database holds (22 listed), 0 other clubs, 12 in all; not in it: Atlanta United, Montreal Impact, Orlando City, Philadelphia Union, Real Salt Lake, Seattle Sounders, Toronto FC, Vancouver Whitecaps; others: -
+2016	club_list	Irish First Division: 8 of 8 listed clubs that the database holds (8 listed), 2 other clubs, 10 in all; not in it: -; others: FC Carlow, Tralee Dynamos
+2016	club_list	Korean League: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Daegu FC, Incheon United; others: -
+2016	club_list	Portuguese Second League: 18 of 21 listed clubs that the database holds (22 listed), 0 other clubs, 18 in all; not in it: Sport Lisboa e Benfica B, Sporting Clube de Braga B, Sporting Clube de Portugal B; others: -
+2016	club_list	Russian First Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: Spartak-2 Moscow, Zenit-2 St. Petersburg; others: -
+2016	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: AFC United, Halmstads BK; others: -
+2016	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: 1461 Trabzon, Kayseri Erciyesspor
+2016	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: Barry Town, Caernarfon Town, Cardiff Met, Denbigh Town, Haverfordwest County, Port Talbot Town
 2016	clubs	african_nations (Africa Cup of Nations), row int-continental-172: game 0, table 16 (16)
 2016	clubs	asia_club_champ (AFC Champions League), row club-world-298: game 16, table 32 (32)
 2016	clubs	fifa_confed (FIFA Confederations Cup), row int-world-190: game 0, table 8 (8)

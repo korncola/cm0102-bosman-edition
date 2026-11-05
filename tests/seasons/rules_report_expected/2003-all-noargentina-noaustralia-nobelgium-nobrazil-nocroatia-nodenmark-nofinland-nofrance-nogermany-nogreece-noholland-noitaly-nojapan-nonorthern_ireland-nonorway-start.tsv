@@ -1,5 +1,13 @@
 # Differences between the rules report and the rules table that the check accepts. Made by
 # tests/seasons/rules_report_check.py --update-expected. Columns: season, kind, text.
+2003	club_list	American Major League: 10 of 10 listed clubs that the database holds (10 listed), 2 other clubs, 12 in all; not in it: -; others: Miami Fusion FC, Tampa Bay Mutiny
+2003	club_list	Irish First Division: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Dundalk F.C., Monaghan United; others: -
+2003	club_list	Irish Premier Division: 10 of 10 listed clubs that the database holds (10 listed), 2 other clubs, 12 in all; not in it: -; others: Dundalk F.C., Monaghan United
+2003	club_list	Korean League: 10 of 13 listed clubs that the database holds (13 listed), 0 other clubs, 10 in all; not in it: Daegu FC, Incheon United, Sangmoo; others: -
+2003	club_list	Polish First Division: 14 of 14 listed clubs that the database holds (14 listed), 2 other clubs, 16 in all; not in it: -; others: Slask Wroclaw, Stomil Olsztyn
+2003	club_list	Russian First Division: 18 of 22 listed clubs that the database holds (22 listed), 0 other clubs, 18 in all; not in it: Baltika Kaliningrad, Metallurg-Zapsib Novokuznetsk, Svetotekhnika Saransk, Uralan Elista; others: -
+2003	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Aydinspor, Batman Petrolspor
+2003	club_list	Welsh Premier Division: 17 of 17 listed clubs that the database holds (17 listed), 1 other clubs, 18 in all; not in it: -; others: Llandudno
 2003	clubs	african_nations (African Cup of Nations), row int-continental-29: game 0, table 16 (16)
 2003	clubs	asia_club_champ (AFC Champions League), row club-world-51: game 16, table 28 (28)
 2003	clubs	euro_champ (UEFA European Championship), row int-continental-23: game 0, table 16 (16)

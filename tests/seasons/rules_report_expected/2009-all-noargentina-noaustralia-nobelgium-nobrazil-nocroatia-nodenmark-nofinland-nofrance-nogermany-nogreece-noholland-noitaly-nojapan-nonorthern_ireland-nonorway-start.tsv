@@ -4,6 +4,13 @@
 2009	bench	eng_fa_cup (FA Cup), row eng-346: game 5, table 7 (7)
 2009	bench	world_club_champ (FIFA Club World Cup), row club-world-154: game 7, table 12 (12)
 2009	bench	world_cup (FIFA World Cup), row int-world-98: game 7, table 12 (12)
+2009	club_list	American Major League: 12 of 13 listed clubs that the database holds (16 listed), 0 other clubs, 12 in all; not in it: Toronto FC; others: -
+2009	club_list	Irish First Division: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Mervue United, Salthill Devon; others: -
+2009	club_list	Irish Premier Division: 10 of 10 listed clubs that the database holds (10 listed), 2 other clubs, 12 in all; not in it: -; others: Cobh Ramblers, Kildare County F.C.
+2009	club_list	Korean League: 10 of 15 listed clubs that the database holds (15 listed), 0 other clubs, 10 in all; not in it: Daegu FC, Gangwon FC, Gwangju Sangmu Bulsajo, Incheon United, Jeju United; others: -
+2009	club_list	Russian First Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: Avangard Kursk, Irtysh Omsk; others: -
+2009	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: IF Brommapojkarna, Åtvidabergs FF; others: -
+2009	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Elazigspor, Eyüpspor
 2009	clubs	african_nations (Africa Cup of Nations), row int-continental-95: game 0, table 16 (16 (15 played))
 2009	clubs	asia_club_champ (AFC Champions League), row club-world-165: game 16, table 32 (32)
 2009	clubs	ire_chal_cup (FAI Cup), row wal-nir-irl-219: game 42, table 47 (47)

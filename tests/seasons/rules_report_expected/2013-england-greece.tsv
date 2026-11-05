@@ -2,6 +2,7 @@
 # tests/seasons/rules_report_check.py --update-expected. Columns: season, kind, text.
 2013	bench	world_club_champ (FIFA Club World Cup), row club-world-230: game 7/9, table 12 (12)
 2013	bench	world_cup (FIFA World Cup), row int-world-146: game 7/9, table 12 (12 (all squad members not in the starting team))
+2013	club_list	Greek National A Division: 14 of 18 listed clubs that the database holds (18 listed), 0 other clubs, 14 in all; not in it: AEL Kalloni, Apollon Smirnis, Diethnis Enosis Ergotelis, Panetolikos; others: -
 2013	clubs	gre_cup (Greek Football Cup), row gre-pol-cro-13: game 4, table 46 (46)
 2013	clubs	gre_prm (Super League Greece), row gre-pol-cro-40: game 14, table 18 (18)
 2013	clubs	wc_african_cup (FIFA World Cup qualification (CAF)), row int-world-150: game 50, table 10 (10)

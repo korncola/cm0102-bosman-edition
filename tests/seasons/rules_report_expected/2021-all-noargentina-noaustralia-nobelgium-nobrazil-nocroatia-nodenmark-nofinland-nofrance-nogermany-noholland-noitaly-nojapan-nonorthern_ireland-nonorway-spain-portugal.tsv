@@ -15,6 +15,18 @@
 2021	bench	tur_second_b (TFF 2. Lig), row rus-tur-237: game 9, table 10 (10)
 2021	bench	uefa_cup (UEFA Europa League), row uefa-165: game 7/9, table 12 (12)
 2021	bench	world_club_champ (FIFA Club World Cup), row club-world-382: game 7/9, table 12 (12)
+2021	club_list	American Major League: 12 of 26 listed clubs that the database holds (28 listed), 0 other clubs, 12 in all; not in it: Charlotte FC, Club de Foot Montréal, FC Cincinnati, Houston Dynamo FC, Los Angeles FC, Minnesota United FC, Nashville SC, New York City FC, Orlando City SC, Philadelphia Union, Portland Timbers, Real Salt Lake City, Toronto FC, Vancouver Whitecaps FC; others: -
+2021	club_list	Greek National B Division: 14 of 17 listed clubs that the database holds (17 listed), 0 other clubs, 14 in all; not in it: AO Kavala, Olympiakos Volou, Pierikos Katerini; others: -
+2021	club_list	Irish First Division: 9 of 9 listed clubs that the database holds (9 listed), 1 other clubs, 10 in all; not in it: -; others: Shamrock Rovers U19
+2021	club_list	Irish Premier Division: 10 of 10 listed clubs that the database holds (10 listed), 2 other clubs, 12 in all; not in it: -; others: Cabinteely FC, Saint Francis
+2021	club_list	Korean League: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Gimcheon Sangmu, Suwon FC; others: -
+2021	club_list	Polish First Division: 16 of 18 listed clubs that the database holds (18 listed), 0 other clubs, 16 in all; not in it: Bruk-Bet Termalica Nieciecza, Gornik Leczna; others: -
+2021	club_list	Portuguese Second Division B: 23 of 23 listed clubs that the database holds (24 listed), 1 other clubs, 24 in all; not in it: -; others: SB Castelo Branco
+2021	club_list	Russian First Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: FK Krasnodar 2, Spartak 2 Moscow; others: -
+2021	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: GIF Sundsvall, Helsingborgs IF; others: -
+2021	club_list	Turkish 2. Division Category A: 19 of 19 listed clubs that the database holds (19 listed), 1 other clubs, 20 in all; not in it: -; others: Altay SK
+2021	club_list	Turkish Premier Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: Altay SK, Giresunspor; others: -
+2021	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: Airbus UK Broughton FC, Cambrian & Clydach, Carmarthen Town AFC, Colwyn Bay FC, Port Talbot Town, Prestatyn Town FC
 2021	clubs	asia_club_champ (AFC Champions League), row club-world-393: game 16, table 39 (39)
 2021	clubs	con_champ (CONCACAF Champions League), row club-world-389: game 16, table 15 (15)
 2021	clubs	gre_cup (Greek Football Cup), row gre-pol-cro-21: game 4, table 128 (128)

@@ -6,6 +6,7 @@
 2022	bench	uefa_cup (UEFA Europa League), row uefa-173: game 7/9, table 12 (12)
 2022	bench	world_club_champ (FIFA Club World Cup), row club-world-401: game 7/9, table 12 (12)
 2022	bench	world_cup (FIFA World Cup), row int-world-254: game 9, table 15 (15)
+2022	club_list	French National: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: FC Mulhouse, Sporting Club de Toulon
 2022	clubs	african_nations (Africa Cup of Nations), row int-continental-238: game 0/4, table 24 (24)
 2022	clubs	asia_nations (AFC Asian Cup), row int-continental-240: game 0/4, table 24 (24)
 2022	clubs	euro_champ_qual (UEFA European Championship qualifying), row int-continental-233: game 5, table 53 (53)

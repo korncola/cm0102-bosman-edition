@@ -6,6 +6,7 @@
 2021	bench	new_finalissima (2022 Finalissima), row int-continental-224: game 9, table 12 (12)
 2021	bench	uefa_cup (UEFA Europa League), row uefa-165: game 7/9, table 12 (12)
 2021	bench	world_club_champ (FIFA Club World Cup), row club-world-382: game 7/9, table 12 (12)
+2021	club_list	Greek National B Division: 14 of 17 listed clubs that the database holds (17 listed), 0 other clubs, 14 in all; not in it: AO Kavala, Olympiakos Volou, Pierikos Katerini; others: -
 2021	clubs	gre_cup (Greek Football Cup), row gre-pol-cro-21: game 4, table 128 (128)
 2021	clubs	gre_second (Super League 2 North), row gre-pol-cro-75: game 14, table 17 (17)
 2021	clubs	gre_second (Super League 2 South), row gre-pol-cro-129: game 14, table 17 (17)

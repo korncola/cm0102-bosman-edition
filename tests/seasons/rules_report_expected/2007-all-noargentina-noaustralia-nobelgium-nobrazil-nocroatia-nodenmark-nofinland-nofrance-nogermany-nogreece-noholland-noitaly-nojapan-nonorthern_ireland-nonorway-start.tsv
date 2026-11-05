@@ -2,6 +2,11 @@
 # tests/seasons/rules_report_check.py --update-expected. Columns: season, kind, text.
 2007	bench	ire_chal_cup (FAI Cup), row wal-nir-irl-169: game 5, table 7 (7)
 2007	bench	world_club_champ (FIFA Club World Cup), row club-world-116: game 7, table 12 (12)
+2007	club_list	American Major League: 10 of 10 listed clubs that the database holds (14 listed), 2 other clubs, 12 in all; not in it: -; others: Miami Fusion FC, Tampa Bay Mutiny
+2007	club_list	Korean League: 10 of 14 listed clubs that the database holds (14 listed), 0 other clubs, 10 in all; not in it: Daegu FC, Gwangju Sangmu Bulsajo, Incheon United, Jeju United; others: -
+2007	club_list	Russian First Division: 18 of 22 listed clubs that the database holds (22 listed), 0 other clubs, 18 in all; not in it: Dinamo Barnaul, Mashuk-KMV Pyatigorsk, Sportakademclub Moscow, Volga Uljanovsk; others: -
+2007	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: GIF Sundsvall, IFK Norrköping; others: -
+2007	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Akçaabat Sebatspor, Dardanelspor A.S.
 2007	clubs	african_nations (Africa Cup of Nations), row int-continental-73: game 0, table 16 (16)
 2007	clubs	asia_club_champ (AFC Champions League), row club-world-127: game 16, table 29 (29)
 2007	clubs	asia_nations (AFC Asian Cup), row int-continental-75: game 4, table 16 (16)

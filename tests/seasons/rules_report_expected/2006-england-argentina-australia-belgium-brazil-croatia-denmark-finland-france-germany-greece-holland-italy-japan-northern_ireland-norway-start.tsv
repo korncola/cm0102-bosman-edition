@@ -3,6 +3,18 @@
 2006	bench	fra_cup (Coupe de France), row fra-52: game 3, table 5 (5)
 2006	bench	fra_lge_cup (Coupe de la Ligue), row fra-53: game 3, table 7 (7)
 2006	bench	world_club_champ (FIFA Club World Cup), row club-world-97: game 7, table 12 (12)
+2006	club_list	Argentine Second Division: 20 of 20 listed clubs that the database holds (20 listed), 5 other clubs, 25 in all; not in it: -; others: All Boys, Almirante Brown, Estudiantes de Buenos Aires, Independiente Rivadavia de Mendoza, Los Andes
+2006	club_list	Croatian First Division: 12 of 12 listed clubs that the database holds (12 listed), 4 other clubs, 16 in all; not in it: -; others: Istra 1961, NK Belisce, NK Inter Zapresic, NK Koprivnica
+2006	club_list	Dutch First Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: AGOVV Apeldoorn, FC Eindhoven; others: -
+2006	club_list	Finnish Premier Division: 12 of 14 listed clubs that the database holds (14 listed), 0 other clubs, 12 in all; not in it: AC Oulu, FC Viikingit; others: -
+2006	club_list	Greek National A Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: Aris Salonika, Ergotelis; others: -
+2006	club_list	Greek National B Division: 14 of 18 listed clubs that the database holds (18 listed), 0 other clubs, 14 in all; not in it: Agrotikos Asteras, Ethnikos/A.O. Manis, Messiniakos, Panthrakikos; others: -
+2006	club_list	Italian Serie A: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: Calcio Catania, Torino; others: -
+2006	club_list	Italian Serie B: 20 of 22 listed clubs that the database holds (22 listed), 0 other clubs, 20 in all; not in it: S.S.C. Napoli, Spezia 1906; others: -
+2006	club_list	Japanese J-League 1: 16 of 18 listed clubs that the database holds (18 listed), 0 other clubs, 16 in all; not in it: Ventforet Kofu, Yokohama FC; others: -
+2006	club_list	Japanese J-League 2: 12 of 13 listed clubs that the database holds (13 listed), 0 other clubs, 12 in all; not in it: Tokushima Vortis; others: -
+2006	club_list	Northern Irish League First Division: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Moyola Park, Tobermore United; others: -
+2006	club_list	Northern Irish League Premier Division: 10 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 10 in all; not in it: Armagh City, Crusaders, Donegal Celtic, Glenavon, Larne, Loughgall; others: -
 2006	clubs	arg_second (Primera B Nacional), row arg-usa-33: game 25, table 20 (20)
 2006	clubs	asia_club_champ (AFC Champions League), row club-world-108: game 16, table 27 (27)
 2006	clubs	bel_third (Belgian Third Division), row hol-bel-75: game 16, table 32 (32 (A 16, B 16))

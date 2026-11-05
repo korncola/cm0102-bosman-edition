@@ -4,6 +4,13 @@
 2014	bench	eng_fa_cup (FA Cup), row eng-376: game 5, table 7 (7)
 2014	bench	ire_chal_cup (FAI Cup), row wal-nir-irl-344: game 5, table 7 (7 (inference from final line-ups))
 2014	bench	world_club_champ (FIFA Club World Cup), row club-world-249: game 7, table 12 (12)
+2014	club_list	American Major League: 12 of 18 listed clubs that the database holds (20 listed), 0 other clubs, 12 in all; not in it: New York City FC, Orlando City, Philadelphia Union, Portland Timbers, Toronto FC, Vancouver Whitecaps; others: -
+2014	club_list	Irish First Division: 8 of 8 listed clubs that the database holds (8 listed), 2 other clubs, 10 in all; not in it: -; others: FC Carlow, Tralee Dynamos
+2014	club_list	Korean League: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Daejeon Citizen, Gwangju FC; others: -
+2014	club_list	Portuguese Second League: 18 of 23 listed clubs that the database holds (24 listed), 0 other clubs, 18 in all; not in it: Clube Sport Marítimo B, Futebol Clube do Porto B, Sport Lisboa e Benfica B, Sporting Clube de Braga B, Sporting Clube de Portugal B; others: -
+2014	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: Falkenberg FF, GIF Sundsvall; others: -
+2014	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Göztepe A.S., Hatayspor
+2014	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: Afan Lido, Caernarfon Town, Caersws, Conwy Borough, Monmouth Town, Taffs Well
 2014	clubs	african_nations (Africa Cup of Nations), row int-continental-150: game 0, table 16 (16)
 2014	clubs	asia_club_champ (AFC Champions League), row club-world-260: game 16, table 32 (32)
 2014	clubs	asia_nations (AFC Asian Cup), row int-continental-152: game 0, table 16 (16)

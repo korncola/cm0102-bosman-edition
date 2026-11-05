@@ -2,6 +2,11 @@
 # tests/seasons/rules_report_check.py --update-expected. Columns: season, kind, text.
 2005	bench	world_club_champ (FIFA Club World Championship), row club-world-78: game 7, table 12 (12)
 2005	bench	world_cup (FIFA World Cup), row int-world-50: game 7, table 12 (12)
+2005	club_list	American Major League: 9 of 9 listed clubs that the database holds (12 listed), 3 other clubs, 12 in all; not in it: -; others: Miami Fusion FC, San Jose Earthquakes, Tampa Bay Mutiny
+2005	club_list	Korean League: 10 of 14 listed clubs that the database holds (14 listed), 0 other clubs, 10 in all; not in it: Daegu FC, Gyeongnam FC, Incheon United, Sangmoo; others: -
+2005	club_list	Polish Second Division: 17 of 18 listed clubs that the database holds (18 listed), 1 other clubs, 18 in all; not in it: Zawisza Bydgoszcz; others: Blekitni Stargard Szczecinski
+2005	club_list	Russian First Division: 18 of 22 listed clubs that the database holds (22 listed), 0 other clubs, 18 in all; not in it: Angusht Nazran, FK Orel, Lada Togliatti, Spartak Nizhny Novgorod; others: -
+2005	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Adanaspor A.S., Aydinspor
 2005	clubs	african_nations (Africa Cup of Nations), row int-continental-51: game 0, table 16 (16)
 2005	clubs	asia_club_champ (AFC Champions League), row club-world-89: game 16, table 25 (25)
 2005	clubs	european_cup (UEFA Champions League), row uefa-34: game 55, table 74 (74 (32 in the group stage))
