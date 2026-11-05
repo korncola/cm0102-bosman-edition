@@ -23,6 +23,12 @@ The runs:
             editions of March 2009 and March 2010 with two clubs, and the row of 2010/11 holds no edition of March 2011
     c2007   November 2007, changing rules off, England with the Conference: the Conference League Cup is made and
             has a winner
+    c2008-off  2008/09 (the original data moved to 2008), changing rules off, England, Tier A (RECOMP_TIER_A=1), to
+            the end of 2024/25 (about 7 minutes at load 15): the rules of the start season stay, so the Conference League Cup
+            plays every season in the format of 2008/09, also in 2024/25, whose row is the National League Cup that
+            the game does not play (open item 131: before, it took that row's rounds of day 0 and stopped at the box
+            "Date..cpp 52" on 15 June 2024); it has 5 rounds for 22 clubs in 2024, a winner at the end of 2024 and
+            no message box
     t2010   start run, September 2010 ODB, changing rules off, Select All without France (Turkey, Russia and the
             Republic of Ireland are not in the 16 rows that the steps click): the Turkish Cup has 4 groups after 3
             rounds, the Turkish Super Cup is made with two clubs, the Russian one of March 2011 (the edition of
@@ -183,6 +189,13 @@ def check_c2007(lines, log, fails, name):
     need_winner(lines, "new_conf_cup", 2007, fails, name)
 
 
+def check_c2008_off(lines, log, fails, name):
+    if "message box from" in log:
+        fails.append(f"{name}: a message box: {log[log.index('message box from'):].splitlines()[0]}")
+    need_log(log, "new cups: new_conf_cup 2024: 5 rounds for 22 clubs", fails, name)
+    need_winner(lines, "new_conf_cup", 2024, fails, name)
+
+
 def check_t2010(lines, log, fails, name):
     need_log(log, "cup groups: tur_cup 2010 with 4 groups after 3 rounds", fails, name)
     need_made(lines, "new_tur_super", fails, name, 2)
@@ -210,6 +223,8 @@ RUNS = {
     "n2008": (2008, os.path.join(DB, "September 2008"), "on", 2010, ["Norway"], False, 5400, check_n2008, {}),
     "c2007": (2007, os.path.join(DB, "November 2007"), "off", 2007, ["England"], False, 3600, check_c2007,
               {"extra": ["conference"]}),
+    "c2008-off": (2008, None, "off", 2024, ["England"], False, 2700, check_c2008_off,
+                  {"env": {"RECOMP_TIER_A": "1"}}),
     "t2010": (2010, os.path.join(DB, "September 2010 ODB"), "off", 2010, ALL_BUT_FRANCE, True, 1800, check_t2010,
               {}),
     "r2002": (2002, None, "off", 2002, ALL_BUT_FRANCE, True, 1800, check_r2002, {}),

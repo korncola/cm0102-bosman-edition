@@ -161,13 +161,17 @@ static int game_day(void) { return (int16_t)rd16(g_mem, GAME_DATE + 2) * 400 + (
  * season's hook runs (season_change.c, the pass of 0x5d5ae0), so it makes the edition that the start season's row
  * holds (Q232): for a cup in the row of the season before, edition S + 1 (the Russian Premier League Cup of March
  * 2003 in the row of 2002/03). */
+/* The changing rules flag of the game. The module's record step at database_load 0x528540 of a new game runs before
+ * create_game 0x828110 sets the game's flag (season_changing_rules is 0 until then): it takes the flag of the next
+ * new game, as `wanted` in season_comps.c does. */
+static int rules_flag(void)
+{
+    return season_game_on() ? season_changing_rules() : season_next_rules();
+}
+
 static int hook_edition(const SeasonCompDef *d, int season)
 {
-    /* The module's record step at database_load 0x528540 of a new game runs before create_game 0x828110 sets the
-     * game's flag (season_changing_rules is 0 until then): it takes the flag of the next new game, as `wanted` in
-     * season_comps.c does. */
-    int rules = season_game_on() ? season_changing_rules() : season_next_rules();
-    return rules ? season : season_new_cup_row_edition(d->file, season);
+    return rules_flag() ? season : season_new_cup_row_edition(d->file, season);
 }
 
 static int new_held(const SeasonCompDef *d, int season)
@@ -264,11 +268,22 @@ static void put_list(uint32_t cup, const uint32_t *clubs, int n)
     wr16(g_mem, cup + CUP_TEAMS, (uint16_t)n);
 }
 
+/* The format of edition `edition` of a cup that the game plays. With changing rules on: the edition's own. With
+ * changing rules off the rules of the start season stay (season_rule_year, season_hooks_due): a cup that the start
+ * season made plays every season in the format of the edition that the start season's row holds (hook_edition).
+ * Open item 131: before, a 2008 game with changing rules off took the format of each later edition, so in 2024 the
+ * Conference League Cup took the row "not played" (clubs -1, no rounds): set_dates gave each round a date of day 0,
+ * and the game stopped at the box "Date..cpp 52" (run set game rr2008-egr, 15 June 2024). */
+static const SeasonNewCup *played_format(const char *file, int edition)
+{
+    return season_new_cup_played(file, edition, rules_flag(), season_start_year());
+}
+
 /* The clubs of edition `edition` of a new cup in clubs[] (32 at most), the clubs of the first round first. Returns
  * their count; fewer than 2: the cup cannot play (its nation's clubs are not in the game). */
 static int pick_clubs(const char *file, int edition, uint32_t *clubs)
 {
-    const SeasonNewCup *f = season_new_cup(file, edition);
+    const SeasonNewCup *f = played_format(file, edition);
     if (!f) return 0;
     int n = 0;
     if (f->clubs == 2) {
@@ -377,7 +392,7 @@ static void set_round(uint32_t rec, int index, int code, int clubs, int fresh, i
 int season_new_cups_rounds(uint32_t cup, const char *file, uint32_t count_ptr)
 {
     int edition = (int16_t)rd16(g_mem, cup + CUP_YEAR);
-    const SeasonNewCup *f = season_new_cup(file, edition);
+    const SeasonNewCup *f = played_format(file, edition);
     uint32_t one = cpu.eax;
     if (!f || !readable(one) || !readable(count_ptr)) return 0;
     int clubs = (int16_t)rd16(g_mem, cup + CUP_TEAMS), ties0 = 1, rounds = 1;

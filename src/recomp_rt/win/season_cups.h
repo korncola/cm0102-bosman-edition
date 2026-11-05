@@ -121,6 +121,11 @@ typedef struct {
 /* The format of an edition, or NULL (no format: before the first, or a file that is not a new cup). */
 const SeasonNewCup *season_new_cup(const char *file, int edition);
 
+/* The format that the game plays for an edition: its own with changing rules on (rules not 0); with changing rules off
+ * the format of the edition that the start season's row holds, for every edition, as the rules of the start season
+ * stay (open item 131). NULL as season_new_cup. */
+const SeasonNewCup *season_new_cup_played(const char *file, int edition, int rules, int start);
+
 /* 1 when the game plays the edition (the table holds it and the format can be played), 0 when not, -1 with no row.
  * After the last row of the table the rule stays (Q248). */
 int season_new_cup_held(const char *file, int edition);

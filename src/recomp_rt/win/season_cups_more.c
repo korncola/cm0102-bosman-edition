@@ -120,7 +120,8 @@ int season_super_four_pick(const uint32_t *league, int count, uint32_t cw, uint3
  *   played on national-team dates (the dates of the Euro 2004 qualifiers of 2003 are an inference).
  * - Conference League Cup (eng.tsv): 2004/05, 2007/08 and 2008/09, a knockout of the Conference clubs with extra time
  *   and penalties (the game holds one Conference division; the months are an inference). From 2024/25 the National
- *   League Cup has 16 Premier League 2 under-21 sides, which the game does not hold (Q336): not played.
+ *   League Cup has 16 Premier League 2 under-21 sides, which the game does not hold (Q336): not played. A game with
+ *   changing rules off plays every edition in its start season's format (season_new_cup_played, open item 131).
  * - All-Ireland cup (wal-nir-irl.tsv): 2010/11 to 2012/13 12 clubs (two-legged first round, quarter-finals and
  *   semi-finals, one-match final), 2013/14 8 clubs (4 from each league). The group formats of 2004/05 to 2007/08 and
  *   2009/10 are not played (docs/research/2026-10-18-cups-more.md, section 4). */
@@ -179,6 +180,11 @@ int season_new_cup_held(const char *file, int edition)
     if (r->format_text && !strncmp(r->format_text, "cancelled", 9)) return 0;
     const SeasonNewCup *f = season_new_cup(file, edition);
     return f && f->clubs >= 0;
+}
+
+const SeasonNewCup *season_new_cup_played(const char *file, int edition, int rules, int start)
+{
+    return season_new_cup(file, rules ? edition : season_new_cup_row_edition(file, start));
 }
 
 int season_new_cup_next(const char *file, int edition)
