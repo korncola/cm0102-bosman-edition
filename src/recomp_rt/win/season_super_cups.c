@@ -242,6 +242,10 @@ static void rounds_made(uint32_t cup, uint32_t stage, uint32_t count_ptr)
     const SeasonSuperFour *f = season_super_four(file, cup_season(cup));
     if ((!f || (int16_t)rd16(g_mem, cup + CUP_TEAMS) != 4) && !strncmp(file, "new_", 4)) {
         season_new_cups_rounds(cup, file, count_ptr);   /* a new cup of slice 21c: its rounds */
+        /* Item 145: a new cup of a group season (the All-Ireland cup of 2004/05 to 2009/10) gets its stages, as the
+         * Cup classes of season_kind_cups.c. ItaSuper's constructor (0x65f739) and start_new_season (slot 35
+         * 0x858e70 at 0x65fd7d) both ask for stage -1 with the cup's own +0x3c. */
+        if (!rt_unwinding) season_cup_groups_table(cup, stage, count_ptr);
         return;
     }
     if ((int16_t)rd16(g_mem, cup + CUP_TEAMS) != 4) return;

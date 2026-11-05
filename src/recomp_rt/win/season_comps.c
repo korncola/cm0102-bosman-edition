@@ -450,8 +450,6 @@ static uint32_t make(const SeasonCompDef *d, int i, int s, int loading)
  * - Finalissima (CONMEBOL-UEFA Cup of Champions): 1985 and 1993, then 2022 (int-continental-4).
  * - Turkish Super Cup: the Presidential Cup from 1966 to 1998, the TFF Super Cup from 2006 (rus-tur-271).
  * - Conference League Cup (National League Cup): from 1979/80 to 2000/01, then 2004/05 (eng-303).
- * - All-Ireland cup (Setanta Sports Cup): from 2005 (wal-nir-irl-25). The table holds 2004/05 to 2009/10, but the
- *   game does not play those group formats (season_cups_more.c), so it first makes the cup in 2010/11.
  * - Greek second tier, group 2: three or four groups from 1959/60 to 1974/75, two groups in 1968/69 and from 1975/76
  *   to 1982/83 (Football League (Greece), 1968-69 Beta Ethniki).
  * - Italian third tier, group C: three groups from the reform of 1959 to 1977/78 (Serie C).
@@ -459,10 +457,12 @@ static uint32_t make(const SeasonCompDef *d, int i, int s, int loading)
  * Intercontinental Cup (2024, a new competition, not the Intercontinental Cup of 1960 to 2004), AFC Champions
  * League Two (2024/25), the UEFA Conference League (2021/22), the two Nations Leagues (2018/19), the Russian Super
  * Cup (2003), the Russian Premier League Cup (2003) and the Superfinalen (2009).
- * The Brazilian state championships are held from 2001/02, so the game makes them at the start. */
+ * The Brazilian state championships are held from 2001/02, so the game makes them at the start. The All-Ireland cup
+ * (the Setanta Cup) is new too: its first edition, of 2005, is in the row of 2004/05, and the game plays it from
+ * there (item 145; before, the game first made the cup in 2010/11 and the list held it). */
 static const char *const played_before_table[] = {
-    "new_recopa", "new_concacaf_gold_cup", "new_finalissima", "new_tur_super", "new_conf_cup", "new_all_ireland",
-    "gre_second", "ita_ser_c2a",
+    "new_recopa", "new_concacaf_gold_cup", "new_finalissima", "new_tur_super", "new_conf_cup", "gre_second",
+    "ita_ser_c2a",
 };
 
 /* 1 when the competition of def `d` had a real edition before season s. */

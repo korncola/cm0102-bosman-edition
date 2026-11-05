@@ -54,8 +54,8 @@ The checks that fail the test (exit code 1):
       is listed, and does not fail the check.
     - (--run, changing rules on, which logs the news with RECOMP_SEASON_CHANGE_LOG=1) no competition gets both
       "The X is played for the first time." and "The X is played again ..." in one season, and the cups of
-      NEWS_KIND get their sentence (the Conference Cup of 2004/05 and the Setanta Sports Cup of 2010/11 again, the
-      Superfinalen of 2009 for the first time) (0.6.2 item 135)
+      NEWS_KIND get their sentence (the Conference Cup of 2004/05 and the Setanta Sports Cup of 2009/10 again, the
+      Superfinalen of 2009 and the Setanta Cup of 2004/05 for the first time) (0.6.2 items 135 and 145)
 
 The differences, by kind:
     clubs, subs_used, bench     the game's value at the start and at the end differ from the count of the row
@@ -694,9 +694,10 @@ def first_and_again(log):
 
 # 0.6.2 item 135: the sentence of a new competition's first season in the game. The Conference League Cup ran
 # from 1979/80 to 2000/01 and came back in 2004/05; the Superfinalen of 2009 was the first official edition.
-# The game first makes the All-Ireland cup in 2010/11: the Setanta Sports Cup ran from 2005.
+# Item 145: the All-Ireland cup starts with its first real edition, the Setanta Cup of 2005 (row 2004/05), and
+# comes back in 2009/10 after the season with no edition.
 NEWS_KIND = {("2004/05", "Conference Cup"): "again", ("2009/10", "Superfinalen"): "for the first time",
-             ("2010/11", "Setanta Sports Cup"): "again"}
+             ("2004/05", "Setanta Cup"): "for the first time", ("2009/10", "Setanta Sports Cup"): "again"}
 
 
 def check(report, game=None, last=None, expected=None, update=False, data_dir=None, start_only=False):

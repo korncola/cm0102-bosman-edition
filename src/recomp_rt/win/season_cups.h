@@ -116,7 +116,19 @@ typedef struct {
     int clubs;               /* 2: league champion v cup winner; 0: every club of the division; n: n clubs;
                               * -1: the game does not play these editions (the reason is in the table's comment) */
     SeasonNewRound round[5]; /* from the final back: final, semi-finals, quarter-finals, the rounds before them */
+    int8_t picks[2];         /* item 145: the clubs of each division by last place (0, 0: half from each, the rest
+                              * from the other) */
+    uint8_t extra;           /* item 145: NEW_CUP_CUP_WINNERS, NEW_CUP_HOLDERS; item 148: NEW_CUP_PAIRED */
 } SeasonNewCup;
+
+/* Item 145, the clubs that a row adds to its picks. NEW_CUP_CUP_WINNERS: the last winner of each division's national
+ * cup (NewCupClubs.cup), or when it already has a place the next club of that division. NEW_CUP_HOLDERS: the last
+ * winner of this cup, or when it has a place or none the next club of the first division. */
+#define NEW_CUP_CUP_WINNERS 1u
+#define NEW_CUP_HOLDERS 2u
+/* Item 148: each tie of the first round drawn pairs a club of the first division with a club of the second
+ * (season_new_cups.c, paired_draw). */
+#define NEW_CUP_PAIRED 4u
 
 /* The format of an edition, or NULL (no format: before the first, or a file that is not a new cup). */
 const SeasonNewCup *season_new_cup(const char *file, int edition);
@@ -150,7 +162,7 @@ int season_new_cup_round_code(int rounds, int r);
  * table in cpu.eax) of a new cup. */
 const char *season_new_cups_making(void);
 int season_new_cups_teams(uint32_t cup, const char *file);
-int season_new_cups_clubs_ready(const char *file, int edition);
+int season_new_cups_clubs_ready(const char *file, int edition, uint32_t record);
 int season_new_cups_rounds(uint32_t cup, const char *file, uint32_t count_ptr);
 
 /* The game part of the group stages (season_cup_groups.c): after the class's create_round_table (stage, count_ptr as
@@ -181,6 +193,10 @@ typedef struct {
     int ko_clubs;            /* the clubs of the knockout: a power of 2 */
     int8_t days[10][3];      /* the group match days: day, month (0 to 11), year after the season year */
     SeasonNewRound ko[5];    /* the knockout rounds from the final back */
+    int nation_pots;         /* item 145: 1 the pots take the clubs of one division after the other (each group gets
+                              * the same share of each division); 0 the pots by strength alone */
+    int8_t draw[3];          /* item 145: the day of the group draw (day, month 0 to 11, year after the season year);
+                              * day 0: at once, when the season's round table is made */
 } SeasonCupGroups;
 
 /* The group format of a cup in a season, or NULL (the class's format). After the last row the rule stays (Q248). */
