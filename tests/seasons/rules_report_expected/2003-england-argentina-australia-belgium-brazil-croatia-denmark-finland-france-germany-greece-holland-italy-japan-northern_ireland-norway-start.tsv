@@ -6,7 +6,6 @@
 2003	clubs	arg_second (Primera B Nacional), row arg-usa-30: game 25, table 20 (20)
 2003	clubs	asia_club_champ (AFC Champions League), row club-world-51: game 16, table 28 (28)
 2003	clubs	bel_third (Belgian Third Division), row hol-bel-36: game 16, table 32 (32 (A 16, B 16))
-2003	clubs	bra_champ_cup (Copa dos Campeões), row bra-192: game 3, table 0 (0)
 2003	clubs	bra_cup (Copa do Brasil), row bra-138: game 71, table 64 (64)
 2003	clubs	bra_nat_third (Campeonato Brasileiro Série C), row bra-84: game 7, table 60 (60)
 2003	clubs	bra_reg_bahia (Campeonato Baiano), row bra-435: game 10, table 13 (13)
@@ -68,10 +67,7 @@
 2003	no_row	record_utils (Reserve): no table row
 2003	no_row	record_utils (Under 21 International): no table row
 2003	not_held	asia_nations (AFC Asian Cup), row int-continental-31: the game holds 2004, the table says not held
-2003	not_held	bra_champ_cup (Copa dos Campeões), row bra-192: the game holds 2003, the table says not held
 2003	not_held	goldcup (Copa América), row int-continental-33: the game holds 2004, the table says not held
-2003	not_held	gre_super (Greek Super Cup), row gre-pol-cro-84: the game holds 2003, the table says not held
-2003	not_held	nir_charity (Charity Shield), row wal-nir-irl-65: the game holds 2003, the table says not held
 2003	not_held	olympics (Football at the Summer Olympics), row int-world-35: the game holds 2004, the table says not held
 2003	not_held	wc_europe_league (FIFA World Cup qualification (UEFA)), row int-world-27: the game holds 2004, the table says not held
 2003	not_in_game	arg-usa-192 argentina_rules 'Argentina' (Argentina)

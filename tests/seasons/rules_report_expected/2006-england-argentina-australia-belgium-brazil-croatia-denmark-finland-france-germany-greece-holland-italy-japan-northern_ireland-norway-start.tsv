@@ -6,7 +6,6 @@
 2006	clubs	arg_second (Primera B Nacional), row arg-usa-33: game 25, table 20 (20)
 2006	clubs	asia_club_champ (AFC Champions League), row club-world-108: game 16, table 27 (27)
 2006	clubs	bel_third (Belgian Third Division), row hol-bel-75: game 16, table 32 (32 (A 16, B 16))
-2006	clubs	bra_champ_cup (Copa dos Campeões), row bra-195: game 3, table 0 (0)
 2006	clubs	bra_cup (Copa do Brasil), row bra-141: game 71, table 64 (64)
 2006	clubs	bra_nat_third (Campeonato Brasileiro Série C), row bra-87: game 7, table 64 (64)
 2006	clubs	bra_reg_bahia (Campeonato Baiano), row bra-438: game 10, table 12 (12)
@@ -67,10 +66,7 @@
 2006	no_row	record_utils (Reserve): no table row
 2006	no_row	record_utils (Under 21 International): no table row
 2006	not_held	asia_nations (AFC Asian Cup), row int-continental-64: the game holds 2007, the table says not held
-2006	not_held	bra_champ_cup (Copa dos Campeões), row bra-195: the game holds 2006, the table says not held
 2006	not_held	cro_a2b (Druga HNL South), row gre-pol-cro-384: the game holds 2006, the table says not held
-2006	not_held	gre_super (Greek Super Cup), row gre-pol-cro-87: the game holds 2006, the table says not held
-2006	not_held	nir_charity (Charity Shield), row wal-nir-irl-140: the game holds 2006, the table says not held
 2006	not_in_game	arg-usa-195 argentina_rules 'Argentina' (Argentina)
 2006	not_in_game	aus-jap-kor-114 japan_rules 'n/a' (Japan)
 2006	not_in_game	aus-jap-kor-6 australia_rules 'n/a' (Australia)

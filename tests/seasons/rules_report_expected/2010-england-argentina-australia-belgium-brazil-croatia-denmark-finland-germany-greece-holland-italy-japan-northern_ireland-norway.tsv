@@ -37,6 +37,7 @@
 2010	clubs	nir_lge_cup (Irish League Cup), row wal-nir-irl-239: game 5, table 42 (42)
 2010	clubs	nir_prm (IFA Premiership), row wal-nir-irl-235: game 10, table 12 (12)
 2010	clubs	nor_prm (Tippeligaen), row nor-fin-92: game 14, table 16 (16)
+2010	clubs	uefa_cup (UEFA Europa League), row uefa-77: game 160/193, table 194 (194 (161 entered + 33 from the Champions League); 48 in the group stage (+8 Cham)
 2010	clubs	world_club_champ (FIFA Club World Cup), row club-world-173: game 0, table 7 (7)
 2010	down	arg_prm (Primera División), row arg-usa-10: game 0 (+0 play-off places), table 2 (2 (19th and 20th of the three-season average table, promedios))
 2010	down	arg_second (Primera B Nacional), row arg-usa-37: game 0 (+0 play-off places), table 2 (2 direct (bottom two of the average table); 3 relegated in total (infobox))
@@ -63,12 +64,8 @@
 2010	no_row	record_utils ('B' International): no table row
 2010	no_row	record_utils (Reserve): no table row
 2010	no_row	record_utils (Under 21 International): no table row
-2010	not_held	bra_champ_cup (Copa dos Campeões), row bra-199: the game holds 2010, the table says not held
 2010	not_held	cro_a2b (Druga HNL South), row gre-pol-cro-388: the game holds 2010, the table says not held
-2010	not_held	ger_lge_cup (DFL-Ligapokal), row ger-128: the game holds 2010, the table says not held
 2010	not_held	goldcup (Copa América), row int-continental-110: the game holds 2011, the table says not held
-2010	not_held	gre_super (Greek Super Cup), row gre-pol-cro-91: the game holds 2010, the table says not held
-2010	not_held	nir_charity (Charity Shield), row wal-nir-irl-240: the game holds 2010, the table says not held
 2010	not_in_game	arg-usa-199 argentina_rules 'Argentina' (Argentina)
 2010	not_in_game	aus-jap-kor-10 australia_rules 'n/a' (Australia)
 2010	not_in_game	aus-jap-kor-118 japan_rules 'n/a' (Japan)

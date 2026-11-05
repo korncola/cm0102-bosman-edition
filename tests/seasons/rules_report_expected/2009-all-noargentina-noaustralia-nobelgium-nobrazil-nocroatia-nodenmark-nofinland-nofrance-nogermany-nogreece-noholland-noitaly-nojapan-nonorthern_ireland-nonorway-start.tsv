@@ -17,7 +17,7 @@
 2009	clubs	swe_prm (Allsvenskan), row den-swe-212: game 14, table 16 (16)
 2009	clubs	tur_second (TFF 1. Lig), row rus-tur-198: game 20, table 18 (18)
 2009	clubs	tur_second_b (TFF 2. Lig), row rus-tur-225: game 10, table 45 (45)
-2009	clubs	uefa_cup (UEFA Europa League), row uefa-69: game 159, table 192 (192 (159 entered + 33 from the Champions League); 48 in the group stage (+8 Cham)
+2009	clubs	uefa_cup (UEFA Europa League), row uefa-69: game 158, table 192 (192 (159 entered + 33 from the Champions League); 48 in the group stage (+8 Cham)
 2009	clubs	usa_mls (Major League Soccer), row arg-usa-225: game 4, table 16 (16)
 2009	clubs	usa_open_cup (Lamar Hunt U.S. Open Cup), row arg-usa-279: game 32, table 40 (40)
 2009	clubs	wc_african_cup (FIFA World Cup qualification (CAF)), row int-world-102: game 50, table 20 (20)
@@ -45,11 +45,6 @@
 2009	no_row	spa_lower (Spanish Lower Division): no table row
 2009	not_held	euro_champ_qual (UEFA European Championship qualifying), row int-continental-90: the game holds 2010, the table says not held
 2009	not_held	intertoto_cup (UEFA Intertoto Cup), row uefa-71: the game holds 2008, the table says not held
-2009	not_held	ire_pres_cup (President's Cup), row wal-nir-irl-223: the game holds 2009, the table says not held
-2009	not_held	ire_super_cup (FAI Super Cup), row wal-nir-irl-224: the game holds 2009, the table says not held
-2009	not_held	kor_super_cup (Korean Super Cup), row aus-jap-kor-387: the game holds 2009, the table says not held
-2009	not_held	pol_lge_cup (Polish League Cup), row gre-pol-cro-225: the game holds 2009, the table says not held
-2009	not_held	wel_prm_cup (FAW Premier Cup), row wal-nir-irl-209: the game holds 2009, the table says not held
 2009	not_in_game	arg-usa-360 usa_rules 'United States' (United States)
 2009	not_in_game	aus-jap-kor-306 korea_rules 'n/a' (South Korea)
 2009	not_in_game	club-world-156 conmebol_liber 'Copa Libertadores' (CONMEBOL)
@@ -61,8 +56,6 @@
 2009	not_in_game	int-continental-93 new '2009 CONCACAF Gold Cup' (CONCACAF)
 2009	not_in_game	por-75 por_second_b 'Segunda Divisão' (Portugal)
 2009	not_in_game	por-80 new 'Taça da Liga (Carlsberg Cup)' (Portugal)
-2009	not_in_game	rus-tur-279 new 'Turkish Super Cup' (Turkey)
-2009	not_in_game	rus-tur-90 new 'Russian Super Cup' (Russia)
 2009	not_in_game	spa-65 spain_rules 'n/a' (Spain)
 2009	not_in_game	spa-68 spa_second_b 'Segunda División B' (Spain)
 2009	not_in_game	uefa-65 uefa_seeding 'UEFA access list and seeding' (UEFA)

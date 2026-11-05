@@ -52,6 +52,10 @@ The checks that fail the test (exit code 1):
       tests/seasons/rules_report_expected/<start year>-<nations>.tsv: one line per difference (season, kind,
       text). A slice that brings a rule removes its lines with --update-expected; a difference that has gone
       is listed, and does not fail the check.
+    - (--run, changing rules on, which logs the news with RECOMP_SEASON_CHANGE_LOG=1) no competition gets both
+      "The X is played for the first time." and "The X is played again ..." in one season, and the cups of
+      NEWS_KIND get their sentence (the Conference Cup of 2004/05 and the Setanta Sports Cup of 2010/11 again, the
+      Superfinalen of 2009 for the first time) (0.6.2 item 135)
 
 The differences, by kind:
     clubs, subs_used, bench     the game's value at the start and at the end differ from the count of the row
@@ -92,6 +96,7 @@ object of the same file (the Regionalliga groups).
 """
 import collections
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -667,6 +672,33 @@ def write_expected(name, diffs, seasons):
     print(f"expected differences written: {expected_path(name)}")
 
 
+def first_and_again(log):
+    """0.6.2 item 135: the competitions with both news sentences in one season, the first edition of the new
+    competitions module (season_comps.c) and the return after a gap (season_new_cups.c), as the Conference Cup of
+    2004/05 had. A list of failure texts."""
+    said = collections.defaultdict(set)
+    for m in re.finditer(r"season change: news (\d{4}/\d\d): The (.+?) is played (for the first time|again)", log):
+        said[(m.group(1), m.group(2))].add(m.group(3))
+    fails = [f"{s}: the {name} is played for the first time and again" for (s, name), kinds in sorted(said.items())
+             if len(kinds) > 1]
+    # The lead's ruling on Max's rule of real life (5 November 2026): a cup with real editions before says
+    # "played again", one held for the first time ever says "for the first time". Checked when the run logs the
+    # cup's sentence: a run without the nation or the season has none. A run that must have it checks that itself
+    # (uefa_formats_run "change": the Conference Cup).
+    for (s, name), want in NEWS_KIND.items():
+        got = said.get((s, name))
+        if got and got != {want}:
+            fails.append(f"{s}: the {name} is played {'/'.join(sorted(got))}, not {want}")
+    return fails
+
+
+# 0.6.2 item 135: the sentence of a new competition's first season in the game. The Conference League Cup ran
+# from 1979/80 to 2000/01 and came back in 2004/05; the Superfinalen of 2009 was the first official edition.
+# The game first makes the All-Ireland cup in 2010/11: the Setanta Sports Cup ran from 2005.
+NEWS_KIND = {("2004/05", "Conference Cup"): "again", ("2009/10", "Superfinalen"): "for the first time",
+             ("2010/11", "Setanta Sports Cup"): "again"}
+
+
 def check(report, game=None, last=None, expected=None, update=False, data_dir=None, start_only=False):
     """Prints the checks and the differences. Returns the failure texts."""
     clubs = []
@@ -961,8 +993,13 @@ def main(argv):
             database = run_database(argv, year, unpacked)
             print(f"database: {database or 'the base data (3.9.68)'}")
             code, report = run(program, game, last, year, database, nations, extra, keep, timeout,
-                               options_more={"changing_rules": rules}, start_only=start_only)
+                               options_more={"changing_rules": rules}, start_only=start_only,
+                               env_more={"RECOMP_SEASON_CHANGE_LOG": "1"} if rules == "on" else None)
             failed = [] if code == 0 else [f"the run ended with code {code}"]
+            log = os.path.join(os.path.dirname(report), "stderr.txt")
+            if os.path.exists(log):
+                with open(log, encoding="latin-1") as f:
+                    failed += first_and_again(f.read())
             if os.path.exists(report):
                 failed += check(report, game if not database else None, last, name, update,
                                 data_dir=database or os.path.join(game, "Data"), start_only=start_only)

@@ -149,6 +149,7 @@ static const SeasonCompDef *def_at(int i)
 
 #define MAX_DEFS 64
 static uint32_t objects[MAX_DEFS];      /* the object of each def, 0 when not made */
+static int made_season[MAX_DEFS];        /* the season whose change made the object (comps_entry), 0 otherwise */
 
 static uint32_t loading_records[MAX_DEFS];   /* season_comps_record_of before the objects of a load exist */
 static int loading_known;                    /* loading_records is filled */
@@ -157,6 +158,7 @@ static int objects_made;                     /* season_comps_before_comp_table h
 static void reset(void)
 {
     memset(objects, 0, sizeof objects);
+    memset(made_season, 0, sizeof made_season);
     loading_known = 0;
     objects_made = 0;
 }
@@ -439,6 +441,40 @@ static uint32_t make(const SeasonCompDef *d, int i, int s, int loading)
 
 /* ---- The rule kind ---- */
 
+/* 0.6.2 item 135: the competitions of the defs that had real editions before the table's first season (2001/02),
+ * by `file`. Such a competition that the game makes at a season change is played again, not for the first time
+ * (the lead's ruling on Max's rule of real life, 5 November 2026). Editions from 2001/02 on come from the table.
+ * Sources, English Wikipedia, read 5 November 2026:
+ * - Recopa Sudamericana: first edition 1989, a hiatus from 1999 to 2002 (club-world-8).
+ * - CONCACAF Gold Cup: first edition 1991, then 1993, 1996, 1998 and 2000.
+ * - Finalissima (CONMEBOL-UEFA Cup of Champions): 1985 and 1993, then 2022 (int-continental-4).
+ * - Turkish Super Cup: the Presidential Cup from 1966 to 1998, the TFF Super Cup from 2006 (rus-tur-271).
+ * - Conference League Cup (National League Cup): from 1979/80 to 2000/01, then 2004/05 (eng-303).
+ * - All-Ireland cup (Setanta Sports Cup): from 2005 (wal-nir-irl-25). The table holds 2004/05 to 2009/10, but the
+ *   game does not play those group formats (season_cups_more.c), so it first makes the cup in 2010/11.
+ * - Greek second tier, group 2: three or four groups from 1959/60 to 1974/75, two groups in 1968/69 and from 1975/76
+ *   to 1982/83 (Football League (Greece), 1968-69 Beta Ethniki).
+ * - Italian third tier, group C: three groups from the reform of 1959 to 1977/78 (Serie C).
+ * New ones, so not in the list: the Copa Sudamericana (2002), the Suruga Bank Championship (2008), the FIFA
+ * Intercontinental Cup (2024, a new competition, not the Intercontinental Cup of 1960 to 2004), AFC Champions
+ * League Two (2024/25), the UEFA Conference League (2021/22), the two Nations Leagues (2018/19), the Russian Super
+ * Cup (2003), the Russian Premier League Cup (2003) and the Superfinalen (2009).
+ * The Brazilian state championships are held from 2001/02, so the game makes them at the start. */
+static const char *const played_before_table[] = {
+    "new_recopa", "new_concacaf_gold_cup", "new_finalissima", "new_tur_super", "new_conf_cup", "new_all_ireland",
+    "gre_second", "ita_ser_c2a",
+};
+
+/* 1 when the competition of def `d` had a real edition before season s. */
+static int played_before(const SeasonCompDef *d, int s)
+{
+    for (size_t i = 0; i < sizeof played_before_table / sizeof played_before_table[0]; i++)
+        if (!strcmp(d->file, played_before_table[i])) return 1;
+    for (int y = SEASON_RULE_FIRST; y < s; y++)
+        if (season_comps_def_held(d, y) == 1) return 1;
+    return 0;
+}
+
 static void comps_entry(const SeasonChange *c)
 {
     if (!season_comps_on() || !entry_in_game(c->entry)) return;
@@ -451,11 +487,22 @@ static void comps_entry(const SeasonChange *c)
                          * season does not hold stays off); slice 21c: the def's own `held` */
         uint32_t obj = make(d, i, c->season, 0);
         if (!obj) continue;
+        made_season[i] = c->season;
         char name[64];
         table_name(d, c->season, name, sizeof name);
         if (*name) season_change_rename(rd32(g_mem, obj + NAME_AT), name);
-        if (*name) season_change_news("The %s is played for the first time.", name);
+        /* One sentence per competition (0.6.2 item 135): new_after says nothing for an object made at this change. */
+        if (*name)
+            season_change_news(played_before(d, c->season) ? "The %s is played again."
+                                                            : "The %s is played for the first time.", name);
     }
+}
+
+int season_comps_made_in(uint32_t comp)
+{
+    for (int i = 0; i < season_comp_def_count && i < MAX_DEFS; i++)
+        if (comp && objects[i] == comp) return made_season[i];
+    return 0;
 }
 
 /* A later name of the table (Q226, Q238). */

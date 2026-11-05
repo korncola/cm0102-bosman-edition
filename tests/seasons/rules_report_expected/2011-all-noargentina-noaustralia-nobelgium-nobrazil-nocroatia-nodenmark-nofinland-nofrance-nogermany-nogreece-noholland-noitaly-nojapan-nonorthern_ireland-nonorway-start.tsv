@@ -49,16 +49,10 @@
 2011	no_row	record_utils (Reserve): no table row
 2011	no_row	record_utils (Under 21 International): no table row
 2011	no_row	spa_lower (Spanish Lower Division): no table row
-2011	not_held	ire_pres_cup (President's Cup), row wal-nir-irl-273: the game holds 2011, the table says not held
-2011	not_held	ire_super_cup (FAI Super Cup), row wal-nir-irl-274: the game holds 2011, the table says not held
 2011	not_held	kor_league_cup (Korean League Cup), row aus-jap-kor-443: the game holds 2011, the table says not held
-2011	not_held	kor_super_cup (Korean Super Cup), row aus-jap-kor-389: the game holds 2011, the table says not held
 2011	not_held	olympics (Football at the Summer Olympics), row int-world-131: the game holds 2012, the table says not held
-2011	not_held	pol_lge_cup (Polish League Cup), row gre-pol-cro-227: the game holds 2011, the table says not held
-2011	not_held	pol_super (Polish Super Cup), row gre-pol-cro-281: the game holds 2011, the table says not held
 2011	not_held	swe_cup (Svenska Cupen), row den-swe-227: the game holds 2011, the table says not held
 2011	not_held	wc_europe_league (FIFA World Cup qualification (UEFA)), row int-world-123: the game holds 2012, the table says not held
-2011	not_held	wel_prm_cup (FAW Premier Cup), row wal-nir-irl-259: the game holds 2011, the table says not held
 2011	not_in_game	arg-usa-362 usa_rules 'United States' (United States)
 2011	not_in_game	aus-jap-kor-308 korea_rules 'n/a' (South Korea)
 2011	not_in_game	club-world-194 conmebol_liber 'Copa Libertadores' (CONMEBOL)

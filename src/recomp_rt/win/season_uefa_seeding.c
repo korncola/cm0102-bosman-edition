@@ -766,14 +766,54 @@ RT_WRAP(00904210, uefa_assign_cl)
     if (!rt_unwinding) rt_ret_stdcall(0, 2);
 }
 
-/* Uefa_Seeding::assign_uefa_cup_places, thiscall (records, short count) ret 8: given by the wrap above. */
+/* The losing semi-finalists of each nation's domestic cup (record_cup_semi_final_losers 0x905790): 50 entries of
+ * 12 bytes at this+0x440, the cup's record id at +0, the two clubs' indexes at +4 and +8. */
+#define SEMI_LOSERS 0x440u
+#define SEMI_ENTRIES 50
+#define SEMI_SIZE 12u
+
+/* Uefa_Seeding::assign_uefa_cup_places, thiscall (records, short count) ret 8: given by the wrap above in a season
+ * of the access list.
+ *
+ * In a season whose row has UEFA Cup groups (slice 22, season_uefa_cup.c), the original runs without its losing
+ * semi-finalists. The original gives a nation's cup place to the cup winner, else the runner-up (0x904889..0x904914).
+ * When both have places, it goes to the next league club (0x9050d0, as 0x904ab7) if the competition table
+ * [0xadadfc] is null (0x904921), the cup is the edition of the table entry (0x904951..0x904966), or the nation is
+ * [0x9cf488] or [0x9cf244] (0x90496c..0x904985). Else it looks for the cup's two losing semi-finalists in this+0x440
+ * (0x904994..0x9049f9). When neither has a place, both enter with code 10 x n + round (0x904be4..0x904d4c), when one
+ * has, the other enters with the ordinary code (0x904d9a..0x904dc3), and when both have, the next league club
+ * (0x904c15). build_entrants counts codes of 10 or more in +0xb2 (0x902c7b..0x902c85), and the original's round
+ * table gives those two an extra round of their own (code 0xa0, 0x90267d..0x902719). The format with groups has no
+ * such round, so it kept the original's format ("groups not possible here", open item 137: a 2002 game with
+ * England, changing rules on, 2004/05, West Ham United and Chelsea with code 23). In real life the place went to a
+ * league club: in 2005/06 the Serbia and Montenegro cup place went to the league's fourth, OFK Beograd, because the
+ * cup runner-up already had a place (https://en.wikipedia.org/wiki/2005%E2%80%9306_UEFA_Cup); the 2000/01 and
+ * 2002/03 rules give it to the best league club with no place (https://en.wikipedia.org/wiki/2000%E2%80%9301_UEFA_Cup,
+ * https://en.wikipedia.org/wiki/2002%E2%80%9303_UEFA_Cup). The original does that itself when the table has no
+ * entry for the cup (0x9049a7..0x9049ff, then 0x9050d0 at 0x904a1a; -1 is the table's empty marker, 0x905790). So
+ * the entries' cup ids are hidden for the call and put back after it: only 0x904994..0x9049d4 reads them here, and
+ * the save and the later seasons keep them. Seasons before 2004/05 keep the original's format, whose extra round
+ * holds the two. */
 RT_WRAP(00904580, uefa_assign_uc)
 {
-    if (!access_row(cpu.ecx)) {
+    uint32_t self = cpu.ecx;
+    if (access_row(self)) {
+        rt_ret_stdcall(0, 2);
+        return;
+    }
+    const SeasonUefa *r = season_uefa_row((int16_t)rd16(g_mem, self + 0x439));
+    if (!r || !r->uc_groups) {
         o_00904580();
         return;
     }
-    rt_ret_stdcall(0, 2);
+    uint32_t ids[SEMI_ENTRIES];
+    for (int i = 0; i < SEMI_ENTRIES; i++) {
+        uint32_t at = self + SEMI_LOSERS + SEMI_SIZE * (uint32_t)i;
+        ids[i] = rd32(g_mem, at);
+        wr32(g_mem, at, 0xffffffffu);
+    }
+    o_00904580();
+    for (int i = 0; i < SEMI_ENTRIES; i++) wr32(g_mem, self + SEMI_LOSERS + SEMI_SIZE * (uint32_t)i, ids[i]);
 }
 
 /* Uefa_Seeding::assign_intertoto_places, thiscall (records, short count) ret 8: none. The volunteer list goes

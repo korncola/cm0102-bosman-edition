@@ -19,7 +19,6 @@
 2013	no_row	record_utils (Reserve): no table row
 2013	no_row	record_utils (Under 21 International): no table row
 2013	not_held	euro_champ_qual (UEFA European Championship qualifying), row int-continental-134: the game holds 2014, the table says not held
-2013	not_held	gre_super (Greek Super Cup), row gre-pol-cro-94: the game holds 2013, the table says not held
 2013	not_in_game	eng-152 eng_conf 'Conference Premier' (England)
 2013	not_in_game	eng-373 eng_fa_trophy 'FA Trophy' (England)
 2013	not_in_game	uefa-97 uefa_seeding 'UEFA access list and seeding' (UEFA)
@@ -52,7 +51,6 @@
 2014	no_row	record_utils ('B' International): no table row
 2014	no_row	record_utils (Reserve): no table row
 2014	no_row	record_utils (Under 21 International): no table row
-2014	not_held	gre_super (Greek Super Cup), row gre-pol-cro-95: the game holds 2014, the table says not held
 2014	not_held	new_concacaf_gold_cup (2013 CONCACAF Gold Cup), row int-continental-148: the game holds 2015, the table says not held
 2014	not_in_game	eng-162 eng_conf 'Conference Premier' (England)
 2014	not_in_game	eng-379 eng_fa_trophy 'FA Trophy' (England)
