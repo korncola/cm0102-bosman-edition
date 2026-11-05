@@ -67,7 +67,9 @@ The original program is about 9,400 functions of 32-bit x86 code. The recompiler
 
 ## Build from source
 
-The repository holds no part of the original game. You need your own copy of the 2008 free release (`CM0102.iso`) and the official 3.9.68 patch (`cm0102_3968.exe`).
+This section is for developers. To play, use the downloads above, which include everything.
+
+The source code in this repository holds no part of the original game, so a build from source needs your own copy of the 2008 free release (`CM0102.iso`) and the official 3.9.68 patch (`cm0102_3968.exe`).
 
 ```bash
 python3 -m pip install capstone
