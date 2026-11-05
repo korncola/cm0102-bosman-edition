@@ -31,7 +31,8 @@ ita_ser_c1a, ita_ser_c1b and ita_ser_c2a, Q520) at the end of each season of the
 with changing rules off every later season keeps the start season's counts, Q232), and C2/B and C2/C with
 year 2999 at the end of a season of the era (Q623); the log has the 38 match days of each group of 20, the regroup line of each
 season change into the era, and the news sentence of the change in the change runs. In each season change
-of the era 4 clubs go up to Serie B and Serie B sends 4 down (Q627), and group C is made once (no line "starts
+of the era 4 clubs go up to Serie B (the group winners first,
+item 126) and Serie B sends 4 down (Q627), and group C is made once (no line "starts
 again"). The two-group runs (Q529): C2/A and C2/B hold the clubs of their rows at the end of each two-group season
 (20 and 20 in 2011/12, the 21 of C2/B is 20; 18 and 18 in 2012/13 and 2013/14), C2/C has year 2999, each
 season change into a two-group season regroups C2 into the two counts, and in each season change C1 sends down as
@@ -85,11 +86,34 @@ def check_report(name, report, seasons, want):
 
 
 def check_moves(name, log):
-    """Q627: each season change of the era sends 4 clubs up to Serie B and Serie B sends 4 down."""
+    """Q627: each season change of the era sends 4 clubs up to Serie B and Serie B sends 4 down. Item 126: the three
+    group winners (status 5, the first row of each group) go up first, then one play-off winner (status 0)."""
     fails = []
     for up, down in re.findall(r"serie c: (\d+) up to Serie B \(groups A \d+, B \d+, C \d+\), (\d+) down", log):
         if up != down or up != "4":
             fails.append(f"{name}: {up} clubs up to Serie B and {down} down (want 4 and 4)")
+    clubs = []
+    for line in log.splitlines():
+        m = re.search(r"serie c: up to Serie B: (.*) \(group ([ABC]), status (\d+)\)", line)
+        if m:
+            clubs.append((m.group(2), int(m.group(3))))
+            continue
+        m = re.search(r"serie c: (\d+) up to Serie B", line)
+        if not m:
+            continue
+        # A group with no row of status 5 or 0 to choose has no winner: C2/A at the change into the era with the extra division (it played
+        # as a C2 group), or group C made at the change into the era without it.
+        groups = [x for x in "ABC" if f"group {x} not read" not in line]
+        winners = sorted(g for g, st in clubs if st == 5)
+        others = [st for g, st in clubs if st != 5]
+        if len(clubs) != int(m.group(1)):
+            fails.append(f"{name}: {len(clubs)} club lines for {m.group(1)} up to Serie B")
+        if winners != groups:
+            fails.append(f"{name}: the group winners that go up to Serie B are {winners} of {clubs} (want "
+                         f"{', '.join(groups)}, item 126)")
+        elif len(clubs) <= 2 * len(groups) and any(st != 0 for st in others):
+            fails.append(f"{name}: a club other than a play-off winner goes up to Serie B before one: {clubs}")
+        clubs = []
     if "group C starts again" in log:
         fails.append(f"{name}: group C started twice in one season change")
     # O259, row A22: the Coppa Italia's lower places fill from its own loop (Serie B, its relegated clubs and places 3
@@ -219,6 +243,10 @@ def run_load(name, extra, table=None):
             fails.append(f"{name}: the save did not load and play on (code {r.returncode}, {again})")
         if "message box" in out:
             fails.append(f"{name}: a message box after the load ({again}/stderr.txt)")
+        # The save is of 2014/15, a season of the era, so group C sends clubs up at the change into 2015/16 (item 126
+        # review: with no rules table every change of a game with the extra division passed over group C).
+        if re.search(r"group [ABC] not read", out):
+            fails.append(f"{name}: the change after the load passed over group C in the choice of the clubs that go up")
         if table and "rules table: none" not in out:
             fails.append(f"{name}: the load had a rules table")
         made = re.search(r"new competition ita_ser_c2a made for \d+ \(entry 21, record \d+\) from the save", out)

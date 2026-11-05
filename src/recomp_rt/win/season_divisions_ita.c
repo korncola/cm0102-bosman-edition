@@ -574,12 +574,13 @@ static void set_status(uint32_t league, int k, uint8_t st)
 
 /* The clubs that go up to Serie B (Q627). Each group's class keeps its own places and play-off (set_up_rules
  * 0x653bdd: +0xbe 1, +0xbf 4; the play-off of 0x653e90 reads +0xbf at 0x653f8f), so each group ends with two rows
- * that league_promote_and_relegate 0x689c80 moves up: status 0 (the winner) and 5 (0x689d47..0x689d4e). The real
- * format sends 4 up: the three group winners and the winner of a national play-off. Serie B sends down its rows of
- * status 3, and in pairs a row moves only with a partner (0x689d26..0x689d5d), so the two sides must match. So the
- * rows that go up are, to the number of Serie B's relegated rows: the three winners (status 0), then the play-off
- * winners (status 5) by points, then (when Serie B relegates more) the next rows by points. The other rows of status
- * 0 or 5 take 0xff, the status of a row that does not move (0x689df4). */
+ * that league_promote_and_relegate 0x689c80 moves up: status 5 (the winner, the first row) and 0 (the play-off
+ * winner) (0x689d47..0x689d4e; the C1/C2 code below reads them the same way). The real format sends 4 up: the three
+ * group winners and the winner of a national play-off. Serie B sends down its rows of status 3, and in pairs a row
+ * moves only with a partner (0x689d26..0x689d5d), so the two sides must match. So the rows that go up are, to the
+ * number of Serie B's relegated rows: the three winners (status 5), then the play-off winners (status 0) by points,
+ * then (when Serie B relegates more) the next rows by points (item 126). The other rows of status 0 or 5 take 0xff,
+ * the status of a row that does not move (0x689df4). */
 static void choose_promoted(uint32_t b, const uint32_t *g, int no_c)
 {
     int nb = (int16_t)rd16(g_mem, b + 0x3e), want = 0;
@@ -588,9 +589,9 @@ static void choose_promoted(uint32_t b, const uint32_t *g, int no_c)
         row_club(b, k, &st);
         want += st == STATUS_DOWN;
     }
-    typedef struct { int g, k, rank, points; } Cand;
+    typedef struct { int g, k, st, rank, points; uint32_t club; } Cand;   /* st: the row's status, for the log */
     Cand c[GROUPS * MAX_CLUBS];
-    int n = 0;
+    int n = 0, read[GROUPS] = {0, 0, 0};
     for (int i = 0; i < GROUPS && !rt_unwinding; i++) {
         int rows = g[i] && !(no_c && i == 2) ? (int16_t)rd16(g_mem, g[i] + 0x3e) : 0;
         for (int k = 0; k < rows && k < MAX_CLUBS && n < GROUPS * MAX_CLUBS; k++) {
@@ -598,7 +599,8 @@ static void choose_promoted(uint32_t b, const uint32_t *g, int no_c)
             uint32_t club = row_club(g[i], k, &st);
             if (!readable(club) || st == STATUS_DOWN) continue;
             if (season_ita_second_up_barred(club)) continue;       /* open item 117 */
-            c[n++] = (Cand){i, k, st == 0 ? 0 : st == 5 ? 1 : 2, row_points(g[i], k)};
+            c[n++] = (Cand){i, k, st, st == 5 ? 0 : st == 0 ? 1 : 2, row_points(g[i], k), club};
+            read[i] |= st == 0 || st == 5;
         }
     }
     if (rt_unwinding) return;
@@ -616,10 +618,15 @@ static void choose_promoted(uint32_t b, const uint32_t *g, int no_c)
         if (i < want) {
             if (c[i].rank == 2) set_status(g[c[i].g], c[i].k, 5);
             up[c[i].g]++;
+            fprintf(stderr, "recomp: serie c: up to Serie B: %.51s (group %c, status %d)\n", win_str(c[i].club + 0x04),
+                    "ABC"[c[i].g], c[i].st);
         } else if (c[i].rank < 2) set_status(g[c[i].g], c[i].k, 0xff);
     }
-    fprintf(stderr, "recomp: serie c: %d up to Serie B (groups A %d, B %d, C %d), %d down from Serie B\n",
-            up[0] + up[1] + up[2], up[0], up[1], up[2], want);
+    /* A group with no row of status 5 or 0 to choose: C2/A at the change into the era with the extra division (no_c),
+     * or group C made at the change into the era without it (its clubs played no season in it, their rows hold 0xff). */
+    fprintf(stderr, "recomp: serie c: %d up to Serie B (groups A %d, B %d, C %d), %d down from Serie B%s%s%s\n",
+            up[0] + up[1] + up[2], up[0], up[1], up[2], want, read[0] ? "" : ", group A not read",
+            read[1] ? "" : ", group B not read", read[2] ? "" : ", group C not read");
 }
 
 /* The chain of the Serie C era, in place of ItaSerA::process_promotion_relegation_chain 0x642410. */
@@ -645,8 +652,11 @@ static void chain(uint32_t serie_a)
     /* The change into the era with the extra division flag: C2/A played the season before as a C2 group, two tiers
      * below Serie B (the C2 rows of 2013/14 send no club up: all join the single Serie C, ita-210, ita-211), so its
      * rows of status 0 and 5 do not go up to Serie B: they take 0xff (0x689df4), and the choice of the clubs that go
-     * up passes over the group. Q529. */
-    int no_c = g[2] && extra_division_flag() && !era_of_year((int16_t)rd16(g_mem, serie_a + 0x40));
+     * up passes over the group. Q529. With no rules table rules_season gives 0, so era_of_year gives 0 for every
+     * season: the state then tells whether the season just played was the era (C2/B ends at change_into_era, below),
+     * else group C's winners never went up in such a game (item 126 review). */
+    int played = (int16_t)rd16(g_mem, serie_a + 0x40);
+    int no_c = g[2] && extra_division_flag() && !(rules_season(played) ? era_of_year(played) : era_by_state());
     if (!rt_unwinding && no_c) {
         int n = (int16_t)rd16(g_mem, g[2] + 0x3e);
         for (int k = 0; k < n && n <= 60 && !rt_unwinding; k++) {
