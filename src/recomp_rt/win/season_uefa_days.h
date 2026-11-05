@@ -53,4 +53,17 @@ int season_uefa_cl_group_days(int season, int phase, int set, SeasonLeagueDay ou
  * (5 or 6) in the season that starts in year season (season_uefa_cup.c, group_table). */
 const SeasonLeagueDay *season_uefa_group_days(int season, int days);
 
+/* The second qualifying round (Q2) and the first round (R1) of the UEFA Cup with groups (season_uefa_cup.c
+ * qual_table) in the season that starts in year season (month m 1 to 12). Each first leg: the original's day on a
+ * Thursday (Uefa_Cup::create_round_table: Q2 10 August, 0x902735..0x90273c; R1 14 September, 0x9027cd..0x9027de),
+ * a week later while the first or the second leg (14 days on) meets a FIFA day, at most 4 weeks. The R1 draw: the
+ * day after the Q2 second leg (the original's 25 August, 0x9027bf..0x9027c4, came before it). Item 125 (batch Q):
+ * the original's Q2 second legs of 23 August 2007 and 21 August 2008 and R1 first legs of 13 September 2007 and
+ * 11 September 2008 fell the day after a FIFA day. The real days (en.wikipedia.org, 2004-05 to 2008-09 UEFA Cup,
+ * "Schedule"): Q2 12, 11, 10, 16 and 14 August, R1 drawn 27, 26, 25, 31 and 29 August, R1 16, 15, 14, 20 and
+ * 18 September, of 2004 to 2008, each second leg 14 days later. */
+void season_uefa_cup_q2_day(int season, int *y, int *m, int *d);
+void season_uefa_cup_r1_day(int season, int *y, int *m, int *d);
+void season_uefa_cup_r1_draw(int season, int *y, int *m, int *d);
+
 #endif

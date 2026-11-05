@@ -121,6 +121,45 @@ int main(int argc, char **argv)
             groups(s, (r->ecl_group_clubs % 2 ? r->ecl_group_clubs : r->ecl_group_clubs - 1) * r->ecl_meetings,
                    "Conference League");
         for (int k = 0; k < 3; k++) ko_draw(s, k);
+        if (s <= 2008 && r->uc_groups > 0) {                /* Q2 and R1 of the UEFA Cup before its groups */
+            void (*first[2])(int, int *, int *, int *) = {season_uefa_cup_q2_day, season_uefa_cup_r1_day};
+            const char *names[2] = {"UEFA Cup second qualifying round", "UEFA Cup first round"};
+            long end = 0;
+            for (int k = 0; k < 2; k++)
+                for (int leg = 0; leg < 2; leg++) {
+                    int y, m, d;
+                    first[k](s, &y, &m, &d);
+                    long z = season_abs_day(y, m, d) + 14 * leg;
+                    season_from_abs_day(z, &y, &m, &d);
+                    day(s, names[k], leg + 1, y, m - 1, d);
+                    end = z;
+                }
+            const SeasonLeagueDay *g = season_uefa_group_days(s, (r->uc_group_clubs % 2 ? r->uc_group_clubs :
+                                                                   r->uc_group_clubs - 1) * r->uc_meetings);
+            long g1 = season_abs_day(s + g[0].year_off, g[0].month + 1, g[0].day) - 3;   /* before any weekday move */
+            checked++;
+            if (end >= g1) {
+                printf("FAIL %d/%02d: the UEFA Cup first round ends on or after the first group day\n", s,
+                       (s + 1) % 100);
+                failures++;
+            }
+        }
+    }
+    /* The real days (UEFA Cup with groups, item 125 batch Q): Q2 first leg, R1 draw, R1 first leg. */
+    static const int real[][7] = {{2004, 8, 12, 8, 27, 9, 16}, {2005, 8, 11, 8, 26, 9, 15}, {2006, 8, 10, 8, 25, 9, 14},
+                                  {2007, 8, 16, 8, 31, 9, 20}, {2008, 8, 14, 8, 29, 9, 18}};
+    for (size_t i = 0; i < sizeof real / sizeof real[0]; i++) {
+        int got[6], y;
+        season_uefa_cup_q2_day(real[i][0], &y, &got[0], &got[1]);
+        season_uefa_cup_r1_draw(real[i][0], &y, &got[2], &got[3]);
+        season_uefa_cup_r1_day(real[i][0], &y, &got[4], &got[5]);
+        checked++;
+        if (memcmp(got, real[i] + 1, sizeof got)) {
+            printf("FAIL %d/%02d: UEFA Cup Q2 %02d-%02d, R1 draw %02d-%02d, R1 %02d-%02d; real %02d-%02d, %02d-%02d, "
+                   "%02d-%02d\n", real[i][0], (real[i][0] + 1) % 100, got[0], got[1], got[2], got[3], got[4], got[5],
+                   real[i][1], real[i][2], real[i][3], real[i][4], real[i][5], real[i][6]);
+            failures++;
+        }
     }
     if (list)
         for (int y = 2002; y <= 2031; y++)

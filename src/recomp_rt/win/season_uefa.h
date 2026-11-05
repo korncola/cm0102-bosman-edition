@@ -251,4 +251,9 @@ int season_uefa_ko_dates_log(char comp, int season);
  * its dates. Returns the count of rounds it dated. */
 int season_uefa_ko_dates(uint32_t table, char comp, int season, const int *kinds, int rounds);
 
+/* season_uefa_dates.c, the game only: the dates of season_uefa_days.h in the Q2 record q2 (its first leg) and the
+ * R1 record r1 (its draw and first leg) of a UEFA Cup with groups. The Q2 draw and the days to each second leg
+ * stay. 1 when it wrote them. */
+int season_uefa_cup_qual_dates(uint32_t q2, uint32_t r1, int season);
+
 #endif
