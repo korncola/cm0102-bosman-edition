@@ -558,6 +558,7 @@ void season_dates_forget(void)
 {
     season_history_forget();
     season_coeffs_forget();
+    rt_ire_super_forget();                      /* open item 127 (original_faults.c) */
     journal_ch_base = journal_ch_end = 0;
     loaded = 0;
     applied_year = 0;

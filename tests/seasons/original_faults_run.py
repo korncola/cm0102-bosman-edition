@@ -11,6 +11,8 @@ Usage:
         [--keep-faults]
     python3 tests/seasons/original_faults_run.py olympics <cm0102_recomp> <game folder> --save <in.sav> --keep <folder>
         [--days 450] [--seed 3] [--rules off] [--tier-a] [--keep-faults]
+    python3 tests/seasons/original_faults_run.py ire_super <cm0102_recomp> <game folder> --save <in.sav> --keep <folder>
+        [--days 45] [--seed 3] [--rules off] [--tier-a] [--keep-faults]
 
 managers: loads a save made on holiday (a soak leg of tests/seasons/soak_run.py, changing rules on, the 3.9.68
 database), plays --days game days on holiday and saves (soak_run.load_leg). It reads the senior national teams of
@@ -22,10 +24,11 @@ both saves (nat_club.dat: the first nation-count rows; the manager at club +0xcf
       first check counts only the nations with a continent
     - a national manager left in the run and his team got a new manager (a retirement or a move to a club)
     - no message box, and the program ends with code 0
---keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:managers (the original's rule for this group only; money, age
-and olympics keep theirs: keep:money, keep:age, keep:olympics). The checks must then fail: this is the
-proof that they find the fault (the same holds for money). The suggested save: the 2011 leg of the 0.6.0 soak seed 6
-(run-logs/release-test-0.6.0/long-games/soak-seed6/leg09/user/samesave.sav), where 161 of 213 teams have no manager.
+--keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:managers (the original's rule for this group only; money, age,
+olympics and ire_super keep theirs: keep:money, keep:age, keep:olympics, keep:ire_super). The checks must then fail:
+this is the proof that they find the fault (the same holds for money). The suggested save: the 2011 leg of the 0.6.0
+soak seed 6 (run-logs/release-test-0.6.0/long-games/soak-seed6/leg09/user/samesave.sav), where 161 of 213 teams
+have no manager.
 
 money: for each balance, sets the balance of Arsenal (the human's club) and of Liverpool (an AI club whose budget follows its balance: club +0x82 is 0, see
 docs/research/2026-10-30-money-64bit.md) in start.sav of the
@@ -57,6 +60,28 @@ for a World Cup qualifier on 31 August, and on 29 August the Olympic pick took 1
 738c1269 (and in the run set, main 1901ffa5) Holland then fielded 10 and the game stopped on the box
 match_eng..cpp 612. On main ec04eb89 the game takes another course and keeps 12 (no box), but the pick still takes
 them. --keep-faults (keep:olympics) must fail: "may take" lines on any build, and the box on 738c1269.
+
+ire_super: loads a save made on holiday before the Irish Super Cup draws its table (late June), plays --days game
+days on holiday with --seed and changing rules --rules (Tier A with --tier-a) and saves. IreSuperCup::create_table
+0x63b0c0 fills its last places with Premier Division clubs and took a club of a European place again, so the edition
+had a match of a club against itself, never completed, and the cup never drew again (open item 127,
+tools/recomp/original_faults.py). The runtime logs each club that the last loop finds in the table ("recomp: Irish
+Super Cup <year>: skips", "takes again" with the fault kept). The checks:
+    - at least one "skips" line and no "takes again" line
+    - the edition of that year has fixtures of four clubs in the save, and none of a club against itself
+    - the save holds a history row of the Irish Super Cup for that year (the edition completed)
+    - no message box, and the program ends with code 0
+The suggested save: run set game a2001offs3 (Tier A, changing rules off, seed 3) played from its July 2051 save
+(run-logs/runset-pass2/run/a2001offs3/leg004/user/samesave.sav) to day 162 of 2057 with the same seed:
+run-logs/0.6.2-s127/r3/user/samesave.sav. Ireland then has three European places, and the original drew "Athlone Town v
+Athlone Town". --keep-faults (keep:ire_super) must fail.
+    With --old the save holds a cup that has already stopped. At the next season change the runtime restarts it
+    ("recomp: Irish Super Cup: the cup of <year> is restarted in <game year>", "left stopped" with the fault kept),
+    and the checks above apply to that game year in place of the "skips" line. The suggested save: a2001offs3 of
+    batch O at day 202 of 2061 (run-logs/merge-062p/offs3/a2001offs3/leg005/user/samesave.sav, cup stopped since
+    2057) with --days 360.
+    With --parked (and --rules on) no restart line may come: run set game a2001s1 at day 212 of 2011
+    (run-logs/runset-pass2/run/a2001s1/leg000/user/samesave.sav, seed 1) with --days 365.
 
 age: sets the birth year of the human manager of start.sav (+0x12) to --born, loads it, goes on holiday and saves 3
 game days later. The day loop stores each staff member's age at +0x18 (0x5cd3c4); for an age above 127 the save must
@@ -175,6 +200,79 @@ def olympics(argv):
         fails.append(f"Olympic picks may take {len(taken)} players from senior squads whose window runs")
     if short:
         fails.append(f"{len(short)} team picks of fewer than 11 players")
+    return fails
+
+
+IRE_SUPER = "recomp: Irish Super Cup "
+IRE_RESTART = "recomp: Irish Super Cup: the cup of "
+
+
+def ire_super(argv):
+    sys.path.insert(0, os.path.join(HERE, "future"))
+    import history_check as hc
+    program, game = os.path.abspath(argv[0]), os.path.abspath(argv[1])
+    save, keep = os.path.abspath(soak_run.arg(argv, "--save")), os.path.abspath(soak_run.arg(argv, "--keep"))
+    days = int(soak_run.arg(argv, "--days", 45))
+    if "--keep-faults" in argv:
+        os.environ["RECOMP_ORIGINAL_FAULTS"] = "keep:ire_super"
+    if "--tier-a" in argv:
+        os.environ["RECOMP_TIER_A"] = "1"
+    o = {"program": program, "game": game, "rules": soak_run.arg(argv, "--rules", "off"), "database": None,
+         "last": 2101, "seed": int(soak_run.arg(argv, "--seed", 3)), "timeout": 7200}
+    work = os.path.join(keep, "ire_super")
+    code, took, box = soak_run.load_leg(o, work, save, days)
+    print(f"run: code {code} after {took:.0f} s, log {os.path.join(work, 'stderr.txt')}")
+    fails = []
+    if code != 0:
+        fails.append(f"the program ended with {code}" + (f" ({box})" if box else ""))
+    log = open(os.path.join(work, "stderr.txt"), encoding="latin-1").read().split("\n")
+    lines = [x[len(IRE_SUPER):] for x in log if x.startswith(IRE_SUPER)]
+    skips, again = [x for x in lines if ": skips " in x], [x for x in lines if ": takes again " in x]
+    for x in lines:
+        print(f"  {x}")
+    if "--parked" in argv:
+        # Changing rules on: the rules table stops the cup, and no restart may bring it back.
+        old = [x for x in log if x.startswith(IRE_RESTART)]
+        print(f"  {len(old)} restart lines")
+        return fails + [f"a cup was restarted against the rules table: {x}" for x in old]
+    if "--old" in argv:
+        # A save in which the cup has stopped: "the cup of <year> is restarted in <game year>".
+        old = [x[len(IRE_RESTART):] for x in log if x.startswith(IRE_RESTART)]
+        for x in old:
+            print(f"  {x}")
+        restarted = [x for x in old if " is restarted in " in x]
+        stopped = [x for x in old if " is left stopped in " in x]
+        if not restarted:
+            fails.append("the stopped Irish Super Cup was not restarted at the season change")
+        if stopped:
+            fails.append(f"the Irish Super Cup was left stopped: {stopped[0]}")
+        years = sorted({int(x.split()[-1]) for x in restarted})
+    else:
+        if not skips:
+            fails.append("the last loop of the Irish Super Cup skipped no club that was already in its table")
+        years = sorted({int(x.split(":")[0]) for x in lines if x.split(":")[0].isdigit()})
+    if again:
+        fails.append(f"the Irish Super Cup took {len(again)} clubs into its table again")
+    saved = os.path.join(work, "user", soak_run.smoke_run.SAVE_NAME)
+    if not os.path.exists(saved):
+        return fails + [f"no save {saved}"]
+    g = hc.Game(saved)
+    cup = [c for c, v in g.comps.items() if v["name"] == "Irish Super Cup"]
+    fx = hc.fixtures(g)
+    import datetime
+    for year in years:
+        matches = [(h, a) for c in cup for d, h, a in fx.get(c, []) if datetime.date.fromordinal(d).year == year]
+        clubs = {x for m in matches for x in m}
+        rows = [r for r in g.rows if r[0] in cup and r[1] == year and r[2] >= 0]
+        print(f"Irish Super Cup {year}: {len(matches)} fixtures, {len(clubs)} clubs, history row: {bool(rows)}")
+        if len(clubs) != 4:
+            fails.append(f"the Irish Super Cup of {year} has fixtures of {len(clubs)} clubs, not 4")
+        selfs = [g.club(h)[0] for h, a in matches if h == a]
+        if selfs:
+            fails.append(f"the Irish Super Cup of {year} has a club against itself: {', '.join(selfs)}")
+        if not rows:
+            fails.append(f"the save holds no history row of the Irish Super Cup of {year} (the edition did not "
+                         f"complete)")
     return fails
 
 
@@ -298,11 +396,12 @@ def age(argv):
 
 
 def main(argv):
-    if len(argv) < 4 or argv[1] not in ("managers", "money", "age", "olympics") or "--keep" not in argv \
-            or (argv[1] in ("managers", "olympics") and "--save" not in argv):
+    if len(argv) < 4 or argv[1] not in ("managers", "money", "age", "olympics", "ire_super") or "--keep" not in argv \
+            or (argv[1] in ("managers", "olympics", "ire_super") and "--save" not in argv):
         print(__doc__)
         return 2
-    fails = {"managers": managers, "money": money, "age": age, "olympics": olympics}[argv[1]](argv[2:])
+    fails = {"managers": managers, "money": money, "age": age, "olympics": olympics,
+             "ire_super": ire_super}[argv[1]](argv[2:])
 
     for f in fails:
         print("FAIL", f)

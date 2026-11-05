@@ -311,6 +311,11 @@ uint32_t rt_national_vacancy(uint32_t club, uint32_t site);
 /* 1 when the Olympic pick leaves a player in an AI senior squad whose window runs (open item 102; win/original_faults.c,
  * tools/recomp/original_faults.py at 0x76ce1c). */
 uint32_t rt_olympic_keeps_senior(uint32_t player, uint32_t nation, uint32_t slot, uint32_t fixture);
+/* 1 when the Irish Super Cup's last loop must skip a club already in its table (open item 127; win/original_faults.c,
+ * tools/recomp/original_faults.py at 0x63b2ae). */
+uint32_t rt_ire_super_has(uint32_t cup, uint32_t club, uint32_t rows);
+/* Item 127: forget the game year that the Irish Super Cup restart last saw (a load or a new game). */
+void rt_ire_super_forget(void);
 /* Money above 2,147,483,647 (0.6.2 slice 11, Q24; win/original_faults.c, tools/recomp/original_faults.py). */
 uint32_t rt_budget_hi(uint32_t lo, uint32_t hi);          /* get_transfer_budget: the high word in place of cdq */
 uint32_t rt_budget_floor(uint32_t finance, uint32_t less); /* the balance less 10m or 15m (0x599135, 0x599185) */

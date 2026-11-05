@@ -1,7 +1,7 @@
 /* Faults of the original that long games reach (0.6.2 slice 11, tools/recomp/original_faults.py). The fixes act in
  * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS turns them off: "keep" all
- * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age and
- * olympics. */
+ * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age,
+ * olympics and ire_super. */
 #include "win.h"
 #include "../rt.h"
 
@@ -12,13 +12,13 @@
 #define CLUB_COUNT 0xae235cu     /* clubs, national teams and under-21 teams */
 #define NATION_COUNT 0xae2350u
 
-enum { MANAGERS, MONEY, AGE, OLYMPICS, GROUPS };
+enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, GROUPS };
 
 static int fixes_on_group(int group)
 {
     static int on[GROUPS] = {-1};
     if (on[0] < 0) {
-        static const char *const names[GROUPS] = {"managers", "money", "age", "olympics"};
+        static const char *const names[GROUPS] = {"managers", "money", "age", "olympics", "ire_super"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
         if (v && strcmp(v, "keep") && strncmp(v, "keep:", 5))
             fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS=%s is not keep or keep:<groups>: every fix acts\n", v);
@@ -29,7 +29,8 @@ static int fixes_on_group(int group)
             for (int g = 0; g < GROUPS; g++) known |= n == strlen(names[g]) && !strncmp(p, names[g], n);
             if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
                 fprintf(stderr,
-                        "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics)\n",
+                        "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics, "
+                        "ire_super)\n",
                         (int)n, p);
         }
         for (int g = 0; g < GROUPS; g++) {
@@ -149,6 +150,85 @@ uint32_t rt_olympic_keeps_senior(uint32_t player, uint32_t nation, uint32_t slot
                     "%d)\n", name, on ? "keeps" : "may take", (int32_t)rd32(g_mem, player), on ? "in" : "from", day,
             year, end_day, end_year);
     return (uint32_t)on;
+}
+
+/* The Irish Super Cup (open item 127, tools/recomp/original_faults.py). At 0x63b2ae the last loop of
+ * `IreSuperCup::create_table` 0x63b0c0 has found a Premier Division club. The table (+0xb1) holds rows of 0x3b bytes
+ * with the club at +0 (League::add_club_to_table 0x687430), and the loops have filled the first `rows` (ebx). A club
+ * that is one of them is skipped, so the table holds four clubs and the edition can complete. With the group off
+ * (keep:ire_super) the line says that the original takes the club again. */
+uint32_t rt_ire_super_has(uint32_t cup, uint32_t club, uint32_t rows)
+{
+    uint32_t table = rd32(g_mem, cup + 0xb1u);
+    int found = 0;
+    for (uint32_t i = 0; table && i < rows && i < 4u && !found; i++) found = rd32(g_mem, table + 0x3bu * i) == club;
+    if (!found) return 0;
+    int on = fixes_on_group(IRE_SUPER);
+    fprintf(stderr, "recomp: Irish Super Cup %d: %s %s, already in the table\n", (int16_t)rd16(g_mem, cup + 0x40u),
+            on ? "skips" : "takes again", log_name(club + 4u));
+    return (uint32_t)on;
+}
+
+/* Irish Super Cup, saves of a game that met the fault (open item 127). The broken edition never completes, so the
+ * season pass never calls IreSuperCup::start_new_season 0x63b550 (all_stages_complete 0x48ce10 stays false), and
+ * IreSuperCup::update_for_date 0x63b300 draws only while +0x40 is the game year ([0xde1f58]+0x439, 0x63b311..
+ * 0x63b331). The cup is then gone for every later season. The real cup is played every season. In a game with no
+ * fault, start_new_season runs after each final, so +0x40 is never below the game year (the trace of a2001offs3,
+ * 2051 to 2057). So when the game year moves on, +0x40 is below it and the table holds one club twice (the state of
+ * the fault, ire_super_broken), the wrap runs start_new_season. It runs outside the season pass, so
+ * season_change_start runs no hooks, but only a broken cup gets here. When the cup is drawn anew (+0x45 0) and still
+ * behind, the wrap sets +0x40 to the game year. The original then draws the cup on that day, as it does in a game
+ * with no fault. The broken edition leaves no history row (checked on the
+ * batch O save of a2001offs3). A load or a new game forgets the year seen (rt_ire_super_forget, from
+ * season_dates_forget), so the restart waits for a year turn that the game plays.
+ * A cup that the rules table parks in a later year (season_kind_cup_breaks.c, 2999) is never below the game year. */
+void o_0063b300(void);
+static int ire_super_seen;              /* the game year at the last update; 0 after a load or a new game */
+
+void rt_ire_super_forget(void)
+{
+    ire_super_seen = 0;
+}
+
+/* 1 when the table of the cup (+0xb1, rows of 0x3b bytes, club at +0) holds one club twice in its four rows: the
+ * state that the fault leaves. With changing rules on, the rules table stops the cup after 2001
+ * (season_kind_cup_breaks.c skips start_new_season), and that cup keeps a whole table and a year below the game
+ * year: it must stay stopped. */
+static int ire_super_broken(uint32_t cup)
+{
+    uint32_t table = rd32(g_mem, cup + 0xb1u);
+    if (!table) return 0;
+    for (uint32_t i = 0; i < 4u; i++)
+        for (uint32_t j = i + 1; j < 4u; j++) {
+            uint32_t a = rd32(g_mem, table + 0x3bu * i);
+            if (a && a == rd32(g_mem, table + 0x3bu * j)) return 1;
+        }
+    return 0;
+}
+
+RT_WRAP(0063b300, ire_super_update)
+{
+    uint32_t self = cpu.ecx;
+    int game = (int16_t)rd16(g_mem, rd32(g_mem, 0xde1f58u) + 0x439u);
+    int year = (int16_t)rd16(g_mem, self + 0x40u);
+    int turned = ire_super_seen && game == ire_super_seen + 1;
+    ire_super_seen = game;
+    if (turned && year < game && ire_super_broken(self)) {
+        int on = fixes_on_group(IRE_SUPER);
+        fprintf(stderr, "recomp: Irish Super Cup: the cup of %d is %s in %d\n", year, on ? "restarted" : "left stopped",
+                game);
+        if (on) {
+            Cpu saved = cpu;
+            cpu.ecx = self;
+            rt_callback(0x63b550u, 0, NULL);
+            if (rt_unwinding) return;
+            cpu = saved;
+            if (!rd32(g_mem, self + 0x45u) && (int16_t)rd16(g_mem, self + 0x40u) < game)
+                wr16(g_mem, self + 0x40u, (uint16_t)game);
+        }
+    }
+    cpu.ecx = self;
+    o_0063b300();
 }
 
 /* Money (Q24). `Finance::get_transfer_budget` 0x598800 works on a 64-bit budget, but cuts three values to 32 bits.
