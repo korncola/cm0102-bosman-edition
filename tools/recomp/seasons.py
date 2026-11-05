@@ -250,8 +250,9 @@ PATCHES = {
 
     # OFC Nations Cup of 8 teams (0.6.2 open item 45, win/season_intl_ofc.c). OceaniaNations (ctor 0x7988b0) is the
     # League of group A and stage[0] group B, each of 3 teams; with 8 teams each has 4. Group A takes the teams 0 to
-    # size - 1 of +0xee, group B the next size. rt_intl_ofc_group gives the size: 3 unless the draw holds 8 teams,
-    # so the original's value in the base game and for an edition of another count. this in esi.
+    # size - 1 of +0xee, group B the next size. rt_intl_ofc_group gives the size: 4 when the draw holds 8 teams or the
+    # one group of 4 (2008), 6 for the one group of 6 (2004, open item 136), else the original's 3, so the original's
+    # value in the base game. this in esi.
     0x7995A9: (0xB1, "(0x3bu * rt_intl_ofc_group(esi, 3u))"),       # create_group_table 0x7995a0: malloc of the rows
     0x7995AE: (0x3, "rt_intl_ofc_group(esi, 3u)"),                  # create_group_table: the row count +0x3e
     0x799A80: (0xC, "(4u * rt_intl_ofc_group(esi, 3u))"),           # create_group_stage 0x799a60: malloc of its teams

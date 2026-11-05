@@ -1,9 +1,9 @@
 /* The OFC Nations Cup of 8 teams (0.6.2 open item 45). The finals table (season_intl_table.c) gives 8 teams in
  * 2002 (int-continental-21), 2012 (-120), 2016 (-164) and 2024 (-252), and after the table every edition takes the
  * 8 of the last row (0.6.2 decision A). Each of these editions has two groups of 4, the top two of each group to
- * the semi-finals, then the final. The base game (season_intl_on() 0) and every edition of another count (6 in
- * 2004, 4 in 2008) take the original's path: each site and wrap here gives the original's value or calls the
- * original then.
+ * the semi-finals, then the final. The base game (season_intl_on() 0) takes the original's path: each site and
+ * wrap here gives the original's value or calls the original then. The editions of 6 (2004) and 4 (2008) have their
+ * own formats, below.
  *
  * The class OceaniaNations (oceania_nations.cpp, ctor 0x7988b0, vtable 0x96e0cc) plays 6 nations. The League
  * object is group A, stage[0] (+0xc, count +0x2c = 2 at 0x798980) is group B and stage[1] the Cup_Stage of the
@@ -67,7 +67,23 @@
  *   (0x79a515..0x79a52b), not the codes of a group that goes on to a knockout (inference);
  * - the honours: slot +0x30 of the class is 0x595160, a jump to stage 1's (the knockout's Cup::record_season_honours
  *   0x519a90). With no stage the class takes League::record_season_honours 0x684640: the group's first is the winner,
- *   the second the runner-up (rows 0 and 1 of +0xb1, 0x68465b..0x68465d). */
+ *   the second the runner-up (rows 0 and 1 of +0xb1, 0x68465b..0x68465d).
+ *
+ * The edition of 6 (2004, int-continental-32 and -43; https://www.rsssf.org/tables/04oc.html and
+ * https://en.wikipedia.org/wiki/2004_OFC_Nations_Cup, read 5 November 2026): Australia and New Zealand with the four
+ * winners of a first round of 10 (Solomon Islands, Tahiti, Vanuatu, Fiji) in one group in Adelaide, each pair once,
+ * 15 matches on 29 and 31 May and 2, 4 and 6 June 2004; then the first two in a final of two legs, 9 October in
+ * Honiara and 12 October in Sydney. The game plays it so in a season game (with changing rules off, in every edition
+ * when the start season's edition is this one, Q232):
+ * - set_up_rules: the stage count +0x2c becomes 1 (the final); the draw date stays the original's;
+ * - the group template (six_template): the 5 real days, so the League scheduler makes a round robin of 3 fixtures a
+ *   day;
+ * - the draw: the original's six (the first round is not played: the six are the original's choice, inference);
+ *   create_group_table makes 6 rows (the sites of seasons.py), create_group_stage (group B) is skipped, the predicted
+ *   places are 1 to 6 and the group's progress codes are its places;
+ * - advance_stage (ofc_advance): at the group's end the final of its first two, a Cup_Stage in stage[0];
+ * - the honours: the final's (Cup::record_season_honours), from stage[0].
+ * A save made in the edition by an older build keeps the original's two groups of 3 and its path. */
 #include "win.h"
 #include "season_intl.h"
 #include "season_uefa_days.h"         /* season_day_of_year */
@@ -115,10 +131,21 @@
 #define KEY_NEW_ZEALAND 0x9cf3f4u       /* key nation id (0x799fc1) */
 #define LEAGUE_HONOURS 0x00684640u      /* League::record_season_honours, thiscall () */
 
+#define GAME_NEW 0x00944cf1u            /* operator new, cdecl (size) (0x799d0c) */
+#define CUP_STAGE_NEW 0x00522e00u       /* Cup_Stage ctor, thiscall, 15 arguments (ret 0x3c at 0x5230b9) */
+#define CUP_START 0x0051c800u           /* Cup::set_up_round, thiscall (0) (0x799e09) */
+#define TABLE_ROW 0x006826d0u           /* League::get_table_row, thiscall (row): the row, +0 the club (0x799cb7) */
+#define CUP_FIRST_DATE 0x00521e60u      /* cdecl (rec, round, day, month0, year offset, weekday, year) */
+#define CUP_LAST_DATE 0x00521eb0u       /* cdecl (rec, round, day, month0, year offset, weekday, x, year, y) */
+#define CUP_ROUND_SIZE 0x68u            /* knockout round record (season_cups.h) */
+#define CURRENT_STAGE 0x30u             /* the last stage in play, -1 before group B (0x799c1d, 0x799947) */
+
 #define TEAMS 8
 #define GROUP 4
 #define ONE_GROUP 4                     /* the edition of one group, home and away (2008) */
 #define ONE_GROUP_DAYS 6
+#define SIX 6                           /* the edition of one group of 6 and a final of two legs (2004) */
+#define SIX_DAYS 5
 
 static int logging(void)
 {
@@ -180,6 +207,21 @@ static int one_group(uint32_t self)
     const SeasonIntlEdition *e = season_intl_rule_edition("oceania_nations", year_of(self));
     return e && e->teams == ONE_GROUP;
 }
+
+/* 1 for the edition of one group of 6 and a final of two legs, in a season game (the table's 2004). */
+static int six_group(uint32_t self)
+{
+    if (!season_intl_on() || !is_ofc(self)) return 0;
+    const SeasonIntlEdition *e = season_intl_rule_edition("oceania_nations", year_of(self));
+    return e && e->teams == SIX;
+}
+
+/* 1 when the class holds that edition as this build sets it up (+0x2c 1, season_intl_ofc_rules). A save made during
+ * the edition by an older build keeps the original's two groups (+0x2c 2), and the original's path then goes on. */
+static int six_staged(uint32_t self) { return six_group(self) && rd32(g_mem, self + STAGE_COUNT) == 1; }
+
+/* 1 on the draw day of that edition, while +0xf2 holds the 6 drawn teams. */
+static int drawn6(uint32_t self) { return six_staged(self) && (int16_t)rd16(g_mem, self + TEAM_COUNT) == SIX; }
 
 /* ---- The draw ---- */
 
@@ -506,8 +548,16 @@ void season_intl_ofc_rules(uint32_t self)
                                year - 1);
         return;
     }
-    if (rd32(g_mem, self + STAGE_COUNT) != 0) return;
-    /* After the edition of one group (or a load of its save, whose stage array has the saved count 0) */
+    if (six_group(self)) {
+        /* One stage, the final, in stage[0] (ofc_advance); the draw date stays the original's. */
+        wr32(g_mem, self + STAGE_COUNT, 1);
+        if (logging()) fprintf(stderr, "recomp: season intl: oceania_nations %d: one group of 6 and a final\n",
+                               year_of(self));
+        return;
+    }
+    if (rd32(g_mem, self + STAGE_COUNT) == 2) return;
+    /* After the edition of one group or of the group of 6 (or a load of its save, whose stage array has the saved
+     * count, 0 or 1: 0x688e44..0x688e5b) */
     uint32_t stages = game_malloc(8);
     if (rt_unwinding || !stages) return;
     game_free(rd32(g_mem, self + STAGES));
@@ -559,12 +609,209 @@ static int one_group_template(uint32_t self)
     return 1;
 }
 
+/* ---- The edition of one group of 6 and a final of two legs (2004, 0.6.2 open item 136) ---- */
+
+/* The real match days of the group of 6 (Adelaide) and the first leg of the final (Honiara), offsets from the edition
+ * year; the second leg (Sydney, 12 October) comes SECOND_LEG days after the first. */
+static const SeasonNlDate six_days[SIX_DAYS] = {{29, 5, 0}, {31, 5, 0}, {2, 6, 0}, {4, 6, 0}, {6, 6, 0}};
+static const SeasonNlDate first_leg = {9, 10, 0};
+#define SECOND_LEG 3
+#define LEAD_DAYS 7                     /* a day of the edition at least this many days after the game's day */
+
+static long today_abs(void)
+{
+    int ty = (int16_t)rd16(g_mem, GAME_DATE + 2), td = (int16_t)rd16(g_mem, GAME_DATE);
+    return ty >= 1900 ? season_intl_abs_day(ty, td) : 0;
+}
+
+static long abs_of(SeasonNlDate d, int year)
+{
+    return season_intl_abs_day(year + d.year, season_day_of_year(year + d.year, d.month, d.day));
+}
+
+/* The date of a day number, as an offset from `year`. */
+static SeasonNlDate date_of(long day, int year)
+{
+    int y = year - 1;
+    while (season_intl_abs_day(y + 1, 0) <= day) y++;
+    int doy = (int)(day - season_intl_abs_day(y, 0)), m = 1;
+    while (m < 12 && season_day_of_year(y, m + 1, 1) <= doy) m++;
+    return (SeasonNlDate){doy - season_day_of_year(y, m, 1) + 1, m, y - year};
+}
+
+/* The group template (stage -1, kept at +0xba): the 5 real days, each pair once, 3 fixtures a day (the League
+ * scheduler makes rows - 1 rounds and rows / 2 fixtures a day, 0x683ac9..0x683ad3, 0x6838d6..0x6838e5). A game made
+ * later than a week before the first day takes the same days moved on to a week after its day. The table's first day
+ * (29 May) moves the class's dates while the builder runs (season_intl.c stage_builder, the 19 June of the original's
+ * template for an edition of a year divisible by 4, 0x798f6d..0x798fd3); these days are the table's own, so the
+ * shift is undone here. Gives 0 for another stage or edition. Only set_up_rules makes this template (0x799740), and
+ * season_intl_ofc_rules then sets +0x2c to 1, so the test is the edition, not six_staged: a load does not call
+ * set_up_rules (0x798961), so a save of an older build keeps its template of 3 days with its +0x2c of 2. */
+static int six_template(uint32_t self)
+{
+    uint32_t sp = cpu.esp;
+    int stage = (int8_t)rd8(g_mem, sp + 4u);
+    if (stage != -1 || !six_group(self)) return 0;
+    int year = year_of(self);
+    long move = today_abs() + LEAD_DAYS - abs_of(six_days[0], year);
+    if (move < 0) move = 0;
+    uint32_t rec = game_malloc(SIX_DAYS * ROUND_SIZE);
+    if (rt_unwinding || !rec) return 0;
+    uint32_t rounds = rd32(g_mem, sp + 8u), id = rd32(g_mem, sp + 0xcu), flag = rd32(g_mem, sp + 0x10u);
+    if (readable(flag)) wr32(g_mem, flag, 1);
+    if (readable(rounds)) wr16(g_mem, rounds, SIX_DAYS);
+    if (readable(id)) wr16(g_mem, id, (uint16_t)(0x3e9 + stage));
+    int shift = season_intl_shift_now();
+    season_intl_shift_more(-shift);
+    for (int i = 0; i < SIX_DAYS && !rt_unwinding; i++)
+        season_nl_league_round(rec, i, date_of(abs_of(six_days[i], year) + move, year), year);
+    season_intl_shift_more(shift);
+    if (rt_unwinding) return 1;
+    if (logging())
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: one group of 6, %ld days later than the real days\n",
+                year, move);
+    rt_ret_stdcall(rec, 4);
+    return 1;
+}
+
+/* The final's round record (one round of 0x68 bytes, as the original's knockout template 0x798d92..0x798e2f and its
+ * final 0x798e35..0x798ebb): the round value 0x96 of a final, 2 teams, two legs (+0x21) SECOND_LEG days apart
+ * (+0x22), the first leg with no extra time (+0x0d 0), the second with extra time and penalties (+0x0f 3; the flags
+ * of season_cups.c type 'L': away goals count). The draw on the first of the month of the first leg. */
+static uint32_t final_round(int year, SeasonNlDate leg)
+{
+    uint32_t rec = game_malloc(CUP_ROUND_SIZE);
+    if (rt_unwinding || !rec) return 0;
+    uint32_t f[7] = {rec, 0, 1, (uint32_t)(leg.month - 1), (uint32_t)leg.year, 0xffffffffu, (uint32_t)year};
+    call_cdecl(CUP_FIRST_DATE, 7, f);
+    if (rt_unwinding) return rec;
+    uint32_t l[9] = {rec, 0, (uint32_t)leg.day, (uint32_t)(leg.month - 1), (uint32_t)leg.year, 0xffffffffu, 1,
+                     (uint32_t)year, 0};
+    call_cdecl(CUP_LAST_DATE, 9, l);
+    if (rt_unwinding) return rec;
+    wr16(g_mem, rec + 7u, 0x96);
+    wr16(g_mem, rec + 9u, 0);
+    wr16(g_mem, rec + 0xbu, 0);
+    wr16(g_mem, rec + 0xdu, 0);
+    wr16(g_mem, rec + 0xfu, 3);
+    wr8(g_mem, rec + 0x17u, 0xa);
+    wr16(g_mem, rec + 0x18u, 2);
+    wr16(g_mem, rec + 0x1au, 1);
+    wr16(g_mem, rec + 0x1cu, 2);
+    wr16(g_mem, rec + 0x1eu, 0);
+    wr8(g_mem, rec + 0x20u, 0);
+    wr8(g_mem, rec + 0x21u, 2);
+    wr8(g_mem, rec + 0x22u, SECOND_LEG);
+    wr32(g_mem, rec + 0x5cu, 0);
+    wr32(g_mem, rec + 0x60u, 0);
+    wr32(g_mem, rec + 0x64u, 0);
+    return rec;
+}
+
+static uint32_t table_club(uint32_t self, int row)
+{
+    uint32_t a[1] = {(uint32_t)row};
+    uint32_t r = call_this(TABLE_ROW, self, 1, a);
+    return !rt_unwinding && readable(r) ? rd32(g_mem, r) : 0;
+}
+
+void o_007999d0(void);
+
+/* advance_stage 0x7999d0 (vtable +0x28), thiscall (), ret 0: League::update_for_date 0x6847c0 calls it when the group
+ * table and every stage up to +0x30 are complete and +0x30 < +0x2c - 1 (0x6849aa..0x6849e0). The original steps +0x30
+ * and at stage 1 calls create_knockout_stage 0x799c50, which takes rows 0 and 1 of both groups. The edition of the
+ * group of 6 has no group B (+0x30 stays -1, set at 0x799947; create_group_stage 0x799c1d sets it) and one stage: the
+ * final of the group's first two, made here as the original makes its knockout (0x799cb2..0x799e15): a Cup_Stage of 2
+ * teams (the group's second first in the list, as the real first leg was at the runner-up's home; whether
+ * Cup::set_up_round keeps that order for the home side was not traced), its round record, Cup::set_up_round, in
+ * stage[0], and +0x30 0. The stage number (Cup_Stage +0x44, 0x522e5b) is 0, its index: a fixture keeps it (+0x42), and
+ * League::add_result takes the stage of a result from the array by it, with an error box when it is above +0x30
+ * (0x685dd0..0x685e5e). The class's callbacks read a stage number below 1 as a group (set_club_progress 0x79a49e,
+ * build_fate_news_text 0x799306, update_staff_records_for_status 0x799765), so in this edition, which has no group B
+ * (stage 0 in the original), their wraps give them 1 for stage 0. The final's first leg is on 9 October of the edition
+ * year, or a week after today when that comes later. */
+RT_WRAP(007999d0, ofc_advance)
+{
+    uint32_t self = cpu.ecx;
+    if (!six_staged(self) || (int32_t)rd32(g_mem, self + CURRENT_STAGE) != -1) {
+        o_007999d0();
+        return;
+    }
+    int year = year_of(self);
+    SeasonNlDate leg = first_leg;
+    if (abs_of(leg, year) < today_abs() + LEAD_DAYS) leg = date_of(today_abs() + LEAD_DAYS, year);
+    uint32_t teams = game_malloc(8), rec = 0, cup = 0;
+    if (rt_unwinding) return;
+    if (teams) {
+        wr32(g_mem, teams, table_club(self, 1));
+        if (!rt_unwinding) wr32(g_mem, teams + 4u, table_club(self, 0));
+        if (!rt_unwinding) rec = final_round(year, leg);
+    }
+    if (rt_unwinding) return;
+    if (rec) {
+        uint32_t na[1] = {0xb2};
+        cup = call_cdecl(GAME_NEW, 1, na);
+        if (rt_unwinding) return;
+    }
+    if (readable(cup)) {
+        /* The arguments of 0x799d2f..0x799d4c: the rounds, the stage number, 4, the template id (0 for the original's
+         * knockout template, 0x798d4e), 0x14. */
+        uint32_t ca[15] = {self, 2, teams, 1, rd32(g_mem, self + 4u), rec, (uint32_t)year, 0, 4, 0, 0x14, 0, 0, 0, 0};
+        cup = call_this(CUP_STAGE_NEW, cup, 15, ca);
+        if (rt_unwinding) return;
+    } else {
+        cup = 0;
+    }
+    game_free(teams);
+    if (!rt_unwinding) game_free(rec);
+    if (rt_unwinding) return;
+    if (!readable(cup)) {
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: no final stage\n", year);
+        rt_ret_cdecl(0);
+        return;
+    }
+    wr32(g_mem, rd32(g_mem, self + STAGES), cup);
+    uint32_t zero[1] = {0};
+    call_this(CUP_START, cup, 1, zero);
+    if (rt_unwinding) return;
+    wr32(g_mem, self + CURRENT_STAGE, 0);
+    if (logging())
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: final of two legs from %d/%d/%d\n", year, leg.day,
+                leg.month, year + leg.year);
+    rt_ret_cdecl(0);
+}
+
+void o_00799300(void);
+void o_00799760(void);
+
+/* build_fate_news_text 0x799300 (thiscall (club, fate, stage as a byte, ...), ret 0x28) and
+ * update_staff_records_for_status 0x799760 (thiscall (club, status, stage as a byte, ...), ret 0x18): the stage byte
+ * at +0xc of the entry stack, below 1 a group (0x799306, 0x799765). The final of the group of 6 is stage 0
+ * (ofc_advance): it gets the knockout's 1. */
+static void final_stage_byte(uint32_t self)
+{
+    if (six_staged(self) && (int8_t)rd8(g_mem, cpu.esp + 0xcu) == 0) wr8(g_mem, cpu.esp + 0xcu, 1);
+}
+
+RT_WRAP(00799300, ofc_fate_news)
+{
+    final_stage_byte(cpu.ecx);
+    o_00799300();
+}
+
+RT_WRAP(00799760, ofc_staff_records)
+{
+    final_stage_byte(cpu.ecx);
+    o_00799760();
+}
+
 void o_00799a60(void);
 
-/* create_group_stage 0x799a60, thiscall (group), ret 4 (0x799c43): group B. None in the edition of one group. */
+/* create_group_stage 0x799a60, thiscall (group), ret 4 (0x799c43): group B. None in the edition of one group, of 4
+ * or of 6. */
 RT_WRAP(00799a60, ofc_group_b)
 {
-    if (season_intl_on() && drawn4(cpu.ecx)) {
+    if (season_intl_on() && (drawn4(cpu.ecx) || drawn6(cpu.ecx))) {
         rt_ret_stdcall(1, 1);
         return;
     }
@@ -572,7 +819,8 @@ RT_WRAP(00799a60, ofc_group_b)
 }
 
 /* Slot +0x30 0x595160 (the wrap in season_cup_groups.c), thiscall () ret 0: 1 when the class is the edition of one
- * group with no stage (+0x2c 0): League::record_season_honours has run and the call has returned. */
+ * group with no stage (+0x2c 0): League::record_season_honours has run and the call has returned; 1 too for the
+ * edition of the group of 6, whose final is stage[0], not stage 1: its Cup::record_season_honours has run. */
 int season_intl_ofc_honours(uint32_t self)
 {
     /* The log of the matches of each team at the edition's end (tests/seasons/ofc_team_matches_run.py). */
@@ -580,6 +828,18 @@ int season_intl_ofc_honours(uint32_t self)
         fprintf(stderr, "recomp: season intl: oceania_nations %d: group A %d rows, %d meetings, %d matches each "
                         "(+0xa7)\n", year_of(self), (int16_t)rd16(g_mem, self + GROUP_ROWS),
                 (int16_t)rd16(g_mem, self + MEETINGS), (int16_t)rd16(g_mem, self + TEAM_MATCHES));
+    if (six_staged(self)) {
+        /* The final in stage[0] (ofc_advance): the original jumps to slot +0x30 of stage 1 (0x595160..0x595168). */
+        uint32_t cup = rd32(g_mem, rd32(g_mem, self + STAGES));
+        if (!readable(cup)) {               /* the original's jump would read stage[1], past the array of 1 */
+            fprintf(stderr, "recomp: season intl: oceania_nations %d: no final, no honours\n", year_of(self));
+            rt_ret_cdecl(0);
+            return 1;
+        }
+        uint32_t r = call_this(rd32(g_mem, rd32(g_mem, cup) + 0x30u), cup, 0, NULL);
+        if (!rt_unwinding) rt_ret_cdecl(r);
+        return 1;
+    }
     if (!season_intl_on() || !is_ofc(self) || rd32(g_mem, self + STAGE_COUNT) != 0) return 0;
     call_this(LEAGUE_HONOURS, self, 0, NULL);
     if (!rt_unwinding) rt_ret_cdecl(0);
@@ -593,7 +853,7 @@ int season_intl_ofc_honours(uint32_t self)
  * create_group_stage has run (0x79a2c7, then cleared at 0x79a2e1). */
 uint32_t rt_intl_ofc_group(uint32_t self, uint32_t original)
 {
-    return drawn8(self) || drawn4(self) ? (uint32_t)GROUP : original;
+    return drawn8(self) || drawn4(self) ? (uint32_t)GROUP : drawn6(self) ? (uint32_t)SIX : original;
 }
 
 /* ---- Predicted positions (vtable +0x5c, 0x79a320) ---- */
@@ -601,14 +861,15 @@ uint32_t rt_intl_ofc_group(uint32_t self, uint32_t original)
 void o_0079a320(void);
 
 /* The original sorts the teams with 0x4b07d0 (0x79a414) and gives 6 places 1, 2, 3, 3, 5, 5 (0x79a425..0x79a46b).
- * With 8 teams: 1, 2, 3, 3, 5, 5, 7, 7; with the one group of 4: 1, 2, 3, 4. */
+ * With 8 teams: 1, 2, 3, 3, 5, 5, 7, 7; with the one group of 4: 1, 2, 3, 4; with the group of 6: 1 to 6. */
 RT_WRAP(0079a320, ofc_predicted)
 {
-    static const int pos8[TEAMS] = {1, 2, 3, 3, 5, 5, 7, 7}, pos4[ONE_GROUP] = {1, 2, 3, 4};
+    static const int pos8[TEAMS] = {1, 2, 3, 3, 5, 5, 7, 7}, pos4[ONE_GROUP] = {1, 2, 3, 4},
+                     pos6[SIX] = {1, 2, 3, 4, 5, 6};
     uint32_t self = cpu.ecx, stats = readable(self) ? rd32(g_mem, self + 8u) : 0;
     uint32_t teams = readable(self) ? rd32(g_mem, self + TEAMS_OF) : 0;
-    int n = drawn8(self) ? TEAMS : drawn4(self) ? ONE_GROUP : 0;
-    const int *pos = n == TEAMS ? pos8 : pos4;
+    int n = drawn8(self) ? TEAMS : drawn4(self) ? ONE_GROUP : drawn6(self) ? SIX : 0;
+    const int *pos = n == TEAMS ? pos8 : n == SIX ? pos6 : pos4;
     if (!n || !readable(stats) || !readable(teams)) {
         o_0079a320();
         return;
@@ -644,9 +905,11 @@ void o_0079a490(void);
 RT_WRAP(0079a490, ofc_progress)
 {
     uint32_t self = cpu.ecx, sp = cpu.esp;
-    /* The edition of one group (+0x2c 0, no knockout): the stage byte 1 takes the original's path of a knockout
-     * stage (0x79a49e..0x79a4a3), so the codes are the group's places. */
-    if (season_intl_on() && is_ofc(self) && rd32(g_mem, self + STAGE_COUNT) == 0 && (int8_t)rd8(g_mem, sp + 8u) < 1) {
+    /* The edition of one group (+0x2c 0, no knockout) and the group of 6: the stage byte 1 takes the original's path
+     * of a knockout stage (0x79a49e..0x79a4a3), so the codes are the group's places. The original maps a place in a
+     * group of 3 to a place among all 6 teams (1, 3, 5); in one group of 6 the place in the group is that place. */
+    if (season_intl_on() && is_ofc(self) && (rd32(g_mem, self + STAGE_COUNT) == 0 || six_staged(self)) &&
+        (int8_t)rd8(g_mem, sp + 8u) < 1) {
         wr8(g_mem, sp + 8u, 1);
         o_0079a490();
         return;
@@ -687,7 +950,7 @@ void season_intl_ofc_template(void (*original)(void))
 {
     uint32_t self = cpu.ecx;
     int stage = (int8_t)rd8(g_mem, cpu.esp + 4u);
-    if (one_group_template(self)) return;
+    if (one_group_template(self) || six_template(self)) return;
     original();
     if (rt_unwinding || stage > 0 || !drawn8(self)) return;
     second_slots(cpu.eax);
