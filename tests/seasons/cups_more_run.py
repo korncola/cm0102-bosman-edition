@@ -45,7 +45,8 @@ The runs:
     a2009   open item 148: 2009/10 (the original data moved to 2009), changing rules on, Northern Ireland and the
             Republic of Ireland, Tier A, to the end of 2011/12: the knockout editions of 2010/11 and 2011/12 (12
             clubs, 6 of each league) pick their clubs again on the draw day of the first round, so the clubs of each
-            league are its places 1 to 6 of the season just ended; each edition has a winner
+            league are its places 1 to 6 of the season just ended, the byes go to the first two of each league;
+            each edition has a winner
     r2002   start run, 2002/03 (the original data), changing rules off, Select All without France: the start hook
             makes the editions that the row of 2002/03 holds, the Russian Premier League Cup of 2003 (first round in
             March 2003) with 16 clubs and the Russian Super Cup of March 2003 with two clubs (log lines)
@@ -289,6 +290,11 @@ def check_a2009(lines, log, fails, name):
             places = sorted(p for _, d, p in listed if d == k)
             if places != list(range(1, 7)):
                 fails.append(f"{name}: new_all_ireland {season}: the places of league {k} are {places}, expected 1 to 6")
+        # The byes (the last 4 of the 12 slots): the first two of each league, the champions among them.
+        byes = sorted((d, p) for _, d, p in listed[8:])
+        if byes != [(1, 1), (1, 2), (2, 1), (2, 2)]:
+            fails.append(f"{name}: new_all_ireland {season}: the byes are {byes} (league, place), expected the first two "
+                         f"of each league")
         need_winner(lines, "new_all_ireland", season, fails, name)
 
 

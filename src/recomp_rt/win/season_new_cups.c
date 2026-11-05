@@ -372,8 +372,14 @@ static int pick_clubs(const char *file, int edition, uint32_t rec, uint32_t *clu
         if (k->division[1]) {                       /* half from each league, the rest from the other */
             int ta = want / 2 < na ? want / 2 : na, tb = want - ta < nb ? want - ta : nb;
             if (ta + tb < want) ta = want - tb < na ? want - tb : na;
-            for (int i = 0; i < ta; i++) clubs[n++] = a[i];
-            for (int i = 0; i < tb; i++) clubs[n++] = b[i];
+            /* Open item 148: the two leagues in turn by place (1st, 1st, 2nd, 2nd, ...), so the byes go to the best of
+             * both. The 2011 byes went to the two champions and the two cup winners (BBC, RTE, Irish Times; the
+             * Setanta doc); before, all four went to League of Ireland clubs and the Irish League champion played the
+             * first round. */
+            for (int i = 0; i < ta || i < tb; i++) {
+                if (i < ta) clubs[n++] = a[i];
+                if (i < tb) clubs[n++] = b[i];
+            }
         } else {
             for (int i = 0; i < na && n < want; i++) clubs[n++] = a[i];
         }
@@ -525,17 +531,19 @@ int season_new_cups_rounds(uint32_t cup, const char *file, uint32_t count_ptr)
 #define CUP_TIES 0xadu
 #define TIE_STATE 0x34u
 
-static int two_leagues(const char *file)
+static const NewCupClubs *two_leagues(const char *file)
 {
     for (size_t i = 0; i < sizeof cup_clubs / sizeof cup_clubs[0]; i++)
-        if (!strcmp(cup_clubs[i].file, file)) return cup_clubs[i].division[1] != 0;
-    return 0;
+        if (!strcmp(cup_clubs[i].file, file)) return cup_clubs[i].division[1] ? &cup_clubs[i] : NULL;
+    return NULL;
 }
 
 static void draw_day_pick(uint32_t cup, int round)
 {
+    if (round != 0) return;
     const char *file = season_change_file(cup);
-    if (round != 0 || !file || strncmp(file, "new_", 4) || !two_leagues(file)) return;
+    const NewCupClubs *k = file && !strncmp(file, "new_", 4) ? two_leagues(file) : NULL;
+    if (!k) return;
     if (g_mem[cup + CUP_BASE_DONE] || (int32_t)rd32(g_mem, cup + CUP_STAGE_COUNT) != 0) return;   /* groups */
     uint32_t ties = rd32(g_mem, cup + CUP_TIES), first = readable(ties) ? rd32(g_mem, ties) : 0;
     if (!readable(first) || g_mem[first + TIE_STATE] != 0) return;      /* drawn already */
@@ -551,10 +559,7 @@ static void draw_day_pick(uint32_t cup, int round)
     }
     for (int i = 0; i < n; i++) wr32(g_mem, list + 6u * (uint32_t)i, clubs[i]);
     fprintf(stderr, "recomp: new cups: %s %d: clubs picked again on the draw day\n", file, edition);
-    const NewCupClubs *k = NULL;
-    for (size_t i = 0; i < sizeof cup_clubs / sizeof cup_clubs[0]; i++)
-        if (!strcmp(cup_clubs[i].file, file)) k = &cup_clubs[i];
-    for (int i = 0; k && i < n; i++) {
+    for (int i = 0; i < n; i++) {
         int from = division_is(clubs[i], CLUB_DIVISION, k->division[0]) ? 1
                  : division_is(clubs[i], CLUB_DIVISION, k->division[1]) ? 2 : 0;
         fprintf(stderr, "recomp: new cups: %s %d club %d: %.50s (division %d, last place %d)\n", file, edition, i + 1,
