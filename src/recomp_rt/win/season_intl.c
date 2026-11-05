@@ -623,7 +623,7 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
  * (+0x16, 0x519c3b; open item 18). At 0x519c2f, with no host found (ebx 0 from 0x519a98), a season game takes the
  * first host of the edition's host row (season_intl_host_ids), else of the edition (the OFC Nations Cup, which has
  * no row), else the history host of a Euro with no host place (2020, 2028). The Club World Cup keeps none: its row
- * of every year holds a random nation (0x5fab70). */
+ * of every year holds a random nation (0x5fab70), or the edition's host while it plays (season_kind_club_world.c). */
 uint32_t rt_intl_history_host(uint32_t cup, uint32_t club)
 {
     if (club || !season_intl_on() || !readable(cup) || !readable(rd32(g_mem, cup + 4u))) return club;

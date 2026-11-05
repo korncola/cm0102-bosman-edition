@@ -76,6 +76,7 @@ CALLBACKS = {
     # Slice 26 (season_kind_club_world.c): the knockout of the FIFA Club World Championship.
     0x92A8B0: ("81ec08020000568b", "WorldClubChamp::pick_entrants (this): the 12 entrants into +0xee"),
     0x92AE60: ("b844210000e8a6a7", "WorldClubChamp::pick_entrant (this, continent, nation, picked, count, record)"),
+    0x6699D0: ("8b54240453b9603d", "key_nation_continent_has_selected_nation (continent record), cdecl"),
     0x929390: ("81ec000200005356", "WorldClubChamp::create_schedule (this, stage, &rounds, &code, &is_league)"),
     # Slice 26c: the 32-club Club World Cup (Form G) with the Libertadores builders.
     0x4C37A0: ("81ec04020000568b", "Conmebol_Liber group A: the parent's group from entrants 0 to 3 (this)"),
