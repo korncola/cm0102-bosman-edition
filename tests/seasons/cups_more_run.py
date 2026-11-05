@@ -33,6 +33,15 @@ The runs:
             Republic of Ireland are not in the 16 rows that the steps click): the Turkish Cup has 4 groups after 3
             rounds, the Turkish Super Cup is made with two clubs, the Russian one of March 2011 (the edition of
             the row of 2010/11) with two clubs, the All-Ireland cup with 12 clubs
+    a2003   item 145: 2003/04 (the original data moved to 2003), changing rules on, Northern Ireland and the
+            Republic of Ireland, Tier A (RECOMP_TIER_A=1), to the end of 2010/11 (about 5 minutes): the season change
+            to 2004/05 makes the All-Ireland cup (the Setanta Cup), which plays each real edition from its first.
+            2004/05: 6 clubs (2 of each league by place and the two
+            national cup winners) in 2 groups of 3, the winners in the final. 2005/06 to 2007/08: 4 clubs of each
+            league in 2 groups of 4 with two of each league, semi-finals and final. 2008/09: none. 2009/10: 9 clubs
+            (4 of each league and the holders) in 3 groups of 3, the winners and the best runner-up in two-legged
+            semi-finals, then the final. 2010/11: the knockout of 12 clubs. Each edition has a winner in the history,
+            the news says "for the first time" in 2004/05 and "again" in 2009/10, and no error box
     r2002   start run, 2002/03 (the original data), changing rules off, Select All without France: the start hook
             makes the editions that the row of 2002/03 holds, the Russian Premier League Cup of 2003 (first round in
             March 2003) with 16 clubs and the Russian Super Cup of March 2003 with two clubs (log lines)
@@ -204,6 +213,51 @@ def check_t2010(lines, log, fails, name):
     need_made(lines, "new_all_ireland", fails, name, 12)
 
 
+# Item 145: the group editions of the All-Ireland cup, by season: clubs, clubs of each league at least (the cup
+# winners and the holders may come from either), groups, the knockout clubs and rounds, the mix of each group (2:
+# two clubs of each league, None: free).
+SETANTA = {2004: (6, (2, 2), 2, 2, 1, None), 2005: (8, (4, 4), 2, 4, 2, 2), 2006: (8, (4, 4), 2, 4, 2, 2),
+           2007: (8, (4, 4), 2, 4, 2, 2), 2009: (9, (4, 4), 3, 4, 2, None)}
+
+
+def setanta_clubs(log, season):
+    """The clubs of an edition from the last "club" lines of its pick: {name: division (1, 2 or 0)}."""
+    out = {}
+    for m in re.finditer(rf"new cups: new_all_ireland {season} club (\d+): (.+) \(division (\d), last place", log):
+        if m.group(1) == "1":
+            out = {}
+        out[m.group(2)] = int(m.group(3))
+    return out
+
+
+def check_a2003(lines, log, fails, name):
+    if "message box from" in log:
+        fails.append(f"{name}: a message box: {log[log.index('message box from'):].splitlines()[0]}")
+    for season, (clubs, least, groups, ko, ko_rounds, mix) in SETANTA.items():
+        need_groups(lines, "new_all_ireland", season, (groups + 1, groups, clubs, ko, ko_rounds), fails, name)
+        need_winner(lines, "new_all_ireland", season, fails, name)
+        picked = setanta_clubs(log, season)
+        per = [sum(1 for d in picked.values() if d == k) for k in (1, 2)]
+        if len(picked) != clubs or per[0] < least[0] or per[1] < least[1]:
+            fails.append(f"{name}: new_all_ireland {season}: {len(picked)} clubs, {per} of the two leagues, expected "
+                         f"{clubs} with at least {least}")
+        drawn = re.findall(rf"cup groups: new_all_ireland {season}/\d\d group (\d+): (.+)", log)
+        if len(drawn) != groups:
+            fails.append(f"{name}: new_all_ireland {season}: {len(drawn)} groups drawn, expected {groups}")
+        for g, members in drawn:
+            got = [picked.get(c, -1) for c in members.split(", ")]
+            if mix and (got.count(1) != mix or got.count(2) != mix):
+                fails.append(f"{name}: new_all_ireland {season} group {g}: {members} is not {mix} of each league")
+    need_log(log, "new cups: new_all_ireland is not held in 2008", fails, name)
+    need_log(log, "new cups: new_all_ireland 2010 with 12 clubs", fails, name)
+    need_winner(lines, "new_all_ireland", 2010, fails, name)
+    if not any(x["file"] == "new_all_ireland" and x["season"] == 2010 and x["phase"] == "end" and x["groups"] == 0
+               for x in lines):
+        fails.append(f"{name}: new_all_ireland 2010/11 is not a knockout at the end of the season")
+    need_log(log, "news 2004/05: The Setanta Cup is played for the first time", fails, name)
+    need_log(log, "news 2009/10: The Setanta Sports Cup is played again", fails, name)
+
+
 def check_r2002(lines, log, fails, name):
     need_log(log, "new cups: new_rus_lge_cup 2003 with 16 clubs", fails, name)
     need_log(log, "new cups: new_rus_super 2003 with 2 clubs", fails, name)
@@ -228,6 +282,8 @@ RUNS = {
     "t2010": (2010, os.path.join(DB, "September 2010 ODB"), "off", 2010, ALL_BUT_FRANCE, True, 1800, check_t2010,
               {}),
     "r2002": (2002, None, "off", 2002, ALL_BUT_FRANCE, True, 1800, check_r2002, {}),
+    "a2003": (2003, None, "on", 2010, ["Northern Ireland", "Republic of Ireland"], False, 3600, check_a2003,
+              {"env": {"RECOMP_TIER_A": "1"}}),
 }
 
 

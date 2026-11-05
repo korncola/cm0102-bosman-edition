@@ -100,16 +100,22 @@ const SeasonCompDef season_def_all_ireland = {"Northern Ireland and Republic of 
                                               "Irish League Cup", "Setanta Cup", 5, 0, new_held};
 
 /* The clubs of a knockout cup: up to `count` clubs of a division (key id global), by their place in it in the last
- * season (clubs new to it after them). */
+ * season (clubs new to it after them). `cup`: the national cup of each division's nation, for a row with
+ * NEW_CUP_CUP_WINNERS (item 145). */
 typedef struct {
     const char *file;
     uint32_t division[2];               /* key id globals (data map); 0: none */
+    uint32_t cup[2];
 } NewCupClubs;
 
+/* The national cups of the All-Ireland cup (item 145): the cup of each nation in the key nation table
+ * (key_nation_build_table 0x667150 reads 0x9cf840 and 0x9cf8c0), the FAI Cup ("Irish Senior Challenge Cup",
+ * IreChalCup 0x6340a0) and the Irish Cup ("northern irish cup"). */
 static const NewCupClubs cup_clubs[] = {
-    {"new_rus_lge_cup", {0x9cf930u, 0}},             /* Russian Premier Division */
-    {"new_conf_cup", {0x9cf69cu, 0}},                /* English Conference */
-    {"new_all_ireland", {0x9cf80cu, 0x9cf8b0u}},     /* Irish Premier Division, Northern Ireland Premier Division */
+    {"new_rus_lge_cup", {0x9cf930u, 0}, {0, 0}},                    /* Russian Premier Division */
+    {"new_conf_cup", {0x9cf69cu, 0}, {0, 0}},                       /* English Conference */
+    {"new_all_ireland", {0x9cf80cu, 0x9cf8b0u}, {0x9cf840u, 0x9cf8c0u}},   /* Irish and Northern Ireland Premier
+                                                                     * Divisions, the FAI Cup and the Irish Cup */
 };
 
 /* The super cups: the key id globals of the league and the cup, and the club that meets the champion when it won
@@ -142,9 +148,12 @@ static int day_of_year(int day, int month)
     return before[month < 0 ? 0 : month > 11 ? 11 : month] + day - 1;
 }
 
-/* The first match of an edition, as year * 400 + day of the year. */
-static int first_match(const SeasonNewCup *f, int edition, int clubs)
+/* The first match of an edition, as year * 400 + day of the year. An edition with a group stage (item 145): its first
+ * group match day. */
+static int first_match(const SeasonNewCup *f, const char *file, int edition, int clubs)
 {
+    const SeasonCupGroups *g = season_cup_groups(file, edition);
+    if (g) return (edition + g->days[0][2]) * 400 + day_of_year(g->days[0][0], g->days[0][1]);
     int ties0 = 1, rounds = 1;
     if (f->clubs > 2) clubs = f->clubs;             /* a row with a club count: its own rounds (12 clubs: 4) */
     if (f->clubs != 2 && !season_new_cup_layout(clubs, &ties0, &rounds)) rounds = 1;
@@ -183,13 +192,13 @@ static uint32_t new_make(const SeasonCompDef *d, uint32_t rec, int year, int loa
 {
     if (!loading) year = hook_edition(d, year);
     const SeasonNewCup *f = season_new_cup(d->file, year);
-    if (!loading && (!f || first_match(f, year, 32) <= game_day())) {
+    if (!loading && (!f || first_match(f, d->file, year, 32) <= game_day())) {
         fprintf(stderr, "recomp: new cups: %s %d not made, its first match is past\n", d->file, year);
         return 0;
     }
     /* A cup whose clubs the game does not hold (a nation or division not loaded) is not made: its picker has no
      * fall-back (the class's own picker reads Italy's key ids and stops the game at ita_super.cpp 203). */
-    if (!loading && !season_new_cups_clubs_ready(d->file, year)) {
+    if (!loading && !season_new_cups_clubs_ready(d->file, year, rec)) {
         fprintf(stderr, "recomp: new cups: %s %d not made, its clubs are not in the game\n", d->file, year);
         return 0;
     }
@@ -279,9 +288,60 @@ static const SeasonNewCup *played_format(const char *file, int edition)
     return season_new_cup_played(file, edition, rules_flag(), season_start_year());
 }
 
+static int has_club(const uint32_t *list, int n, uint32_t club)
+{
+    for (int i = 0; i < n; i++)
+        if (list[i] == club) return 1;
+    return 0;
+}
+
+/* The last winner of a competition record (comp_util_get_latest_placed_club 0x4afd80, place 0), or 0. */
+static uint32_t record_winner(uint32_t rec)
+{
+    if (!readable(rec)) return 0;
+    uint32_t a[2] = {rec, 0};
+    uint32_t club = call_cdecl(0x004afd80u, 2, a);
+    return rt_unwinding || !readable(club) ? 0 : club;
+}
+
+/* Item 145: the clubs of a row with picks, by the rules of its edition: picks[i] clubs of division i by last place,
+ * the national cup winners (NEW_CUP_CUP_WINNERS) or the holders of this cup (NEW_CUP_HOLDERS, `rec` its record).
+ * A place whose club already has one goes to the next club of the division (cup winners: the cup's division;
+ * holders: the first division). Returns the count. */
+static int pick_by_rule(const SeasonNewCup *f, const NewCupClubs *k, uint32_t rec, uint32_t *clubs)
+{
+    uint32_t list[2][32];
+    int count[2] = {0, 0}, next[2] = {0, 0}, n = 0;
+    for (int d = 0; d < 2; d++)
+        if (k->division[d]) count[d] = division_clubs(k->division[d], list[d], 32);
+    for (int d = 0; d < 2; d++)
+        while (next[d] < f->picks[d] && next[d] < count[d] && n < 32) clubs[n++] = list[d][next[d]++];
+    for (int d = 0; d < 2 && (f->extra & NEW_CUP_CUP_WINNERS); d++) {
+        uint32_t club = placed(k->cup[d], 0);
+        if (rt_unwinding) return 0;
+        /* A cup winner of a lower division or of the other nation's league: in, as real life (2005: Longford Town). */
+        if (!club || has_club(clubs, n, club)) {
+            while (next[d] < count[d] && has_club(clubs, n, list[d][next[d]])) next[d]++;
+            club = next[d] < count[d] ? list[d][next[d]++] : 0;
+        }
+        if (club && n < 32) clubs[n++] = club;
+    }
+    if (f->extra & NEW_CUP_HOLDERS) {
+        uint32_t club = record_winner(rec);
+        if (rt_unwinding) return 0;
+        if (!club || has_club(clubs, n, club)) {
+            while (next[0] < count[0] && has_club(clubs, n, list[0][next[0]])) next[0]++;
+            club = next[0] < count[0] ? list[0][next[0]++] : 0;
+        }
+        if (club && n < 32) clubs[n++] = club;
+    }
+    return n;
+}
+
 /* The clubs of edition `edition` of a new cup in clubs[] (32 at most), the clubs of the first round first. Returns
- * their count; fewer than 2: the cup cannot play (its nation's clubs are not in the game). */
-static int pick_clubs(const char *file, int edition, uint32_t *clubs)
+ * their count; fewer than 2: the cup cannot play (its nation's clubs are not in the game). `rec`: the cup's record (0
+ * when not known), for the holders. */
+static int pick_clubs(const char *file, int edition, uint32_t rec, uint32_t *clubs)
 {
     const SeasonNewCup *f = played_format(file, edition);
     if (!f) return 0;
@@ -301,6 +361,7 @@ static int pick_clubs(const char *file, int edition, uint32_t *clubs)
         for (size_t i = 0; i < sizeof cup_clubs / sizeof cup_clubs[0]; i++)
             if (!strcmp(cup_clubs[i].file, file)) k = &cup_clubs[i];
         if (!k) return 0;
+        if (f->picks[0] || f->picks[1]) return pick_by_rule(f, k, rec, clubs);
         uint32_t a[32], b[32];
         int na = division_clubs(k->division[0], a, 32), nb = k->division[1] ? division_clubs(k->division[1], b, 32) : 0;
         int want = f->clubs > 0 ? f->clubs : 32;
@@ -321,11 +382,11 @@ static int pick_clubs(const char *file, int edition, uint32_t *clubs)
     return n;
 }
 
-int season_new_cups_clubs_ready(const char *file, int edition)
+int season_new_cups_clubs_ready(const char *file, int edition, uint32_t record)
 {
     uint32_t clubs[32];
     Cpu saved = cpu;
-    int n = pick_clubs(file, edition, clubs);
+    int n = pick_clubs(file, edition, record, clubs);
     if (!rt_unwinding) cpu = saved;
     return n >= 2;
 }
@@ -334,7 +395,7 @@ int season_new_cups_teams(uint32_t cup, const char *file)
 {
     int edition = (int16_t)rd16(g_mem, cup + CUP_YEAR);
     uint32_t clubs[32];
-    int n = pick_clubs(file, edition, clubs);
+    int n = pick_clubs(file, edition, rd32(g_mem, cup + 4), clubs);
     if (rt_unwinding) return 0;
     if (n < 2) {
         /* The list of the last edition stays (the module makes no cup without its clubs, new_make). */
@@ -344,6 +405,16 @@ int season_new_cups_teams(uint32_t cup, const char *file)
     put_list(cup, clubs, n);
     if (rt_unwinding) return 0;
     fprintf(stderr, "recomp: new cups: %s %d with %d clubs\n", file, edition, n);
+    /* Item 145: each club with the division it came from (1 or 2 in the cup's list, 0 another), for the run checks. */
+    const NewCupClubs *k = NULL;
+    for (size_t i = 0; i < sizeof cup_clubs / sizeof cup_clubs[0]; i++)
+        if (!strcmp(cup_clubs[i].file, file)) k = &cup_clubs[i];
+    for (int i = 0; k && k->division[1] && i < n; i++) {
+        int from = division_is(clubs[i], CLUB_DIVISION, k->division[0]) ? 1
+                 : division_is(clubs[i], CLUB_DIVISION, k->division[1]) ? 2 : 0;
+        fprintf(stderr, "recomp: new cups: %s %d club %d: %.50s (division %d, last place %d)\n", file, edition, i + 1,
+                win_str(clubs[i] + 4), from, (int8_t)g_mem[clubs[i] + CLUB_LAST_PLACE]);
+    }
     return 1;
 }
 
