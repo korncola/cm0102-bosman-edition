@@ -8,7 +8,6 @@
 2005	clubs	arg_second (Primera B Nacional), row arg-usa-32: game 25, table 20 (20)
 2005	clubs	asia_club_champ (AFC Champions League), row club-world-89: game 16, table 25 (25)
 2005	clubs	bel_third (Belgian Third Division), row hol-bel-62: game 16, table 32 (32 (A 16, B 16))
-2005	clubs	bra_champ_cup (Copa dos Campeões), row bra-194: game 3, table 0 (0)
 2005	clubs	bra_cup (Copa do Brasil), row bra-140: game 71, table 64 (64)
 2005	clubs	bra_nat_third (Campeonato Brasileiro Série C), row bra-86: game 7, table 63 (63)
 2005	clubs	bra_reg_bahia (Campeonato Baiano), row bra-437: game 10, table 12 (12)
@@ -72,10 +71,7 @@
 2005	no_row	record_utils ('B' International): no table row
 2005	no_row	record_utils (Reserve): no table row
 2005	no_row	record_utils (Under 21 International): no table row
-2005	not_held	bra_champ_cup (Copa dos Campeões), row bra-194: the game holds 2005, the table says not held
 2005	not_held	euro_champ_qual (UEFA European Championship qualifying), row int-continental-46: the game holds 2006, the table says not held
-2005	not_held	gre_super (Greek Super Cup), row gre-pol-cro-86: the game holds 2005, the table says not held
-2005	not_held	nir_charity (Charity Shield), row wal-nir-irl-115: the game holds 2005, the table says not held
 2005	not_in_game	arg-usa-194 argentina_rules 'Argentina' (Argentina)
 2005	not_in_game	aus-jap-kor-113 japan_rules 'n/a' (Japan)
 2005	not_in_game	aus-jap-kor-5 australia_rules 'n/a' (Australia)

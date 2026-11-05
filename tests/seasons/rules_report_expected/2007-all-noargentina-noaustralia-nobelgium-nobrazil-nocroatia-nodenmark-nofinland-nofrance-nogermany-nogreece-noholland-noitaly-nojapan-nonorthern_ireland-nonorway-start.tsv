@@ -43,10 +43,6 @@
 2007	no_row	record_utils (Reserve): no table row
 2007	no_row	record_utils (Under 21 International): no table row
 2007	no_row	spa_lower (Spanish Lower Division): no table row
-2007	not_held	ire_leinster_cup (Leinster Senior Cup), row wal-nir-irl-171: the game holds 2007, the table says not held
-2007	not_held	ire_pres_cup (President's Cup), row wal-nir-irl-173: the game holds 2007, the table says not held
-2007	not_held	ire_super_cup (FAI Super Cup), row wal-nir-irl-174: the game holds 2007, the table says not held
-2007	not_held	kor_super_cup (Korean Super Cup), row aus-jap-kor-385: the game holds 2007, the table says not held
 2007	not_held	olympics (Football at the Summer Olympics), row int-world-83: the game holds 2008, the table says not held
 2007	not_held	wc_europe_league (FIFA World Cup qualification (UEFA)), row int-world-75: the game holds 2008, the table says not held
 2007	not_in_game	arg-usa-358 usa_rules 'United States' (United States)
@@ -56,12 +52,9 @@
 2007	not_in_game	den-swe-202 swe_second 'Division 1' (Sweden)
 2007	not_in_game	den-swe-204 new 'Svenska Supercupen' (Sweden)
 2007	not_in_game	eng-337 eng_fa_trophy 'FA Trophy' (England)
-2007	not_in_game	eng-339 new 'Conference League Cup (Setanta Shield)' (England)
 2007	not_in_game	eng-92 eng_conf 'Conference Premier' (England)
 2007	not_in_game	por-57 por_second_b 'Segunda Divisão' (Portugal)
 2007	not_in_game	por-62 new 'Taça da Liga (Carlsberg Cup)' (Portugal)
-2007	not_in_game	rus-tur-277 new 'Turkish Super Cup' (Turkey)
-2007	not_in_game	rus-tur-88 new 'Russian Super Cup' (Russia)
 2007	not_in_game	spa-49 spain_rules 'n/a' (Spain)
 2007	not_in_game	spa-52 spa_second_b 'Segunda División B' (Spain)
 2007	not_in_game	uefa-49 uefa_seeding 'UEFA access list and seeding' (UEFA)

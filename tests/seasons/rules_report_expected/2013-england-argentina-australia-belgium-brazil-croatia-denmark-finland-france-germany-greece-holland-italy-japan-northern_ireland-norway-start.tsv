@@ -16,7 +16,6 @@
 2013	clubs	asia_club_champ (AFC Champions League), row club-world-241: game 16, table 32 (32)
 2013	clubs	bel_first (Belgian Pro League), row hol-bel-164: game 18, table 16 (16)
 2013	clubs	bel_third (Belgian Third Division), row hol-bel-166: game 16, table 36 (36 (A 18, B 18))
-2013	clubs	bra_champ_cup (Copa dos Campeões), row bra-202: game 3, table 0 (0)
 2013	clubs	bra_cup (Copa do Brasil), row bra-148: game 71, table 87 (87)
 2013	clubs	bra_nat_third (Campeonato Brasileiro Série C), row bra-94: game 7, table 20 (20)
 2013	clubs	bra_reg_bahia (Campeonato Baiano), row bra-445: game 10, table 12 (12)
@@ -82,12 +81,8 @@
 2013	no_row	record_utils ('B' International): no table row
 2013	no_row	record_utils (Reserve): no table row
 2013	no_row	record_utils (Under 21 International): no table row
-2013	not_held	bra_champ_cup (Copa dos Campeões), row bra-202: the game holds 2013, the table says not held
 2013	not_held	cro_a2b (Druga HNL South), row gre-pol-cro-391: the game holds 2013, the table says not held
 2013	not_held	euro_champ_qual (UEFA European Championship qualifying), row int-continental-134: the game holds 2014, the table says not held
-2013	not_held	ger_lge_cup (DFL-Ligapokal), row ger-167: the game holds 2013, the table says not held
-2013	not_held	gre_super (Greek Super Cup), row gre-pol-cro-94: the game holds 2013, the table says not held
-2013	not_held	nir_charity (Charity Shield), row wal-nir-irl-315: the game holds 2013, the table says not held
 2013	not_in_game	arg-usa-202 argentina_rules 'Argentina' (Argentina)
 2013	not_in_game	arg-usa-67 new 'Copa Argentina' (Argentina)
 2013	not_in_game	arg-usa-94 new 'Supercopa Argentina' (Argentina)

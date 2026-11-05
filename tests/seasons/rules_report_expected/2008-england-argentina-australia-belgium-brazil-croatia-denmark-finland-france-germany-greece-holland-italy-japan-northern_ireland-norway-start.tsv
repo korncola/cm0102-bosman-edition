@@ -10,7 +10,6 @@
 2008	clubs	asia_club_champ (AFC Champions League), row club-world-146: game 16, table 32 (32)
 2008	clubs	bel_second (Belgian Second Division), row hol-bel-100: game 18, table 19 (19)
 2008	clubs	bel_third (Belgian Third Division), row hol-bel-101: game 16, table 32 (32 (A 16, B 16))
-2008	clubs	bra_champ_cup (Copa dos Campeões), row bra-197: game 3, table 0 (0)
 2008	clubs	bra_cup (Copa do Brasil), row bra-143: game 71, table 64 (64)
 2008	clubs	bra_nat_third (Campeonato Brasileiro Série C), row bra-89: game 7, table 20 (20)
 2008	clubs	bra_reg_bahia (Campeonato Baiano), row bra-440: game 10, table 12 (12)
@@ -79,18 +78,13 @@
 2008	no_row	record_utils ('B' International): no table row
 2008	no_row	record_utils (Reserve): no table row
 2008	no_row	record_utils (Under 21 International): no table row
-2008	not_held	bra_champ_cup (Copa dos Campeões), row bra-197: the game holds 2008, the table says not held
 2008	not_held	cro_a2b (Druga HNL South), row gre-pol-cro-386: the game holds 2008, the table says not held
-2008	not_held	ger_lge_cup (DFL-Ligapokal), row ger-102: the game holds 2008, the table says not held
-2008	not_held	gre_super (Greek Super Cup), row gre-pol-cro-89: the game holds 2008, the table says not held
-2008	not_held	nir_charity (Charity Shield), row wal-nir-irl-190: the game holds 2008, the table says not held
 2008	not_in_game	arg-usa-197 argentina_rules 'Argentina' (Argentina)
 2008	not_in_game	aus-jap-kor-116 japan_rules 'n/a' (Japan)
 2008	not_in_game	aus-jap-kor-8 australia_rules 'n/a' (Australia)
 2008	not_in_game	bra-8 brazil_rules 'Brazil' (Brazil)
 2008	not_in_game	eng-102 eng_conf 'Conference Premier' (England)
 2008	not_in_game	eng-343 eng_fa_trophy 'FA Trophy' (England)
-2008	not_in_game	eng-345 new 'Conference League Cup (Setanta Shield)' (England)
 2008	not_in_game	fra-68 fra_cfa 'CFA' (France)
 2008	not_in_game	fra-69 fra_lower 'CFA 2' (France)
 2008	not_in_game	ger-103 new 'T-Home Supercup' (Germany)
@@ -100,7 +94,6 @@
 2008	not_in_game	ita-126 ita_ser_c2b 'Lega Pro Seconda Divisione girone B' (Italy)
 2008	not_in_game	ita-127 ita_ser_c2c 'Lega Pro Seconda Divisione girone C' (Italy)
 2008	not_in_game	ita-136 new 'Supercoppa di Lega di Seconda Divisione (Serie C2 to 2008)' (Italy)
-2008	not_in_game	nor-fin-75 new 'Superfinalen' (Norway)
 2008	not_in_game	nor-fin-80 new 'Liigacup' (Finland)
 2008	not_in_game	uefa-57 uefa_seeding 'UEFA access list and seeding' (UEFA)
 2008	playoffs	arg_prm (Primera División), row arg-usa-8: game 0 up and 0 down play-off places, table 0 and 2 ('17th and 18th of the average table play two-leg promotion/relegation ties (promo')

@@ -16,7 +16,6 @@
 2012	clubs	asia_club_champ (AFC Champions League), row club-world-222: game 16, table 32 (32)
 2012	clubs	bel_first (Belgian Pro League), row hol-bel-151: game 18, table 16 (16)
 2012	clubs	bel_third (Belgian Third Division), row hol-bel-153: game 16, table 37 (37 (A 18, B 19))
-2012	clubs	bra_champ_cup (Copa dos Campeões), row bra-201: game 3, table 0 (0)
 2012	clubs	bra_cup (Copa do Brasil), row bra-147: game 71, table 87 (87)
 2012	clubs	bra_nat_third (Campeonato Brasileiro Série C), row bra-93: game 7, table 21 (21)
 2012	clubs	bra_reg_bahia (Campeonato Baiano), row bra-444: game 10, table 12 (12)
@@ -80,11 +79,7 @@
 2012	no_row	record_utils ('B' International): no table row
 2012	no_row	record_utils (Reserve): no table row
 2012	no_row	record_utils (Under 21 International): no table row
-2012	not_held	bra_champ_cup (Copa dos Campeões), row bra-201: the game holds 2012, the table says not held
 2012	not_held	cro_a2b (Druga HNL South), row gre-pol-cro-390: the game holds 2012, the table says not held
-2012	not_held	ger_lge_cup (DFL-Ligapokal), row ger-154: the game holds 2012, the table says not held
-2012	not_held	gre_super (Greek Super Cup), row gre-pol-cro-93: the game holds 2012, the table says not held
-2012	not_held	nir_charity (Charity Shield), row wal-nir-irl-290: the game holds 2012, the table says not held
 2012	not_in_game	arg-usa-201 argentina_rules 'Argentina' (Argentina)
 2012	not_in_game	arg-usa-66 new 'Copa Argentina' (Argentina)
 2012	not_in_game	arg-usa-93 new 'Supercopa Argentina' (Argentina)

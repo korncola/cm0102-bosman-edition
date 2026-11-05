@@ -25,7 +25,6 @@
 2020	clubs	sco_lge_cup (Scottish League Cup), row sco-159: game 42, table 44 (44)
 2020	clubs	spa_cup (Copa del Rey), row spa-159: game 83, table 126 (126 clubs)
 2020	clubs	spa_second_b (Segunda División B), row spa-156: game 20, table 102 (102 (3 groups of 20 and 2 of 21, each split in 2 subgroups of 10 or 11))
-2020	clubs	spa_super (Supercopa de España), row spa-160: game 2, table 4 (4)
 2020	clubs	swe_prm (Allsvenskan), row den-swe-278: game 14, table 16 (16)
 2020	clubs	tur_first (Süper Lig), row rus-tur-182: game 18, table 21 (21)
 2020	clubs	tur_second (TFF 1. Lig), row rus-tur-209: game 20, table 18 (18)
@@ -54,21 +53,13 @@
 2020	no_row	record_utils ('B' International): no table row
 2020	no_row	record_utils (Reserve): no table row
 2020	no_row	record_utils (Under 21 International): no table row
-2020	not_held	ire_leinster_cup (Leinster Senior Cup), row wal-nir-irl-496: the game holds 2020, the table says not held
-2020	not_held	ire_lge_cup (League of Ireland Cup), row wal-nir-irl-495: the game holds 2020, the table says not held
-2020	not_held	ire_munster_cup (Munster Senior Cup), row wal-nir-irl-497: the game holds 2020, the table says not held
-2020	not_held	ire_super_cup (FAI Super Cup), row wal-nir-irl-499: the game holds 2020, the table says not held
-2020	not_held	kor_league_cup (Korean League Cup), row aus-jap-kor-452: the game holds 2020, the table says not held
-2020	not_held	kor_super_cup (Korean Super Cup), row aus-jap-kor-398: the game holds 2020, the table says not held
+2020	not_held	ire_munster_cup (Munster Senior Cup), row wal-nir-irl-497: the game holds 2021, the table says not held
 2020	not_held	new_concacaf_gold_cup (CONCACAF Gold Cup), row int-continental-214: the game holds 2021, the table says not held
 2020	not_held	olympics (Football at the Summer Olympics), row int-world-239: the game holds 2020, the table says not held
-2020	not_held	pol_lge_cup (Polish League Cup), row gre-pol-cro-236: the game holds 2020, the table says not held
-2020	not_held	sco_chal_cup (Scottish Challenge Cup), row sco-160: the game holds 2020, the table says not held
-2020	not_held	usa_open_cup (Lamar Hunt U.S. Open Cup), row arg-usa-290: the game holds 2020, the table says not held
+2020	not_held	sco_chal_cup (Scottish Challenge Cup), row sco-160: the game holds 2021, the table says not held
 2020	not_held	wc_oceania_league (FIFA World Cup qualification (OFC)), row int-world-236: the game holds 2020, the table says not held
-2020	not_held	wel_cup (Welsh Cup), row wal-nir-irl-482: the game holds 2020, the table says not held
-2020	not_held	wel_lge_cup (Welsh League Cup), row wal-nir-irl-483: the game holds 2020, the table says not held
-2020	not_held	wel_prm_cup (FAW Premier Cup), row wal-nir-irl-484: the game holds 2020, the table says not held
+2020	not_held	wel_cup (Welsh Cup), row wal-nir-irl-482: the game holds 2021, the table says not held
+2020	not_held	wel_lge_cup (Welsh League Cup), row wal-nir-irl-483: the game holds 2021, the table says not held
 2020	not_in_game	arg-usa-371 usa_rules 'United States' (United States)
 2020	not_in_game	aus-jap-kor-317 korea_rules 'n/a' (South Korea)
 2020	not_in_game	club-world-365 conmebol_liber 'Copa Libertadores' (CONMEBOL)
@@ -78,8 +69,6 @@
 2020	not_in_game	eng-222 eng_conf 'National League' (England)
 2020	not_in_game	eng-415 eng_fa_trophy 'FA Trophy' (England)
 2020	not_in_game	por-179 new 'Taça da Liga (Allianz Cup)' (Portugal)
-2020	not_in_game	rus-tur-101 new 'Russian Super Cup' (Russia)
-2020	not_in_game	rus-tur-290 new 'Turkish Super Cup' (Turkey)
 2020	not_in_game	spa-153 spain_rules 'n/a' (Spain)
 2020	not_in_game	uefa-153 uefa_seeding 'UEFA access list and seeding' (UEFA)
 2020	playoffs	ire_first (League of Ireland First Division), row wal-nir-irl-492: game 1 up and 0 down play-off places, table 4 and 0 ('pos 2,3,4,5: promotion play-off')
@@ -115,7 +104,7 @@
 2021	bench	tur_first (Süper Lig), row rus-tur-183: game 9, table 10 (10)
 2021	bench	tur_second (TFF 1. Lig), row rus-tur-210: game 9, table 10 (10)
 2021	bench	tur_second_b (TFF 2. Lig), row rus-tur-237: game 9, table 10 (10)
-2021	bench	uefa_cup (UEFA Europa League), row uefa-165: game 7/9, table 12 (12)
+2021	bench	uefa_cup (UEFA Europa League), row uefa-165: game 9, table 12 (12)
 2021	bench	world_club_champ (FIFA Club World Cup), row club-world-382: game 7/9, table 12 (12)
 2021	clubs	asia_club_champ (AFC Champions League), row club-world-393: game 16, table 39 (39)
 2021	clubs	con_champ (CONCACAF Champions League), row club-world-389: game 16, table 15 (15)
@@ -134,7 +123,6 @@
 2021	clubs	sco_lge_cup (Scottish League Cup), row sco-167: game 42, table 45 (45)
 2021	clubs	spa_cup (Copa del Rey), row spa-167: game 83, table 126 (126 clubs)
 2021	clubs	spa_second_b (Primera División RFEF), row spa-164: game 20, table 40 (40 (2 groups of 20))
-2021	clubs	spa_super (Supercopa de España), row spa-168: game 2, table 4 (4)
 2021	clubs	swe_prm (Allsvenskan), row den-swe-284: game 14, table 16 (16)
 2021	clubs	tur_first (Süper Lig), row rus-tur-183: game 18, table 20 (20)
 2021	clubs	tur_second (TFF 1. Lig), row rus-tur-210: game 20, table 19 (19)
@@ -171,13 +159,7 @@
 2021	no_row	record_utils (Under 21 International): no table row
 2021	not_held	african_nations (Africa Cup of Nations), row int-continental-227: the game holds 2021, the table says not held
 2021	not_held	euro_champ_qual (UEFA European Championship qualifying), row int-continental-222: the game holds 2022, the table says not held
-2021	not_held	ire_leinster_cup (Leinster Senior Cup), row wal-nir-irl-521: the game holds 2021, the table says not held
-2021	not_held	ire_lge_cup (League of Ireland Cup), row wal-nir-irl-520: the game holds 2021, the table says not held
-2021	not_held	ire_super_cup (FAI Super Cup), row wal-nir-irl-524: the game holds 2021, the table says not held
-2021	not_held	kor_league_cup (Korean League Cup), row aus-jap-kor-453: the game holds 2021, the table says not held
-2021	not_held	kor_super_cup (Korean Super Cup), row aus-jap-kor-399: the game holds 2021, the table says not held
-2021	not_held	pol_lge_cup (Polish League Cup), row gre-pol-cro-237: the game holds 2021, the table says not held
-2021	not_held	wel_prm_cup (FAW Premier Cup), row wal-nir-irl-509: the game holds 2021, the table says not held
+2021	not_held	ire_leinster_cup (Leinster Senior Cup), row wal-nir-irl-521: the game holds 2022, the table says not held
 2021	not_held	world_cup (FIFA World Cup), row int-world-242: the game holds 2022, the table says not held
 2021	not_in_game	arg-usa-372 usa_rules 'United States' (United States)
 2021	not_in_game	aus-jap-kor-318 korea_rules 'n/a' (South Korea)
@@ -188,8 +170,6 @@
 2021	not_in_game	eng-232 eng_conf 'National League' (England)
 2021	not_in_game	eng-421 eng_fa_trophy 'FA Trophy' (England)
 2021	not_in_game	por-188 new 'Taça da Liga (Allianz Cup)' (Portugal)
-2021	not_in_game	rus-tur-102 new 'Russian Super Cup' (Russia)
-2021	not_in_game	rus-tur-291 new 'Turkish Super Cup' (Turkey)
 2021	not_in_game	spa-161 spain_rules 'n/a' (Spain)
 2021	not_in_game	uefa-161 uefa_seeding 'UEFA access list and seeding' (UEFA)
 2021	playoffs	ire_first (League of Ireland First Division), row wal-nir-irl-517: game 1 up and 0 down play-off places, table 4 and 0 ('pos 2,3,4,5: promotion play-off')
