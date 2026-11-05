@@ -1,4 +1,4 @@
-/* The real UEFA season coefficients of some season databases (0.6.2 open item 106).
+/* The real UEFA season coefficients of the season databases (0.6.2 open item 106).
  *
  * A nation record holds six season coefficients, doubles at +0xe0 to +0x108, oldest first. At a new game in start
  * year S the game expects the seasons (S-6)/(S-5) to (S-1)/S there: the first season ranks the nations by +0xe0 to
@@ -7,16 +7,19 @@
  * the six down one place and writes the game's own points to +0x108 (0x903b50). So +0x108, the season before the
  * start, counts in the five-season totals of the next five seasons.
  *
- * Some databases hold 0 at +0x108 (October 2022, October 2023, October 2024, December 2025, May 2026, October 2026
- * and April 2024: the season before the start is missing), and some hold all six one season off (September 2005,
- * September 2008, September 2011 ODB, October 2019, November 2020, Summer 2002 and the extra versions December 2008,
- * March 2009, March 2012 ODB, March 2020, April 2021 and April 2023 one season old; October 2021, Summer 2006, June
- * 2010 and April 2022 one season early). Max, 3 November 2026: these databases take the real values of the six
- * seasons (researched, kassiesa.net and UEFA). At the database load of a new game (season_dates.c, after the shift
- * and the history fill), the game writes the six values of each nation of the table, in every start year (also 2001,
- * where no shift runs). A new shift for another year undoes the write first, as it undoes the history fill. The
- * database files stay unchanged. A loaded save needs nothing: it holds the nation records, and a save of an older
- * build keeps its old values.
+ * Max, 3 and 4 November 2026: every season database and extra database takes the real values of the six seasons
+ * (researched, kassiesa.net and UEFA). Some hold 0 at +0x108 (October 2022 to October 2026 and April 2024: the
+ * season before the start is missing). Some hold all six one season old (Summer 2002, September 2005, September
+ * 2008, September 2011 ODB, October 2019, November 2020 and the extra databases December 2008, March 2009, March 2012
+ * ODB, March 2020, April 2021 and April 2023) or one season early (Summer 2006, October 2021 and the extra databases
+ * June 2010 and April 2022). The others hold a few wrong values (1 to 13 nations each). Our own Summer 2002,
+ * Summer 2004 and Summer 2006 hold the real values from 4 November 2026 (tools/seasons/own_db/coeffs.py). Their
+ * rows fix a copy of an earlier zip.
+ *
+ * At the database load of a new game (season_dates.c, after the shift and the history fill), the game writes the
+ * six values of each nation of the table, in every start year (also 2001, where no shift runs). A new shift for
+ * another year undoes the write first, as it undoes the history fill. The database files stay unchanged. A loaded
+ * save needs nothing: it holds the nation records, and a save of an older build keeps its old values.
  *
  * A row is written only when the record of its nation id holds that id and its six values are those of the known
  * database or already the real ones (a nation.dat that a player changed keeps its own values). Nothing runs with

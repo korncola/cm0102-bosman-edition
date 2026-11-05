@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Makes src/recomp_rt/win/season_coeffs_table.c, the real UEFA season coefficients of the season databases whose
-values are missing or one season off (0.6.2 open item 106).
+values are missing, wrong or one season off (0.6.2 open item 106).
 
 Usage:
     python3 -I tools/seasons/make_coeff_table.py --measure <folder of database folders>
@@ -16,13 +16,17 @@ the nations by +0xe0 to +0x100 (UefaSeeding::roll_coefficients 0x903b50 makes no
 later season change shifts the six down one place and writes the game's own points to +0x108 (0x903b50). So
 +0x108 is the season before the start, which counts in the five-season totals of the next five seasons.
 
-TARGETS names the season databases and extra versions that get the real values and the slot offset that --measure
-found in each: 0 when the values sit in the right slots and +0x108 is 0 (the season before the start is missing), -1
-when all six are one season old, +1 when they are one season early. Max's decision (3 November 2026, "do whatever
-real life does"): these databases take the real UEFA values of the six seasons. The values come from
-docs/research/2026-11-03-uefa-association-coefficients.tsv (kassiesa.net country rankings 2000 to 2026, read 3
-November 2026; UEFA's own coefficient data agrees from 2006/07 on). --measure checks that most nonzero values of
-each database are the real values at the offset of TARGETS, so the table fixes the fault that was measured.
+Every season database and extra database gets the real values (Max's decisions of 3 and 4 November 2026, "do
+whatever real life does"). OFFSETS names those whose values are one season off, with the slot offset that --measure
+found: -1 when all six are one season old, +1 when they are one season early. The others have the offset 0: the
+values sit in the right slots, with a few wrong values or with 0 at +0x108 (the season before the start missing).
+The values come from docs/research/2026-11-03-uefa-association-coefficients.tsv (kassiesa.net country rankings 2000
+to 2026, read 3 November 2026; UEFA's own coefficient data agrees from 2006/07 on). --measure checks that most
+nonzero values of each database are the real values at its offset, so the table fixes the fault that was measured.
+
+--measure reads each database as players have it from before 4 November 2026. Our own Summer 2002, Summer 2004 and
+Summer 2006 hold the real values from that day (own_db/coeffs.py), so --measure takes their earlier zips
+(own-dbs/old, "before the real coefficients", EARLIER_NATIONS), and the rows fix a player's copy of an earlier zip.
 
 A row is a nation whose six values are not the real ones: its id in the database, its name, the six values the game
 must find there (a check that the loaded nation.dat is the known one) and the six real values. Yugoslavia in a
@@ -47,14 +51,22 @@ REAL = os.path.join(ROOT, "docs", "research", "2026-11-03-uefa-association-coeff
 OUT = os.path.join(ROOT, "src", "recomp_rt", "win", "season_coeffs_table.c")
 NATION_TABLE, UEFA = 4, 2
 CONTINENT_AT, NAME_AT, COEFFS_AT = 0x71, 0x04, 0xe0
-# database: the slot offset of its values (see above)
-TARGETS = {"Summer 2002": -1, "September 2005": -1, "Summer 2006": +1, "September 2008": -1,
+# database: the slot offset of its values (see above). Every other season database and extra version has the
+# offset 0 (--measure checks it).
+OFFSETS = {"Summer 2002": -1, "September 2005": -1, "Summer 2006": +1, "September 2008": -1,
            "September 2011 ODB": -1, "October 2019": -1, "November 2020": -1, "October 2021": +1,
-           "October 2022": 0, "October 2023": 0, "October 2024": 0, "December 2025": 0, "May 2026": 0,
-           "October 2026": 0,
            # extra versions
            "December 2008": -1, "March 2009": -1, "June 2010": +1, "March 2012 ODB": -1, "March 2020": -1,
-           "April 2021": -1, "April 2022": +1, "April 2023": -1, "April 2024": 0}
+           "April 2021": -1, "April 2022": +1, "April 2023": -1}
+ROLES = ("season database", "extra version")
+# Our own databases: the SHA-256 of the nation.dat that --measure must read, that of the zips before 4 November 2026
+# (own-dbs/old, "before the real coefficients"). The zips of that day hold the real values, so they give no rows.
+EARLIER_NATIONS = {
+    "Summer 2002": "3868c523f26cea7732850ad0d5948605a9e5c53855e255b9f318b170c0634ffe",
+    "Summer 2004": "91fd79645926acee218b15ddf275b1380703b85dc1a84030ac66aa584ba8005f",
+    "Summer 2006": "f3bb1dd0b8fad018a15568c8297e27f60cd434b41792d485a2f2e94b71d2e10b"}
+# UEFA nations of a database that are not UEFA members (no researched values): their six real values are 0
+NOT_MEMBERS = {"Greenland"}
 # the database's name of a nation: the researched name
 REAL_NAME = {"Holland": "Netherlands", "Republic of Ireland": "Ireland", "FYR of Macedonia": "North Macedonia",
              "Yugoslavia": "Serbia"}
@@ -116,6 +128,8 @@ def real_values():
 def real_six(real, name, start, where):
     """The real values of the six seasons (start-6)/(start-5) to (start-1)/start of the database's nation name. A
     season before the nation's first researched season (before it joined UEFA) is 0; a gap after it fails."""
+    if name in NOT_MEMBERS:
+        return [0.0] * 6
     rname = REAL_NAME.get(name, name)
     seasons = [e for n, e in real if n == rname]
     if not seasons:
@@ -132,11 +146,11 @@ def real_six(real, name, start, where):
 
 
 def season_slots(dbs):
-    """{(nation, season end year): {value}} of the season databases whose six slots are right (not in TARGETS
+    """{(nation, season end year): {value}} of the season databases whose six slots are right (not in OFFSETS
     with a nonzero offset), for the db_agree column."""
     out = {}
     for name, (y, role, folder) in dbs.items():
-        if not y or role not in ("season database", "extra version") or TARGETS.get(name):
+        if not y or role not in ROLES or OFFSETS.get(name):
             continue
         for n, (_, v) in uefa_nations(folder).items():
             for k in range(6):
@@ -152,9 +166,13 @@ def measure(dbroot):
     real = real_values()
     held = season_slots(dbs)
     rows = []
-    for target, offset in TARGETS.items():
+    targets = [r["database"] for r in hg.read_tsv(hg.SIGS) if r["role"] in ROLES]
+    for target in targets:
         if target not in dbs:
             fail(f"no folder of the database {target!r} in {dbroot}")
+        offset = OFFSETS.get(target, 0)
+        if target in EARLIER_NATIONS and hg.sha(os.path.join(dbs[target][2], "nation.dat")) != EARLIER_NATIONS[target]:
+            fail(f"{target}: not the nation.dat of the zip before 4 November 2026 (own-dbs/old)")
         y = dbs[target][0]
         nations = uefa_nations(dbs[target][2])
         ends = [y - 5 + k for k in range(6)]
@@ -260,7 +278,7 @@ def table_text():
             fail(f"{r['database']}: the nation name {r['nation']!r} cannot go into the table")
         by_db.setdefault(r["database"], []).append((nid, r["nation"], found, real))
     lines = [
-        "/* The real UEFA season coefficients of some season databases (season_coeffs.h). Made by",
+        "/* The real UEFA season coefficients of the season databases (season_coeffs.h). Made by",
         " * tools/seasons/make_coeff_table.py from docs/research/2026-11-03-database-coefficients.tsv. Do not edit. */",
         '#include "season_coeffs.h"',
         "",
