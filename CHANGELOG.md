@@ -168,8 +168,6 @@ New features and a Linux version. Each option has a line in `settings.txt` in th
 - Windows: Ctrl+[ is Back and F11 switches full screen.
 - Fixes: the underline in the news covers the whole name, and the "Replace this file?" text is centred in widescreen.
 
-Thanks to u/gundenaf on Reddit, who asked for the Linux version and the database choice.
-
 ## 0.2.0 (pre-release)
 
 Comfort features and sound. Each feature has a line in `settings.txt` in the save folder, and `off` turns it off. No feature changes a match result or a decision of the game.
