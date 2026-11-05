@@ -1,7 +1,7 @@
 """Faults of the original that long games reach (0.6.2 slice 11, Q23, Q24, Q27, open item 102;
 src/recomp_rt/win/original_faults.c). The fixes act in every game, the base game too. The test switch
-RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age", "keep:olympics" or
-"keep:ire_super" (or a list: "keep:money,age") turns off one group or more.
+RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age", "keep:olympics",
+"keep:ire_super" or "keep:nsl" (or a list: "keep:money,age") turns off one group or more.
 
 National managers (fault 26, Q23). `club_can_be_managed` 0x544820 takes a senior national team (club id from club
 count - 2 x nation count to club count - nation count, 0x544835..0x544857) only when its nation had more than 150
@@ -85,6 +85,20 @@ never calls `IreSuperCup::start_new_season` 0x63b550, and `update_for_date` 0x63
 while +0x45 is 0 and +0x40 is the year, 0x63b311..0x63b331): the cup is gone for the rest of the game. At 0x63b2ae
 (the jump that skips a club of another division) the last loop also skips a club that is already in the table
 (rt_ire_super_has).
+
+Australian NSL stages (open item 128). The NSL plays three stages: the regular season, the finals series of the top
+six (stage 0, `AusNsl::create_finals_series_stage` 0x412010) and the Grand Final of the top two (stage 1,
+`AusNsl::create_grand_final_stage` 0x4121c0). The index of the current stage is at +0x30 and the stage count (2) at
++0x2c; the ctor 0x410e90 sets them to -1 and 2 (0x410efe, 0x410f01). `AusNsl::advance_stage` 0x411f70 steps the index and builds
+stage 0 or 1, but only while the index is below count - 1 (else the box "aus_nsl.cpp 752", 0x2f0).
+`AusNsl::start_new_season` 0x411de0 does not set the index back to -1 and does not free the stages, as the other
+classes with stages do at the same point (`ArgPrm::start_new_season` 0x405720, `BraNatFirst::start_new_season`
+0x42a640: each stage 0..index freed by its slot 0 with 1, then the index -1; the AusNsl destructor 0x4110e0 frees
+the same stages). So from the second season the index
+stays at 1: the game builds no finals series and no Grand Final, and `AusNsl::record_season_honours` 0x411d90 writes
+the first season's Grand Final pair again from the old stage 1. At 0x411e1c, after the stats reset and before the
+step of the year (0x411e1e), each stage 0..index is freed as there, its slot set to 0, and the index set to -1
+(rt_aus_nsl_new_season). A save made in season 2 or later keeps the index of 1 until its next start_new_season.
 """
 
 # address: (the instruction in the original, C code)
@@ -130,4 +144,5 @@ INSNS = {
     0x63B2AE: ("jne 0x63b2c6", "if (!cc_e(F) || rt_ire_super_has(esi, edi, ebx)) goto L_63b2c6;"),
     0x5968E8: ("mov edx, dword ptr [0xae23b4]", "rt_max_wage_high(edx, eax); edx = R32(0xae23b4u);"),
     0x597019: ("add ecx, edx", "ecx = rt_max_wage_sum(ecx, edx);"),
+    0x411E1C: ("mov eax, dword ptr [esi]", "SYNC(); rt_aus_nsl_new_season(esi); RT_AFTER_CALL(); eax = R32(esi);"),
 }

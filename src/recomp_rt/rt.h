@@ -316,6 +316,9 @@ uint32_t rt_olympic_keeps_senior(uint32_t player, uint32_t nation, uint32_t slot
 uint32_t rt_ire_super_has(uint32_t cup, uint32_t club, uint32_t rows);
 /* Item 127: forget the game year that the Irish Super Cup restart last saw (a load or a new game). */
 void rt_ire_super_forget(void);
+/* AusNsl::start_new_season frees the stages and sets the stage index to -1 (open item 128; win/original_faults.c,
+ * tools/recomp/original_faults.py at 0x411e1c). */
+void rt_aus_nsl_new_season(uint32_t self);
 /* Money above 2,147,483,647 (0.6.2 slice 11, Q24; win/original_faults.c, tools/recomp/original_faults.py). */
 uint32_t rt_budget_hi(uint32_t lo, uint32_t hi);          /* get_transfer_budget: the high word in place of cdq */
 uint32_t rt_budget_floor(uint32_t finance, uint32_t less); /* the balance less 10m or 15m (0x599135, 0x599185) */

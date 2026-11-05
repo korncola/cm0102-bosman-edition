@@ -207,7 +207,7 @@ assert not set(SAVE_SIZE_INSNS) & (set(INSNS) | set(PATCHES))
 INSNS.update(SAVE_SIZE_INSNS)
 
 # Faults of the original that long games reach (0.6.2 slice 11, original_faults.py): national managers, money above
-# 2,147,483,647, the human manager's age and Olympic squads (open item 102).
+# 2,147,483,647, the human manager's age, Olympic squads (open item 102) and the Australian NSL stages (open item 128).
 from original_faults import INSNS as ORIGINAL_FAULT_INSNS  # noqa: E402
 
 assert not set(ORIGINAL_FAULT_INSNS) & (set(INSNS) | set(PATCHES))
