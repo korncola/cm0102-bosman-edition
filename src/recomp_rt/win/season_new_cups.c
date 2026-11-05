@@ -507,6 +507,79 @@ int season_new_cups_rounds(uint32_t cup, const char *file, uint32_t count_ptr)
     return 1;
 }
 
+/* ---- The draw day of a knockout edition (open item 148) ----
+ *
+ * The knockout editions of the All-Ireland cup (2010/11 on) took their clubs when the module made the cup's season, in
+ * the entry of the Republic of Ireland (20), before the Northern Irish Premier Division records its final places: its
+ * start_new_season 0x78ee30 calls the chain 0x689c20, whose League::record_final_positions 0x68aa30 writes club +0x5b
+ * and +0x5f (0x68aa5d) in a later entry. So the Irish League clubs came in list order, not by place (item 145 found the
+ * same in the group editions and picks them on the draw day, season_cup_groups.c). A knockout's clubs meet at the draw
+ * of its first round: Cup::update_for_date 0x51f890 calls Cup::draw_round 0x51c410 on that round's draw day
+ * (0x51fa7d), when both leagues hold the places of the season just ended. Before that draw the cup picks again and
+ * writes the clubs in the same slots of its team list: map_fixture_tree 0x518790 gave the slots their rounds (the clubs
+ * of the first round first, the byes after them, as pick_clubs orders them), so a list of the same count keeps the
+ * tree. A pick of another count (a league with fewer clubs than at the season change) keeps the list. A cup with one
+ * league (the Conference League Cup, the Russian Premier League Cup) had its places at the change and is not touched. */
+#define CUP_STAGE_COUNT 0x2cu
+#define CUP_BASE_DONE 0xb1u
+#define CUP_TIES 0xadu
+#define TIE_STATE 0x34u
+
+static int two_leagues(const char *file)
+{
+    for (size_t i = 0; i < sizeof cup_clubs / sizeof cup_clubs[0]; i++)
+        if (!strcmp(cup_clubs[i].file, file)) return cup_clubs[i].division[1] != 0;
+    return 0;
+}
+
+static void draw_day_pick(uint32_t cup, int round)
+{
+    const char *file = season_change_file(cup);
+    if (round != 0 || !file || strncmp(file, "new_", 4) || !two_leagues(file)) return;
+    if (g_mem[cup + CUP_BASE_DONE] || (int32_t)rd32(g_mem, cup + CUP_STAGE_COUNT) != 0) return;   /* groups */
+    uint32_t ties = rd32(g_mem, cup + CUP_TIES), first = readable(ties) ? rd32(g_mem, ties) : 0;
+    if (!readable(first) || g_mem[first + TIE_STATE] != 0) return;      /* drawn already */
+    int edition = (int16_t)rd16(g_mem, cup + CUP_YEAR), count = (int16_t)rd16(g_mem, cup + CUP_TEAMS);
+    uint32_t list = rd32(g_mem, cup + CUP_TEAM_LIST), clubs[32];
+    if (!readable(list) || count < 2 || count > 32) return;
+    int n = pick_clubs(file, edition, rd32(g_mem, cup + 4), clubs);
+    if (rt_unwinding) return;
+    if (n != count) {
+        fprintf(stderr, "recomp: new cups: %s %d: %d clubs on the draw day, %d in the list; the list stays\n", file,
+                edition, n, count);
+        return;
+    }
+    for (int i = 0; i < n; i++) wr32(g_mem, list + 6u * (uint32_t)i, clubs[i]);
+    fprintf(stderr, "recomp: new cups: %s %d: clubs picked again on the draw day\n", file, edition);
+    const NewCupClubs *k = NULL;
+    for (size_t i = 0; i < sizeof cup_clubs / sizeof cup_clubs[0]; i++)
+        if (!strcmp(cup_clubs[i].file, file)) k = &cup_clubs[i];
+    for (int i = 0; k && i < n; i++) {
+        int from = division_is(clubs[i], CLUB_DIVISION, k->division[0]) ? 1
+                 : division_is(clubs[i], CLUB_DIVISION, k->division[1]) ? 2 : 0;
+        fprintf(stderr, "recomp: new cups: %s %d club %d: %.50s (division %d, last place %d)\n", file, edition, i + 1,
+                win_str(clubs[i] + 4), from, (int8_t)g_mem[clubs[i] + CLUB_LAST_PLACE]);
+    }
+}
+
+static int season_game(void);
+
+void o_0051c410(void);
+
+/* Cup::draw_round, thiscall (round) ret 4: a new cup of two leagues picks its clubs again before its first draw. */
+RT_WRAP(0051c410, new_cups_draw_round)
+{
+    uint32_t cup = cpu.ecx;
+    if (season_game() && readable(cup)) {
+        int round = (int)rt_arg(0);
+        Cpu saved = cpu;
+        draw_day_pick(cup, round);
+        if (rt_unwinding) return;
+        cpu = saved;
+    }
+    o_0051c410();
+}
+
 /* ---- The season change: kind "new_cups" ---- */
 
 static int new_file(const char *file) { return file && !strncmp(file, "new_", 4) && season_new_cup(file, 9999); }

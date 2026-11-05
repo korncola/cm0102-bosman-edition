@@ -42,6 +42,10 @@ The runs:
             (4 of each league and the holders) in 3 groups of 3, the winners and the best runner-up in two-legged
             semi-finals, then the final. 2010/11: the knockout of 12 clubs. Each edition has a winner in the history,
             the news says "for the first time" in 2004/05 and "again" in 2009/10, and no error box
+    a2009   open item 148: 2009/10 (the original data moved to 2009), changing rules on, Northern Ireland and the
+            Republic of Ireland, Tier A, to the end of 2011/12: the knockout editions of 2010/11 and 2011/12 (12
+            clubs, 6 of each league) pick their clubs again on the draw day of the first round, so the clubs of each
+            league are its places 1 to 6 of the season just ended; each edition has a winner
     r2002   start run, 2002/03 (the original data), changing rules off, Select All without France: the start hook
             makes the editions that the row of 2002/03 holds, the Russian Premier League Cup of 2003 (first round in
             March 2003) with 16 clubs and the Russian Super Cup of March 2003 with two clubs (log lines)
@@ -275,6 +279,19 @@ def check_a2003(lines, log, fails, name):
     need_log(log, "news 2009/10: The Setanta Sports Cup is played again", fails, name)
 
 
+def check_a2009(lines, log, fails, name):
+    if "message box from" in log:
+        fails.append(f"{name}: a message box: {log[log.index('message box from'):].splitlines()[0]}")
+    for season in (2010, 2011):
+        need_log(log, f"new cups: new_all_ireland {season}: clubs picked again on the draw day", fails, name)
+        listed = setanta_clubs(log, season)
+        for k in (1, 2):
+            places = sorted(p for _, d, p in listed if d == k)
+            if places != list(range(1, 7)):
+                fails.append(f"{name}: new_all_ireland {season}: the places of league {k} are {places}, expected 1 to 6")
+        need_winner(lines, "new_all_ireland", season, fails, name)
+
+
 def check_r2002(lines, log, fails, name):
     need_log(log, "new cups: new_rus_lge_cup 2003 with 16 clubs", fails, name)
     need_log(log, "new cups: new_rus_super 2003 with 2 clubs", fails, name)
@@ -299,6 +316,8 @@ RUNS = {
     "t2010": (2010, os.path.join(DB, "September 2010 ODB"), "off", 2010, ALL_BUT_FRANCE, True, 1800, check_t2010,
               {}),
     "r2002": (2002, None, "off", 2002, ALL_BUT_FRANCE, True, 1800, check_r2002, {}),
+    "a2009": (2009, None, "on", 2011, ["Northern Ireland", "Republic of Ireland"], False, 3600, check_a2009,
+              {"env": {"RECOMP_TIER_A": "1"}}),
     "a2003": (2003, None, "on", 2010, ["Northern Ireland", "Republic of Ireland"], False, 3600, check_a2003,
               {"env": {"RECOMP_TIER_A": "1"}}),
 }
