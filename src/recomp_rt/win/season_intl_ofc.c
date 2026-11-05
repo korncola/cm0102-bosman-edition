@@ -109,6 +109,7 @@
                                          * makes rows - 1 rounds that many times (0x683ac9..0x683ad3) */
 #define DRAW_DAY 0xb6u                  /* s16 day of the year (0x79971e) */
 #define DRAW_OFFSET 0xb8u               /* s16 year offset from +0x40 (0x799739) */
+#define TEAM_MATCHES 0xa7u              /* s16: the matches of each team, -1 until worked out (League ctor 0x682263) */
 #define ROUNDS 0xa9u                    /* s16: the days of group A's template (set_up_rules 0x799740) */
 #define GAME_DATE 0xae2c90u             /* s16 day of the year, s16 year */
 #define KEY_NEW_ZEALAND 0x9cf3f4u       /* key nation id (0x799fc1) */
@@ -486,6 +487,15 @@ int season_intl_ofc_kept(uint32_t team)
 void season_intl_ofc_rules(uint32_t self)
 {
     if (!season_intl_on() || !is_ofc(self)) return;
+    /* +0xa7, the matches of each team of the group table: only the League constructor sets it to -1 (0x682263), and
+     * each League step that meets -1 works it out as (rows - 1) x meetings, first init_table_row 0x687453 on the draw
+     * day (0x799659), which also sizes each row's form array from it (0x687570); the table sort (0x6827ef) and the
+     * load (0x688c29) do the same. So an edition of another size kept the count of the edition before: the groups of
+     * 3 of 2004 kept the 3 of the groups of 4 of 2002, and the 2004 edition then stopped after its groups (a Tier A
+     * game of 2001 had no knockout by July 2004); the home-and-away group of 2008 (6) kept 3. As season_sizes.c does
+     * for a league whose size changes, each edition works it out again. A new game is unchanged: the constructor set
+     * -1 just before (set_up_rules from the constructor, 0x798994). */
+    wr16(g_mem, self + TEAM_MATCHES, 0xffffu);
     if (one_group(self)) {
         int year = year_of(self);
         wr32(g_mem, self + STAGE_COUNT, 0);
@@ -565,6 +575,11 @@ RT_WRAP(00799a60, ofc_group_b)
  * group with no stage (+0x2c 0): League::record_season_honours has run and the call has returned. */
 int season_intl_ofc_honours(uint32_t self)
 {
+    /* The log of the matches of each team at the edition's end (tests/seasons/ofc_team_matches_run.py). */
+    if (logging() && season_intl_on() && is_ofc(self))
+        fprintf(stderr, "recomp: season intl: oceania_nations %d: group A %d rows, %d meetings, %d matches each "
+                        "(+0xa7)\n", year_of(self), (int16_t)rd16(g_mem, self + GROUP_ROWS),
+                (int16_t)rd16(g_mem, self + MEETINGS), (int16_t)rd16(g_mem, self + TEAM_MATCHES));
     if (!season_intl_on() || !is_ofc(self) || rd32(g_mem, self + STAGE_COUNT) != 0) return 0;
     call_this(LEAGUE_HONOURS, self, 0, NULL);
     if (!rt_unwinding) rt_ret_cdecl(0);
