@@ -133,7 +133,10 @@ int season_super_four_pick(const uint32_t *league, int count, uint32_t cw, uint3
  *     Longford Town; Linfield, Portadown and Irish Cup winners Glentoran), 3 from each league.
  *   - 2006 to 2008: 4 from each league. The sources name the champions and the FAI Cup holders but no rule for the
  *     other places (a gap): the top four of each league is the closest rule.
- *   - 2009/10: the top four of each league and the holders (Cork City), 9 clubs. */
+ *   - 2009/10: the top four of each league and the holders (Cork City), 9 clubs (one source for the rule). Gaps: the
+ *     Irish League sent its 1st, 2nd, 5th and 6th of 2008/09 (Glentoran, Linfield, Coleraine, Cliftonville), for a
+ *     reason not found; and the draw of 28 July 2009 took the 2008 League of Ireland table, while the game's draw,
+ *     after its season change, takes the season just ended (row 2008/09, the 2009 season). */
 #define ET_PENS (CUP_PENALTIES | CUP_EXTRA_TIME)
 static const SeasonNewCup new_cups[] = {
     {"new_tur_super", 2006, 0, 2, {{1, ET_PENS, 7, 7, 0, 0}}},
@@ -153,7 +156,7 @@ static const SeasonNewCup new_cups[] = {
      {4, 4}, 0},
     {"new_all_ireland", 2007, 0, 8, {{1, ET_PENS, 10, 4, 1, 0}, {1, ET_PENS, 28, 3, 1, 0}, {1, ET_PENS, 26, 1, 1, 0}},
      {4, 4}, 0},
-    {"new_all_ireland", 2009, 0, 9, {{1, ET_PENS, 15, 4, 1, 0}, {2, ET_PENS, 3, 3, 1, 14}, {1, ET_PENS, 3, 10, 0, 0},
+    {"new_all_ireland", 2009, 0, 9, {{1, ET_PENS, 15, 4, 1, 0}, {2, ET_PENS, 3, 3, 1, 14}, {1, ET_PENS, 13, 2, 1, 0},
                                      {1, ET_PENS, 29, 7, 0, 0}}, {4, 4}, NEW_CUP_HOLDERS},
     {"new_all_ireland", 2010, 0, 12, {{1, ET_PENS, 21, 4, 1, 0}, {2, ET_PENS, 9, 3, 1, 7}, {2, ET_PENS, 7, 2, 1, 7},
                                       {2, ET_PENS, 14, 1, 1, 7}}},
@@ -267,13 +270,16 @@ int season_new_cup_round_code(int rounds, int r)
  *     rules say so), the top 2 to one-match semi-finals (winner v runner-up of the other group, the winner at home)
  *     with extra time and penalties, then the final. 2006: group days of group A, 20 February to 27 March, semi-finals
  *     10 April, final 22 April, draw 12 December 2005. 2007: 26 February to 16 April (6 of the 7 real days; the
- *     last of group 1 was on 17 April), semi-finals 23 April, final 12 May, draw 7 December 2006. 2008: three match
- *     days to mid-April, the rest from 1 September, semi-finals 13 and 14 October and the final on 1 November 2008;
- *     a late edition plays at its normal time in its season (Q277), so the days after 14 April and the knockout
- *     dates are an inference from 2007 (21 April, 28 April, 10 May); draw 17 January 2008.
+ *     last of group 1 was on 17 April), semi-finals 23 April, final 12 May, draw 7 December 2006. 2008: the draw of
+ *     17 January 2008 set three match days to mid-April and three in September, the semi-finals and the final in
+ *     October (played 13 and 14 October and 1 November 2008). The game plays one edition a season: the season
+ *     change of 2008 starts the cup's next season (with changing rules off a 2007 game plays an edition every
+ *     season), so an edition cannot run on to the autumn. A gap: the days after 14 April and the knockout dates
+ *     are an inference from 2007 (21 April, 28 April, 10 May).
  *   - 2009/10: 3 groups of 3, the 3 winners and the best runner-up to two-legged semi-finals (first legs 3 April 2010,
- *     14 days), final 15 May 2010. Group days 29 August to 3 November 2009; the matches put back to February and
- *     March 2010 play on their days (Q277). Draw 28 July 2009. The pots by strength (the mix was 2+1 and 1+2). */
+ *     14 days), final 15 May 2010. Group days of the draw's schedule (28 July 2009): 29 August, 19 September,
+ *     3 October and 9 November 2009, 27 February and 13 March 2010. The pots by strength (the mix was 2+1 and 1+2;
+ *     they keep the two champions apart, which the real draw did not: a gap, the draw rule is not found). */
 static const SeasonCupGroups group_formats[] = {
     {"sco_lge_cup", 2016, 8, 0, 1, 1, 1, 16, {{15, 6, 0}, {18, 6, 0}, {22, 6, 0}, {25, 6, 0}, {29, 6, 0}},
      {{1, ET_PENS, 26, 10, 0, 0}, {1, ET_PENS, 22, 9, 0, 0}, {1, ET_PENS, 20, 8, 0, 0}, {1, ET_PENS, 9, 7, 0, 0}}},
@@ -301,7 +307,7 @@ static const SeasonCupGroups group_formats[] = {
     {"new_all_ireland", 2007, 2, 0, 2, 2, 0, 4, {{26, 1, 1}, {10, 2, 1}, {18, 2, 1}, {7, 3, 1}, {14, 3, 1}, {21, 3, 1}},
      {{1, ET_PENS, 10, 4, 1, 0}, {1, ET_PENS, 28, 3, 1, 0}}, 1, {17, 0, 1}},
     {"new_all_ireland", 2008, 0},
-    {"new_all_ireland", 2009, 3, 0, 2, 1, 0, 4, {{29, 7, 0}, {19, 8, 0}, {22, 8, 0}, {3, 9, 0}, {6, 9, 0}, {3, 10, 0}},
+    {"new_all_ireland", 2009, 3, 0, 2, 1, 0, 4, {{29, 7, 0}, {19, 8, 0}, {3, 9, 0}, {9, 10, 0}, {27, 1, 1}, {13, 2, 1}},
      {{1, ET_PENS, 15, 4, 1, 0}, {2, ET_PENS, 3, 3, 1, 14}}, 0, {28, 6, 0}},
     {"new_all_ireland", 2010, 0},
     /* Test only (RECOMP_CUP_GROUPS_TEST=1, season_cup_groups.c): the League Cup with 16 groups of 5 and 6 and a last

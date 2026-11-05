@@ -314,6 +314,10 @@ static int pick_by_rule(const SeasonNewCup *f, const NewCupClubs *k, uint32_t re
     int count[2] = {0, 0}, next[2] = {0, 0}, n = 0;
     for (int d = 0; d < 2; d++)
         if (k->division[d]) count[d] = division_clubs(k->division[d], list[d], 32);
+    /* A cup of two leagues needs the clubs of both (a game with the Republic of Ireland and not Northern Ireland has
+     * no Irish League): with fewer clubs than its picks in a division, the edition is not made (new_make). */
+    for (int d = 0; d < 2; d++)
+        if (count[d] < f->picks[d]) return 0;
     for (int d = 0; d < 2; d++)
         while (next[d] < f->picks[d] && next[d] < count[d] && n < 32) clubs[n++] = list[d][next[d]++];
     for (int d = 0; d < 2 && (f->extra & NEW_CUP_CUP_WINNERS); d++) {
@@ -530,7 +534,8 @@ static void new_before(const SeasonChange *c)
 }
 
 /* One sentence when a new cup stops or comes back (Q258). The module writes the sentence of the change that makes
- * it. */
+ * it. The sentence names the game season (item 145: "not played in 2008" read as if the Setanta Cup of 2008, which
+ * was played, had not been). */
 static void new_after(const SeasonChange *c)
 {
     if (!season_game() || !new_file(c->file)) return;
@@ -544,11 +549,11 @@ static void new_after(const SeasonChange *c)
     snprintf(name, sizeof name, "%.50s", readable(rec) ? win_str(rec + 4) : "");
     if (!*name) return;
     if (now)
-        season_change_news("The %s is played again in %d.", name, s);
+        season_change_news("The %s is played again in the %d/%02d season.", name, s, (s + 1) % 100);
     else if (season_new_cup_next(c->file, s) == SEASON_CUPS_NEVER)
         season_change_news("The %s is no longer played.", name);
     else
-        season_change_news("The %s is not played in %d.", name, s);
+        season_change_news("The %s is not played in the %d/%02d season.", name, s, (s + 1) % 100);
 }
 
 const SeasonRuleKind season_kind_new_cups = {"new_cups", NULL, NULL, NULL, NULL, new_before, new_after};

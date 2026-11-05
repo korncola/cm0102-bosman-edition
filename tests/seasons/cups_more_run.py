@@ -66,6 +66,14 @@ the season. The check reads the loaded program's report and log.
     n2008-load  September 2008, Norway, changing rules on: saved after 150 days (December 2008, after the module
                 made the Norwegian Super Cup of March 2009 on its vtable copy); after the load the cup is played
                 and has a winner
+    a2004-load-wait  item 145: 2004/05 (the original data moved to 2004), Northern Ireland and the Republic of
+                Ireland, changing rules on: saved after 100 days (October 2004, before the draw day of the
+                All-Ireland cup, 13 December); after the load the groups and the final are drawn and played
+    a2004-load-mid  the same, saved after 262 days (late March 2005, between group match days); after the load the
+                groups end, the final is drawn and the cup has a winner
+    a2007-load-gap  2007/08 (the original data moved to 2007), the same nations: saved after 400 days (August 2008,
+                in 2008/09, which has no edition); after the load the cup comes back in 2009/10 with 9 clubs in 3
+                groups and has a winner
 
 A run starts a game only when fewer than 15 games run on this Mac and the load of the last minute is below 24 (Max's
 limit), and its game stops when the script stops (SIGTERM, SIGINT, SIGHUP). Run at most three of these scripts at
@@ -221,12 +229,14 @@ SETANTA = {2004: (6, (2, 2), 2, 2, 1, None), 2005: (8, (4, 4), 2, 4, 2, 2), 2006
 
 
 def setanta_clubs(log, season):
-    """The clubs of an edition from the last "club" lines of its pick: {name: division (1, 2 or 0)}."""
-    out = {}
-    for m in re.finditer(rf"new cups: new_all_ireland {season} club (\d+): (.+) \(division (\d), last place", log):
+    """The clubs of an edition from the last "club" lines of its pick (the pick of the draw day): a list of (name,
+    division 1, 2 or 0, last place) in the order of the list."""
+    out = []
+    for m in re.finditer(rf"new cups: new_all_ireland {season} club (\d+): (.+) \(division (\d), last place "
+                         rf"(-?\d+)\)", log):
         if m.group(1) == "1":
-            out = {}
-        out[m.group(2)] = int(m.group(3))
+            out = []
+        out.append((m.group(2), int(m.group(3)), int(m.group(4))))
     return out
 
 
@@ -236,11 +246,18 @@ def check_a2003(lines, log, fails, name):
     for season, (clubs, least, groups, ko, ko_rounds, mix) in SETANTA.items():
         need_groups(lines, "new_all_ireland", season, (groups + 1, groups, clubs, ko, ko_rounds), fails, name)
         need_winner(lines, "new_all_ireland", season, fails, name)
-        picked = setanta_clubs(log, season)
+        listed = setanta_clubs(log, season)
+        picked = {c: d for c, d, _ in listed}
         per = [sum(1 for d in picked.values() if d == k) for k in (1, 2)]
         if len(picked) != clubs or per[0] < least[0] or per[1] < least[1]:
             fails.append(f"{name}: new_all_ireland {season}: {len(picked)} clubs, {per} of the two leagues, expected "
                          f"{clubs} with at least {least}")
+        # The clubs taken by place come first in the list, league by league: places 1 to n of each league.
+        for k in (1, 2):
+            places = [p for _, d, p in listed if d == k][:least[k - 1]]
+            if places != list(range(1, least[k - 1] + 1)):
+                fails.append(f"{name}: new_all_ireland {season}: the places of league {k} are {places}, expected 1 to "
+                             f"{least[k - 1]}")
         drawn = re.findall(rf"cup groups: new_all_ireland {season}/\d\d group (\d+): (.+)", log)
         if len(drawn) != groups:
             fails.append(f"{name}: new_all_ireland {season}: {len(drawn)} groups drawn, expected {groups}")
@@ -358,7 +375,36 @@ def check_n2008_load(lines, log, fails, name):
 
 # name: (start year, database folder, nations, days to the save, season of the end report, a log line of the first
 # program that shows the save is inside the competition, check of the loaded program)
+def check_a2004_wait(lines, log, fails, name):
+    need_log(log, "cup groups: new_all_ireland 2004/05: 6 clubs drawn in 2 groups", fails, name)
+    need_log(log, "cup groups: new_all_ireland 2004/05: knockout of 2 clubs drawn", fails, name)
+    need_groups(lines, "new_all_ireland", 2004, (3, 2, 6, 2, 1), fails, name)
+    need_winner(lines, "new_all_ireland", 2004, fails, name)
+
+
+def check_a2004_mid(lines, log, fails, name):
+    need_log(log, "cup groups: new_all_ireland 2004/05: knockout of 2 clubs drawn", fails, name)
+    need_groups(lines, "new_all_ireland", 2004, (3, 2, 6, 2, 1), fails, name)
+    need_winner(lines, "new_all_ireland", 2004, fails, name)
+
+
+def check_a2007_gap(lines, log, fails, name):
+    need_log(log, "new cups: new_all_ireland resumes in 2009", fails, name)
+    need_log(log, "cup groups: new_all_ireland 2009/10: 9 clubs drawn in 3 groups", fails, name)
+    need_groups(lines, "new_all_ireland", 2009, (4, 3, 9, 4, 2), fails, name)
+    need_winner(lines, "new_all_ireland", 2009, fails, name)
+
+
+IRELANDS = ["Northern Ireland", "Republic of Ireland"]
 LOAD_RUNS = {
+    # Item 145, the All-Ireland cup: saved before its draw day (October 2004, the draw on 13 December 2004), in the
+    # middle of its groups (late March 2005) and in the season with no edition (August 2008).
+    "a2004-load-wait": (2004, None, IRELANDS, 100, 2004, "new cups: new_all_ireland 2004 with 6 clubs",
+                        check_a2004_wait),
+    "a2004-load-mid": (2004, None, IRELANDS, 262, 2004,
+                       "cup groups: new_all_ireland 2004/05: 6 clubs drawn in 2 groups", check_a2004_mid),
+    "a2007-load-gap": (2007, None, IRELANDS, 400, 2009, "new cups: new_all_ireland is not held in 2008",
+                       check_a2007_gap),
     "e2016-load": (2016, os.path.join(DB, "October 2016"), ["England"], 100, 2016,
                    "cup groups: eng_auto_cup 2016/17: 56 clubs drawn in 16 groups", check_e2016_load),
     "i2023-load": (2023, os.path.join(DB, "October 2023"), ["Italy"], 189, 2023,

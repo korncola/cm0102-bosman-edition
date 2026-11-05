@@ -378,6 +378,18 @@ static void groups_failed(uint32_t cup, const SeasonCupGroups *g, int group, int
 
 static void draw_groups(uint32_t cup, const SeasonCupGroups *g)
 {
+    /* Item 145: a new cup (the All-Ireland cup) picks its clubs again on the day of the draw, as real life did. At the
+     * season change the module makes it in the entry of the Republic of Ireland (20), before the Northern Irish
+     * Premier Division records its final places: NirPrm::start_new_season 0x78ee30 calls the chain 0x689c20 (vtable
+     * +0xb0), whose League::record_final_positions 0x68aa30 writes club +0x5b and +0x5f (0x68aa5d), in a later
+     * entry. So the pick of the season change saw the Irish League of the season before, with no last division. */
+    const char *file = season_change_file(cup);
+    if (file && !strncmp(file, "new_", 4)) {
+        Cpu saved = cpu;
+        season_new_cups_teams(cup, file);
+        if (rt_unwinding) return;
+        cpu = saved;
+    }
     uint32_t list = rd32(g_mem, cup + CUP_TEAM_LIST);
     int count = (int16_t)rd16(g_mem, cup + CUP_TEAMS);
     int from = g->base_rounds > 0 ? base_slots(cup, (int16_t)rd16(g_mem, cup + CUP_ROUND_COUNT)) : 0;
@@ -701,7 +713,8 @@ static int before_draw(uint32_t cup, const SeasonCupGroups *g)
     static const int before[12] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
     int year = (int16_t)rd16(g_mem, cup + CUP_YEAR) + g->draw[2];
     int m = g->draw[1] < 0 ? 0 : g->draw[1] > 11 ? 11 : g->draw[1];
-    int draw = year * 400 + before[m] + g->draw[0] - 1;
+    int leap = m > 1 && year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);   /* the game counts 29 February */
+    int draw = year * 400 + before[m] + leap + g->draw[0] - 1;
     int today = (int16_t)rd16(g_mem, GAME_DATE + 2) * 400 + (int16_t)rd16(g_mem, GAME_DATE);
     return today < draw;
 }
