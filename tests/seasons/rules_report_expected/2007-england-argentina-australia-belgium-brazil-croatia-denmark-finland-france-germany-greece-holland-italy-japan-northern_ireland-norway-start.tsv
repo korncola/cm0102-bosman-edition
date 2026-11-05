@@ -9,7 +9,6 @@
 2007	clubs	asia_nations (AFC Asian Cup), row int-continental-75: game 4, table 16 (16)
 2007	clubs	bel_second (Belgian Second Division), row hol-bel-87: game 18, table 19 (19)
 2007	clubs	bel_third (Belgian Third Division), row hol-bel-88: game 16, table 31 (31 (A 16, B 15))
-2007	clubs	bra_champ_cup (Copa dos Campeões), row bra-196: game 3, table 0 (0)
 2007	clubs	bra_cup (Copa do Brasil), row bra-142: game 71, table 64 (64)
 2007	clubs	bra_nat_third (Campeonato Brasileiro Série C), row bra-88: game 7, table 63 (63)
 2007	clubs	bra_reg_bahia (Campeonato Baiano), row bra-439: game 10, table 12 (12)
@@ -72,9 +71,7 @@
 2007	no_row	record_utils ('B' International): no table row
 2007	no_row	record_utils (Reserve): no table row
 2007	no_row	record_utils (Under 21 International): no table row
-2007	not_held	bra_champ_cup (Copa dos Campeões), row bra-196: the game holds 2007, the table says not held
 2007	not_held	cro_a2b (Druga HNL South), row gre-pol-cro-385: the game holds 2007, the table says not held
-2007	not_held	nir_charity (Charity Shield), row wal-nir-irl-165: the game holds 2007, the table says not held
 2007	not_held	olympics (Football at the Summer Olympics), row int-world-83: the game holds 2008, the table says not held
 2007	not_held	wc_europe_league (FIFA World Cup qualification (UEFA)), row int-world-75: the game holds 2008, the table says not held
 2007	not_in_game	arg-usa-196 argentina_rules 'Argentina' (Argentina)
@@ -86,7 +83,6 @@
 2007	not_in_game	bra-7 brazil_rules 'Brazil' (Brazil)
 2007	not_in_game	bra-979 new 'Campeonato Brasiliense' (Brazil)
 2007	not_in_game	eng-337 eng_fa_trophy 'FA Trophy' (England)
-2007	not_in_game	eng-339 new 'Conference League Cup (Setanta Shield)' (England)
 2007	not_in_game	eng-92 eng_conf 'Conference Premier' (England)
 2007	not_in_game	fra-59 fra_cfa 'CFA' (France)
 2007	not_in_game	fra-60 fra_lower 'CFA 2' (France)

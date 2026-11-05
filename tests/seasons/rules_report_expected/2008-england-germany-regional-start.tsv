@@ -21,10 +21,8 @@
 2008	no_row	record_utils ('B' International): no table row
 2008	no_row	record_utils (Reserve): no table row
 2008	no_row	record_utils (Under 21 International): no table row
-2008	not_held	ger_lge_cup (DFL-Ligapokal), row ger-102: the game holds 2008, the table says not held
 2008	not_in_game	eng-102 eng_conf 'Conference Premier' (England)
 2008	not_in_game	eng-343 eng_fa_trophy 'FA Trophy' (England)
-2008	not_in_game	eng-345 new 'Conference League Cup (Setanta Shield)' (England)
 2008	not_in_game	ger-103 new 'T-Home Supercup' (Germany)
 2008	not_in_game	uefa-57 uefa_seeding 'UEFA access list and seeding' (UEFA)
 2008	playoffs	ger_first (Bundesliga), row ger-92: game 0 up and 0 down play-off places, table 0 and 1 ('16th v 2. Bundesliga 3rd, two legs, away goals rule, extra time and penalties')

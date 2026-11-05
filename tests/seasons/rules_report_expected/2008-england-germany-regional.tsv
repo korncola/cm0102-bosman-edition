@@ -18,10 +18,8 @@
 2008	no_row	record_utils ('B' International): no table row
 2008	no_row	record_utils (Reserve): no table row
 2008	no_row	record_utils (Under 21 International): no table row
-2008	not_held	ger_lge_cup (DFL-Ligapokal), row ger-102: the game holds 2008, the table says not held
 2008	not_in_game	eng-102 eng_conf 'Conference Premier' (England)
 2008	not_in_game	eng-343 eng_fa_trophy 'FA Trophy' (England)
-2008	not_in_game	eng-345 new 'Conference League Cup (Setanta Shield)' (England)
 2008	not_in_game	ger-103 new 'T-Home Supercup' (Germany)
 2008	not_in_game	uefa-57 uefa_seeding 'UEFA access list and seeding' (UEFA)
 2008	playoffs	ger_first (Bundesliga), row ger-92: game 0 up and 0 down play-off places, table 0 and 1 ('16th v 2. Bundesliga 3rd, two legs, away goals rule, extra time and penalties')
@@ -46,6 +44,7 @@
 2009	down	eng_third (Football League Two), row eng-111: game 1 (+0 play-off places), table 2 (2)
 2009	down	ger_second (2. Bundesliga), row ger-106: game 3 (+0 play-off places), table 2 (2)
 2009	format	uefa_cup, row uefa-69: game 40 clubs in the group stage and 32 in the knockout round after it, table 48 and 32
+2009	name	new_conf_cup (Conference League Cup (Setanta Shield)), row eng-351: game 'Conference League Cup (Setanta Shield)', table 'Conference League Cup'
 2009	name	uefa_cup (UEFA Cup), row uefa-69: game 'UEFA Cup', table 'UEFA Europa League'
 2009	no_row	friendly (Friendly): no table row
 2009	no_row	record_utils ('B' International): no table row
@@ -53,8 +52,8 @@
 2009	no_row	record_utils (Under 21 International): no table row
 2009	not_held	euro_champ_qual (UEFA European Championship qualifying), row int-continental-90: the game holds 2010, the table says not held
 2009	not_held	fifa_confed (FIFA Confederations Cup), row int-world-106: the game holds 2009, the table says not held
-2009	not_held	ger_lge_cup (DFL-Ligapokal), row ger-115: the game holds 2009, the table says not held
 2009	not_held	intertoto_cup (UEFA Intertoto Cup), row uefa-71: the game holds 2009, the table says not held
+2009	not_held	new_conf_cup (Conference League Cup (Setanta Shield)), row eng-351: the game holds 2009, the table says not held
 2009	not_held	oceania_nations (OFC Nations Cup), row int-continental-98: the game holds 2010, the table says not held
 2009	not_held	olympics (Football at the Summer Olympics), row int-world-107: the game holds 2008, the table says not held
 2009	not_in_game	eng-112 eng_conf 'Conference Premier' (England)

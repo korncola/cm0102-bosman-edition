@@ -38,7 +38,7 @@
 2002	clubs	nir_first (Irish League First Division), row wal-nir-irl-36: game 10, table 8 (8)
 2002	clubs	nir_lge_cup (Irish League Cup), row wal-nir-irl-39: game 5, table 20 (20)
 2002	clubs	nir_prm (Irish League Premier Division), row wal-nir-irl-35: game 10, table 12 (12)
-2002	clubs	oceania_nations (OFC Nations Cup), row int-continental-21: game 0, table 8 (8)
+2002	clubs	oceania_nations (OFC Nations Cup), row int-continental-21: game 4, table 8 (8)
 2002	down	arg_prm (Primera División), row arg-usa-2: game 0 (+0 play-off places), table 2 (2 (19th and 20th of the three-season average table, promedios))
 2002	down	arg_second (Primera B Nacional), row arg-usa-29: game 0 (+0 play-off places), table 2 (2 (by affiliation relegation tables; infobox))
 2002	down	bra_nat_second (Campeonato Brasileiro Série B), row bra-56: game 4 (+0 play-off places), table 2 (2)
@@ -56,8 +56,6 @@
 2002	no_row	record_utils (Reserve): no table row
 2002	no_row	record_utils (Under 21 International): no table row
 2002	not_held	bra_champ_cup (Copa dos Campeões), row bra-191: the game holds 2002, the table says not held
-2002	not_held	gre_super (Greek Super Cup), row gre-pol-cro-83: the game holds 2002, the table says not held
-2002	not_held	nir_charity (Charity Shield), row wal-nir-irl-40: the game holds 2002, the table says not held
 2002	not_in_game	arg-usa-191 argentina_rules 'Argentina' (Argentina)
 2002	not_in_game	aus-jap-kor-110 japan_rules 'n/a' (Japan)
 2002	not_in_game	aus-jap-kor-2 australia_rules 'n/a' (Australia)

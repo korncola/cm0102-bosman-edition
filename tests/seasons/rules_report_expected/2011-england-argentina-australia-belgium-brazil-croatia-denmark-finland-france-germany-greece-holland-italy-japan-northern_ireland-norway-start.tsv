@@ -11,7 +11,6 @@
 2011	clubs	asia_club_champ (AFC Champions League), row club-world-203: game 16, table 32 (32)
 2011	clubs	bel_first (Belgian Pro League), row hol-bel-138: game 18, table 16 (16)
 2011	clubs	bel_third (Belgian Third Division), row hol-bel-140: game 16, table 36 (36 (A 18, B 18))
-2011	clubs	bra_champ_cup (Copa dos Campeões), row bra-200: game 3, table 0 (0)
 2011	clubs	bra_cup (Copa do Brasil), row bra-146: game 71, table 64 (64)
 2011	clubs	bra_nat_third (Campeonato Brasileiro Série C), row bra-92: game 7, table 20 (20)
 2011	clubs	bra_reg_bahia (Campeonato Baiano), row bra-443: game 10, table 12 (12)
@@ -76,11 +75,7 @@
 2011	no_row	record_utils ('B' International): no table row
 2011	no_row	record_utils (Reserve): no table row
 2011	no_row	record_utils (Under 21 International): no table row
-2011	not_held	bra_champ_cup (Copa dos Campeões), row bra-200: the game holds 2011, the table says not held
 2011	not_held	cro_a2b (Druga HNL South), row gre-pol-cro-389: the game holds 2011, the table says not held
-2011	not_held	ger_lge_cup (DFL-Ligapokal), row ger-141: the game holds 2011, the table says not held
-2011	not_held	gre_super (Greek Super Cup), row gre-pol-cro-92: the game holds 2011, the table says not held
-2011	not_held	nir_charity (Charity Shield), row wal-nir-irl-265: the game holds 2011, the table says not held
 2011	not_held	olympics (Football at the Summer Olympics), row int-world-131: the game holds 2012, the table says not held
 2011	not_held	wc_europe_league (FIFA World Cup qualification (UEFA)), row int-world-123: the game holds 2012, the table says not held
 2011	not_in_game	arg-usa-200 argentina_rules 'Argentina' (Argentina)

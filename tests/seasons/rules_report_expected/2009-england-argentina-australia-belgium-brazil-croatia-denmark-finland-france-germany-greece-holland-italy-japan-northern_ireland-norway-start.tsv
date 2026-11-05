@@ -13,7 +13,6 @@
 2009	clubs	bel_first (Belgian Pro League), row hol-bel-112: game 18, table 16 (16)
 2009	clubs	bel_second (Belgian Second Division), row hol-bel-113: game 18, table 19 (19)
 2009	clubs	bel_third (Belgian Third Division), row hol-bel-114: game 16, table 37 (37 (A 19, B 18))
-2009	clubs	bra_champ_cup (Copa dos Campeões), row bra-198: game 3, table 0 (0)
 2009	clubs	bra_cup (Copa do Brasil), row bra-144: game 71, table 64 (64)
 2009	clubs	bra_nat_third (Campeonato Brasileiro Série C), row bra-90: game 7, table 20 (20)
 2009	clubs	bra_reg_bahia (Campeonato Baiano), row bra-441: game 10, table 12 (12)
@@ -49,7 +48,7 @@
 2009	clubs	nir_lge_cup (Irish League Cup), row wal-nir-irl-214: game 5, table 26 (26)
 2009	clubs	nir_prm (IFA Premiership), row wal-nir-irl-210: game 10, table 12 (12)
 2009	clubs	nor_prm (Tippeligaen), row nor-fin-82: game 14, table 16 (16)
-2009	clubs	uefa_cup (UEFA Europa League), row uefa-69: game 159, table 192 (192 (159 entered + 33 from the Champions League); 48 in the group stage (+8 Cham)
+2009	clubs	uefa_cup (UEFA Europa League), row uefa-69: game 158, table 192 (192 (159 entered + 33 from the Champions League); 48 in the group stage (+8 Cham)
 2009	clubs	wc_african_cup (FIFA World Cup qualification (CAF)), row int-world-102: game 50, table 20 (20)
 2009	clubs	wc_asia_league (FIFA World Cup qualification (AFC)), row int-world-103: game 4, table 2 (2)
 2009	clubs	wc_concacaf_cup (FIFA World Cup qualification (CONCACAF)), row int-world-101: game 24, table 6 (6)
@@ -77,13 +76,9 @@
 2009	no_row	record_utils ('B' International): no table row
 2009	no_row	record_utils (Reserve): no table row
 2009	no_row	record_utils (Under 21 International): no table row
-2009	not_held	bra_champ_cup (Copa dos Campeões), row bra-198: the game holds 2009, the table says not held
 2009	not_held	cro_a2b (Druga HNL South), row gre-pol-cro-387: the game holds 2009, the table says not held
 2009	not_held	euro_champ_qual (UEFA European Championship qualifying), row int-continental-90: the game holds 2010, the table says not held
-2009	not_held	ger_lge_cup (DFL-Ligapokal), row ger-115: the game holds 2009, the table says not held
-2009	not_held	gre_super (Greek Super Cup), row gre-pol-cro-90: the game holds 2009, the table says not held
 2009	not_held	intertoto_cup (UEFA Intertoto Cup), row uefa-71: the game holds 2008, the table says not held
-2009	not_held	nir_charity (Charity Shield), row wal-nir-irl-215: the game holds 2009, the table says not held
 2009	not_in_game	arg-usa-198 argentina_rules 'Argentina' (Argentina)
 2009	not_in_game	aus-jap-kor-117 japan_rules 'n/a' (Japan)
 2009	not_in_game	aus-jap-kor-9 australia_rules 'n/a' (Australia)
@@ -100,7 +95,6 @@
 2009	not_in_game	ita-143 ita_ser_c2b 'Lega Pro Seconda Divisione girone B' (Italy)
 2009	not_in_game	ita-144 ita_ser_c2c 'Lega Pro Seconda Divisione girone C' (Italy)
 2009	not_in_game	ita-153 new 'Supercoppa di Lega di Seconda Divisione (Serie C2 to 2008)' (Italy)
-2009	not_in_game	nor-fin-85 new 'Superfinalen' (Norway)
 2009	not_in_game	nor-fin-90 new 'Liigacup' (Finland)
 2009	not_in_game	uefa-65 uefa_seeding 'UEFA access list and seeding' (UEFA)
 2009	playoffs	arg_prm (Primera División), row arg-usa-9: game 0 up and 0 down play-off places, table 0 and 2 ('17th and 18th of the average table play two-leg promotion/relegation ties (promo')
