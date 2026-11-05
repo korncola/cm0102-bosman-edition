@@ -15,3 +15,4 @@ rename	2022	09-01	Turkey	Türkiye	int-world-253
 confed	2002	09-01	Kazakhstan	UEFA	UEFA member from April 2002 (UEFA Congress, Stockholm, 25 April 2002)
 confed	2006	02-01	Australia	AFC	int-world-49, AFC member from 1 January 2006 (season_intl.c AUSTRALIA_TO_ASIA); due from 1 February, as the move waits for the first league table update day from 1 January (intl_entry)
 confed	2016	09-01	Kosovo	UEFA	UEFA Congress of 3 May 2016 (season_intl_uefa_from)
+confed	1991	09-01	Martinique	CONCACAF	CONCACAF associate member from 1991, full member from 2013, not in FIFA (season_intl_concacaf_from, open item 141); the databases from October 2016 hold it with no continent
