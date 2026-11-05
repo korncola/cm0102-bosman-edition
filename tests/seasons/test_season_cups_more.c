@@ -144,7 +144,7 @@ static void new_cups(void)
     CHECK(season_new_cup_held("new_all_ireland", 2010) == 1, "Setanta Cup 2010/11");
     CHECK(season_new_cup_held("new_all_ireland", 2014) == 0, "Setanta Cup 2014/15");
     f = season_new_cup("new_all_ireland", 2013);
-    CHECK(f && f->clubs == 8, "Setanta Cup 2013/14: 8 clubs");
+    CHECK(f && f->clubs == 8 && f->extra == NEW_CUP_PAIRED, "Setanta Cup 2013/14: 8 clubs, paired first round");
     CHECK(season_new_cup_held("unknown_cup", 2010) == -1, "no row");
 }
 
@@ -224,7 +224,7 @@ static void setanta(void)
         {2007, 1, 8, 4, 4, 0, 2, 4, 2, 4, 1, 26, 1, 1, 17, 0, 10, 4},
         {2008, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {2009, 1, 9, 4, 4, NEW_CUP_HOLDERS, 3, 3, 1, 4, 0, 29, 7, 0, 28, 6, 15, 4},
-        {2010, 1, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 4},
+        {2010, 1, 12, 0, 0, NEW_CUP_PAIRED, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 4},
     };
     for (size_t i = 0; i < sizeof want / sizeof want[0]; i++) {
         int e = want[i].edition;
