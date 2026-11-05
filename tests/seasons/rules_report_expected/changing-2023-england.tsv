@@ -88,7 +88,7 @@
 2026	clubs	african_nations (Africa Cup of Nations), row int-continental-282: game 4, table 24 (24)
 2026	clubs	asia_nations (AFC Asian Cup), row int-continental-284: game 0/4, table 24 (24)
 2026	clubs	euro_champ_qual (UEFA European Championship qualifying), row int-continental-277: game 6, table 54 (54 (scheduled))
-2026	clubs	new_concacaf_gold_cup (CONCACAF Gold Cup), row int-continental-280: game 4, table 16 (16)
+2026	clubs	new_concacaf_gold_cup (CONCACAF Gold Cup), row int-continental-280: game 0/4, table 16 (16)
 2026	clubs	new_concacaf_nations_league (CONCACAF Nations League), row int-continental-281: game 4, table 41 (41)
 2026	clubs	new_conference_league (UEFA Conference League), row uefa-206: game 139/164, table 165 (165 (111 entered + 54 from the Champions League and Europa League); 36 in the le)
 2026	clubs	new_uefa_nations_league (2024-25 UEFA Nations League (C/D play-offs)), row int-continental-278: game 4, table 54 (54)
