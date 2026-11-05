@@ -412,8 +412,9 @@ static const struct { const char *list, *data; } NAME_EXCEPTIONS[] = {
      * in 3.9.68) as it played the 2014 season, as Galway F.C., before it bought back its name for 2015. Same club:
      * en.wikipedia.org/wiki/Galway_United_F.C. ("initially playing as Galway F.C."; founded 1937) and
      * galwayunitedfc.ie/club-history (read 5 November 2026). A start in 2013/14 makes the slice 15b record Galway
-     * F.C., which the record step finds first. The rows act where no record exists: a 2014/15 start, and a game that
-     * plays into 2013/14. */
+     * F.C., which the record step finds first. The rows act where no record exists: a 2014/15 start, and a 2013/14
+     * start with no record (its source database missing). The club moves run only at a new game, so a game that
+     * starts in 2013/14 keeps the record club in 2014/15. */
     {"Galway", "Galway United"},
     {"Galway FC", "Galway United"},
 };
