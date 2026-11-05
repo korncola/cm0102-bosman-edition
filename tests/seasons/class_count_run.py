@@ -105,13 +105,20 @@ def run_season(program, game, work):
 # counts are ones the classes take: IrePrm 10 or 12, IreFirst 9 to 12.
 DATA_3965 = "/Users/max/Projects/cm0102/data-3965"
 IRISH = [(2008, None, {"ire_prm": 12, "ire_first": 10}), (2010, None, None), (2017, None, None),
-         (2018, None, None), (2012, DATA_3965, None)]
+         (2018, None, None), (2013, None, None), (2014, None, None), (2012, DATA_3965, None)]
 # The count fills that each start logs (division, places, missing clubs): none, as the data hold every listed club.
 FILLS = {}
 TAKES = {"ire_prm": {10, 12}, "ire_first": {9, 10, 11, 12}}
 # Item 123b: the list clubs that each start finds by the joined initials (list name, database name and id), found
 # by the rule of season_clubs.c over the lists of these seasons (model cmp2.py mode 5 in run-logs/0.6.2-s123b).
 BY_INITIALS = {
+    2013: {("Irish Premier Division", "Bray Wanderers", "Bray Wanderers A.F.C. (1855)"),
+           ("Italian Serie A", "A.C. Milan", "AC Milan (7369)"),
+           ("Spanish Second Division B1", "Zamora CF", "Zamora C.F. (13080)"),
+           ("Turkish 2. Division Category A", "Kahramanmarasspor A.S.", "Kahramanmarasspor (5704)")},
+    2014: {("Irish Premier Division", "Bray Wanderers", "Bray Wanderers A.F.C. (1855)"),
+           ("Italian Serie A", "A.C. Milan", "AC Milan (7369)"),
+           ("Greek Second Division Group 2", "Paniliakos", "I.S. Paniliakos (8565)")},
     2008: {("Italian Serie A", "S.S. Lazio", "Lazio (6411)"), ("Italian Serie A", "S.S.C. Napoli", "Napoli (7752)"),
            ("Italian Serie A", "Bologna F.C. 1909", "Bologna 1909 (1728)"),
            ("Irish Premier Division", "Bray Wanderers", "Bray Wanderers A.F.C. (1855)")},
@@ -135,6 +142,8 @@ BY_INITIALS = {
 }
 # The list names that each start finds by the exception rows of season_clubs.c (NAME_EXCEPTIONS).
 BY_EXCEPTION = {
+    # 2013: the list's "Galway" (no id) is the slice 15b record Galway F.C. of this load, not an exception
+    2014: {("Irish Premier Division", "Galway FC", "Galway United (4287)")},
     2010: {("Irish First Division", "Cork City FORAS Co-op", "Cork City (2741)")},
     2017: {("Irish Premier Division", "St. Patrick's Athletic", "Saint Patrick's Athletic (11003)")},
     2018: {("Irish Premier Division", "Bohemian Football Club Dublin", "Bohemian F.C. (1710)"),
