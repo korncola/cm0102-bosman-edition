@@ -454,10 +454,12 @@ void season_national_after_pick(uint32_t nation, int slot)
  * call of select_squad, so an under-21 squad picked short (or before a load) would play short. After the
  * original, each national side of the fixture gets the same treatment as after a pick (u21_without_seniors). */
 void o_0076bab0(void);
+void squad_log_fixture(uint32_t fixture, uint32_t teams);
 
 RT_WRAP(0076bab0, u21_squads_for_fixture)
 {
     uint32_t fixture = rt_arg(0);
+    squad_log_fixture(fixture, cpu.ecx);    /* squad_log.c (test log, item 143) */
     o_0076bab0();
     if (rt_unwinding || !readable(fixture) || !u21_rule_on()) return;
     Cpu saved = cpu;

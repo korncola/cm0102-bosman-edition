@@ -201,6 +201,24 @@ def differing_share(a, b, box=None, tol=0):
 
 
 # The runs of the same-save check: a name and the option lines of settings.txt (after the mode).
+# The groups of original_faults.c. The group callups can act in the first days of a game (open item 143), so the
+# runs original-faults-keep keep only the others.
+ORIGINAL_FAULT_GROUPS = ["managers", "money", "age", "olympics", "ire_super", "nsl", "holiday", "callups"]
+KEEP_IN_RUNS = "keep:" + ",".join(g for g in ORIGINAL_FAULT_GROUPS if g != "callups")
+
+
+def with_set_keep(env):
+    """A run's environment with RECOMP_ORIGINAL_FAULTS of the whole set (keep or keep:<groups>) added to the run's own
+    keep list, so that a set with keep:callups keeps that group in every run, original-faults-keep too."""
+    outer, inner = os.environ.get("RECOMP_ORIGINAL_FAULTS", ""), env.get("RECOMP_ORIGINAL_FAULTS")
+    if inner is None or not (outer == "keep" or outer.startswith("keep:")):
+        return env
+    if "keep" in (outer, inner):
+        return dict(env, RECOMP_ORIGINAL_FAULTS="keep")
+    groups = [g for g in (outer[5:] + "," + inner[5:]).split(",") if g]
+    return dict(env, RECOMP_ORIGINAL_FAULTS="keep:" + ",".join(dict.fromkeys(groups)))
+
+
 SAME_SAVE_RUNS = [
     ("normal", {"faster_days": "off"}),
     ("again", {"faster_days": "off"}),
@@ -263,8 +281,12 @@ SAME_SAVE_RUNS = [
     # outside the 14 days of each saved game), and for a club on holiday with "Reject all offers" or "below asking
     # price" (open item 132; these runs go on holiday with every setting off): in these runs none of that happens,
     # so with their test switch off the save is that of normal. A saved game whose days pass a month change keeps
-    # only the other groups (FAULTS_ACT).
-    ("original-faults-keep", {"faster_days": "off", "_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
+    # only the other groups (FAULTS_ACT). The senior call-ups (group callups, open item 143) act at a senior pick
+    # that meets a player abroad, which can come in the first days of a game (in a game with every league,
+    # Argentina's pick on 14.7.01 refuses 60 players with the original's rule), so this run keeps every other group
+    # (KEEP_IN_RUNS). Its proof is a set with RECOMP_ORIGINAL_FAULTS=keep:callups for every run against --ref-build
+    # (with_set_keep), and tests/seasons/callups_run.py.
+    ("original-faults-keep", {"faster_days": "off", "_env": {"RECOMP_ORIGINAL_FAULTS": KEEP_IN_RUNS}}),
     # The merged parts of a save (0.6.2 slice 13, save_parts.c) change only how the temporary files go into the
     # save: with their test switch off the save holds the same files as normal.
     ("save-parts-keep", {"faster_days": "off", "_env": {"RECOMP_SAVE_PARTS": "keep"}}),
@@ -346,7 +368,7 @@ MATCH_RUNS = [
     ("box-fixes-off", {"_env": {"RECOMP_BOX_FIXES": "off"}}),
     ("host-loops-off", {"_env": {"RECOMP_QSORT": "original", "RECOMP_HOT": "original", "RECOMP_FTOL": "original",
                                  "RECOMP_CALL_CACHE": "0"}}),
-    ("original-faults-keep", {"_env": {"RECOMP_ORIGINAL_FAULTS": "keep"}}),
+    ("original-faults-keep", {"_env": {"RECOMP_ORIGINAL_FAULTS": KEEP_IN_RUNS}}),
     ("save-parts-keep", {"_env": {"RECOMP_SAVE_PARTS": "keep"}}),
     ("files-off", {"_env": {"RECOMP_FOLDER_CACHE": "0", "RECOMP_KEEP_FILES": "0"}}),
 ]
@@ -453,7 +475,7 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
 
     def play(name, options, work):
         steps_of_run = options.get("_steps", steps)        # a run may have its own steps and environment
-        extra_env = options.get("_env", {})
+        extra_env = with_set_keep(options.get("_env", {}))
         run_program = options.get("_program", program)     # and its own build (--ref-build)
         user_sub = options.get("_user_sub", "")              # and a folder between the run and its user folder
         options = {k: v for k, v in options.items() if k not in ("_steps", "_env", "_program", "_user_sub", "_against")}

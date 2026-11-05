@@ -1,7 +1,8 @@
 """Faults of the original that long games reach (0.6.2 slice 11, Q23, Q24, Q27, open item 102;
 src/recomp_rt/win/original_faults.c). The fixes act in every game, the base game too. The test switch
 RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age", "keep:olympics",
-"keep:ire_super", "keep:nsl" or "keep:holiday" (or a list: "keep:money,age") turns off one group or more.
+"keep:ire_super", "keep:nsl", "keep:holiday" or "keep:callups" (or a list: "keep:money,age") turns off one group
+or more.
 
 National managers (fault 26, Q23). `club_can_be_managed` 0x544820 takes a senior national team (club id from club
 count - 2 x nation count to club count - nation count, 0x544835..0x544857) only when its nation had more than 150
@@ -128,6 +129,29 @@ offers" an offer for the club can reach them only when a release clause or the r
 Every player of a game has an asking price: none of 6,860 at the start, 6,842 a year later and 10,679 in a game of
 2026 has 0 (tests/seasons/holiday_offers_run.py, RECOMP_TEST_LIST=census), so listed and unlisted players meet the
 same rule.
+
+Senior call-ups (open item 143). `NationalTeams::select_squad` 0x76c120 picks a squad from the nation's pool. For a
+candidate at a club whose nation is on another continent than his own (club +0x53, nation +0x71; 0x76cc3d..0x76cc59
+and 0x76cc9f..0x76ccbd) it applies a release rule:
+- a friendly (fixture +0 the key at 0x9cf668): refused when his club's reputation (+0x80) x 0.8 (0x9689b0) is over
+  the opponent's (0x76ccdd..0x76cd3e)
+- a 'B' or Under 21 International (0x9cf794, 0x9cf798): always refused (0x76ccc3)
+- another record (qualifiers, finals): refused when his division's reputation (club +0x57, +0x69) x 0.7 (0x968e40)
+  is over the competition's (0x76cc61..0x76cc9a)
+A nation with its players abroad and weak opponents then picks almost nobody. In a game with every league (14.7.01,
+the picks for 30.9.01) Mali refused 35 of 38 players and picked 1, Senegal 85 of 103 (7 picked), Guinea 45 of 49 (4),
+Cape Verde Islands 27 of 31 (1). A pick sets the window end (record +0x3a) to its fixture's date. The next fixture
+is checked 14 days before it, and it keeps the squad when that check comes at most 14 days after the window end
+(0x54cdb0 at 0x76bb94, cmp 0xe at 0x76bb9e; the window moves on at 0x76bbe6..0x76bc09). So a fixture at most 28 days
+after the last one keeps a short squad, and the top-up fills it with virtual players. Real clubs must release their
+players to the senior national team for the matches on the dates of the international match calendar (FIFA
+Regulations on the Status and Transfer of Players, annex 1). The game's rule has no such dates, so for the senior
+slot (0, the byte argument at [esp + 0x8e4], 0x76cd9c) the refusals at 0x76cc9a, 0x76cd0b and 0x76cd3e now let the
+candidate go on, as a player at a club of his own continent does (rt_callup_released). This holds for the human
+manager's pick too (0x784630, forced 1). The pick keeps its other gates, among them a regular player of a club with a
+competitive match on the date (NationalTeams::mark_clubs_with_fixtures 0x7775c0, the playing-time mood contract
++0x3d over -10, 0x76cd44..0x76cd73). 'B' and under-21 picks (and the Olympic squad in slot 2) keep the original's
+rule.
 """
 
 # address: (the instruction in the original, C code)
@@ -179,4 +203,7 @@ INSNS = {
     0x84AF77: ("jne 0x84b174", "if (!cc_e(F)) goto L_84b174; SYNC(); t0 = rt_holiday_refuses_loan(ebx); RT_AFTER_CALL(); "
                                "if (t0) goto L_84b162;"),
     0x8C8264: ("jne 0x8c8277", "if (!cc_e(F) && !rt_holiday_below_asking(eax, esi)) goto L_8c8277;"),
+    0x76CC9A: ("jmp 0x76cf82", "if (rt_callup_released(R8(esp + 0x8e4u))) goto L_76cd79; goto L_76cf82;"),
+    0x76CD0B: ("je 0x76cf82", "if (cc_e(F) && !rt_callup_released(R8(esp + 0x8e4u))) goto L_76cf82;"),
+    0x76CD3E: ("je 0x76cf82", "if (cc_e(F) && !rt_callup_released(R8(esp + 0x8e4u))) goto L_76cf82;"),
 }
