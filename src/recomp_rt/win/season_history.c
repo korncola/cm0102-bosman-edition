@@ -209,11 +209,23 @@ static uint32_t find_comp(const char *want)
     return 0;
 }
 
+/* The entry of database `name` for start year N: the entry of that start year, else the entry of an official data
+ * set that holds from its start on (open item 149). */
 static const SeasonHistDb *entry_for(const char *name, int N)
 {
     for (int i = 0; name && i < season_history_dbs_count; i++)
         if (!strcmp(season_history_dbs[i].db, name) && season_history_dbs[i].start == N) return &season_history_dbs[i];
+    for (int i = 0; name && i < season_history_dbs_count; i++) {
+        const SeasonHistDb *e = &season_history_dbs[i];
+        if (e->last && !strcmp(e->db, name) && e->start <= N && N <= e->last) return e;
+    }
     return NULL;
+}
+
+/* 1 when a row with the start years from and to holds for start year N (to 0: the start year of its entry). */
+static int holds(uint16_t from, uint16_t to, int N)
+{
+    return !to || (from <= N && N <= to);
 }
 
 /* A history row as a sort key: competition, label year, the four places, then its index. */
@@ -339,6 +351,7 @@ void season_history_fill(const char *name, int N)
     if (!nw || !dropped) rt_fatal("season history: no memory");
     for (uint32_t k = 0; k < n_rows; k++) {
         const SeasonHistRow *row = e && k < e->n_rows ? &e->rows[k] : extra[k - (e ? e->n_rows : 0)];
+        if (!holds(row->from, row->to, N)) continue;
         uint32_t c = find_comp(row->comp);
         if (!c) continue;
         int missing[4] = {0, 0, 0, 0};
@@ -373,7 +386,8 @@ void season_history_fill(const char *name, int N)
         for (uint32_t k = 0; k < n_dropped && !keep; k++) keep = dropped[k].comp == c && dropped[k].label == y;
         if (keep) continue;
         for (uint32_t k = 0; e && k < e->n_clears; k++)
-            if (e->clears[k].label == y && find_comp(e->clears[k].comp) == c) { freed[n_freed++] = i; break; }
+            if (e->clears[k].label == y && holds(e->clears[k].from, e->clears[k].to, N) &&
+                find_comp(e->clears[k].comp) == c) { freed[n_freed++] = i; break; }
     }
     free(dropped);
 

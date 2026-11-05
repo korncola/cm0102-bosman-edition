@@ -128,7 +128,21 @@ The nation part pointer [0xae23dc]. After the grow it is base + (count - nation 
 
 The game then treats the rows as its own: at the creation of the game it keeps only the rows of the selected nations (0x539ae0, function map; seen in the test: the Scottish rows are in memory after the load and gone at the first turn of an England-only game). A saved game holds the rows; its load does not run the fill.
 
-The researched rows do not come for a start in 2001, for a start year that is not the season of the database (the table has rows for that season only), for a Custom database. Nothing runs with `RECOMP_SEASON_CODE=off`. Since 0.6.2 (open item 74) the fill also runs without a shift plan, in every season game (a 2001 start with changing rules on included): it writes the past editions of the records that the season code adds, which no database holds (the Finalissima of 1985, 1993 and 2022; `new_comp_rows` in `season_history.c`, source Wikipedia, "Finalissima", Results). The base game adds no record and gets no row.
+The researched rows do not come for a start in 2001, for an Update Team database in another season than its own (the shift of slice 11b moves its whole history by N - D, Q344, so real rows would sit beside moved ones), or for a Custom database. Since 0.6.2 (open item 149) they come for the official data sets in every start year: see "Official data sets in later start years" below. Nothing runs with `RECOMP_SEASON_CODE=off`. Since 0.6.2 (open item 74) the fill also runs without a shift plan, in every season game (a 2001 start with changing rules on included): it writes the past editions of the records that the season code adds, which no database holds (the Finalissima of 1985, 1993 and 2022; `new_comp_rows` in `season_history.c`, source Wikipedia, "Finalissima", Results). The base game adds no record and gets no row.
+
+### Official data sets in later start years (0.6.2 open item 149)
+
+The rule is the real-life rule: a game started in any year shows the real past editions of every competition. Before 0.6.2, the table held rows only for the season of each database, so the official data sets moved to a later start (3.9.60, 3.9.65 and 3.9.68 from 2003 on, and 3.9.60 and 3.9.65 also in 2002) got none: a 2004 start held no World Cup 2002, no Euro 2004 and no OFC Nations Cup 2002 or 2004, and no league row of 2002 to 2004 (`season_dates.c`, the log "3.9.68 in 2004: 2 rows written", session s062-145).
+
+The history of an official data set stays that of 2001 in every start year: its plan (`plan_for_folder`) moves no history year (`competition history +0`, no last rows). So `history_fill.py` makes the plan of each official data set for every start year from 2002 to the year after the last researched edition ended (2027), with the rules of "Which rows" (the research only, the July rule, the names of that data, no row for a winner the data lacks). Each plan row holds for one range of start years, from the first start year after its edition ended on (the tool stops when a row's start years are not one range). `plan-official.tsv` gives each row once, with its first start year (`start_year`) and its last (`last_start`, empty for every later one). The 2002/03 tile of 3.9.68 keeps its own entry in `plan.tsv`.
+
+In the game each official data set is one entry of the table (`last` 0xffff) and each row carries its range (`from`, `to`): `entry_for` takes the entry of the start year when there is one, else the official entry that holds for it, and the fill writes and clears only the rows whose range holds the start year.
+
+The research covers the label years 2001 to 2009 (200 to 500 rows a year) and, after that, only the World Cup and the Euro (and a few US Open Cup, Argentine and African rows). A 3.9.68 start in 2015 therefore holds the World Cups of 2010 and 2014 and the Euro 2012, but no league row of 2010 to 2014: those years need new research. Euro 2012 (final 1 July 2012, https://en.wikipedia.org/wiki/UEFA_Euro_2012_final) joins `EARLY_JULY`, so a 2012 start holds it.
+
+Changing rules off: the fill runs in every season game with the season code on, with the rules on or off, as before (`shift_for`, `season_dates.c`); a 2001 start has no plan and gets no row, so the base game does not change.
+
+Test: `tests/seasons/history_official_run.py` (3.9.68 in 2003, 2004 and 2010, 3.9.65 and 3.9.60 in 2004, Summer 2004 in its season).
 
 ### Test
 
