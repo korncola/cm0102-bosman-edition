@@ -31,7 +31,7 @@
 2024	bench	new_conference_league (UEFA Europa Conference League), row uefa-190: game 9, table 12 (12)
 2024	bench	uefa_cup (UEFA Europa League), row uefa-189: game 9, table 12 (12)
 2024	clubs	european_cup (UEFA Champions League), row uefa-186: game 78, table 81 (81 (36 in the league phase))
-2024	clubs	new_concacaf_nations_league (2023-24 CONCACAF Nations League), row int-continental-259: game 3/4, table 41 (41)
+2024	clubs	new_concacaf_nations_league (2023-24 CONCACAF Nations League), row int-continental-259: game 4, table 41 (41)
 2024	clubs	new_conference_league (UEFA Europa Conference League), row uefa-190: game 153/178, table 164 (164 (110 entered + 54 from the Champions League and Europa League); 36 in the le)
 2024	clubs	new_uefa_nations_league (2022-23 UEFA Nations League (play-out)), row int-continental-256: game 4, table 54 (54)
 2024	clubs	olympics (Football at the Summer Olympics), row int-world-287: game 0/4, table 16 (16)
