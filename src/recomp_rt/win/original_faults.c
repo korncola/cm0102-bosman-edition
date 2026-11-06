@@ -1,7 +1,7 @@
 /* Faults of the original that long games reach (0.6.2 slice 11, tools/recomp/original_faults.py). The fixes act in
  * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS turns them off: "keep" all
  * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age,
- * olympics, ire_super, nsl, holiday, callups, confed and callup_marks. */
+ * olympics, ire_super, nsl, holiday, callups, confed and club_regulars. */
 #include "win.h"
 #include "season_intl.h"
 #include "../rt.h"
@@ -13,14 +13,14 @@
 #define CLUB_COUNT 0xae235cu     /* clubs, national teams and under-21 teams */
 #define NATION_COUNT 0xae2350u
 
-enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, NSL, HOLIDAY, CALLUPS, CONFED, CALLUP_MARKS, GROUPS };
+enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, NSL, HOLIDAY, CALLUPS, CONFED, CLUB_REGULARS, GROUPS };
 
 static int fixes_on_group(int group)
 {
     static int on[GROUPS] = {-1};
     if (on[0] < 0) {
         static const char *const names[GROUPS] = {"managers", "money", "age", "olympics", "ire_super", "nsl",
-                                                   "holiday", "callups", "confed", "callup_marks"};
+                                                   "holiday", "callups", "confed", "club_regulars"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
         if (v && strcmp(v, "keep") && strncmp(v, "keep:", 5))
             fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS=%s is not keep or keep:<groups>: every fix acts\n", v);
@@ -32,7 +32,7 @@ static int fixes_on_group(int group)
             if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
                 fprintf(stderr,
                         "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics, "
-                        "ire_super, nsl, holiday, callups, confed, callup_marks)\n",
+                        "ire_super, nsl, holiday, callups, confed, club_regulars)\n",
                         (int)n, p);
         }
         for (int g = 0; g < GROUPS; g++) {
@@ -552,5 +552,57 @@ int season_intl_confed_june(void)
  * and 0x777729 then mark every such club, and the squad pick 0x76c120 leaves out its regulars (0x76cd44..0x76cd73). */
 uint32_t rt_callup_mark_all(void)
 {
-    return (uint32_t)fixes_on_group(CALLUP_MARKS);
+    return (uint32_t)fixes_on_group(CLUB_REGULARS);
+}
+
+/* A kept squad is picked again for a match when one of its players is a regular of a club with a continental match
+ * within a day (open item 160, group club_regulars, original_faults.py). The squad check of a national fixture 0x76bab0
+ * (called from NationalTeams::daily_update at 0x76b30e) keeps a side's squad for its next match when that match's check comes at most 14 days after the window end
+ * (0x54cdb0 at 0x76bb99 and 0x76be0c, cmp 0xe) and the squad is set (+0x43); else it calls select_squad 0x76c120
+ * (0x76bc23 and the away side's call after 0x76be83). A kept squad never meets the pick's gate (0x76cd44..0x76cd73).
+ * nt: NationalTeams (ebp there), side: the senior side of the fixture (+0x1c home at 0x76bba8, +0x20 away at
+ * 0x76be1b). Gives 0 when the fix acts and a player of the side's squad (+0xd7, 50 staff pointers, as the sort
+ * 0x778ef0 reads them) is at a club (staff +0x39) with mark 3 in the list of mark_clubs_with_fixtures 0x7775c0 (nt
+ * +0x24, a byte per club below the national sides) and has a contract whose playing-time mood (+0x3d) is over -10
+ * (the gate's test, CONTRACT_MANAGER::get_contract 0x4cf5a0: staff row [0xae2d0c] + id x 79, +0 the contract index;
+ * contract [[0xae1050]] + index x 80). Else 1: the squad is kept, as in the original. */
+#define SQUAD_AT 0xd7u
+#define SQUAD_SLOTS 50
+#define STAFF_CLUB 0x39u
+#define STAFF_ROWS 0xae2d0cu
+#define STAFF_COUNT 0xae2364u
+#define CONTRACTS 0xae1050u
+#define MOOD 0x3du
+
+static int pointer(uint32_t p) { return p >= 0x10000u && p < 0xfff00000u; }
+
+uint32_t rt_squad_kept(uint32_t nt, uint32_t side)
+{
+    if (!fixes_on_group(CLUB_REGULARS) || !pointer(nt) || !pointer(side)) return 1;
+    uint32_t marks = rd32(g_mem, nt + 0x24u);
+    int clubs = (int)rd32(g_mem, CLUB_COUNT) - 2 * (int)rd32(g_mem, NATION_COUNT);
+    if (!pointer(marks)) return 1;
+    for (uint32_t k = 0; k < SQUAD_SLOTS; k++) {
+        uint32_t st = rd32(g_mem, side + SQUAD_AT + 4u * k);
+        if (!pointer(st)) continue;
+        uint32_t club = rd32(g_mem, st + STAFF_CLUB);
+        if (!pointer(club)) continue;
+        int32_t id = (int32_t)rd32(g_mem, club);
+        if (id < 0 || id >= clubs || g_mem[marks + (uint32_t)id] != 3u) continue;
+        int32_t sid = (int32_t)rd32(g_mem, st);
+        if (sid < 0 || sid >= (int32_t)rd32(g_mem, STAFF_COUNT)) continue;
+        int32_t ci = (int32_t)rd32(g_mem, rd32(g_mem, STAFF_ROWS) + (uint32_t)sid * 79u);
+        if (ci < 0) continue;
+        uint32_t contract = rd32(g_mem, rd32(g_mem, CONTRACTS)) + (uint32_t)ci * 80u;
+        if ((int8_t)g_mem[contract + MOOD] > -10) {
+            if (getenv("RECOMP_DUTY_LOG")) {
+                char who[64];
+                snprintf(who, sizeof who, "%s", log_name(side + 4u));
+                fprintf(stderr, "recomp: duty: %s picks its squad again: a regular of %s has a continental match "
+                                "within a day\n", who, log_name(club + 4u));
+            }
+            return 0;
+        }
+    }
+    return 1;
 }

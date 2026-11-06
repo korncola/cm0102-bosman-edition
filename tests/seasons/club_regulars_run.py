@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Clubs of a nation with no league in the game keep their regulars for a continental match (0.6.2 open item 160,
-original-faults group callup_marks, tools/recomp/original_faults.py).
+original-faults group club_regulars, tools/recomp/original_faults.py).
 
 Usage:
-    python3 tests/seasons/callup_marks_run.py <cm0102_recomp> <game folder> --save <samesave.sav> [--keep <folder>]
+    python3 tests/seasons/club_regulars_run.py <cm0102_recomp> <game folder> --save <samesave.sav> [--keep <folder>]
         [--keep-faults]
 
 NationalTeams::mark_clubs_with_fixtures 0x7775c0 marks each club with a match within a day of a national match: 1 its
@@ -19,7 +19,7 @@ RECOMP_DUTY_LOG_CLUB=Club Jorge Wilstermann (src/recomp_rt/win/duty_log.c: the c
 
 The checks: the leg ends with code 0 and no message box; the call-up check for 5 October 2011 (day 277) marks
 Wilstermann; the duty-clash check of tests/seasons/future/history_check.py finds no Wilstermann row in the new save.
---keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:callup_marks: it passes only when the checks find the fault.
+--keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:club_regulars: it passes only when the checks find the fault.
 """
 import os
 import re
@@ -50,7 +50,7 @@ def main(argv):
     keep_faults = "--keep-faults" in argv
     os.environ.update({"RECOMP_TIER_A": "1", "RECOMP_DUTY_LOG": "1", "RECOMP_DUTY_LOG_CLUB": CLUB})
     if keep_faults:
-        os.environ["RECOMP_ORIGINAL_FAULTS"] = "keep:callup_marks"
+        os.environ["RECOMP_ORIGINAL_FAULTS"] = "keep:club_regulars"
     o = {"program": program, "game": game_dir, "rules": "off", "database": None, "seed": 1, "start": 2001,
          "last": 2101, "nations": ["all"], "extra": [], "timeout": 7200}
     work = os.path.join(keep, "leg")
