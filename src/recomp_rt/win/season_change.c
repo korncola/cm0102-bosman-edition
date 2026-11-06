@@ -364,6 +364,9 @@ void season_change_rename(uint32_t rec, const char *name)
             renames = p;
             rename_room = room;
         }
+        /* Open item 152: the whole row is cleared first. The save writes all NAME_ROOM bytes of the name, and
+         * the bytes after its end came from the realloc block, so two runs of the same game gave other bytes. */
+        memset(&renames[rename_count], 0, sizeof renames[rename_count]);
         renames[rename_count].index = index;
         snprintf(renames[rename_count].original, NAME_ROOM, "%.*s", NAME_ROOM - 1, win_str(rec + NAME_AT));
         rename_count++;
@@ -535,6 +538,9 @@ int season_change_part_read(const uint8_t *in, uint32_t n, uint32_t form)
         renames[i].index = get32(in + at);
         memcpy(renames[i].original, in + at + 4, NAME_ROOM);
         renames[i].original[NAME_ROOM - 1] = 0;
+        /* Open item 152: a save made before the fix holds unset bytes after the name: the next save writes zeros. */
+        size_t end = strlen(renames[i].original);
+        memset(renames[i].original + end, 0, NAME_ROOM - end);
         at += 4 + NAME_ROOM;
     }
     rename_count = (int)names;
