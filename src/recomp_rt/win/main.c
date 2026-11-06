@@ -12,6 +12,8 @@
  * for test runs). */
 #include "win.h"
 #include "qsort6.h"
+
+int layout_reads_self_test(void);   /* layout_reads.c (open item 138b) */
 #include "host.h"
 #include "season.h"
 #include "season_rules.h"
@@ -179,6 +181,7 @@ int main(int argc, char **argv)
     cpu.esp -= 4;
     wr32(g_mem, cpu.esp, RT_RETURN_ADDR);
     if (getenv("RECOMP_QSORT_TEST")) return qsort6_self_test();     /* crt.c */
+    if (getenv("RECOMP_LAYOUT_TEST")) return layout_reads_self_test();  /* layout_reads.c */
     f_00947a13();
     fprintf(stderr, "cm0102_recomp: the entry point returned %u\n", cpu.eax);
     at_end();

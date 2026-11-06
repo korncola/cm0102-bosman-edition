@@ -214,6 +214,13 @@ from original_faults import INSNS as ORIGINAL_FAULT_INSNS  # noqa: E402
 assert not set(ORIGINAL_FAULT_INSNS) & (set(INSNS) | set(PATCHES))
 INSNS.update(ORIGINAL_FAULT_INSNS)
 
+# Reads of the original that depend on where memory lies (0.6.2 open item 138b, layout_reads.py): the captain's
+# scale, the match players' unset fields and a local of the daily staff update.
+from layout_reads import INSNS as LAYOUT_INSNS  # noqa: E402
+
+assert not set(LAYOUT_INSNS) & (set(INSNS) | set(PATCHES))
+INSNS.update(LAYOUT_INSNS)
+
 # International caps above 255 (0.6.2 slice 12) in the same way.
 from caps_wide import INSNS as CAPS_INSNS  # noqa: E402
 
