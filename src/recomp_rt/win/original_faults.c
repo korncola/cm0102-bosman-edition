@@ -1,8 +1,9 @@
 /* Faults of the original that long games reach (0.6.2 slice 11, tools/recomp/original_faults.py). The fixes act in
  * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS turns them off: "keep" all
  * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age,
- * olympics, ire_super, nsl, holiday and callups. */
+ * olympics, ire_super, nsl, holiday, callups and confed. */
 #include "win.h"
+#include "season_intl.h"
 #include "../rt.h"
 
 #include <stdio.h>
@@ -12,14 +13,14 @@
 #define CLUB_COUNT 0xae235cu     /* clubs, national teams and under-21 teams */
 #define NATION_COUNT 0xae2350u
 
-enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, NSL, HOLIDAY, CALLUPS, GROUPS };
+enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, NSL, HOLIDAY, CALLUPS, CONFED, GROUPS };
 
 static int fixes_on_group(int group)
 {
     static int on[GROUPS] = {-1};
     if (on[0] < 0) {
         static const char *const names[GROUPS] = {"managers", "money", "age", "olympics", "ire_super", "nsl",
-                                                   "holiday", "callups"};
+                                                   "holiday", "callups", "confed"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
         if (v && strcmp(v, "keep") && strncmp(v, "keep:", 5))
             fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS=%s is not keep or keep:<groups>: every fix acts\n", v);
@@ -31,7 +32,7 @@ static int fixes_on_group(int group)
             if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
                 fprintf(stderr,
                         "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics, "
-                        "ire_super, nsl, holiday, callups)\n",
+                        "ire_super, nsl, holiday, callups, confed)\n",
                         (int)n, p);
         }
         for (int g = 0; g < GROUPS; g++) {
@@ -534,4 +535,12 @@ uint32_t rt_holiday_below_asking(uint32_t option, uint32_t slot)
 uint32_t rt_callup_released(uint32_t slot)
 {
     return fixes_on_group(CALLUPS) && (slot & 0xffu) == 0u;
+}
+
+/* The Confederations Cup in June (open items 157 to 159): season_intl_date_shift (season_intl_rules.c) moves an edition
+ * that keeps the original's dates, 29 July to 9 August, to the Saturday near 18 June. It acts from the new game on:
+ * the base game builds its 2003 edition there (the stage builder 0x58bdb0). */
+int season_intl_confed_june(void)
+{
+    return fixes_on_group(CONFED);
 }

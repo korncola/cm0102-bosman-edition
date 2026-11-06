@@ -390,15 +390,43 @@ const SeasonIntlEdition *season_intl_rule_edition(const char *file, int year)
     return season_intl_first(file, season_start_year());
 }
 
+/* The Confederations Cup in June (0.6.2 open items 157 to 159, original-faults group confed, original_faults.c).
+ * The original's template plays it from 29 July (League_Stage date 0x68a160 at 0x58b601) to 9 August (0x521eb0 at
+ * 0x58b984), in the year +0x40 that steps by 2 for ever (0x58c050), and its draw on 20 February (Date::Date 0x549f70
+ * at 0x58be40). Those days are the original's Club World Championship (late July to August in every odd year) and
+ * the European club qualifiers: in the changing-rules-off games of run set pass 3, 12 clubs of the Champions Cup,
+ * the Inter-Toto Cup and the Club World Championship played the day before, of or after a match of a side that held
+ * 3 to 15 of their players (NationalTeams::get_international_duty_club 0x7757d0 holds a player from the day before
+ * his side's match to the day after). Every real edition played in June, after the June FIFA days: 2003 18 to 29
+ * June, 2005 15 to 29, 2009 14 to 28, 2013 15 to 30, 2017 17 June to 2 July
+ * (https://en.wikipedia.org/wiki/FIFA_Confederations_Cup). So an edition that keeps the original's dates (every
+ * edition of a game with the season code's international rules off, and the 2003 edition that a 2001 game builds
+ * at the new game) moves to the day of the 2003 edition, 18 June, in its own year and then to the template's weekday
+ * code (Saturday), as an edition of another year's date does below: Date::Date moves every template date to its code
+ * anyway (0x54a2d0), so the first group day is the Saturday from 15 to 21 June (2003: 21 June) and the final about 12
+ * days later. */
+static int confed_june_shift(int year)
+{
+    const SeasonIntlEdition *e = season_intl_table_edition(class_files[INTL_CONFED], 2003);
+    if (!e || e->month < 1) return 0;
+    long from = days_from_civil(year, class_first[INTL_CONFED].month0 + 1, class_first[INTL_CONFED].day);
+    long to = days_from_civil(year, e->month, e->day > 0 ? e->day : 1);
+    int code = class_first[INTL_CONFED].code;
+    int wd = (int)(((to + 3) % 7 + 7) % 7), k = ((code - wd) % 7 + 7) % 7;       /* 1 January 1970: a Thursday */
+    return (int)(to + (k > 3 ? k - 7 : k) - from);
+}
+
 int season_intl_date_shift(uint32_t cls, int year)
 {
-    if (!season_intl_on() || cls >= INTL_CLASSES) return 0;
+    if (cls >= INTL_CLASSES) return 0;
+    int confed = cls == INTL_CONFED && season_intl_confed_june();
+    if (!season_intl_on()) return confed ? confed_june_shift(year) : 0;
     const SeasonIntlEdition *e = season_intl_rule_edition(class_files[cls], year);
     if (!e || e->month < 1) return 0;
     /* A game that starts in 2001/02 keeps the dates of the editions it builds at the new game (Q152: the World
-     * Cup 2002, the African Cup of Nations 2002, the Confederations Cup 2003, Euro 2004 and the others of a 2001
-     * game with changing rules on play as in the base game). */
-    if (start_edition_2001(cls, year)) return 0;
+     * Cup 2002, the African Cup of Nations 2002, Euro 2004 and the others of a 2001 game with changing rules on play
+     * as in the base game). The Confederations Cup 2003 plays as in the base game too: in June with group confed. */
+    if (start_edition_2001(cls, year)) return confed ? confed_june_shift(year) : 0;
     int day = class_first[cls].day, month0 = class_first[cls].month0, code = class_first[cls].code;
     if (cls == INTL_OFC && year % 4 != 2) {
         day = 19;

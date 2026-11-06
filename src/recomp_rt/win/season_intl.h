@@ -92,6 +92,9 @@ const SeasonIntlEdition *season_intl_rule_edition(const char *file, int year);
 /* The days by which the finals of a class in an edition year move, so the first group day is the table's
  * (0 for the base game, an edition the table does not hold, or one without a date). */
 int season_intl_date_shift(uint32_t cls, int year);
+/* 1 when the fix of original-faults group confed acts (original_faults.c): the Confederations Cup of an edition that
+ * keeps the original's dates plays from the day of the 2003 edition, 18 June, in place of 29 July. */
+int season_intl_confed_june(void);
 
 /* The confederations, in the order of the key continent ids 0x9cfa08 to 0x9cfa1c (docs/research/
  * 2026-10-16-sweep-international.md, section 8): the id of confederation c is the dword at 0x9cfa08 + 4 * c. */

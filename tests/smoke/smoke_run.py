@@ -204,8 +204,10 @@ def differing_share(a, b, box=None, tol=0):
 # The runs of the same-save check: a name and the option lines of settings.txt (after the mode).
 # The groups of original_faults.c. The group callups can act in the first days of a game (open item 143), so the
 # runs original-faults-keep keep only the others.
-ORIGINAL_FAULT_GROUPS = ["managers", "money", "age", "olympics", "ire_super", "nsl", "holiday", "callups"]
-KEEP_IN_RUNS = "keep:" + ",".join(g for g in ORIGINAL_FAULT_GROUPS if g != "callups")
+ORIGINAL_FAULT_GROUPS = ["managers", "money", "age", "olympics", "ire_super", "nsl", "holiday", "callups", "confed"]
+# The group confed (open items 157 to 159) moves the Confederations Cup 2003 that a new game builds, so it acts in a new
+# game too and these runs leave it on as well.
+KEEP_IN_RUNS = "keep:" + ",".join(g for g in ORIGINAL_FAULT_GROUPS if g not in ("callups", "confed"))
 
 
 def with_set_keep(env):
