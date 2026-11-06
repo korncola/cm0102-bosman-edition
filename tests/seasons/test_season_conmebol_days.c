@@ -1,8 +1,9 @@
 /* The days of the South American section of World Cup qualifying (open item 163 of 0.6.2, season_conmebol_days.c).
- * Every cycle from 2006 to 2302 with 14, 16 and 18 rounds: each round on a FIFA day, at least 3 days after the one
- * before, in the span (or the weeks before it), after the day the section is made; with a finals stand-in that holds
- * every 10 June to 20 July, none in it. The 2014 cycle has the real windows and no round on 1 August 2012 (run set
- * a2002s3), the 2098 cycle none in August 2096 (a2006s3). */
+ * Every cycle from 2006 to 2302 with 14, 16 and 18 rounds: each round on a FIFA day (or a real matchday), at least
+ * 3 days after the one before, in the span, after the day the section is made; with a finals stand-in that holds
+ * every 10 June to 20 July, none of the window rule in it. 18 rounds of 2006, 2010, 2014, 2018 and 2026 take the
+ * real first and last matchday; 2014 (run set a2002s3, whose 1 August 2012 met the Copa Sudamericana) has the real
+ * days. The 2098 cycle has no round in July or August 2096 (a2006s3). The fields of a round record. */
 #include "season_conmebol_days.h"
 #include "season_uefa_days.h"
 
@@ -48,12 +49,20 @@ static void cycle(int wc, int rounds, SeasonConmebolBusy busy)
     for (int i = 0; i < n; i++) {
         int y, m, d;
         season_from_abs_day(out[i], &y, &m, &d);
-        CHECK(is_fifa_day(out[i]), "%d round %d on %04d-%02d-%02d: not a FIFA day", wc, i + 1, y, m, d);
+        CHECK(is_fifa_day(out[i]) || season_conmebol_real_day(out[i]), "%d round %d on %04d-%02d-%02d: not a FIFA day",
+              wc, i + 1, y, m, d);
         CHECK(out[i] <= last && out[i] >= made + 2, "%d round %d on %04d-%02d-%02d: out of the span", wc, i + 1, y, m,
               d);
         CHECK(!i || out[i] - out[i - 1] >= 3, "%d round %d on %04d-%02d-%02d: %ld days after the one before", wc,
               i + 1, y, m, d, i ? out[i] - out[i - 1] : 0);
-        CHECK(!busy || !busy(out[i]), "%d round %d on %04d-%02d-%02d: in a final's days", wc, i + 1, y, m, d);
+        CHECK(!busy || season_conmebol_real_day(out[i]) || !busy(out[i]), "%d round %d on %04d-%02d-%02d: in a final's days",
+              wc, i + 1, y, m, d);
+    }
+    /* The real cycles: the real first and last matchday. */
+    int real = rounds == 18 && (wc == 2006 || wc == 2010 || wc == 2014 || wc == 2018 || wc == 2026);
+    if (real && n == rounds) {
+        CHECK(out[0] == first, "%d: first round not on the real first matchday", wc);
+        CHECK(out[n - 1] == last, "%d: last round not on the real last matchday", wc);
     }
 }
 
@@ -65,10 +74,9 @@ int main(void)
             cycle(wc, r, summer);
         }
 
-    /* 2014 (a2002s3): the real windows of October 2011 to October 2013; the list has two single days in their
-     * place of June 2012 (Euro 2012: 9 and 10 June are not in it). */
-    static const int want[18][3] = {{2011, 10, 7}, {2011, 10, 11}, {2011, 11, 11}, {2011, 11, 15}, {2012, 2, 29},
-                                    {2012, 5, 26}, {2012, 9, 7},   {2012, 9, 11},  {2012, 10, 12}, {2012, 10, 16},
+    /* 2014 (a2002s3): the real days (en.wikipedia.org, 2014 FIFA World Cup qualification (CONMEBOL)). */
+    static const int want[18][3] = {{2011, 10, 7}, {2011, 10, 11}, {2011, 11, 11}, {2011, 11, 15}, {2012, 6, 2},
+                                    {2012, 6, 9},  {2012, 9, 7},   {2012, 9, 11},  {2012, 10, 12}, {2012, 10, 16},
                                     {2013, 3, 22}, {2013, 3, 26},  {2013, 6, 7},   {2013, 6, 11},  {2013, 9, 6},
                                     {2013, 9, 10}, {2013, 10, 11}, {2013, 10, 15}};
     long out[64];
@@ -90,9 +98,41 @@ int main(void)
         CHECK(m != 7 && m != 8, "2098 round %d on %04d-%02d-%02d", i + 1, y, m, d);
     }
 
-    /* A section made after its span began places nothing before the day it is made. */
+    /* A section made after its span began places nothing before the day it is made (the window rule). */
     n = season_conmebol_days(2014, 18, season_abs_day(2012, 1, 1), NULL, out);
     CHECK(n == 0 || out[0] >= season_abs_day(2012, 1, 1), "2014 made in 2012: a round before it");
+
+    /* A 2018 section made on 1 December 2015, after its real first day: the window rule, nothing before that day;
+     * a window rule cycle ends in the last FIFA window of its span (2030: September 2029 or later). */
+    n = season_conmebol_days(2018, 18, season_abs_day(2015, 12, 1), NULL, out);
+    CHECK(n == 0 || out[0] >= season_abs_day(2015, 12, 1), "2018 made late: a round before it");
+    n = season_conmebol_days(2030, 14, season_abs_day(2026, 7, 20), NULL, out);
+    CHECK(n == 14 && out[13] >= season_abs_day(2029, 9, 1), "2030 (14 rounds): ends too early");
+    n = season_conmebol_days(2030, 18, season_abs_day(2026, 7, 20), NULL, out);
+    CHECK(n == 18 && out[17] >= season_abs_day(2029, 9, 1), "2030 (18 rounds): ends too early");
+
+    /* 2022: the window rule from 8 October 2020 to the game's 10 October 2021. */
+    long first, last;
+    season_conmebol_span(2022, &first, &last);
+    n = season_conmebol_days(2022, 18, season_abs_day(2018, 7, 20), NULL, out);
+    CHECK(n == 18 && out[17] <= last, "2022: %d placed", n);
+
+    /* Round record fields: Friday 7 October 2011, campaign year 2012 (base): day 279, year -1, midweek 2; Saturday
+     * 2 June 2012: day 153, year 0, weekend 1; Sunday 13 October 2002 (base 2004): weekend 1. */
+    int doy, off, flag;
+    season_conmebol_round_fields(season_abs_day(2011, 10, 7), 2012, &doy, &off, &flag);
+    CHECK(doy == 279 && off == -1 && flag == 2, "7 October 2011: %d %d %d", doy, off, flag);
+    season_conmebol_round_fields(season_abs_day(2012, 6, 2), 2012, &doy, &off, &flag);
+    CHECK(doy == 153 && off == 0 && flag == 1, "2 June 2012: %d %d %d", doy, off, flag);
+    season_conmebol_round_fields(season_abs_day(2002, 10, 13), 2004, &doy, &off, &flag);
+    CHECK(flag == 1 && off == -2, "13 October 2002: %d %d %d", doy, off, flag);
+    season_conmebol_round_fields(season_abs_day(2025, 9, 9), 2024, &doy, &off, &flag);
+    CHECK(flag == 2 && off == 1, "9 September 2025 (Tuesday): %d %d %d", doy, off, flag);
+
+    /* Every real day is a FIFA day or a real matchday; 9 June 2012 is not in the FIFA list. */
+    CHECK(!is_fifa_day(season_abs_day(2012, 6, 9)) && season_conmebol_real_day(season_abs_day(2012, 6, 9)),
+          "9 June 2012");
+    CHECK(!season_conmebol_real_day(season_abs_day(2012, 8, 1)), "1 August 2012 a real matchday");
 
     if (fails) {
         printf("%d failures\n", fails);

@@ -47,6 +47,7 @@
 #include "win.h"
 #include "season.h"
 #include "season_uefa_days.h"
+#include "season_conmebol_days.h"
 #include "season_names.h"
 #include "season_intl.h"
 #include "season_change.h"
@@ -363,6 +364,19 @@ static int window_from(const int *doys, int n, int d, int c)
 
 static int duty_ties(uint32_t n, uint32_t m, int y, int d);
 
+/* 1 when club a and club b are sides of South American nations (nation +0x71, the continent's id at +0, against the
+ * key continent id of confederation SEASON_CONF_SOUTH_AMERICA, as finals_busy reads them). */
+static int south_american(uint32_t a, uint32_t b)
+{
+    uint32_t sides[2] = {a, b}, want = rd32(g_mem, KEY_CONTINENTS + 4u * SEASON_CONF_SOUTH_AMERICA);
+    for (int s = 0; s < 2; s++) {
+        uint32_t nation = readable(sides[s]) ? rd32(g_mem, sides[s] + 0x53) : 0;
+        uint32_t cont = readable(nation) ? rd32(g_mem, nation + NATION_CONTINENT) : 0;
+        if (!readable(cont) || rd32(g_mem, cont) != want) return 0;
+    }
+    return 1;
+}
+
 /* The day a qualifier of club home v club away on day d of year y moves to: the nearest free FIFA day of the same
  * year, 2 or more days after today, with no other match of the two sides within CLASH_DAYS of it (side_near; self:
  * the fixture that moves, when it is stored) and no continental club tie within a day of it whose club holds more
@@ -374,8 +388,11 @@ static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, in
 {
     int doys[FIFA_DOYS_MAX], n = fifa_doys(y, doys, FIFA_DOYS_MAX);
     uint32_t na = rd32(g_mem, home + 0x53), nb = rd32(g_mem, away + 0x53);
-    for (int k = 0; k < n; k++)                                           /* on a free FIFA day already */
-        if (doys[k] == d && !finals_busy(home, away, y, d) && !side_near(home, away, y, d, self) &&
+    /* On a free FIFA day already, or on a real South American matchday that the FIFA list lacks (open item 163:
+     * 9 June 2012 in Euro 2012, season_conmebol_real_day). */
+    int real = south_american(home, away) && season_conmebol_real_day(season_abs_day(y, 1, 1) + d);
+    for (int k = 0; k <= n; k++)
+        if ((k < n ? doys[k] == d : real) && !finals_busy(home, away, y, d) && !side_near(home, away, y, d, self) &&
             !duty_ties(na, nb, y, d))
             return rt_unwinding ? -1 : d;
     int today_year = (int16_t)rd16(g_mem, GAME_DATE + 2), today = (int16_t)rd16(g_mem, GAME_DATE);

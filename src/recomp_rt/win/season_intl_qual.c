@@ -527,10 +527,8 @@ static int by_round_day(const void *a, const void *b)
  * (season_conmebol_days.c says why). A season game, every cycle from 2006, made in a running season: the start
  * season of a 2001 start keeps the original's international calendar (O405), so there end_by_october acts and the
  * fixtures move at the first running day (season_friendly_dates.c, route M), as before. The template's rounds take
- * the new days in the order of their own days. A round record (league_round_set_date 0x68a160): the day of the
- * year at +0 (0x68a1a5), the year less the campaign year +0x40 at +2 (0x68a1ac), and at +4 1 for a weekend day and
- * 2 for a midweek day (0x68a1b4; Saturday or Sunday 1, as WcSouthAmericanLeague's fixed fixtures set it,
- * 0x9224d1..0x9224f0). Returns 1 when it placed them. */
+ * the new days in the order of their own days; season_conmebol_round_fields gives the fields of each round record
+ * (league_round_set_date 0x68a160). Returns 1 when it placed them. */
 static int conmebol_windows(uint32_t self, uint32_t tpl, int rounds)
 {
     if (!season_intl_on() || !readable(self) || !readable(tpl) || rounds <= 0 || rounds > 64 ||
@@ -555,12 +553,11 @@ static int conmebol_windows(uint32_t self, uint32_t tpl, int rounds)
     qsort(order, (size_t)rounds, sizeof order[0], by_round_day);
     for (int k = 0; k < rounds; k++) {
         uint32_t rec = tpl + (uint32_t)order[k][1] * 0x41u;
-        int yy, mm, dd;
-        season_from_abs_day(days[k], &yy, &mm, &dd);
-        int wd = (int)((days[k] % 7 + 7 + 3) % 7);           /* 1 January 1970 was a Thursday: 0 Monday */
-        wr16(g_mem, rec, (uint16_t)season_day_of_year(yy, mm, dd));
-        wr16(g_mem, rec + 2u, (uint16_t)(yy - base));
-        wr8(g_mem, rec + 4u, wd >= 5 ? 1 : 2);
+        int doy, year_off, flag;
+        season_conmebol_round_fields(days[k], base, &doy, &year_off, &flag);
+        wr16(g_mem, rec, (uint16_t)doy);
+        wr16(g_mem, rec + 2u, (uint16_t)year_off);
+        wr8(g_mem, rec + 4u, (uint8_t)flag);
     }
     if (logging()) {
         int y0, m0, d0, y1, m1, d1;
