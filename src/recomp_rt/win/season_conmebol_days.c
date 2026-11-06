@@ -163,6 +163,18 @@ static int pick(long first, long last, long earliest, SeasonConmebolBusy busy, i
     return m;
 }
 
+/* The original makes the fixtures on the Saturday near 25 January (set_up_rules 0x921040: Date 0x549f70 with 25,
+ * January, the campaign year and weekday 5, 0x9210a4..0x92110c), 25 to 28 days before its first round of mid to
+ * late February. The same lead, four weeks, before the real first round (an inference from the original). */
+#define MAKE_LEAD 28
+
+long season_conmebol_make_day(long first_round, long original, long today)
+{
+    if (first_round > original) return original;
+    long m = first_round - MAKE_LEAD;
+    return m > today ? m : today + 1;
+}
+
 int season_conmebol_days(int wc, int rounds, long earliest, SeasonConmebolBusy busy, long out[])
 {
     long first, last;

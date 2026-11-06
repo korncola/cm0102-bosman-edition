@@ -528,7 +528,8 @@ static int by_round_day(const void *a, const void *b)
  * season of a 2001 start keeps the original's international calendar (O405), so there end_by_october acts and the
  * fixtures move at the first running day (season_friendly_dates.c, route M), as before. The template's rounds take
  * the new days in the order of their own days; season_conmebol_round_fields gives the fields of each round record
- * (league_round_set_date 0x68a160). Returns 1 when it placed them. */
+ * (league_round_set_date 0x68a160), and the make day moves before the first round (season_conmebol_make_day).
+ * Returns 1 when it placed them. */
 static int conmebol_windows(uint32_t self, uint32_t tpl, int rounds)
 {
     if (!season_intl_on() || !readable(self) || !readable(tpl) || rounds <= 0 || rounds > 64 ||
@@ -558,6 +559,18 @@ static int conmebol_windows(uint32_t self, uint32_t tpl, int rounds)
         wr16(g_mem, rec, (uint16_t)doy);
         wr16(g_mem, rec + 2u, (uint16_t)year_off);
         wr8(g_mem, rec + 4u, (uint8_t)flag);
+    }
+    /* The make day (+0xb6 day, +0xb8 year offset, set just before this call at 0x921118 and 0x921133; +0x45 is 1
+     * once made, 0x9212ee): before the first round, so the real rounds of the year before the campaign year keep
+     * their days (season_conmebol_make_day). */
+    long today = season_abs_day(ty, tm, td);
+    long made = day_number(base + (int16_t)rd16(g_mem, self + 0xb8u), (int16_t)rd16(g_mem, self + 0xb6u));
+    if (!rd32(g_mem, self + 0x45u) && made > today) {
+        long mk = season_conmebol_make_day(days[0], made, today);
+        int doy, year_off, flag;
+        season_conmebol_round_fields(mk, base, &doy, &year_off, &flag);
+        wr16(g_mem, self + 0xb6u, (uint16_t)doy);
+        wr16(g_mem, self + 0xb8u, (uint16_t)year_off);
     }
     if (logging()) {
         int y0, m0, d0, y1, m1, d1;

@@ -129,6 +129,22 @@ int main(void)
     season_conmebol_round_fields(season_abs_day(2025, 9, 9), 2024, &doy, &off, &flag);
     CHECK(flag == 2 && off == 1, "9 September 2025 (Tuesday): %d %d %d", doy, off, flag);
 
+    /* The make day (WcSouthAmericanLeague::update_for_date 0x921160 makes the fixtures on it, 0x92123a). The
+     * original's: the Saturday near 25 January of the campaign year (28 January 2012). With the real first round of
+     * 7 October 2011: 9 September 2011, so no round lies before it (FIXTURE_MANAGER::add_fixture 0x5aa680 moves
+     * such a round, 0x5aa729). A section made late: tomorrow. A first round after the original's: the original's. */
+    long orig = season_abs_day(2012, 1, 28), today = season_abs_day(2010, 7, 24);
+    CHECK(season_conmebol_make_day(season_abs_day(2011, 10, 7), orig, today) == season_abs_day(2011, 9, 9),
+          "make day of the 2014 real cycle");
+    CHECK(season_conmebol_make_day(season_abs_day(2010, 8, 10), orig, today) == today + 1, "make day: tomorrow");
+    CHECK(season_conmebol_make_day(season_abs_day(2012, 2, 29), orig, today) == orig, "make day: the original's");
+    for (int wc = 2006; wc <= 2302; wc += 4) {
+        long made = season_abs_day(wc - 4, 7, 20);
+        n = season_conmebol_days(wc, 18, made + 2, NULL, out);
+        long o = season_abs_day(wc - 2, 1, 25), mk = season_conmebol_make_day(out[0], o, made);
+        CHECK(n == 18 && mk > made && mk < out[0] && mk <= o, "%d: make day out of order", wc);
+    }
+
     /* Every real day is a FIFA day or a real matchday; 9 June 2012 is not in the FIFA list. */
     CHECK(!is_fifa_day(season_abs_day(2012, 6, 9)) && season_conmebol_real_day(season_abs_day(2012, 6, 9)),
           "9 June 2012");

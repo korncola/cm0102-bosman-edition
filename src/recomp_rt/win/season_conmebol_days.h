@@ -28,4 +28,11 @@ void season_conmebol_round_fields(long z, int base, int *doy, int *year_off, int
  * them (out[] is then not used). */
 int season_conmebol_days(int wc, int rounds, long earliest, SeasonConmebolBusy busy, long out[]);
 
+/* The day the section makes its fixtures (WcSouthAmericanLeague +0xb6 day and +0xb8 year offset, set_up_rules
+ * 0x921040 at 0x921118 and 0x921133; update_for_date 0x921160 makes them on that day only, 0x921206..0x92123a).
+ * A fixture made for a day already past moves to the next free days (FIXTURE_MANAGER::add_fixture 0x5aa680 at
+ * 0x5aa729), so no round may lie on or before it. When the first round is on or before the original's day
+ * `original`: MAKE_LEAD days before the first round, but not before tomorrow (today + 1). Else `original`. */
+long season_conmebol_make_day(long first_round, long original, long today);
+
 #endif
