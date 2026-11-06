@@ -23,7 +23,11 @@ when one is not in its INSNS:
   init_from_current_contract 0x85e590 writes its morale byte +0x3d. The patch at 0x8bf420 must clear the contract.
 - NationalTeams::select_squad 0x76c120 sets 26 place masks at [esp + 0x70] for squad size 26 (cmp 0x1a at 0x76c769),
   24 for size 24 (cmp 0x18 at 0x76c859) and 22 for any other size: the branch 0x76c939..0x76c9e6 (with 0x76c860 and
-  0x76c865) writes no word from [esp + 0x9c]. The patch at 0x76c939 must set the masks from the 23rd to the 50th.
+  0x76c865) writes no word from [esp + 0x9c]. The patch at 0x76c939 must set the masks from the 23rd to the 50th
+  to 0x240, the mask that each size's last places take (0x76c7d9, 0x76c8c1, 0x76c973).
+- SimulatedStats: the push depth at 0x84c266 is 0 (0x84c271 writes the fixture's +0xc at [esp + 0x4c]), and
+  VIRTUAL_STAFF::fill_fixture_squads 0x90d2f0, which gets the fixture, writes no +0x38 or +0x39 through a register.
+- Each patch calls rt_layout_fix with the index of its group in names[] of layout_reads.c.
 Each INSNS row must name the instruction that the original has at its address.
 Exit code 0 when every case passes.
 """
@@ -44,6 +48,9 @@ CONTRACT_FUNCS = ((0x85E410, 0x85E473), (0x85E590, 0x85E746))   # STAFF_CONTRACT
 WRITES = ("mov", "and", "or", "xor", "add", "sub", "inc", "dec", "adc", "sbb", "neg", "not", "shl", "shr", "sar",
           "sete", "setne", "setl", "setle", "setg", "setge", "setb", "setbe", "seta", "setae", "sets", "setns")
 SIZES = {"byte": 1, "word": 2, "dword": 4}
+FILL, FILL_END = 0x90D2F0, 0x90D4EC   # VIRTUAL_STAFF::fill_fixture_squads, which gets the fixture (0x84c2a9, 0x84c2b7)
+GROUP_OF = {0x6E19B9: "captain", 0x6EADA0: "players", 0x5CE311: "daily", 0x84C266: "stats", 0x8BF420: "loans",
+            0x76C939: "squads"}
 
 
 def disassemble(img):
@@ -117,6 +124,13 @@ def main():
         if w and any(set(range(int(w.group(2), 16) - d - STATS_FIXTURE, int(w.group(2), 16) - d - STATS_FIXTURE
                                + SIZES[w.group(1)])) & FLAGS for d in (0, 4, 8, 12)):
             fails.append(f"{a:#x}: the original may write the simulated fixture's flags ({m} {o}); read the case again")
+    if at.get(0x84C271) != ("mov", "dword ptr [esp + 0x4c], eax"):
+        fails.append("0x84c266: the push depth is not 0 there (the fixture's +0xc at [esp + 0x4c]); read the case again")
+    for a, m, o in code:
+        w = re.match(r"(byte|word|dword) ptr \[(e[a-z]{2}) \+ (0x[0-9a-f]+)\]", o) \
+            if FILL <= a < FILL_END and m in WRITES else None
+        if w and w.group(2) != "esp" and set(range(int(w.group(3), 16), int(w.group(3), 16) + SIZES[w.group(1)])) & FLAGS:
+            fails.append(f"{a:#x}: fill_fixture_squads may write the fixture's flags ({m} {o}); read the case again")
     if "memset(M + esp + 0x40u, 0, 0x4fu)" not in layout_reads.INSNS.get(0x84C266, ("", ""))[1]:
         fails.append(f"{STATS:#x}: the simulated fixture's match flags +0x38 stay unset, and no patch clears them")
     if at.get(LOAN_AT) != ("lea", "ecx, [esp + 0x28]") or at.get(0x8BF5AF) != ("lea", "eax, [esp + 0x28]"):
@@ -140,9 +154,19 @@ def main():
              for m in [re.match(r"word ptr \[esp \+ (0x[0-9a-f]+)\], ", o)] if m and mn == "mov"}
     if other != set(range(0x70, 0x9C, 2)):
         fails.append(f"0x76c939: the 22-place branch writes the masks {sorted(map(hex, other))}; read the case again")
-    if "memset(M + esp + 0x9cu, 0xff, 0x38u)" not in layout_reads.INSNS.get(0x76C939, ("", ""))[1]:
+    if any(at.get(a) != ("mov", "eax, 0x240") for a in (0x76C7D9, 0x76C8C1, 0x76C973)):
+        fails.append("0x76c120: the last places of sizes 26, 24 and 22 do not take the mask 0x240; read the case again")
+    if "for (uint32_t i = 0x9cu; i < 0xd4u; i += 2u) W16(esp + i, 0x240u);" not in \
+            layout_reads.INSNS.get(0x76C939, ("", ""))[1]:
         fails.append("0x76c120: the place masks after the 22nd stay unset for other squad sizes, "
-                     "and no patch sets them")
+                     "or do not take the original's mask 0x240")
+    # Each patch asks the switch for its own group: the index of its name in names[] of layout_reads.c.
+    src = open(os.path.join(HERE, "..", "..", "src", "recomp_rt", "win", "layout_reads.c")).read()
+    names = re.findall(r'"([a-z]+)"', re.search(r"names\[GROUPS\] = \{([^}]*)\}", src).group(1))
+    for a, group in GROUP_OF.items():
+        want = f"rt_layout_fix({names.index(group)}u)" if group in names else None
+        if not want or want not in layout_reads.INSNS.get(a, ("", ""))[1]:
+            fails.append(f"{a:#x}: the patch does not ask the switch for its group {group} ({want})")
     for f in fails:
         print("FAIL  " + f)
     print("PASS" if not fails else f"FAILED: {len(fails)}")

@@ -5,9 +5,9 @@ Game menu B, 25298081): the screen's blocks moved the database tables to other h
 an address as a number, a heap block that nothing had set and stack bytes that nothing had set. None of these is
 a value of the game: the original's own layout is not fixed either (its heap is the CRT heap of the computer it runs
 on). So each read takes a defined value in its place: the record's id for the address, 0, as fresh memory, for the
-unset bytes, and 0xffff, every position, for the place masks of a national squad. The fixes act in every game, the
-base game too. The test switch RECOMP_LAYOUT_FIXES=keep, or keep:captain, keep:players, keep:daily, keep:stats,
-keep:loans, keep:squads, turns them off (layout_reads.c).
+unset bytes, and 0x240, the mask of the original's last places, for the place masks of a national squad. The fixes
+act in every game, the base game too. The test switch RECOMP_LAYOUT_FIXES=keep, or keep:captain, keep:players,
+keep:daily, keep:stats, keep:loans, keep:squads, turns them off (layout_reads.c).
 
 The captain (MATCH_MAN::choose_captain 0x6e1940). For each player of the list it takes the captain score
 (match_man_get_captain_score 0x6e1cf0). When the manager's rating (non_player_attribute_rating 0x544410 with the
@@ -72,9 +72,12 @@ World Cup qualifiers of Oceania) has a 23rd mask that nothing set: [esp + 0x9c] 
 stack (0xc2b0 with one Setup Game screen, 0xa570 with the other), the place took another player, and on day 26 of
 2002 another squad went to the qualifier. The array has 50 words ([esp + 0x70] to [esp + 0xd3], the place loop
 runs to the size byte, 0x76d384..0x76d394), so a size from 27 to 50 would leave more masks unset. Here the masks
-from the 23rd to the 50th are 0xffff for the other sizes (0x76c939), every position: a squad of 23 places names
-23 players, as it does in real life, and the 23rd place takes the best player left. A mask of 0 would leave the
-place empty (0x76d092), so a squad of 23 would have 22 players.
+from the 23rd to the 50th are 0x240 for the other sizes (0x76c939). That is the mask the original gives the last
+places of each size it knows: places 19 to 22 of 22, 21 to 24 of 24 and 22 to 26 of 26 (0x76c82c..0x76c84c,
+0x76c914..0x76c92c, 0x76c9c6..0x76c9de). So a squad of 23 places names 23 players, as it does in real life, and the
+23rd place takes an outfield player as the 24-place squad's 23rd place does. A mask of 0 would leave the place empty
+(0x76d092), so a squad of 23 would have 22 players. A mask of 0xffff would make it a fourth goalkeeper: the scorer
+match_man_score_player_for_role 0x6e2f20 tests bit 1, the goalkeeper, first (0x6e30a0).
 """
 
 # address: (the instruction in the original, C code)
@@ -88,5 +91,6 @@ INSNS = {
     0x8BF420: ("lea ecx, [esp + 0x28]",
                "if (rt_layout_fix(4u)) memset(M + esp + 0x28u, 0, 0x50u); ecx = (uint32_t)(esp + 0x28u);"),
     0x76C939: ("mov word ptr [esp + 0x74], ax",
-               "if (rt_layout_fix(5u)) memset(M + esp + 0x9cu, 0xff, 0x38u); W16(esp + 0x74u, (uint16_t)eax);"),
+               "if (rt_layout_fix(5u)) for (uint32_t i = 0x9cu; i < 0xd4u; i += 2u) W16(esp + i, 0x240u); "
+               "W16(esp + 0x74u, (uint16_t)eax);"),
 }

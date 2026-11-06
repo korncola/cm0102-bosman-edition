@@ -527,6 +527,12 @@ if(EXISTS "${CM0102_EXE}")
     add_test(NAME layout_reads_kept COMMAND cm0102_recomp --game "${CM0102_EXE_DIR}")
     set_tests_properties(layout_reads_kept PROPERTIES WILL_FAIL TRUE ENVIRONMENT
         "RECOMP_LAYOUT_TEST=1;RECOMP_LAYOUT_FIXES=keep:players;SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy;RECOMP_NO_BOX=1;RECOMP_USER_DIR=${CMAKE_BINARY_DIR}/layout-kept-user")
+    # The switch knows every group: three named groups give no warning, a name it does not know gives one.
+    add_test(NAME layout_reads_names COMMAND cm0102_recomp --game "${CM0102_EXE_DIR}")
+    set_tests_properties(layout_reads_names PROPERTIES
+        PASS_REGULAR_EXPRESSION "unknown group bogus"
+        FAIL_REGULAR_EXPRESSION "unknown group (captain|players|daily|stats|loans|squads)"
+        ENVIRONMENT "RECOMP_LAYOUT_TEST=1;RECOMP_LAYOUT_FIXES=keep:stats,loans,squads,bogus;SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy;RECOMP_NO_BOX=1;RECOMP_USER_DIR=${CMAKE_BINARY_DIR}/layout-names-user")
     add_test(NAME layout_reads_check COMMAND "${RECOMP_PYTHON}" -I "${CMAKE_SOURCE_DIR}/tests/recomp/layout_reads_check.py"
         --exe "${CM0102_EXE}")
     # 0.6.0 slice 11c: the build stops when the history table is not the one plan.tsv gives, or a row is not valid.
