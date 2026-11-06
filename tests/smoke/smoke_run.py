@@ -424,7 +424,9 @@ ONLY_RUNS = None
 CUSTOM_DB = None
 
 # Item 153 (0.6.2): runs whose claim holds for the base game only, the game with start year 2001 and changing
-# rules off. With --custom-db they are compared only when the normal game is the base game (season_of_save):
+# rules off. With --custom-db the check first proves that the normal game is in the season that the data set gives
+# (expected_season, or the season of the loaded save with --save), then leaves these runs out (n/a) when that
+# season is not the base game:
 # - season-code-off: RECOMP_SEASON_CODE=off starts every game in 2001 and reads and writes no season part. Its
 #   claim (season_code_on, season.c, Q342) is that a base game with the switch gives the same save as without it.
 #   A season game with the switch is a game in another year.
@@ -433,11 +435,21 @@ CUSTOM_DB = None
 #   every hook (RECOMP_SEASON_CHANGE_TEST=write) a season game changes by design.
 BASE_GAME_RUNS = ("season-code-off", "kinds-base")
 BASE_GAME = (2001, 0)       # SEASON_FIRST_YEAR (season.h), changing rules off
+# The known data sets (the source of seasons_table.c, tools/seasons/make_db_table.py) and the roles that start a
+# new game in the data set's own season (season_screen_year, season_screen.c).
+SIGNATURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "docs", "research", "rules-0.6.0",
+                          "databases-signatures.tsv")
+OWN_SEASON_ROLES = ("season database", "extra version")
+
+
+def season_text(season):
+    year, rules = season
+    return f"{year}/{(year + 1) % 100:02d} with changing rules {'on' if rules else 'off'}"
 
 
 def season_of_save(path):
     """(start year, changing rules) of a saved game, from the fields +8 and +12 of the part bosman_season.dat
-    (season.c). The game writes the part only in a season game (season.c, the test before the part writer), so a
+    (season.c). The game writes the part in every season game (season.c, the test before the part writer), so a
     save without it is the base game."""
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools", "save"))
     import savfile
@@ -449,16 +461,41 @@ def season_of_save(path):
     return struct.unpack_from("<II", part, 8)
 
 
-def base_game_only(name, normal_save):
-    """None when the run is compared, or the reason it is not: a run of BASE_GAME_RUNS with --custom-db, when the
-    normal game is a season game."""
-    if not CUSTOM_DB or name not in BASE_GAME_RUNS:
+def expected_season(folder, table=SIGNATURES):
+    """(start year, changing rules) of a new game of the runs on the data set folder: the season of a known season
+    data set, else 2001. The runs write no season line (season 2001/02 by default) and changing_rules = off
+    (new_game_runs). A data set is known by the sizes and SHA-256 of club.dat and staff.dat, as seasons_db_identify
+    (seasons_db.c) knows it."""
+    import csv
+    import hashlib
+    files = {n.lower(): os.path.join(folder, n) for n in os.listdir(folder)}
+    if "club.dat" not in files or "staff.dat" not in files:
+        return BASE_GAME
+    sizes = {k: os.path.getsize(files[k]) for k in ("club.dat", "staff.dat")}
+    digests = {}
+    with open(table, newline="") as f:
+        for r in csv.DictReader(f, delimiter="\t"):
+            if int(r["club_size"]) != sizes["club.dat"] or int(r["staff_size"]) != sizes["staff.dat"]:
+                continue
+            if not digests:
+                for k in ("club.dat", "staff.dat"):
+                    with open(files[k], "rb") as g:
+                        digests[k] = hashlib.sha256(g.read()).hexdigest()
+            if r["club_sha256"] == digests["club.dat"] and r["staff_sha256"] == digests["staff.dat"]:
+                if r["role"] in OWN_SEASON_ROLES:
+                    return (int(r["data_season"][:4]), 0)
+                return BASE_GAME
+    return BASE_GAME
+
+
+def base_game_only(name, season):
+    """None when the run is compared, or the reason it is not: a run of BASE_GAME_RUNS with --custom-db when the
+    season of the game (season_want of compare_saves, already checked against the normal save) is not the base
+    game."""
+    if not CUSTOM_DB or name not in BASE_GAME_RUNS or season is None or tuple(season) == BASE_GAME:
         return None
-    year, rules = season_of_save(normal_save)
-    if (year, rules) == BASE_GAME:
-        return None
-    return (f"the custom data set plays a season game (start {year}/{(year + 1) % 100:02d}, changing rules "
-            f"{'on' if rules else 'off'}), and this run is defined for the base game only (BASE_GAME_RUNS)")
+    return (f"the custom data set plays a season game ({season_text(season)}), and this run is defined for the "
+            f"base game only (BASE_GAME_RUNS)")
 
 
 def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600, allowed=(), required=None,
@@ -547,55 +584,76 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
             if failed_runs:
                 print("FAIL")
                 return 1
-        failed = 0
-        first = runs[0][0]
-        if all(against.get(name) == "" for name, _ in runs[1:]):
-            print("FAIL  no run is compared (each run left is a reference)")
-            return 1
-        want = open(saves[first], "rb").read()
-        for name, _ in runs[1:]:
-            if required and name in required and required[name] not in save_parts(saves[name]):
-                failed += 1
-                print(f"FAIL  {name}: the save has no part {required[name]}")
-                continue
-            if against.get(name) == "":
-                continue                                    # a reference run for another run (ref-0.5.0)
-            why = base_game_only(name, saves[first])
-            if why:
-                print(f"n/a   {name}: {why}")
-                continue
-            base = against.get(name) or first
-            if open(saves[name], "rb").read() == open(saves[base], "rb").read():
-                print(f"ok    {name}: the save is the same as {base}")
-                continue
-            a, b = save_parts(saves[base]), save_parts(saves[name])
-            merged = any(k.lower().endswith(".parts") for k in list(a) + list(b))
-            if merged:      # a save of 0.6.2 or later with merged parts (slice 13): compare the files
-                a, b = save_files(saves[base]), save_files(saves[name])
-            differ = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
-            if merged and open(saves[base], "rb").read(8) != open(saves[name], "rb").read(8):
-                differ.append("the file header (version and flags)")
-            if merged and not differ:
-                print(f"ok    {name}: the save holds the same files as {base} (merged parts)")
-                continue
-            ok_parts = allowed.get(name, ()) if isinstance(allowed, dict) else allowed
-            if differ and set(differ) <= set(ok_parts) and rows and name in rows and rows[name] == HOST_ROWS and \
-                    not host_rows_ok(saves[base], saves[name]):
-                failed += 1
-                print(f"FAIL  {name}: the save differs from {base} in more than the hosts of its history rows")
-                continue
-            if differ and set(differ) <= set(ok_parts) and rows and name in rows and rows[name] != HOST_ROWS and \
-                    not q48_rows_ok(saves[base], saves[name], rows[name]):
-                failed += 1
-                print(f"FAIL  {name}: the save differs from {base} in other history rows than {rows[name]}")
-                continue
-            if differ and set(differ) <= set(ok_parts):
-                print(f"ok    {name}: the save differs from {base} only in accepted parts: {', '.join(differ)}")
-                continue
-            failed += 1
-            print(f"FAIL  {name}: the save differs from {base} in: {', '.join(differ) or 'the file header'}")
+        season_want = None
+        if CUSTOM_DB:
+            season_want = season_of_save(save) if save else expected_season(CUSTOM_DB)
+        failed = compare_saves(runs, saves, against, allowed, required, rows, season_want)
     print("PASS" if not failed else "FAIL")
     return 1 if failed else 0
+
+
+def compare_saves(runs, saves, against, allowed=(), required=None, rows=None, season_want=None):
+    """Compares the save of each run with the save of its reference (compare_runs) and prints a line for each run.
+    Returns the count of failures. season_want: with --custom-db, the (start year, changing rules) that the normal
+    game must have (expected_season). A check in which no run is compared fails."""
+    failed = 0
+    first = runs[0][0]
+    if all(against.get(name) == "" for name, _ in runs[1:]):
+        print("FAIL  no run is compared (each run left is a reference)")
+        return 1
+    if season_want is not None:         # --custom-db: the normal game must be in the season of the data set
+        season_got = season_of_save(saves[first])
+        if season_got != season_want:
+            print(f"FAIL  {first}: the game is in {season_text(season_got)}, the data set gives {season_text(season_want)}")
+            failed += 1
+    compared = 0
+    want = open(saves[first], "rb").read()
+    for name, _ in runs[1:]:
+        if required and name in required and required[name] not in save_parts(saves[name]):
+            failed += 1
+            print(f"FAIL  {name}: the save has no part {required[name]}")
+            continue
+        if against.get(name) == "":
+            continue                                    # a reference run for another run (ref-0.5.0)
+        why = base_game_only(name, season_want)
+        if why:
+            print(f"n/a   {name}: {why}")
+            continue
+        compared += 1
+        base = against.get(name) or first
+        if open(saves[name], "rb").read() == open(saves[base], "rb").read():
+            print(f"ok    {name}: the save is the same as {base}")
+            continue
+        a, b = save_parts(saves[base]), save_parts(saves[name])
+        merged = any(k.lower().endswith(".parts") for k in list(a) + list(b))
+        if merged:      # a save of 0.6.2 or later with merged parts (slice 13): compare the files
+            a, b = save_files(saves[base]), save_files(saves[name])
+        differ = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+        if merged and open(saves[base], "rb").read(8) != open(saves[name], "rb").read(8):
+            differ.append("the file header (version and flags)")
+        if merged and not differ:
+            print(f"ok    {name}: the save holds the same files as {base} (merged parts)")
+            continue
+        ok_parts = allowed.get(name, ()) if isinstance(allowed, dict) else allowed
+        if differ and set(differ) <= set(ok_parts) and rows and name in rows and rows[name] == HOST_ROWS and \
+                not host_rows_ok(saves[base], saves[name]):
+            failed += 1
+            print(f"FAIL  {name}: the save differs from {base} in more than the hosts of its history rows")
+            continue
+        if differ and set(differ) <= set(ok_parts) and rows and name in rows and rows[name] != HOST_ROWS and \
+                not q48_rows_ok(saves[base], saves[name], rows[name]):
+            failed += 1
+            print(f"FAIL  {name}: the save differs from {base} in other history rows than {rows[name]}")
+            continue
+        if differ and set(differ) <= set(ok_parts):
+            print(f"ok    {name}: the save differs from {base} only in accepted parts: {', '.join(differ)}")
+            continue
+        failed += 1
+        print(f"FAIL  {name}: the save differs from {base} in: {', '.join(differ) or 'the file header'}")
+    if not compared:
+        print("FAIL  no run is compared (each run left is n/a or a reference)")
+        failed += 1
+    return failed
 
 
 # --search: after the load, open the player search (Player & Staff Search, Player Search tab: every player
