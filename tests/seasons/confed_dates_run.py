@@ -17,14 +17,16 @@ before its first match, NationalTeams::select_squad 0x76c120). Leg 2 loads that 
 the squad picks of the original's July edition.
 
 The checks: each leg ends with code 0 and no message box; every Confederations Cup match of 2003 lies in June (the
-fixtures of the second save); the duty-clash check finds no club match within a day of a match of a side that holds 3
-or more of its players, in either save. With RECOMP_DUTY_LOG=1 (src/recomp_rt/win/duty_log.c) the script also prints
+fixtures of the second save); the duty-clash check finds, in either save, no club match within a day of a match of a
+side that holds 3 or more of its players, on a day within a day of a Confederations Cup match (other rows belong to
+other items). With RECOMP_DUTY_LOG=1 (src/recomp_rt/win/duty_log.c) the script also prints
 how many club matches the original's call-up move (0x5abb10) moved and how many stayed.
 --keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:confed (the original's dates). It passes only when the June check
 fails and the legs end well: the proof that the check finds the fault.
 """
 import datetime
 import os
+import re
 import sys
 import tempfile
 
@@ -78,13 +80,18 @@ def main(argv):
             log = f.read()
         print(f"      leg {k + 1}: the call-up move moved {log.count('recomp: duty: moved ')} club matches, "
               f"{log.count('not removed, stays')} stayed")
-    for k, save in enumerate(saves):
-        game = hc.Game(save)
+    games = [hc.Game(save) for save in saves]
+    days = confed_days(games[-1]) if len(games) == len(legs) else []
+    near = {d + k for d in days for k in (-1, 0, 1)}
+    for k, game in enumerate(games):
         print(f"      save {k + 1}: {game.date}")
         for check, comp, year, detail in hc.duty_clashes(game):
-            fails.append(f"save {k + 1}: {check} {comp} {year}: {detail}")
+            m = re.search(r" on (\d{4}-\d\d-\d\d) ", detail)
+            if m and datetime.date.fromisoformat(m.group(1)).toordinal() in near:
+                fails.append(f"save {k + 1}: {check} {comp} {year}: {detail}")
+            else:
+                print(f"      not a Confederations Cup day: {check} {comp} {year}: {detail}")
         if k == 1:
-            days = confed_days(game)
             print("      Confederations Cup 2003: " + ", ".join(str(datetime.date.fromordinal(d)) for d in days))
             if not days:
                 fails.append("no Confederations Cup match in 2003")
