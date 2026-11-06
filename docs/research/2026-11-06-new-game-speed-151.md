@@ -25,7 +25,11 @@ Main (22e068ce, the game code of db62ef0d) and the branch ran at the same time, 
 
 "Loading database" (7.5 s with all nations) and "Creating Shortlists" (47.8 and 48.4 s with all nations) did not change. Player Initialisation varies by about 1 s from run to run under this load.
 
-Max's own case is slower for another reason. His settings use `database = folder:December 2025`, an Update Team data set. With a copy of his user folder, the 4-nation 2025/26 start took 722 s on the 0.6.0 app he has installed, 94.9 s on main and 85.5 s on the branch, up to the manager's name. The leftover .tmp files of his folder made no difference (99.0 s without them on main), and a fresh folder with only that data set took 89.8 s on main. With that data set "Player histories" is 88 % the sort after each new row: 28,339 sorts of about 59,000 rows. That sort is the next step (branch `claude/s062-151b-history-sort`).
+Max's own case is slower for another reason. His settings use `database = folder:December 2025`, an Update Team data set. With a copy of his user folder, the 4-nation 2025/26 start took 722 s on the 0.6.0 app he has installed, 94.9 s on main and 85.5 s on the branch, up to the manager's name. The leftover .tmp files of his folder made no difference (99.0 s without them on main), and a fresh folder with only that data set took 89.8 s on main. With that data set "Player histories" is 88 % the sort after each new row: 28,339 sorts of about 59,000 rows. That sort is changed on the branch `claude/s062-151b-history-sort` (item 151b, below).
+
+## The history sort (item 151b)
+
+With Max's data set the rows before the new row are always in strict order (no two compare equal), and the new row lands anywhere. Then the rows after the sort are known: the old rows with the new row at its place. `qsort6_insert.c` writes them so, and finds the stack words that the sort leaves and its eax by a walk of the sort's steps backwards in time, which skips every part that can no longer write a word that is still open. Parts in order need no compare. The file's head comment gives the reasoning. In a test harness 20,000 random sorts of 2 to 70,000 rows gave the same words and eax as the full steps, with about 24 parts visited in place of about 15,000. RECOMP_QSORT=check: 28,339 sorts equal with the December 2025 data set, 8,322 with the 3.9.68 data and all nations. "Player histories" with the December 2025 data set: 35.9 s to 3.8 s.
 
 ## Where the time went on main
 
