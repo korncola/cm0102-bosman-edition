@@ -328,18 +328,20 @@ int main(void)
     /* 0.6.2 open items 157 to 159: the original's Confederations Cup plays from 29 July (0x58b601) to 9 August
      * (0x58b984) of every odd year, in the European club qualifiers and its own Club World Championship. The real
      * editions played in June (2003: 18 to 29 June). With the fix of group confed every edition of the base game
-     * starts on the Saturday within 3 days of 18 June, by a whole shift that Date::Date's weekday move keeps. */
+     * starts on the Saturday on or before 18 June, by a whole shift that Date::Date's weekday move keeps, and its
+     * last match (9 August, code 2: 0x58b984) is in June too. */
     {
         int bad = 0, bad_year = 0;
         for (int y = 2003; y <= 2301; y += 2) {
             int s = season_intl_date_shift(INTL_CONFED, y);
-            long first = snapped(y, 29, 6, s, 5);
-            if (first < days_from_civil(y, 6, 15) || first > days_from_civil(y, 6, 21) || s % 7 != (first -
-                    days_from_civil(y, 7, 29)) % 7) {
+            long first = snapped(y, 29, 6, s, 5), last = snapped(y, 9, 7, s, 2);
+            if (first < days_from_civil(y, 6, 12) || first > days_from_civil(y, 6, 18) ||
+                first != days_from_civil(y, 7, 29) + s || last > days_from_civil(y, 6, 30)) {
                 if (!bad++) bad_year = y;
             }
         }
-        CHECK(bad == 0, "base game: %d Confederations Cups start outside 15 to 21 June (first %d)", bad, bad_year);
+        CHECK(bad == 0, "base game: %d Confederations Cups not from 12 to 18 June to the end of June (first %d)", bad,
+              bad_year);
         confed_june = 0;
         CHECK(season_intl_date_shift(INTL_CONFED, 2011) == 0, "base game, keep:confed: the original's dates");
         confed_june = 1;
@@ -362,9 +364,9 @@ int main(void)
     CHECK(season_intl_date_shift(INTL_WORLD_CUP, 2002) == 0, "2001 on: the 2002 World Cup keeps its dates");
     CHECK(season_intl_date_shift(INTL_ACN, 2002) == 0, "2001 on: the ACN 2002 keeps its dates");
     CHECK(season_intl_date_shift(INTL_ACN, 2004) != 0, "2001 on: the ACN 2004 moves to the table's dates");
-    /* The Confederations Cup 2003 of a 2001 game plays as in the base game: from 21 June (group confed). */
-    CHECK(snapped(2003, 29, 6, season_intl_date_shift(INTL_CONFED, 2003), 5) == days_from_civil(2003, 6, 21),
-          "2001 on: the Confederations Cup 2003 from Saturday 21 June, as the base game");
+    /* The Confederations Cup 2003 of a 2001 game plays as in the base game: from 14 June (group confed). */
+    CHECK(snapped(2003, 29, 6, season_intl_date_shift(INTL_CONFED, 2003), 5) == days_from_civil(2003, 6, 14),
+          "2001 on: the Confederations Cup 2003 from Saturday 14 June, as the base game");
     confed_june = 0;
     CHECK(season_intl_date_shift(INTL_CONFED, 2003) == 0, "2001 on, keep:confed: the Confederations Cup 2003 keeps "
                                                           "its dates");

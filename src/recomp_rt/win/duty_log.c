@@ -84,7 +84,7 @@ void duty_log_remove(uint32_t fix, int removed)
 
 void duty_log_moved(uint32_t fix, uint32_t old_date)
 {
-    if (!duty_log_on() || !inside || !readable(fix)) return;
+    if (!duty_log_on() || !inside || rt_unwinding || !readable(fix)) return;
     char t[200];
     fixture_text(fix, t, sizeof t);
     fprintf(stderr, "recomp: duty: moved %s from day %d of %d to day %d of %d\n", t,

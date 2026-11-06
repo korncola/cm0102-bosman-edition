@@ -538,7 +538,8 @@ uint32_t rt_callup_released(uint32_t slot)
 }
 
 /* The Confederations Cup in June (open items 157 to 159): season_intl_date_shift (season_intl_rules.c) moves an edition
- * that keeps the original's dates, 29 July to 9 August, to the Saturday near 18 June. It acts from the new game on:
+ * that keeps the original's dates, 29 July to 9 August, to the Saturday on or before 18 June,
+ * so all of it plays in June. It acts from the new game on:
  * the base game builds its 2003 edition there (the stage builder 0x58bdb0). */
 int season_intl_confed_june(void)
 {

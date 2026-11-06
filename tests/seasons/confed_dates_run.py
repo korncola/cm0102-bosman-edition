@@ -8,18 +8,20 @@ Usage:
 The original plays the Confederations Cup of every odd year from 29 July to 9 August (0x58b601, 0x58b984), in the days
 of its own Club World Championship and the European club qualifiers. In the changing-rules-off games of run set pass 3
 clubs of those cups played the day before, of or after a match of a side that held 3 or more of their players
-(the duty-clash check of tests/seasons/future/history_check.py). The fix moves each such edition to the Saturday near
-18 June, as the real editions played in June.
+(the duty-clash check of tests/seasons/future/history_check.py). The fix moves each such edition to the Saturday on
+or before 18 June, so the whole edition plays in June, as the real editions mostly did.
 
 One new game, Tier A, every nation, seed 1, changing rules off (the base game: the 3.9.68 database, 2001/02). Leg 1
-saves on 20 June 2003, after the squad picks of a June edition (a finals squad is picked 10 days before its first
-match, NationalTeams::select_squad 0x76c120). Leg 2 loads that save and saves on 25 July 2003, after the squad picks
-of the original's July edition.
+saves on 13 June 2003, after the squad picks of the June edition (from 14 June 2003; a finals squad is picked 10 days
+before its first match, NationalTeams::select_squad 0x76c120). Leg 2 loads that save and saves on 25 July 2003, after
+the squad picks of the original's July edition.
 
 The checks: each leg ends with code 0 and no message box; every Confederations Cup match of 2003 lies in June (the
 fixtures of the second save); the duty-clash check finds no club match within a day of a match of a side that holds 3
-or more of its players, in either save. --keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:confed: the first check
-must then fail.
+or more of its players, in either save. With RECOMP_DUTY_LOG=1 (src/recomp_rt/win/duty_log.c) the script also prints
+how many club matches the original's call-up move (0x5abb10) moved and how many stayed.
+--keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:confed (the original's dates). It passes only when the June check
+fails and the legs end well: the proof that the check finds the fault.
 """
 import datetime
 import os
@@ -34,7 +36,7 @@ import soak_run  # noqa: E402
 
 SAVE = "samesave.sav"
 FIRST_DAY = 2001 * 366 + 181             # the first human turn of a new game (game_days, run_set.py)
-SAVE_1 = 2003 * 366 + 170                 # 20 June 2003 (day 170 from 0)
+SAVE_1 = 2003 * 366 + 163                 # 13 June 2003 (day 163 from 0)
 SAVE_2 = 2003 * 366 + 205                 # 25 July 2003
 
 
@@ -52,12 +54,15 @@ def main(argv):
     program, game_dir = os.path.abspath(argv[1]), os.path.abspath(argv[2])
     keep = argv[argv.index("--keep") + 1] if "--keep" in argv else tempfile.mkdtemp(prefix="cm0102-confed-")
     os.environ["RECOMP_TIER_A"] = "1"
-    if "--keep-faults" in argv:
+    os.environ["RECOMP_DUTY_LOG"] = "1"
+    keep_faults = "--keep-faults" in argv
+    if keep_faults:
         os.environ["RECOMP_ORIGINAL_FAULTS"] = "keep:confed"
     o = {"program": program, "game": game_dir, "rules": "off", "database": None, "seed": 1, "start": 2001,
          "last": 2005, "nations": ["all"], "extra": [], "timeout": 7200}
-    fails, saves = [], []
-    for k, (run, days) in enumerate(((soak_run.new_game_leg, SAVE_1 - FIRST_DAY), (soak_run.load_leg, SAVE_2 - SAVE_1))):
+    fails, june, saves = [], [], []
+    legs = ((soak_run.new_game_leg, SAVE_1 - FIRST_DAY), (soak_run.load_leg, SAVE_2 - SAVE_1))
+    for k, (run, days) in enumerate(legs):
         work = os.path.join(keep, f"leg{k + 1}")
         code, took, box = run(o, work, days) if k == 0 else run(o, work, saves[-1], days)
         save = os.path.join(work, "user", SAVE)
@@ -67,6 +72,10 @@ def main(argv):
                          f"{'there' if os.path.exists(save) else 'missing'} ({work})")
             break
         saves.append(save)
+        with open(os.path.join(work, "stderr.txt"), errors="replace") as f:
+            log = f.read()
+        print(f"      leg {k + 1}: the call-up move moved {log.count('recomp: duty: moved ')} club matches, "
+              f"{log.count('not removed, stays')} stayed")
     for k, save in enumerate(saves):
         game = hc.Game(save)
         print(f"      save {k + 1}: {game.date}")
@@ -79,10 +88,16 @@ def main(argv):
                 fails.append("no Confederations Cup match in 2003")
             out = [d for d in days if datetime.date.fromordinal(d).month != 6]
             if out:
-                fails.append(f"{len(out)} Confederations Cup days of 2003 outside June, the first "
-                             f"{datetime.date.fromordinal(out[0])}")
-    for f in fails:
+                june.append(f"{len(out)} Confederations Cup days of 2003 outside June, the first "
+                            f"{datetime.date.fromordinal(out[0])}")
+    for f in june + fails:
         print("FAIL ", f)
+    if keep_faults:
+        legs_ok = len(saves) == len(legs)
+        ok = bool(june) and legs_ok
+        print("PASS: the June check finds the fault" if ok else "FAIL: the June check does not find the fault")
+        return 0 if ok else 1
+    fails += june
     print("PASS" if not fails else f"FAILED: {len(fails)}")
     return 0 if not fails else 1
 

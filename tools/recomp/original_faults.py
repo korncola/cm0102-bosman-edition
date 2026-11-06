@@ -1,8 +1,8 @@
 """Faults of the original that long games reach (0.6.2 slice 11, Q23, Q24, Q27, open item 102;
 src/recomp_rt/win/original_faults.c). The fixes act in every game, the base game too. The test switch
 RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age", "keep:olympics",
-"keep:ire_super", "keep:nsl", "keep:holiday", "keep:callups" or "keep:confed" (or a list: "keep:money,age") turns off one group
-or more.
+"keep:ire_super", "keep:nsl", "keep:holiday", "keep:callups" or "keep:confed" (or a list: "keep:money,age") turns
+off one group or more.
 
 National managers (fault 26, Q23). `club_can_be_managed` 0x544820 takes a senior national team (club id from club
 count - 2 x nation count to club count - nation count, 0x544835..0x544857) only when its nation had more than 150
@@ -152,6 +152,18 @@ manager's pick too (0x784630, forced 1). The pick keeps its other gates, among t
 competitive match on the date (NationalTeams::mark_clubs_with_fixtures 0x7775c0, the playing-time mood contract
 +0x3d over -10, 0x76cd44..0x76cd73). 'B' and under-21 picks (and the Olympic squad in slot 2) keep the original's
 rule.
+
+The Confederations Cup in June (open items 157 to 159). The template of the class (0x58b560) plays the groups from 29
+July (League_Stage date 0x68a160 at 0x58b601) and the final on 9 August (0x521eb0 at 0x58b984), and the year +0x40
+steps by 2 for ever (0x58c050). Those are the days of the original's own Club World Championship and of the European
+club qualifiers. NationalTeams::get_international_duty_club 0x7757d0 holds a player from the day before his side's
+match to the day after, so clubs of those cups played without 3 to 15 of their players (run set pass 3, changing
+rules off). The real editions started in mid-June (2003: 18 to 29 June). This group has no patch here: its fix is in
+season_intl_date_shift (src/recomp_rt/win/season_intl_rules.c, confed_june_shift), which the stage builder 0x58bdb0
+and the template already use for the date shift of every finals class. An edition that keeps the original's dates
+moves its first group day to the Saturday on or before 18 June of its year, so all its matches are in June (2003: 14
+to 25 June). It acts from the new game on: the base game builds its 2003 edition there. Tests: ctest season_intl and
+tests/seasons/confed_dates_run.py.
 """
 
 # address: (the instruction in the original, C code)
