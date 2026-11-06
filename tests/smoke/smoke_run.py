@@ -418,7 +418,47 @@ JOBS = 0
 ONLY_RUNS = None
 # --custom-db <folder> (0.6.0, staff reserve): each run copies the folder into Databases of its user folder and
 # plays it as a custom data set (database = folder:<name>), for example the 3.9.68 data against the 0.5.0 build.
+# A season data set that the game knows (seasons_table.c, for example December 2025: role SEASON, 2025) starts in
+# its own season (season_screen_year, season_screen.c), so its normal game is a season game and the runs of
+# BASE_GAME_RUNS do not apply to it (see there).
 CUSTOM_DB = None
+
+# Item 153 (0.6.2): runs whose claim holds for the base game only, the game with start year 2001 and changing
+# rules off. With --custom-db they are compared only when the normal game is the base game (season_of_save):
+# - season-code-off: RECOMP_SEASON_CODE=off starts every game in 2001 and reads and writes no season part. Its
+#   claim (season_code_on, season.c, Q342) is that a base game with the switch gives the same save as without it.
+#   A season game with the switch is a game in another year.
+# - kinds-base: the season change calls the rule kinds in every season game (season_game_changes, season_names.c;
+#   docs/research/2026-10-17-season-change.md) and in no base game. With the test kind that writes the game in
+#   every hook (RECOMP_SEASON_CHANGE_TEST=write) a season game changes by design.
+BASE_GAME_RUNS = ("season-code-off", "kinds-base")
+BASE_GAME = (2001, 0)       # SEASON_FIRST_YEAR (season.h), changing rules off
+
+
+def season_of_save(path):
+    """(start year, changing rules) of a saved game, from the fields +8 and +12 of the part bosman_season.dat
+    (season.c). The game writes the part only in a season game (season.c, the test before the part writer), so a
+    save without it is the base game."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools", "save"))
+    import savfile
+    sav = savfile.Sav(path)
+    try:
+        part = sav.read_member("bosman_season.dat")
+    except KeyError:
+        return BASE_GAME
+    return struct.unpack_from("<II", part, 8)
+
+
+def base_game_only(name, normal_save):
+    """None when the run is compared, or the reason it is not: a run of BASE_GAME_RUNS with --custom-db, when the
+    normal game is a season game."""
+    if not CUSTOM_DB or name not in BASE_GAME_RUNS:
+        return None
+    year, rules = season_of_save(normal_save)
+    if (year, rules) == BASE_GAME:
+        return None
+    return (f"the custom data set plays a season game (start {year}/{(year + 1) % 100:02d}, changing rules "
+            f"{'on' if rules else 'off'}), and this run is defined for the base game only (BASE_GAME_RUNS)")
 
 
 def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600, allowed=(), required=None,
@@ -520,6 +560,10 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
                 continue
             if against.get(name) == "":
                 continue                                    # a reference run for another run (ref-0.5.0)
+            why = base_game_only(name, saves[first])
+            if why:
+                print(f"n/a   {name}: {why}")
+                continue
             base = against.get(name) or first
             if open(saves[name], "rb").read() == open(saves[base], "rb").read():
                 print(f"ok    {name}: the save is the same as {base}")

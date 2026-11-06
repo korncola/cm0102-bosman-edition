@@ -33,7 +33,9 @@ Some changes alter the game by decision. Since 0.6.2 (Q48), the history rows of 
 - In a new game, `rules-on` plays with the fix off and must equal `history-q48-off` except in the accepted rules-on parts. The run `rules-on-q48` plays the shipped default (changing rules on, fix on) and must equal the same run of `--ref-build`.
 - In start.sav and prematch.sav, `history-q48-off` may differ from `normal` only in `index.dat` and `nation_comp_history.dat`, and there only by the 3.9.68 row of the Copa América 2001, which goes when the game plays its own final. In any other saved game it must equal `normal`. In a new game it is a reference run only.
 
-The runs, parts and rows are in `q48_runs`, `Q48_SAVE_PARTS` and `Q48_SAVE_ROWS` in `smoke_run.py`. Any other difference still fails, and a check that compares no run fails. The effect of the fix itself is checked by the history checker (`tests/seasons/future/history_check.py`).
+The runs, parts and rows are in `q48_runs`, `Q48_SAVE_PARTS` and `Q48_SAVE_ROWS` in `smoke_run.py`.
+
+Two runs hold for the base game only (start 2001/02, changing rules off). `season-code-off` starts every game in 2001 and writes no season part, so it equals the game without the switch only in the base game. `kinds-base` proves that the base game calls no rule kind, and every season game calls them. With `--custom-db`, a season data set that the game knows (for example December 2025) starts in its own season, so the normal game is a season game. The check then reads the start year and the changing rules from the part `bosman_season.dat` of the normal save. It prints `n/a` for those two runs when the game is not the base game (`BASE_GAME_RUNS`, open item 153). Without `--custom-db` it compares them as before. ctest `same_save_base_game` checks this rule. Any other difference still fails, and a check that compares no run fails. The effect of the fix itself is checked by the history checker (`tests/seasons/future/history_check.py`).
 
 ## Start-season soaks
 
