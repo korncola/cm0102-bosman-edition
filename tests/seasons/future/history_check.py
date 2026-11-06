@@ -99,8 +99,10 @@ A confederation check for every edition:
                   players of one of the clubs (they are on duty, 0x7757d0; open item 93). For an Olympic match of the
                   under-21 sides the fault is only a club that keeps fewer than 11 players it can field: not on duty,
                   at the club, not injured (open item 107), with the virtual players of its free squad slots for a
-                  club with a nation (open item 164). Fixtures still to be played; not in a 2001 game with changing
-                  rules off
+                  club with a nation (open item 164). The squad count only for a national match up to 14 days after
+                  the save (the squads picked); after that, a club's match within one day of a match of its own
+                  nation's senior side (open items 157 to 162). Fixtures still to be played; not in a 2001 game with
+                  changing rules off
     entrant-holder the title holder is not an entrant (access.tsv "holder": the Champions League from 2006, the
                   Libertadores), when the edition before is at most one cycle and one year before; not for an
                   edition of the start year or before (it began before the game, the holder may be out)
@@ -963,6 +965,7 @@ def entrants(game, rules, access, changes=()):
 DUTY_MIN = 3                                  # players of one club in the squad of a side that plays a day apart
 SIDE_MIN = 11                                 # players a club needs to field a side (box match_eng.cpp 612 or 652)
 TOP_UP_MOST = 25                              # virtual players the top-up 0x90dae0 adds at most (0x90ddbc, 0x90dde0)
+PICK_AHEAD = 14                               # days: NationalTeams::daily_update picks the squads of this day ahead
 OLYMPIC_NAMES = ("football tournament of the olympic games", "olympic games")   # set the key 0x9cf7a0
 FITNESS = 0x1F                                # injury.dat: a fitness record per staff id (Injury::load 0x62ab00)
 
@@ -1016,7 +1019,15 @@ def duty_clashes(game):
     October 2029 save and fielded 9 on 22 November. Squads: club.dat +0xd7, SLOTS staff ids (-1 for none); the
     national side of a player's squad staff.dat +0x24 (the squads of the save date). Only fixtures still to be
     played, and none in the start season of a 2001 game, which keeps the original's dates (season_friendly_dates.c
-    keeps_original). One fault per competition and year, with its first case."""
+    keeps_original). The squads of the save are those of the matches up to PICK_AHEAD days after it:
+    NationalTeams::daily_update 0x76b100 picks the squads of the day two weeks ahead (0x54c770 with 2 at 0x76b126; in a
+    replay of a2001offs2, the pick of day 213 of 2041 is for Japan's match of day 227), and the original's call-up move
+    0x7777e0 acts on them that day. For a later match the squad count is not used (Argentina's of 3 September 2041 held
+    3 players of San Lorenzo in the July save and fewer in its own pick, run set pass 3, a2001offs1). A club's match
+    within a day of a match of its own nation's senior side is a fault there with no count (open items 95 and 96 were
+    found from July saves 20 days or more before the match; lead, 6 November 2026). The senior side of a nation is the
+    lower id of its two in nat_club.dat (the under-21 sides come after, 0x540a2a..0x540a40). One fault per competition
+    and year, with its first case."""
     sav = game.sav
     staff = sav.read("staff.dat") if sav.has("staff.dat") else b""
     injury = sav.read("injury.dat") if sav.has("injury.dat") else b""
@@ -1041,6 +1052,14 @@ def duty_clashes(game):
     first = datetime.date(game.start + 1, 7, 1).toordinal() if game.start == 2001 else 0
     today = max(first, datetime.date(game.date[0], 1, 1).toordinal() + game.date[1] if game.date[0] > 1900 else 0)
     games = olympics(game)
+    # The senior side of each nation: the national sides come first in the club list, the under-21 sides after
+    # them (the under-21 side's club id is at least the count minus the nations, 0x540a2a..0x540a40), so a nation's
+    # senior side has the lower id of its two.
+    nation_of = {s32(clubs, o): s32(clubs, o + 0x53) for o in range(0, len(clubs) - CLUB + 1, CLUB)}
+    sides = sav.read("nat_club.dat") if sav.has("nat_club.dat") else b""
+    own = {}
+    for sid, nat in sorted((s32(sides, o), s32(sides, o + 0x53)) for o in range(0, len(sides) - CLUB + 1, CLUB)):
+        own.setdefault(nat, sid)
     national = collections.defaultdict(set)       # day: national side ids that play a match that is not the Olympics
     olympic = collections.defaultdict(set)        # day: national side ids that play an Olympic match
     club_matches = []
@@ -1062,7 +1081,7 @@ def duty_clashes(game):
         if (name, year) in seen:
             continue
         near = (day - 1, day, day + 1)
-        hit = next(((c, side, d) for d in near for side in sorted(national.get(d, ()))
+        hit = next(((c, side, d) for d in near if d <= today + PICK_AHEAD for side in sorted(national.get(d, ()))
                     for c in (home, away) if called[c][side] >= DUTY_MIN), None)
         when = datetime.date.fromordinal(day)
         if hit:
@@ -1071,6 +1090,15 @@ def duty_clashes(game):
             faults.append(("duty-clash", name, year, f"{game.club(c)[0]} on {when} has "
                                                      f"{called[c][side]} players in the squad of {game.club(side)[0]}, "
                                                      f"which plays on {datetime.date.fromordinal(d)}"))
+            continue
+        hit = next(((c, own[nation_of[c]], d) for d in near if d > today + PICK_AHEAD for c in (home, away)
+                    if nation_of.get(c, -1) in own and own[nation_of[c]] in national.get(d, ())), None)
+        if hit:
+            c, side, d = hit
+            seen.add((name, year))
+            faults.append(("duty-clash", name, year, f"{game.club(c)[0]} on {when} plays within a day of its "
+                                                     f"nation's side {game.club(side)[0]}, which plays on "
+                                                     f"{datetime.date.fromordinal(d)} (squad not yet picked)"))
             continue
         busy = set().union(*(national.get(d, set()) | olympic.get(d, set()) for d in near))
         games_near = set().union(*(olympic.get(d, set()) for d in near))
