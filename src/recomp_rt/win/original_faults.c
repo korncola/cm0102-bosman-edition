@@ -1,7 +1,7 @@
 /* Faults of the original that long games reach (0.6.2 slice 11, tools/recomp/original_faults.py). The fixes act in
  * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS turns them off: "keep" all
  * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age,
- * olympics, ire_super, nsl, holiday and callups. */
+ * olympics, ire_super, nsl, holiday, callups and wc_pots. */
 #include "win.h"
 #include "../rt.h"
 
@@ -12,14 +12,14 @@
 #define CLUB_COUNT 0xae235cu     /* clubs, national teams and under-21 teams */
 #define NATION_COUNT 0xae2350u
 
-enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, NSL, HOLIDAY, CALLUPS, GROUPS };
+enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, NSL, HOLIDAY, CALLUPS, WC_POTS, GROUPS };
 
 static int fixes_on_group(int group)
 {
     static int on[GROUPS] = {-1};
     if (on[0] < 0) {
         static const char *const names[GROUPS] = {"managers", "money", "age", "olympics", "ire_super", "nsl",
-                                                   "holiday", "callups"};
+                                                   "holiday", "callups", "wc_pots"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
         if (v && strcmp(v, "keep") && strncmp(v, "keep:", 5))
             fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS=%s is not keep or keep:<groups>: every fix acts\n", v);
@@ -31,7 +31,7 @@ static int fixes_on_group(int group)
             if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
                 fprintf(stderr,
                         "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics, "
-                        "ire_super, nsl, holiday, callups)\n",
+                        "ire_super, nsl, holiday, callups, wc_pots)\n",
                         (int)n, p);
         }
         for (int g = 0; g < GROUPS; g++) {
@@ -534,4 +534,31 @@ uint32_t rt_holiday_below_asking(uint32_t option, uint32_t slot)
 uint32_t rt_callup_released(uint32_t slot)
 {
     return fixes_on_group(CALLUPS) && (slot & 0xffu) == 0u;
+}
+
+/* The draw of the 2002 World Cup (open item 166). `WorldCup::draw_groups` 0x92e940 first draws pot 1 at random: the
+ * slots 0 and 1 go to groups 1 and 3, and for each other group it picks a slot of 2 to 7 (random 0..5 + 2, 0x92ea3b)
+ * until the slot's byte +4 is not 0xff, then writes 0xff into it (0x92ea92). Only then it tests the year (0x92eb46)
+ * and writes the real 2002 draw over the whole result (0x92eb52..0x92efe9). The pots are the array +0xee of 32 slots
+ * of 5 bytes. `WorldCup::seed_teams` 0x92f230 writes them for every edition but 2002: for 2002 it returns at once
+ * (0x92f240). The constructor 0x92bf50 never writes them, and operator new 0x944cf1 does not clear, so the 2002
+ * pots hold what the heap held. The save writes them (0x92f150) and the load reads them back (0x92f000). One byte of
+ * 0xff in the slots 2 to 7 leaves five slots for six picks, and the loop at 0x92ea57..0x92ea71 never ends: the game
+ * stops on the draw day (+0xb6, 27 December 2001) in every load of that game. Before the 2002 draw the fix writes 0
+ * into each byte +4 of the slots 2 to 7 that holds 0xff, so all six slots are free, as seed_teams leaves them for the
+ * other editions (0x92f536). The 2002 result never uses the pots, and only the test for 0xff reads them, so a game
+ * whose pots hold no 0xff draws as before and saves the same bytes. With the group off (keep:wc_pots) the pots stay
+ * as they are. */
+void rt_wc2002_pots(uint32_t cup)
+{
+    int ff = 0, on = fixes_on_group(WC_POTS);
+    for (uint32_t k = 2; k < 8u; k++) {
+        uint32_t at = cup + 0xeeu + 5u * k + 4u;
+        if (rd8(g_mem, at) != 0xffu) continue;
+        ff++;
+        if (on) wr8(g_mem, at, 0);
+    }
+    if (ff)
+        fprintf(stderr, "recomp: World Cup 2002 draw: %d pot 1 slots hold 0xff, the pots are %s\n", ff,
+                on ? "cleared" : "kept");
 }
