@@ -518,6 +518,17 @@ if(EXISTS "${CM0102_EXE}")
     add_test(NAME qsort6 COMMAND cm0102_recomp --game "${CM0102_EXE_DIR}")
     set_tests_properties(qsort6 PROPERTIES ENVIRONMENT
         "RECOMP_QSORT_TEST=1;SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy;RECOMP_NO_BOX=1;RECOMP_USER_DIR=${CMAKE_BINARY_DIR}/qsort6-user")
+    # Reads of the original that depend on where memory lies (0.6.2 open item 138b, layout_reads.c): the original's
+    # match player constructor gives the same record in blocks that held other bytes. With the fix off
+    # (RECOMP_LAYOUT_FIXES=keep:players, the original's code) the records differ, so layout_reads_kept must fail.
+    add_test(NAME layout_reads COMMAND cm0102_recomp --game "${CM0102_EXE_DIR}")
+    set_tests_properties(layout_reads PROPERTIES ENVIRONMENT
+        "RECOMP_LAYOUT_TEST=1;SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy;RECOMP_NO_BOX=1;RECOMP_USER_DIR=${CMAKE_BINARY_DIR}/layout-user")
+    add_test(NAME layout_reads_kept COMMAND cm0102_recomp --game "${CM0102_EXE_DIR}")
+    set_tests_properties(layout_reads_kept PROPERTIES WILL_FAIL TRUE ENVIRONMENT
+        "RECOMP_LAYOUT_TEST=1;RECOMP_LAYOUT_FIXES=keep:players;SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy;RECOMP_NO_BOX=1;RECOMP_USER_DIR=${CMAKE_BINARY_DIR}/layout-kept-user")
+    add_test(NAME layout_reads_check COMMAND "${RECOMP_PYTHON}" -I "${CMAKE_SOURCE_DIR}/tests/recomp/layout_reads_check.py"
+        --exe "${CM0102_EXE}")
     # 0.6.0 slice 11c: the build stops when the history table is not the one plan.tsv gives, or a row is not valid.
     add_custom_command(
         OUTPUT "${CMAKE_BINARY_DIR}/seasons/history.ok"
