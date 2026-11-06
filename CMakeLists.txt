@@ -307,6 +307,12 @@ if(NOT WIN32)
         src/recomp_rt/win/season_fifa_days_table.c)
     target_include_directories(season_fifa_days_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_fifa_days COMMAND season_fifa_days_test)
+    # Open item 163: the South American qualifying rounds on the FIFA windows of each cycle, 2006 to 2302.
+    add_executable(season_conmebol_days_test tests/seasons/test_season_conmebol_days.c
+        src/recomp_rt/win/season_conmebol_days.c src/recomp_rt/win/season_uefa_days.c
+        src/recomp_rt/win/season_fifa_days_table.c)
+    target_include_directories(season_conmebol_days_test PRIVATE src/recomp_rt/win)
+    add_test(NAME season_conmebol_days COMMAND season_conmebol_days_test)
     add_executable(youth_pool_test tests/seasons/test_youth_pool.c src/recomp_rt/win/youth_pool_rule.c)
     target_include_directories(youth_pool_test PRIVATE src/recomp_rt/win)
     add_test(NAME youth_pool COMMAND youth_pool_test)

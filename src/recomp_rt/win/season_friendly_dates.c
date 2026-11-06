@@ -114,6 +114,8 @@ static int keeps_original(int s)
     return s < season_start_year() || (s == season_start_year() && season_start_year() == SEASON_FIRST_YEAR);
 }
 
+int season_friendly_keeps_original_now(void) { return keeps_original(season_now()); }
+
 /* Running seasons only (O405, the maintainer, 26 October 2026; keeps_original): in the start season of a 2001 start the
  * table stays the original's, as
  * that season keeps the original's qualifying and international dates. The table holds the rows of later seasons

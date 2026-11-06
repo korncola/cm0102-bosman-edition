@@ -63,6 +63,8 @@
 #include "season_intl.h"
 #include "season_wcq26.h"
 #include "season_uefa_days.h"
+#include "season_conmebol_days.h"
+#include "season.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,6 +74,7 @@
 #define KEY_CONCACAF 0x9cf770u
 #define KEY_ASIA 0x9cf774u
 #define KEY_SOUTH_AMERICA 0x9cf778u
+#define GAME_DATE 0xae2c90u             /* s16 day of the year, s16 year */
 #define STAGES 0xcu                     /* stage array of a competition, count at +0x2c */
 #define STAGE_COUNT 0x2cu
 #define TEAM_COUNT 0x3eu                /* word: teams of a League table or a Cup round */
@@ -507,6 +510,68 @@ static void end_by_october(uint32_t self, uint32_t tpl, int rounds, const char *
 void o_00920590(void);
 void o_00914de0(void);
 
+static int conmebol_busy(long z)
+{
+    int y, m, d;
+    season_from_abs_day(z, &y, &m, &d);
+    return season_intl_finals_busy(SEASON_CONF_SOUTH_AMERICA, y, season_day_of_year(y, m, d));
+}
+
+static int by_round_day(const void *a, const void *b)
+{
+    long x = ((const long *)a)[0], y = ((const long *)b)[0];
+    return x < y ? -1 : x > y;
+}
+
+/* Open item 163: the rounds of the South American section on the FIFA windows of the real cycle
+ * (season_conmebol_days.c says why). A season game, every cycle from 2006, made in a running season: the start
+ * season of a 2001 start keeps the original's international calendar (O405), so there end_by_october acts and the
+ * fixtures move at the first running day (season_friendly_dates.c, route M), as before. The template's rounds take
+ * the new days in the order of their own days. A round record (league_round_set_date 0x68a160): the day of the
+ * year at +0 (0x68a1a5), the year less the campaign year +0x40 at +2 (0x68a1ac), and at +4 1 for a weekend day and
+ * 2 for a midweek day (0x68a1b4; Saturday or Sunday 1, as WcSouthAmericanLeague's fixed fixtures set it,
+ * 0x9224d1..0x9224f0). Returns 1 when it placed them. */
+static int conmebol_windows(uint32_t self, uint32_t tpl, int rounds)
+{
+    if (!season_intl_on() || !readable(self) || !readable(tpl) || rounds <= 0 || rounds > 64 ||
+        season_friendly_keeps_original_now())
+        return 0;
+    int base = (int16_t)rd16(g_mem, self + 0x40u), y = base + 2;
+    if (y < FIRST_YEAR) return 0;
+    int ty = (int16_t)rd16(g_mem, GAME_DATE + 2), tm, td;
+    season_from_day_of_year(ty, (int16_t)rd16(g_mem, GAME_DATE), &tm, &td);
+    long days[64], order[64][2];
+    if (season_conmebol_days(y, rounds, season_abs_day(ty, tm, td) + 2, conmebol_busy, days) != rounds) {
+        if (logging())
+            fprintf(stderr, "recomp: season intl: wc qualifying %d: CONMEBOL keeps the template (too few FIFA days "
+                            "for %d rounds)\n", y, rounds);
+        return 0;
+    }
+    for (int r = 0; r < rounds; r++) {
+        uint32_t rec = tpl + (uint32_t)r * 0x41u;
+        order[r][0] = day_number(base + (int16_t)rd16(g_mem, rec + 2u), (int16_t)rd16(g_mem, rec)) * 64 + r;
+        order[r][1] = r;
+    }
+    qsort(order, (size_t)rounds, sizeof order[0], by_round_day);
+    for (int k = 0; k < rounds; k++) {
+        uint32_t rec = tpl + (uint32_t)order[k][1] * 0x41u;
+        int yy, mm, dd;
+        season_from_abs_day(days[k], &yy, &mm, &dd);
+        int wd = (int)((days[k] % 7 + 7 + 3) % 7);           /* 1 January 1970 was a Thursday: 0 Monday */
+        wr16(g_mem, rec, (uint16_t)season_day_of_year(yy, mm, dd));
+        wr16(g_mem, rec + 2u, (uint16_t)(yy - base));
+        wr8(g_mem, rec + 4u, wd >= 5 ? 1 : 2);
+    }
+    if (logging()) {
+        int y0, m0, d0, y1, m1, d1;
+        season_from_abs_day(days[0], &y0, &m0, &d0);
+        season_from_abs_day(days[rounds - 1], &y1, &m1, &d1);
+        fprintf(stderr, "recomp: season intl: wc qualifying %d: CONMEBOL plays its %d rounds on FIFA days, "
+                        "%04d-%02d-%02d to %04d-%02d-%02d\n", y, rounds, y0, m0, d0, y1, m1, d1);
+    }
+    return 1;
+}
+
 /* WcSouthAmericanLeague::create_schedule, thiscall (stage, short *round_count, short *, int *) ret 0x10, returns
  * the template. */
 RT_WRAP(00920590, wcq_conmebol_schedule)
@@ -515,7 +580,8 @@ RT_WRAP(00920590, wcq_conmebol_schedule)
     o_00920590();
     if (rt_unwinding || !readable(count)) return;
     uint32_t eax = cpu.eax;
-    end_by_october(self, eax, (int16_t)rd16(g_mem, count), "CONMEBOL");
+    if (!conmebol_windows(self, eax, (int16_t)rd16(g_mem, count)))
+        end_by_october(self, eax, (int16_t)rd16(g_mem, count), "CONMEBOL");
     cpu.eax = eax;
 }
 
