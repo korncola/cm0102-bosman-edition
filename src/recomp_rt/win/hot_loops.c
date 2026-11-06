@@ -31,12 +31,15 @@
  * of each id) in place of the scan, and gives the same eax, edx and stack. The index lives from the first
  * search in a call of 0x69ba50 to the end of that call, and is made again when the list, its rows or its
  * count change. The list (rows at +4, count at +8, room at +0xc) is written only by the members of
- * PLAYER_REGEN 0x7a4000..0x7ae400. From 0x69ba50 the direct calls reach 995 functions, and of those
- * members only 0x7a56f0 (the destructor, on the path of the game's end 0x5cc7d0), 0x7a7eb0, 0x7a7ed0
- * (the callers 0x696ba5, 0x696bd7 and 0x83d3cb only test the row pointer for 0), 0x7a81a0 (the spare
- * records at +0x1c..+0x44) and 0x7ae350. The destructor drops the index. A found row whose id differs
- * from the index prints "recomp: hot index stale" and the copy scans; RECOMP_HOT=check compares each
- * search with the recompiled code. Outside 0x69ba50 the copy scans.
+ * PLAYER_REGEN: every reference to the object [0xb7434c] passes it to a member, and of the members that
+ * give a pointer into the rows (0x7a7ed0) the callers 0x696ba5, 0x696bd7 and 0x83d3cb only test it for 0.
+ * Each member that stores to +4, +8 or +0xc of a register or calls add_retirement 0x7a8510 or
+ * remove_retirement 0x7a8690 drops the index when it starts and when it ends, whatever calls it, directly
+ * or through an address (REGEN_WRITER below; 0x7abac0 matches that scan only by its writes to the staff
+ * record). Of them 0x69ba50 reaches by direct calls only the destructor 0x7a56f0. The index also lives only
+ * while esp is below the esp of the outermost 0x69ba50, so code that an unwind runs in an older frame scans.
+ * A found row whose id differs from the index prints "recomp: hot index stale" and the copy scans;
+ * RECOMP_HOT=check compares each search with the recompiled code. Outside 0x69ba50 the copy scans.
  *
  * 0x600a50 human_manager_is_human_club, cdecl (club, ignore_holiday, quick, manager, any), item 151. The
  * shortlist search fill_shortlist_slot 0x83f3a0 calls it for each candidate (0x83fab3), and it took 13 % of
@@ -74,7 +77,6 @@ void o_0069fc60(void);
 void o_0069ba50(void);
 void o_0053a610(void);
 void o_00600a50(void);
-void o_007a56f0(void);
 
 static void attr_vector_host(void);
 static int attr_vector_check(void);
@@ -90,6 +92,7 @@ static struct {
     int valid;
 } ridx;
 static int vacancy_depth;          /* calls of add_job_vacancy 0x69ba50 that run */
+static uint32_t vacancy_esp;       /* the esp at the start of the outermost of them */
 static uint64_t ridx_builds;
 
 static uint32_t ridx_hash(uint32_t id) { return (id * 0x9e3779b1u) >> 7; }
@@ -119,7 +122,7 @@ static void ridx_build(uint32_t list, uint32_t rows, uint32_t n)
 /* The row of the id, or n when no row has it; -1 when the index cannot answer. */
 static int64_t ridx_find(uint32_t list, uint32_t rows, uint32_t n, uint32_t id)
 {
-    if (!vacancy_depth || (int32_t)n <= 0) return -1;
+    if (!vacancy_depth || cpu.esp >= vacancy_esp || (int32_t)n <= 0 || n > 0x1000000u) return -1;
     if (!ridx.valid || ridx.list != list || ridx.rows != rows || ridx.n != n) ridx_build(list, rows, n);
     uint32_t h = ridx_hash(id) & ridx.mask;
     while (ridx.at[h] >= 0) {
@@ -264,6 +267,8 @@ RT_WRAP(007ae350, list_has_id)
 }
 
 /* 1 with the result in the registers and the stack; 0 when the case is not the common one (nothing written). */
+static uint64_t human_club_taken;  /* the self-test checks that the copy takes its cases */
+
 static int human_club_host(void)
 {
     uint32_t esp = cpu.esp, club = rd32(g_mem, esp + 4), manager = rd32(g_mem, esp + 0x10);
@@ -283,6 +288,7 @@ static int human_club_host(void)
     cpu.ecx = limit;
     cpu.edx = 0;
     cpu.esp = esp + 4;
+    human_club_taken++;
     return 1;
 }
 
@@ -466,19 +472,46 @@ static int attr_vector_check(void)
  * or an unwind drops it too. */
 RT_WRAP(0069ba50, job_vacancy_index)
 {
-    vacancy_depth++;
+    if (!vacancy_depth++) vacancy_esp = cpu.esp;
     ridx.valid = 0;
     o_0069ba50();
     ridx.valid = 0;
     if (--vacancy_depth < 0 || rt_unwinding) vacancy_depth = 0;
 }
 
-/* PLAYER_REGEN::~PLAYER_REGEN 0x7a56f0 frees the list. */
-RT_WRAP(007a56f0, regen_free_index)
-{
-    ridx.valid = 0;
-    o_007a56f0();
-}
+/* The members of PLAYER_REGEN that may write the list of 0x7ae350 drop its index (see the head of the file). */
+void o_007a5380(void); /* PLAYER_REGEN::PLAYER_REGEN */
+RT_WRAP(007a5380, regen_writer_007a5380) { ridx.valid = 0; o_007a5380(); ridx.valid = 0; }
+void o_007a56f0(void); /* ~PLAYER_REGEN, frees the list */
+RT_WRAP(007a56f0, regen_writer_007a56f0) { ridx.valid = 0; o_007a56f0(); ridx.valid = 0; }
+void o_007a5790(void); /* find_new_retirements */
+RT_WRAP(007a5790, regen_writer_007a5790) { ridx.valid = 0; o_007a5790(); ridx.valid = 0; }
+void o_007a58f0(void); /* build_initial_retirement_list */
+RT_WRAP(007a58f0, regen_writer_007a58f0) { ridx.valid = 0; o_007a58f0(); ridx.valid = 0; }
+void o_007a59e0(void); /* process_retirements */
+RT_WRAP(007a59e0, regen_writer_007a59e0) { ridx.valid = 0; o_007a59e0(); ridx.valid = 0; }
+void o_007a7310(void);
+RT_WRAP(007a7310, regen_writer_007a7310) { ridx.valid = 0; o_007a7310(); ridx.valid = 0; }
+void o_007a79c0(void);
+RT_WRAP(007a79c0, regen_writer_007a79c0) { ridx.valid = 0; o_007a79c0(); ridx.valid = 0; }
+void o_007a7f20(void); /* schedule_injury_retirement */
+RT_WRAP(007a7f20, regen_writer_007a7f20) { ridx.valid = 0; o_007a7f20(); ridx.valid = 0; }
+void o_007a8050(void);
+RT_WRAP(007a8050, regen_writer_007a8050) { ridx.valid = 0; o_007a8050(); ridx.valid = 0; }
+void o_007a82b0(void); /* remove_spare_non_player_record */
+RT_WRAP(007a82b0, regen_writer_007a82b0) { ridx.valid = 0; o_007a82b0(); ridx.valid = 0; }
+void o_007a8470(void); /* remove_player_data_from_pool */
+RT_WRAP(007a8470, regen_writer_007a8470) { ridx.valid = 0; o_007a8470(); ridx.valid = 0; }
+void o_007a8510(void); /* add_retirement */
+RT_WRAP(007a8510, regen_writer_007a8510) { ridx.valid = 0; o_007a8510(); ridx.valid = 0; }
+void o_007a8690(void); /* remove_retirement */
+RT_WRAP(007a8690, regen_writer_007a8690) { ridx.valid = 0; o_007a8690(); ridx.valid = 0; }
+void o_007a8780(void);
+RT_WRAP(007a8780, regen_writer_007a8780) { ridx.valid = 0; o_007a8780(); ridx.valid = 0; }
+void o_007ab340(void);
+RT_WRAP(007ab340, regen_writer_007ab340) { ridx.valid = 0; o_007ab340(); ridx.valid = 0; }
+void o_007adcd0(void); /* load_retire_dat */
+RT_WRAP(007adcd0, regen_writer_007adcd0) { ridx.valid = 0; o_007adcd0(); ridx.valid = 0; }
 
 RT_WRAP(0069fc60, llist_has_id)
 {
@@ -522,6 +555,7 @@ int hot_loops_self_test(void)
      * rows hold repeated ids, so the first row of an id must win. */
     uint32_t big = rt_alloc(3001 * 0x1a);
     vacancy_depth = 1;
+    vacancy_esp = 0xffffffffu;
     for (int n = -2; n <= 3000; n += n < 40 ? 1 : 397) {
         ridx.valid = 0;
         for (int i = 0; i < 3001 * 0x1a; i++) {
@@ -545,6 +579,31 @@ int hot_loops_self_test(void)
         }
     }
     if (!ridx_builds) hot_test_fails++;            /* the index must have run */
+    /* A row whose id changes while the index is valid: the copy must see that the found row is stale and scan.
+     * Then a search with esp at or above the esp of 0x69ba50 (an older frame): the copy must scan, with no
+     * index made. */
+    wr32(g_mem, list + 8, 3000);
+    wr32(g_mem, big + 1500 * 0x1a, 0x55555555u);    /* an id no other row holds */
+    ridx.valid = 0;
+    wr32(g_mem, idp, 0x55555555u);
+    for (int k = 0; k < 2; k++) {
+        cpu.ecx = list;
+        uint32_t args[1] = {idp};
+        rt_callback(LIST_HAS, 1, args);                 /* k 0: makes the index; k 1: the found row is stale */
+        wr32(g_mem, big + 1500 * 0x1a, 0x66666666u);
+        calls++;
+    }
+    if (ridx.valid) hot_test_fails++;               /* the stale row must drop the index */
+    uint64_t builds = ridx_builds;
+    vacancy_esp = cpu.esp - 0x100;                  /* below the esp of the call: an older frame */
+    for (int k = 0; k < 4; k++) {
+        wr32(g_mem, idp, (uint32_t)k);
+        cpu.ecx = list;
+        uint32_t args[1] = {idp};
+        rt_callback(LIST_HAS, 1, args);
+        calls++;
+    }
+    if (ridx_builds != builds) hot_test_fails++;
     vacancy_depth = 0;
     ridx.valid = 0;
     /* 0x600a50 (item 151): clubs with ids around the national-side limit, with no manager, the argument's
@@ -557,7 +616,7 @@ int hot_loops_self_test(void)
     for (int cid = 7990; cid <= 8010; cid += 5)
         for (int m = 0; m < 3; m++)
             for (int arg = 0; arg < 3; arg++)
-                for (int mid = 4980; mid <= 4995; mid += 5) {
+                for (int mid = 4979; mid <= 4995; mid += mid < 4985 ? 1 : 5) {   /* the jl at 0x600aa5: 4984 */
                     wr32(g_mem, club, (uint32_t)cid);
                     wr32(g_mem, club + 0xcf, m == 0 ? 0 : m == 1 ? man : other);
                     wr32(g_mem, man, (uint32_t)mid);
@@ -579,7 +638,9 @@ int hot_loops_self_test(void)
                         calls++;
                         continue;
                     }
+                    uint64_t taken = human_club_taken;
                     rt_callback(HUMAN_CLUB, 5, args);
+                    if (human_club_taken == taken) hot_test_fails++;    /* the copy must take a common case */
                     calls++;
                 }
     wr32(g_mem, 0xae2364u, g64);

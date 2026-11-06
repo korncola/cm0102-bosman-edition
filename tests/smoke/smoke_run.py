@@ -29,7 +29,8 @@ days (default 14) after the first news screen (RECOMP_SAVE_AFTER_DAYS) and stops
                host copies of hot code of the original (qsort6.c, hot_loops.c, _ftol in crt.c) and the cache of
                calls through an address (rt.c, 0.6.2 item 110) change no game decision
     files-off  RECOMP_FOLDER_CACHE=0, RECOMP_KEEP_FILES=0: the kept folder names of the path lookup
-               (folder_names.c) and the kept history file of the season change (files.c) change nothing
+               (folder_names.c) and the kept history file of the season change and of a new game (files.c, the
+               scopes 0x7c1350, 0x7bfd50 and 0x5aff00, item 151) change nothing
     kinds-base  RECOMP_SEASON_CHANGE_TEST=write (0.6.0 slice 16): a rule kind that writes the game in every
                hook changes nothing in the base game, because the base game calls no kind
 Each run prints its count of idle sleeps (RECOMP_IDLE_COUNT=1). The check fails when the normal run

@@ -572,6 +572,10 @@ static char *fd_keep[MAX_FILES];              /* the host path of a handle of KE
 static char *fd_name[MAX_FILES];              /* the game's name, access and disposition of that handle */
 static uint32_t fd_access[MAX_FILES], fd_disposition[MAX_FILES];
 static int keep_depth;
+static uint32_t keep_esp;           /* item 151: the esp at the start of the outermost scope */
+
+/* A scope runs, and esp is in it (an unwind can run an older frame's code while the scope's wrap waits). */
+static int keep_live(void) { return keep_depth && cpu.esp < keep_esp; }
 static int fd_flags[MAX_FILES];     /* the host open flags of a handle */
 
 static int keep_on(void)
@@ -635,7 +639,7 @@ void o_007c1350(void);
 /* PlayerStats::end_season_for_key_nation 0x7c1350, thiscall (key nation), ret 4. */
 RT_WRAP(007c1350, keep_files_archive)
 {
-    keep_depth++;
+    if (!keep_depth++) keep_esp = cpu.esp;
     o_007c1350();
     if (--keep_depth == 0 || rt_unwinding) {
         keep_depth = 0;
@@ -653,7 +657,7 @@ void o_005aff00(void);
  * nations. */
 RT_WRAP(005aff00, keep_files_fog)
 {
-    keep_depth++;
+    if (!keep_depth++) keep_esp = cpu.esp;
     o_005aff00();
     if (--keep_depth == 0 || rt_unwinding) {
         keep_depth = 0;
@@ -664,7 +668,7 @@ RT_WRAP(005aff00, keep_files_fog)
 /* PlayerStats::PlayerStats 0x7bfd50, thiscall, the "Player histories" step of a new game (item 151). */
 RT_WRAP(007bfd50, keep_files_histories)
 {
-    keep_depth++;
+    if (!keep_depth++) keep_esp = cpu.esp;
     o_007bfd50();
     if (--keep_depth == 0 || rt_unwinding) {
         keep_depth = 0;
@@ -683,7 +687,7 @@ int win_close_file(uint32_t h)
     if (fd < 0) return 0;
     uint32_t i = (h - FILE_BASE) / 4;
     int k = KEEP_MAX;
-    if (keep_depth && keep_on() && fd_keep[i] && !(fd_flags[i] & (O_TRUNC | O_EXCL)))
+    if (keep_live() && keep_on() && fd_keep[i] && !(fd_flags[i] & (O_TRUNC | O_EXCL)))
         for (k = 0; k < KEEP_MAX && kept[k].path; k++) {}
     if (k < KEEP_MAX) {
         kept[k].path = fd_keep[i];          /* the path and the game's name move to the kept file */
@@ -717,7 +721,7 @@ RT_IMPORT(CreateFileA)
     const char *name = win_str(rt_arg(0));
     uint32_t access = rt_arg(1), disposition = rt_arg(4);
     char h[2048], u[2048];
-    int kk = keep_depth && keep_on() && (disposition == 3 || disposition == 4)
+    int kk = keep_live() && keep_on() && (disposition == 3 || disposition == 4)
              ? keep_find_name(name, access, disposition) : -1;
     if (kk >= 0) {                                      /* the kept file, as the path lookup would find it */
         for (uint32_t i = 0; i < MAX_FILES; i++) {
@@ -799,7 +803,7 @@ RT_IMPORT(CreateFileA)
         }
         rt_fatal("too many open files");
     }
-    int fd = keep_depth && !(flags & (O_CREAT | O_TRUNC | O_EXCL)) ? keep_take(target, flags) : -1;
+    int fd = keep_live() && !(flags & (O_CREAT | O_TRUNC | O_EXCL)) ? keep_take(target, flags) : -1;
     if (fd < 0) fd = host_open(target, flags, 0644);
     WIN_TRACE("CreateFileA(%s -> %s, %#x, %u) = %d\n", name, target, access, disposition, fd);
     if (fd < 0) {
