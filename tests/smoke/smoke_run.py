@@ -204,7 +204,7 @@ def differing_share(a, b, box=None, tol=0):
 # The runs of the same-save check: a name and the option lines of settings.txt (after the mode).
 # The groups of original_faults.c. The group callups can act in the first days of a game (open item 143), so the
 # runs original-faults-keep keep only the others.
-ORIGINAL_FAULT_GROUPS = ["managers", "money", "age", "olympics", "ire_super", "nsl", "holiday", "callups"]
+ORIGINAL_FAULT_GROUPS = ["managers", "money", "age", "olympics", "ire_super", "nsl", "holiday", "callups", "wc_pots"]
 KEEP_IN_RUNS = "keep:" + ",".join(g for g in ORIGINAL_FAULT_GROUPS if g != "callups")
 
 
@@ -280,7 +280,8 @@ SAME_SAVE_RUNS = [
     # for money above 2,147,483,647 (the top wage from about 1.65 billion), at an age above 127 and at an Olympic
     # squad pick inside a senior squad's window, at the season change of the Australian NSL (19 July from 2002,
     # outside the 14 days of each saved game), and for a club on holiday with "Reject all offers" or "below asking
-    # price" (open item 132; these runs go on holiday with every setting off): in these runs none of that happens,
+    # price" (open item 132; these runs go on holiday with every setting off), and at the draw of the 2002 World Cup
+    # on 27 December 2001 (open item 166): in these runs none of that happens,
     # so with their test switch off the save is that of normal. A saved game whose days pass a month change keeps
     # only the other groups (FAULTS_ACT). The senior call-ups (group callups, open item 143) act at a senior pick
     # that meets a player abroad, which can come in the first days of a game (in a game with every league,

@@ -1,8 +1,8 @@
 """Faults of the original that long games reach (0.6.2 slice 11, Q23, Q24, Q27, open item 102;
 src/recomp_rt/win/original_faults.c). The fixes act in every game, the base game too. The test switch
 RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age", "keep:olympics",
-"keep:ire_super", "keep:nsl", "keep:holiday" or "keep:callups" (or a list: "keep:money,age") turns off one group
-or more.
+"keep:ire_super", "keep:nsl", "keep:holiday", "keep:callups" or "keep:wc_pots" (or a list: "keep:money,age") turns
+off one group or more.
 
 National managers (fault 26, Q23). `club_can_be_managed` 0x544820 takes a senior national team (club id from club
 count - 2 x nation count to club count - nation count, 0x544835..0x544857) only when its nation had more than 150
