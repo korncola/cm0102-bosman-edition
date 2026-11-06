@@ -196,6 +196,8 @@ if(NOT WIN32)
     add_executable(heap_zone_test tests/recomp/test_heap_zone.c src/recomp_rt/heap.c)
     target_include_directories(heap_zone_test PRIVATE src/recomp_rt)
     add_test(NAME heap_zone COMMAND heap_zone_test)
+    # Item 153 (0.6.2): the same-save runs that hold for the base game only (smoke_run.py, BASE_GAME_RUNS).
+    add_test(NAME same_save_base_game COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/smoke/base_game_runs_check.py")
     add_test(NAME seasons_table COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_db_table.py" --check)
     add_test(NAME season_credits COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/check_credits.py")
     # Right ages and dates in every season (0.6.0 slice 11b): the C table matches the date shift tables.
