@@ -56,6 +56,7 @@
 #define CONTINENT_ASIA 0x9cfa0cu        /* key continent ids (sweep section 8) */
 #define CONTINENT_OCEANIA 0x9cfa18u
 #define CONTINENT_EUROPE 0x9cfa10u
+#define CONTINENT_NORTH_AMERICA 0x9cfa14u   /* the CONCACAF key that WcConcacafCup::select_entrants 0x916250 compares */
 #define KEY_AUSTRALIA 0x9cf224u         /* key nation ids: OceaniaNations 0x799f9c, 0x5fab70 */
 #define KEY_NEW_ZEALAND 0x9cf3f4u
 #define KEY_NEW_CALEDONIA 0x9cf530u     /* left out of the Oceania section at 0x91fc89 */
@@ -1626,6 +1627,34 @@ static int uefa_members(int season, int news)
     return done;
 }
 
+/* A CONCACAF member that the data holds with no continent (season_intl_concacaf_from: the six members that are not
+ * FIFA members, in the databases from October 2016, open item 141) gets the continent pointer of a North American nation, as a UEFA member gets
+ * Europe's. It then plays the CONCACAF Nations League and the Gold Cup qualifying (season_nl_nation_can_play,
+ * season_gold_cup.c), and its national team gets squad sizes. The FIFA World Cup qualifying is not changed by it:
+ * WcConcacafCup::select_entrants 0x916250 takes a nation whose continent is null or North America alike (0x9169bc:
+ * a null continent jumps to the pick at 0x9169d2, another must equal the key at 0x9169c5..0x9169cc). Returns the
+ * count. news: 1 to add a sentence. */
+static int concacaf_members(int season, int news)
+{
+    uint32_t america = 0, key = rd32(g_mem, CONTINENT_NORTH_AMERICA);
+    for (int id = 0; id < nation_count() && !america; id++) {
+        uint32_t c = rd32(g_mem, nation_at(id) + NATION_CONTINENT);
+        if (readable(c) && rd32(g_mem, c) == key) america = c;
+    }
+    if (!america) return 0;
+    int done = 0;
+    for (int id = 0; id < nation_count(); id++) {
+        const char *name = win_str(nation_at(id) + NATION_NAME);
+        int from = season_intl_concacaf_from(name);
+        if (!from || from > season || readable(rd32(g_mem, nation_at(id) + NATION_CONTINENT))) continue;
+        wr32(g_mem, nation_at(id) + NATION_CONTINENT, america);
+        if (logging()) fprintf(stderr, "recomp: season intl: nation %s plays in CONCACAF (%d)\n", name, from);
+        if (news) season_change_news("%s now plays in CONCACAF.", name);
+        done++;
+    }
+    return done;
+}
+
 void o_0060d810(void);
 
 /* match_nation_key_id, cdecl (name, index): set_key_ids 0x601a40 finds the key nations by their name at every
@@ -1692,6 +1721,7 @@ void season_intl_at_create(void)
     nations_rename(season_start_year(), 0);
     dead_records();
     uefa_members(season_start_year(), 0);
+    concacaf_members(season_start_year(), 0);
 }
 
 /* The host news of a World Cup with more than two hosts (slice 29: 2026 and 2030), in the season of its table
@@ -1721,6 +1751,7 @@ static void intl_season(int season)
     nations_rename(season, 1);
     sides_rename();
     uefa_members(season, 1);
+    concacaf_members(season, 1);
     host_news(season);
     /* The host rows of the table in a game that started in 2001/02: at its first season change, for the
      * editions from 2002/03 (host_init). The table is sorted as the constructor sorts it. */

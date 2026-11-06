@@ -395,6 +395,17 @@ int main(void)
     CHECK(!season_intl_later_held(-1, held_in, (void *)sep2011), "no row");
     /* Kosovo: UEFA from 2016/17 (no continent in the April 2015, October 2015 and April 2016 databases). */
     CHECK(season_intl_uefa_from("Kosovo") == 2016, "Kosovo joins UEFA in 2016");
+    /* Martinique: CONCACAF in every season of the game, though the databases from October 2016 give no continent. */
+    CHECK(season_intl_concacaf_from("Martinique") == 1991 && season_intl_concacaf_from("martinique") == 1991,
+          "Martinique plays in CONCACAF");
+    CHECK(season_intl_concacaf_from("Guadeloupe") <= 2001 && season_intl_concacaf_from("French Guiana") <= 2001,
+          "Guadeloupe and French Guiana: CONCACAF in every season");
+    CHECK(season_intl_concacaf_from("Saint-Martin") == 2002 && season_intl_concacaf_from("Sint Maarten") == 2002,
+          "Saint-Martin and Sint Maarten from 2002/03");
+    CHECK(season_intl_concacaf_from("Bonaire") == 2013, "Bonaire from 2013/14");
+    CHECK(!season_intl_concacaf_from("Suriname") && !season_intl_concacaf_from("Netherlands Antilles") &&
+          !season_intl_concacaf_from("Curaçao") && !season_intl_concacaf_from(NULL),
+          "no other nation (Suriname and Curacao are FIFA members, the Netherlands Antilles were dissolved)");
     CHECK(!season_intl_uefa_from("Gibraltar") && !season_intl_uefa_from("Serbia") && !season_intl_uefa_from(NULL),
           "no other nation");
 

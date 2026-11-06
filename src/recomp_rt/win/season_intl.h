@@ -245,6 +245,11 @@ int season_intl_later_held(int i, int (*held)(const char *name, void *ctx), void
  * (Kosovo, admitted in May 2016: the April 2015, October 2015 and April 2016 databases), or 0. */
 int season_intl_uefa_from(const char *name);
 
+/* The season from which a nation is a CONCACAF member, for a nation that a database holds with no continent though
+ * it plays CONCACAF's own competitions (the members that are not FIFA members: Martinique, Guadeloupe, French Guiana,
+ * Saint-Martin, Sint Maarten and Bonaire in the databases from October 2016), or 0. */
+int season_intl_concacaf_from(const char *name);
+
 /* The real draw of a finals edition whose qualifying began before the game (O259 A9): the names of its
  * finalists, ';' between nations and '/' between the names of one nation, or NULL. */
 const char *season_intl_real_draw(const char *file, int year);
