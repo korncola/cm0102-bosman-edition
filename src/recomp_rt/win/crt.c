@@ -39,14 +39,20 @@ static int qsort_mode = -1;        /* 0 host, 1 check, 2 original, 3 the self-te
 static unsigned long long qsort_checked;
 static int test_fails;
 
-static void print_qsort_checked(void) { fprintf(stderr, "recomp: qsort check: %llu sorts equal\n", qsort_checked); }
+static unsigned long long sorted_sorts;    /* sorts that took the sorted path (the self-test counts them) */
+static uint64_t insert_sorts;              /* sorts done by qsort6_insert */
+
+static void print_qsort_checked(void)
+{
+    fprintf(stderr, "recomp: qsort check: %llu sorts equal (%llu by qsort6_insert, %llu by the sorted path)\n",
+            qsort_checked, (unsigned long long)insert_sorts, sorted_sorts);
+}
 
 /* Item 151b: the rows of the last host sort, in their order after it, and whether that order is strict. When
  * the next sort has the same list with one more row (as 0x7c6a30 adds one and sorts again), the rows before
  * the new one equal this copy (memcmp), so only the new row needs a test. Any other call tests the whole list.
  * RECOMP_QSORT_SORTED=0 turns the sorted path off. */
 static struct { uint8_t *rows; size_t room; uint32_t base, num, width; int strict, valid; } last_sort;
-static unsigned long long sorted_sorts;    /* sorts that took the sorted path (the self-test counts them) */
 
 static int sorted_path_on(void)
 {
@@ -99,7 +105,6 @@ static void keep_sorted_rows(const uint8_t *rows, uint32_t base, uint32_t num, u
     last_sort.valid = 1;
 }
 
-static uint64_t insert_sorts;      /* sorts done by qsort6_insert (the self-test counts them) */
 static int insert_off;             /* the self-test: 1 tests qsort6's own sorted path */
 
 static uint8_t *host_sort(uint8_t *rows, uint32_t base, uint32_t num, uint32_t width)
@@ -288,9 +293,11 @@ int qsort6_self_test(void)
     fprintf(stderr, "qsort test: %llu sorts took the sorted path\n", sorted_sorts - sorted_before);
     insert_off = 0;
     /* qsort6_insert (item 151b): lists that grow by a row at a random place, as with Max's data set: ids differ
-     * (a few 0xff bytes), so all rows are in strict order. Lists 0..3 grow to 1500 rows one row at a time;
-     * lists 4..7 start at 2000 to 4000 rows. Some rows repeat an id with another byte, and some land on an
-     * equal row (the full sort). */
+     * (one in sixteen a lone 0xff byte), so the rows are in strict order. Lists 0..3 grow to 1500 rows one row
+     * at a time; lists 4..7 start at 2000 to 3500 rows. Some rows repeat an id with another byte (0xff among
+     * them), and these may land on an equal row (the full sort). In list 2 every walk may visit 3 parts only,
+     * so qsort6_insert gives up and the full sort runs from the rows as they were; in list 3 one row in
+     * twenty has an id of 0x80000000 or more (the full sort). */
     uint64_t insert_before = insert_sorts;
     static uint8_t used[1u << 16];
     for (int list = 0; list < 8; list++) {
@@ -302,7 +309,8 @@ int qsort6_self_test(void)
             int same = used[id];
             used[id] = 1;
             uint8_t *row = rows + (size_t)num * 6;
-            row[0] = (uint8_t)id; row[1] = (uint8_t)(id >> 8); row[2] = 0; row[3] = 0;
+            row[0] = (uint8_t)id; row[1] = (uint8_t)(id >> 8); row[2] = 0;
+            row[3] = list == 3 && test_random() % 20 == 0 ? 0x80 : 0;
             row[4] = same ? (uint8_t)(test_random() % 9 - 4) : test_random() % 16 == 0 ? 0xff : (uint8_t)(test_random() % 9 - 4);
             row[5] = (uint8_t)test_random();
             num++;
@@ -312,10 +320,12 @@ int qsort6_self_test(void)
                 sorts++;
                 continue;
             }
+            qsort6_insert_max_visit = list == 2 ? 3 : 20000;
             test_one(mem, rows, num);
             sorts++;
         }
     }
+    qsort6_insert_max_visit = 20000;
     if (insert_sorts == insert_before) test_fails++;     /* qsort6_insert must have run */
     fprintf(stderr, "qsort test: %llu sorts by qsort6_insert\n", (unsigned long long)(insert_sorts - insert_before));
     free(rows);

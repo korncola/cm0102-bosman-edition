@@ -37,6 +37,7 @@ int qsort6_strict(const uint8_t *base, uint32_t num, uint32_t width);
  * gives up (*done 0) the rows are as they were and the caller sorts with qsort6. */
 uint8_t *qsort6_insert(uint8_t *base, uint32_t num, uint32_t width, const qsort6_stack *st, const uint8_t *before,
                        int *done);
+extern int qsort6_insert_max_visit;     /* the parts a walk may visit; the self-test lowers it */
 
 /* RECOMP_QSORT_TEST (crt.c): qsort6 against the recompiled qsort; the exit code, 0 when all are equal. */
 int qsort6_self_test(void);

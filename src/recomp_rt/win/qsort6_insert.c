@@ -34,6 +34,8 @@
 #define SLOT(off) (((off) + 0x140) / 4)
 #define DEPTHS 30                  /* the original's stack of ranges */
 #define MAX_VISIT 20000            /* a walk that visits more parts gives up (the caller sorts in full) */
+#define MAX_NEST 200               /* nor may the walk nest deeper (the C stack) */
+int qsort6_insert_max_visit = MAX_VISIT;   /* the self-test lowers it to test the fall-back */
 
 typedef struct { int16_t slot; uint32_t v; } Wr;
 
@@ -52,7 +54,7 @@ typedef struct {
     uint32_t open_depths;          /* depths with an open word of the stack of ranges */
     int eax_open;
     uint8_t *eax;
-    int visits;
+    int visits, nest;
 } Ins;
 
 static int slot_depth(int slot)
@@ -312,7 +314,7 @@ static void walk_in_order(Ins *s, uint8_t *lo, uint8_t *hi, int t)
 {
     uint32_t w = s->width, size = (uint32_t)(hi - lo) / w + 1;
     if (size <= 8 || !worth(s, lo, hi, t) || s->failed) return;
-    if (++s->visits > MAX_VISIT || t >= DEPTHS) { s->failed = 1; return; }
+    if (++s->visits > qsort6_insert_max_visit || t >= DEPTHS) { s->failed = 1; return; }
     uint8_t *mid = lo + (size / 2) * w, *up = mid + w, *down = mid, *xl = NULL, *xh = NULL, *yl = NULL, *yh = NULL;
     if ((int32_t)(down - 1 - lo) >= (int32_t)(hi - up)) {
         if (lo + w < down) xl = lo, xh = down - w;
@@ -321,8 +323,11 @@ static void walk_in_order(Ins *s, uint8_t *lo, uint8_t *hi, int t)
         if (up < hi) xl = up, xh = hi;
         if (lo + w < down) yl = lo, yh = down - w;
     }
+    if (s->nest >= MAX_NEST) { s->failed = 1; return; }
+    s->nest++;
     if (xl) walk_in_order(s, xl, xh, t);
     if (yl) walk_in_order(s, yl, yh, xl ? t + 1 : t);
+    s->nest--;
     if (xl) {
         size_t from = s->nrec;
         put(s, -0xf8 + 4 * t, ad(s, xl));
@@ -336,7 +341,7 @@ static void walk(Ins *s, uint8_t *lo, uint8_t *hi, int t)
 {
     if (s->failed || !worth(s, lo, hi, t)) return;
     if (!s->eax_open && !s->open_fixed && in_order(s, lo, hi)) { walk_in_order(s, lo, hi, t); return; }
-    if (++s->visits > MAX_VISIT || t >= DEPTHS) { s->failed = 1; return; }
+    if (++s->visits > qsort6_insert_max_visit || t >= DEPTHS || s->nest >= MAX_NEST) { s->failed = 1; return; }
     uint32_t w = s->width, size = (uint32_t)(hi - lo) / w + 1;
     size_t mark = s->nrec;
     if (size <= 8) {
@@ -363,6 +368,7 @@ static void walk(Ins *s, uint8_t *lo, uint8_t *hi, int t)
     }
     /* Latest first: the kept part (after the pop to depth t), the pop, the part done at once, the push, an eax
      * that an empty part sets, the partition. The partition's writes stay in rec[mark .. node_end). */
+    s->nest++;
     if (xl) {
         walk(s, xl, xh, t);
         size_t from = s->nrec;
@@ -370,6 +376,7 @@ static void walk(Ins *s, uint8_t *lo, uint8_t *hi, int t)
         close_words(s, from);
     }
     if (yl) walk(s, yl, yh, xl ? t + 1 : t);
+    s->nest--;
     if (xl) {
         size_t from = s->nrec;
         push_writes(s, branch, t, ad(s, xl), ad(s, xh));
@@ -425,16 +432,10 @@ uint8_t *qsort6_insert(uint8_t *base, uint32_t num, uint32_t width, const qsort6
         if (qsort6_history_cmp(before + (size_t)m * width, row) < 0) l = m + 1;
         else r = m;
     }
-    if (s.failed || s.eax_open || !s.eax) {         /* the caller sorts in full, from the rows as they were */
-        memcpy(base, before, (size_t)num * width);
-        return NULL;
-    }
-    memcpy(base, before, (size_t)l * width);
-    memcpy(base + (size_t)l * width, row, width);
-    memcpy(base + (size_t)(l + 1) * width, before + (size_t)l * width, (size_t)(num - 1 - l) * width);
     /* The first steps of the sort: the saved registers and the empty stack of ranges. */
     size_t from = s.nrec;
     s.open[SLOT(0)] = s.open[SLOT(-0xfc)] = s.open[SLOT(-0x100)] = s.open[SLOT(-0x104)] = 1;
+    s.open_fixed += 4;
     put(&s, 0, st->ebp);
     put(&s, -0xfc, st->ebx);
     put(&s, -0x100, st->esi);
@@ -443,6 +444,13 @@ uint8_t *qsort6_insert(uint8_t *base, uint32_t num, uint32_t width, const qsort6
     put(&s, 8, st->q - 0x80);
     put(&s, 0xc, st->q - 0xf8);
     close_words(&s, from);
+    if (s.failed || s.eax_open || !s.eax) {         /* the caller sorts in full, from the rows as they were */
+        memcpy(base, before, (size_t)num * width);
+        return NULL;
+    }
+    memcpy(base, before, (size_t)l * width);
+    memcpy(base + (size_t)l * width, row, width);
+    memcpy(base + (size_t)(l + 1) * width, before + (size_t)l * width, (size_t)(num - 1 - l) * width);
     for (int sl = 0; sl < NS; sl++) {
         if (!s.got[sl]) continue;                   /* a word the sort never writes */
         uint32_t at = st->q + (uint32_t)(sl * 4 - 0x140);
