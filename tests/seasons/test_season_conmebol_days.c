@@ -42,7 +42,7 @@ static int summer(long z)                       /* a stand-in for the Copa Ameri
 static void cycle(int wc, int rounds, SeasonConmebolBusy busy)
 {
     long out[64], first, last;
-    long made = season_abs_day(wc - 4, 7, 20);          /* the section is made after the finals before it */
+    long made = season_abs_day(wc - 4, 7, 25);          /* set up on 25 July after the finals before it */
     season_conmebol_span(wc, &first, &last);
     int n = season_conmebol_days(wc, rounds, made + 2, busy, out);
     CHECK(n == rounds, "%d, %d rounds%s: %d placed", wc, rounds, busy ? " (finals)" : "", n);
@@ -100,12 +100,13 @@ int main(void)
 
     /* A section made after its span began places nothing before the day it is made (the window rule). */
     n = season_conmebol_days(2014, 18, season_abs_day(2012, 1, 1), NULL, out);
-    CHECK(n == 0 || out[0] >= season_abs_day(2012, 1, 1), "2014 made in 2012: a round before it");
+    CHECK(n == 18 && out[0] >= season_abs_day(2012, 1, 1), "2014 made in 2012: a round before it");
 
-    /* A 2018 section made on 1 December 2015, after its real first day: the window rule, nothing before that day;
+    /* A 2018 section made on 1 December 2015, after its real first day: the windows to 10 October 2017 hold too
+     * few rounds, so 0 (the caller then keeps the template, end_by_october);
      * a window rule cycle ends in the last FIFA window of its span (2030: September 2029 or later). */
     n = season_conmebol_days(2018, 18, season_abs_day(2015, 12, 1), NULL, out);
-    CHECK(n == 0 || out[0] >= season_abs_day(2015, 12, 1), "2018 made late: a round before it");
+    CHECK(n == 0, "2018 made late: %d placed, want 0 (the windows from December 2015 hold fewer than 18: the template)", n);
     n = season_conmebol_days(2030, 14, season_abs_day(2026, 7, 20), NULL, out);
     CHECK(n == 14 && out[13] >= season_abs_day(2029, 9, 1), "2030 (14 rounds): ends too early");
     n = season_conmebol_days(2030, 18, season_abs_day(2026, 7, 20), NULL, out);
@@ -133,13 +134,13 @@ int main(void)
      * original's: the Saturday near 25 January of the campaign year (28 January 2012). With the real first round of
      * 7 October 2011: 9 September 2011, so no round lies before it (FIXTURE_MANAGER::add_fixture 0x5aa680 moves
      * such a round, 0x5aa729). A section made late: tomorrow. A first round after the original's: the original's. */
-    long orig = season_abs_day(2012, 1, 28), today = season_abs_day(2010, 7, 24);
+    long orig = season_abs_day(2012, 1, 28), today = season_abs_day(2010, 7, 25);
     CHECK(season_conmebol_make_day(season_abs_day(2011, 10, 7), orig, today) == season_abs_day(2011, 9, 9),
           "make day of the 2014 real cycle");
     CHECK(season_conmebol_make_day(season_abs_day(2010, 8, 10), orig, today) == today + 1, "make day: tomorrow");
     CHECK(season_conmebol_make_day(season_abs_day(2012, 2, 29), orig, today) == orig, "make day: the original's");
     for (int wc = 2006; wc <= 2302; wc += 4) {
-        long made = season_abs_day(wc - 4, 7, 20);
+        long made = season_abs_day(wc - 4, 7, 25);
         n = season_conmebol_days(wc, 18, made + 2, NULL, out);
         long o = season_abs_day(wc - 2, 1, 25), mk = season_conmebol_make_day(out[0], o, made);
         CHECK(n == 18 && mk > made && mk < out[0] && mk <= o, "%d: make day out of order", wc);
