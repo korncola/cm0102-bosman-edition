@@ -11,6 +11,14 @@
 2019	bench	tur_first (Süper Lig), row rus-tur-181: game 9, table 10 (10 (21-man matchday list from 2017–18))
 2019	bench	tur_second (TFF 1. Lig), row rus-tur-208: game 9, table 10 (10)
 2019	bench	world_club_champ (FIFA Club World Cup), row club-world-344: game 7, table 12 (12)
+2019	club_list	American Major League: 12 of 23 listed clubs that the database holds (26 listed), 0 other clubs, 12 in all; not in it: FC Cincinnati, Minnesota United FC, Montreal Impact, Nashville SC, New York City FC, Orlando City SC, Philadelphia Union, Real Salt Lake City, Seattle Sounders FC, Toronto FC, Vancouver Whitecaps FC; others: -
+2019	club_list	Irish First Division: 9 of 9 listed clubs that the database holds (10 listed), 1 other clubs, 10 in all; not in it: -; others: Newbridge Town FC
+2019	club_list	Irish Premier Division: 10 of 10 listed clubs that the database holds (10 listed), 2 other clubs, 12 in all; not in it: -; others: Evergreen, Limerick FC
+2019	club_list	Korean League: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Busan IPark FC, Incheon United FC; others: -
+2019	club_list	Russian First Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: FK Krasnodar II, Spartak 2 Moscow; others: -
+2019	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: Falkenbergs FF, Varbergs BoIS; others: -
+2019	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Afjet Afyonspor, Elazigspor
+2019	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: Haverfordwest County, Llandudno FC, Llanelli AFC, Port Talbot Town, Prestatyn Town FC, Rhyl Football Club
 2019	clubs	asia_club_champ (AFC Champions League), row club-world-355: game 16, table 29 (29)
 2019	clubs	euro_champ (UEFA European Championship), row int-continental-199: game 0, table 24 (24)
 2019	clubs	euro_champ_qual (UEFA European Championship qualifying), row int-continental-200: game 0, table 55 (55)

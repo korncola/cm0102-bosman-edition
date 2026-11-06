@@ -3,6 +3,14 @@
 2015	bench	new_suruga_bank (Suruga Bank Championship), row club-world-527: game 7, table 9 (9)
 2015	bench	sco_lge_cup (Scottish League Cup), row sco-119: game 5, table 7 (7)
 2015	bench	world_club_champ (FIFA Club World Cup), row club-world-268: game 7, table 12 (12)
+2015	club_list	American Major League: 12 of 18 listed clubs that the database holds (20 listed), 0 other clubs, 12 in all; not in it: Montreal Impact, Orlando City, Philadelphia Union, Real Salt Lake, Toronto FC, Vancouver Whitecaps; others: -
+2015	club_list	Irish First Division: 8 of 8 listed clubs that the database holds (8 listed), 2 other clubs, 10 in all; not in it: -; others: FC Carlow, Tralee Dynamos
+2015	club_list	Korean League: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Gwangju FC, Suwon City; others: -
+2015	club_list	Portuguese Second League: 18 of 23 listed clubs that the database holds (24 listed), 0 other clubs, 18 in all; not in it: Futebol Clube do Porto B, Sport Lisboa e Benfica B, Sporting Clube de Braga B, Sporting Clube de Portugal B, Varzim Sport Clube; others: -
+2015	club_list	Russian First Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: Spartak-2 Moscow, Zenit-2 St. Petersburg; others: -
+2015	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: GIF Sundsvall, Jönköping Södra IF; others: -
+2015	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Bucaspor, Manisaspor
+2015	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: Caerau Ely, Caernarfon Town, Cefn Druids, Conwy Borough, Guilsfield FC, Prestatyn Town
 2015	clubs	asia_club_champ (AFC Champions League), row club-world-279: game 16, table 32 (32)
 2015	clubs	euro_champ (UEFA European Championship), row int-continental-155: game 0, table 24 (24)
 2015	clubs	euro_champ_qual (UEFA European Championship qualifying), row int-continental-156: game 0, table 53 (53)

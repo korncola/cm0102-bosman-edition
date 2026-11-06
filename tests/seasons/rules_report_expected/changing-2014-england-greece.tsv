@@ -1,6 +1,8 @@
 # Differences between the rules report and the rules table that the check accepts. Made by
 # tests/seasons/rules_report_check.py --update-expected. Columns: season, kind, text.
 2014	bench	world_club_champ (FIFA Club World Cup), row club-world-249: game 7/9, table 12 (12)
+2014	club_list	Greek National A Division: 14 of 18 listed clubs that the database holds (18 listed), 0 other clubs, 14 in all; not in it: Niki Volos, PAE Kerkyras, Skoda Xanthi, Veria; others: -
+2014	club_list	Greek National B Division: 13 of 13 listed clubs that the database holds (13 listed), 1 other clubs, 14 in all; not in it: -; others: Skoda Xanthi
 2014	clubs	african_nations (Africa Cup of Nations), row int-continental-150: game 0/4, table 16 (16)
 2014	clubs	asia_nations (AFC Asian Cup), row int-continental-152: game 0/4, table 16 (16)
 2014	clubs	euro_champ_qual (UEFA European Championship qualifying), row int-continental-145: game 6, table 53 (53)

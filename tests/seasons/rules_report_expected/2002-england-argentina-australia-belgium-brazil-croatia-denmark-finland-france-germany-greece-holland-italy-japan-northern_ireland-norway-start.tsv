@@ -2,6 +2,14 @@
 # tests/seasons/rules_report_check.py --update-expected. Columns: season, kind, text.
 2002	bench	fra_lge_cup (Coupe de la Ligue), row fra-17: game 3, table 5 (5)
 2002	bench	ger_cup (DFB-Pokal), row ger-23: game 6, table 7 (7)
+2002	club_list	Argentine Second Division: 20 of 20 listed clubs that the database holds (20 listed), 5 other clubs, 25 in all; not in it: -; others: Atlético Tucumán, Central Córdoba de Rosario, Independiente Rivadavia de Mendoza, Platense, Racing de Córdoba
+2002	club_list	Brazilian National Third Division: 56 of 79 listed clubs that the database holds (93 listed), 0 other clubs, 56 in all; not in it: Americano Futebol Clube (RJ), Associação Atlética Francana, Associação Atlética Portuguesa (RJ), Associação Desportiva Cabofriense, Botafogo Futebol Clube (SP), Caxias Futebol Clube, Clube Atlético Bragantino, Comercial Esporte Clube, Desportiva Capixaba, Esporte Clube São José, Esporte Clube XV de Novembro, Estrela do Norte Futebol Clube, Goytacaz Futebol Clube, Grêmio Esportivo Brasil, Grêmio de Esportes Maringá, Iraty Sport Club, Ituiutaba Esporte Clube, Macaé Sports, Rio Branco Atlético Clube, Serra Futebol Clube, Tuna Luso Brasileira, Tupi Football Club, Uberaba Sport Club; others: -
+2002	club_list	Croatian First Division: 12 of 12 listed clubs that the database holds (12 listed), 4 other clubs, 16 in all; not in it: -; others: HNK Segesta, NK Bjelovar, NK Mosor, NK TSK
+2002	club_list	Croatian Second Division North: 12 of 12 listed clubs that the database holds (12 listed), 4 other clubs, 16 in all; not in it: -; others: Ivancica, NK Bedem, NK Mladost Molve, NK NASK-Nasicecement
+2002	club_list	Croatian Second Division South: 12 of 12 listed clubs that the database holds (12 listed), 4 other clubs, 16 in all; not in it: -; others: NK Imotska Krajina, NK Samobor, NK Trnje, NK Vrbovec
+2002	club_list	Finnish Premier Division: 12 of 14 listed clubs that the database holds (14 listed), 0 other clubs, 12 in all; not in it: FC Jokerit, FC KooTeePee; others: -
+2002	club_list	Northern Irish League First Division: 8 of 8 listed clubs that the database holds (8 listed), 2 other clubs, 10 in all; not in it: -; others: Ards, Institute
+2002	club_list	Northern Irish League Premier Division: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Ards, Institute; others: -
 2002	clubs	arg_second (Primera B Nacional), row arg-usa-29: game 25, table 20 (20)
 2002	clubs	bel_third (Belgian Third Division), row hol-bel-23: game 16, table 32 (32 (A 16, B 16))
 2002	clubs	bra_champ_cup (Copa dos Campeões), row bra-191: game 3, table 0 (0)

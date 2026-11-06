@@ -5,6 +5,14 @@
 2012	bench	fifa_confed (FIFA Confederations Cup), row int-world-142: game 7, table 12 (12)
 2012	bench	ire_chal_cup (FAI Cup), row wal-nir-irl-294: game 5, table 7 (7 (inference from final line-ups))
 2012	bench	world_club_champ (FIFA Club World Cup), row club-world-211: game 7, table 12 (12)
+2012	club_list	American Major League: 12 of 17 listed clubs that the database holds (19 listed), 0 other clubs, 12 in all; not in it: Philadelphia Union, Portland Timbers, Seattle Sounders, Toronto FC, Vancouver Whitecaps; others: -
+2012	club_list	Irish First Division: 8 of 8 listed clubs that the database holds (8 listed), 2 other clubs, 10 in all; not in it: -; others: FC Carlow, Tralee Dynamos
+2012	club_list	Korean League: 10 of 14 listed clubs that the database holds (14 listed), 0 other clubs, 10 in all; not in it: Daegu FC, Daejeon Citizen, Gangwon Football Club, Incheon United; others: -
+2012	club_list	Portuguese Second League: 18 of 21 listed clubs that the database holds (22 listed), 0 other clubs, 18 in all; not in it: Associação Naval 1º de Maio, Clube Desportivo Feirense, Portimonense Sporting Clube; others: -
+2012	club_list	Russian First Division: 17 of 17 listed clubs that the database holds (17 listed), 1 other clubs, 18 in all; not in it: -; others: Torpedo Vladimir
+2012	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: Halmstad BK, Östers IF; others: -
+2012	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Giresunspor, Sakaryaspor A.S.
+2012	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: CPD Porthmadog, Caersws, Cambrian & Clydach, Haverfordwest County, Rhyl, Technogroup Welshpool
 2012	clubs	african_nations (Africa Cup of Nations), row int-continental-128: game 0, table 16 (16)
 2012	clubs	asia_club_champ (AFC Champions League), row club-world-222: game 16, table 32 (32)
 2012	clubs	fifa_confed (FIFA Confederations Cup), row int-world-142: game 0, table 8 (8)

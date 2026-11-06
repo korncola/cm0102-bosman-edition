@@ -10,6 +10,14 @@
 2020	bench	tur_second (TFF 1. Lig), row rus-tur-209: game 9, table 10 (10)
 2020	bench	tur_second_b (TFF 2. Lig), row rus-tur-236: game 9, table 10 (10)
 2020	bench	world_club_champ (FIFA Club World Cup), row club-world-363: game 7/9, table 12 (12)
+2020	club_list	American Major League: 12 of 25 listed clubs that the database holds (27 listed), 0 other clubs, 12 in all; not in it: FC Cincinnati, Houston Dynamo, Inter Miami CF, Los Angeles FC, Minnesota United FC, Montreal Impact, Nashville SC, New York City FC, Orlando City SC, Philadelphia Union, Portland Timbers, Real Salt Lake City, Vancouver Whitecaps FC; others: -
+2020	club_list	Irish Premier Division: 10 of 10 listed clubs that the database holds (10 listed), 2 other clubs, 12 in all; not in it: -; others: Limerick FC, Saint Francis
+2020	club_list	Korean League: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Gwangju FC, Seongnam FC; others: -
+2020	club_list	Russian First Division: 18 of 22 listed clubs that the database holds (22 listed), 0 other clubs, 18 in all; not in it: Akron Togliatti, FK Krasnodar 2, Spartak 2 Moscow, Veles Moskow; others: -
+2020	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: Degerfors IF, Halmstads BK; others: -
+2020	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Büyüksehir Belediye Erzurumspor, Fatih Karagümrük
+2020	club_list	Turkish Premier Division: 18 of 21 listed clubs that the database holds (21 listed), 0 other clubs, 18 in all; not in it: Büyüksehir Belediye Erzurumspor, Fatih Karagümrük, Hatayspor; others: -
+2020	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: Airbus UK Broughton FC, Cambrian & Clydach, Carmarthen Town AFC, Colwyn Bay FC, Port Talbot Town, Prestatyn Town FC
 2020	clubs	african_nations (Africa Cup of Nations), row int-continental-216: game 0/4, table 24 (24)
 2020	clubs	asia_club_champ (AFC Champions League), row club-world-374: game 16, table 40 (40)
 2020	clubs	ire_chal_cup (FAI Cup), row wal-nir-irl-494: game 42, table 38 (38)

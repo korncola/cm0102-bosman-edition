@@ -2,6 +2,16 @@
 # tests/seasons/rules_report_check.py --update-expected. Columns: season, kind, text.
 2003	bench	fra_lge_cup (Coupe de la Ligue), row fra-26: game 3, table 5 (5)
 2003	bench	ger_cup (DFB-Pokal), row ger-36: game 6, table 7 (7)
+2003	club_list	Argentine Second Division: 20 of 20 listed clubs that the database holds (20 listed), 5 other clubs, 25 in all; not in it: -; others: Almirante Brown de Arrecifes, Atlético Tucumán, Central Córdoba de Rosario, Independiente Rivadavia de Mendoza, Platense
+2003	club_list	Brazilian National Third Division: 47 of 47 listed clubs that the database holds (60 listed), 9 other clubs, 56 in all; not in it: -; others: Agremiação Sportiva Arapiraquense, Associação Desportiva Comercial Bandeirante, Atlético Clube Goianiense, Bangu Atlético Clube, Baré Esporte Clube, Botafogo Futebol Clube (PB), Camaçari Futebol Clube, Centro Sportivo Alagoano, Esporte Clube Comercial
+2003	club_list	Croatian First Division: 12 of 12 listed clubs that the database holds (12 listed), 4 other clubs, 16 in all; not in it: -; others: NK Bjelovar, NK Istra, NK Karlovac, NK Mosor
+2003	club_list	Croatian Second Division North: 11 of 11 listed clubs that the database holds (11 listed), 5 other clubs, 16 in all; not in it: -; others: NK Granicar, NK Mladost Molve, NK Omladinac, NK Podravac, NK Ðakovo
+2003	club_list	Croatian Second Division South: 12 of 12 listed clubs that the database holds (12 listed), 4 other clubs, 16 in all; not in it: -; others: NK Imotska Krajina, NK Konavljanin, NK Krk, NK TSK
+2003	club_list	Dutch First Division: 18 of 19 listed clubs that the database holds (19 listed), 0 other clubs, 18 in all; not in it: AGOVV; others: -
+2003	club_list	Finnish Premier Division: 12 of 14 listed clubs that the database holds (14 listed), 0 other clubs, 12 in all; not in it: FC Jazz, Rovaniemen Palloseura; others: -
+2003	club_list	Italian Serie B: 20 of 24 listed clubs that the database holds (24 listed), 0 other clubs, 20 in all; not in it: Catania, Fiorentina, Genoa, Salernitana; others: -
+2003	club_list	Northern Irish League First Division: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Brantwood, Lurgan Celtic; others: -
+2003	club_list	Northern Irish League Premier Division: 10 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 10 in all; not in it: Ballymena United, Crusaders, Dungannon Swifts, Larne, Limavady United, Newry Town; others: -
 2003	clubs	african_nations (African Cup of Nations), row int-continental-29: game 0, table 16 (16)
 2003	clubs	arg_second (Primera B Nacional), row arg-usa-30: game 25, table 20 (20)
 2003	clubs	asia_club_champ (AFC Champions League), row club-world-51: game 16, table 28 (28)

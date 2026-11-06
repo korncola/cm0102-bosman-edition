@@ -7,6 +7,9 @@
 2016	bench	ita_ser_c1b (Lega Pro girone B), row ita-265: game 9, table 12 (12 (inference: already 12 in Lega Pro by July 2017))
 2016	bench	ita_ser_c2a (Lega Pro girone C), row ita-266: game 9, table 12 (12 (inference: already 12 in Lega Pro by July 2017))
 2016	bench	world_club_champ (FIFA Club World Cup), row club-world-287: game 7/9, table 12 (12)
+2016	club_list	French National: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Sports Réunis de Colmar, Vendée Luçon Football
+2016	club_list	Italian Serie A: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: Crotone, Delfino Pescara; others: -
+2016	club_list	Italian Serie B: 20 of 22 listed clubs that the database holds (22 listed), 0 other clubs, 20 in all; not in it: Cittadella, Pisa; others: -
 2016	clubs	african_nations (Africa Cup of Nations), row int-continental-172: game 0/4, table 16 (16)
 2016	clubs	fifa_confed (FIFA Confederations Cup), row int-world-190: game 0/4, table 8 (8)
 2016	clubs	fra_third (Championnat National), row fra-139: game 20, table 18 (18)

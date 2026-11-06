@@ -6,6 +6,14 @@
 2013	bench	rus_prm (Russian Football Premier League), row rus-tur-13: game 9, table 12 (12)
 2013	bench	world_club_champ (FIFA Club World Cup), row club-world-230: game 7, table 12 (12)
 2013	bench	world_cup (FIFA World Cup), row int-world-146: game 7, table 12 (12 (all squad members not in the starting team))
+2013	club_list	American Major League: 12 of 17 listed clubs that the database holds (19 listed), 0 other clubs, 12 in all; not in it: Philadelphia Union, Portland Timbers, Real Salt Lake, Toronto FC, Vancouver Whitecaps; others: -
+2013	club_list	Irish First Division: 7 of 7 listed clubs that the database holds (8 listed), 3 other clubs, 10 in all; not in it: -; others: FC Carlow, Mervue United, Tralee Dynamos
+2013	club_list	Korean League: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Sangju Sangmu Phoenix FC, Seongnam Ilhwa Chunma; others: -
+2013	club_list	Portuguese Second League: 18 of 22 listed clubs that the database holds (22 listed), 0 other clubs, 18 in all; not in it: Clube Sport Marítimo B, Moreirense Futebol Clube, Sport Clube Beira-Mar, Sporting Clube de Braga B; others: -
+2013	club_list	Russian First Division: 18 of 19 listed clubs that the database holds (19 listed), 0 other clubs, 18 in all; not in it: Angusht Nazran; others: -
+2013	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: Falkenberg FF, IF Brommapojkarna; others: -
+2013	club_list	Turkish 2. Division Category A: 19 of 19 listed clubs that the database holds (19 listed), 1 other clubs, 20 in all; not in it: -; others: Göztepe A.S.
+2013	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: Caersws, Cambrian & Clydach, Cefn Druids, Haverfordwest County, Taffs Well, West End
 2013	clubs	asia_club_champ (AFC Champions League), row club-world-241: game 16, table 32 (32)
 2013	clubs	ire_chal_cup (FAI Cup), row wal-nir-irl-319: game 42, table 40 (40)
 2013	clubs	ire_first (League of Ireland First Division), row wal-nir-irl-317: game 10, table 8 (8)

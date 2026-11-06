@@ -536,14 +536,16 @@ def club_differences(seasons, comps, clubs, data_dir, rows=()):
     for n in held:
         plain_to[make_clubs.plain_name(n)].add(n)
     lists = collections.OrderedDict()
-    records = club_record_names(season)             # slice 15b: the new club records of the start season
+    # Slice 15b: the new club records of the start season. Its own name: cf6e4633 gave it the name of the
+    # division records above, so no division had a record and no club_list line came (0.6.2 open item 142).
+    new_records = club_record_names(season)
     for s, division, club_id, club, _ in make_clubs.build()[0]:
         if s != season:
             continue
         if names.get(club_id) == club or club in held:
             name = club
-        elif club_id == -1 and (division, club) in records:
-            name = records[(division, club)]
+        elif club_id == -1 and (division, club) in new_records:
+            name = new_records[(division, club)]
         else:                               # the plain form, when one club of the database has it (season_clubs.c)
             name = make_clubs.plain_match(club, plain_to.get(make_clubs.plain_name(club), set()))
         lists.setdefault(new_division_alias(division, season, rows), []).append(name)

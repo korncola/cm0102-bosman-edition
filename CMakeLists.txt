@@ -395,6 +395,8 @@ if(NOT WIN32)
     add_test(NAME future_run_set COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/future/run_set_test.py")
     # A rules report run with --year and no --database plays the season database of its expected files (item 129).
     add_test(NAME rules_report_database COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/rules_report_database_check.py")
+    # The club_list check of the rules report prints its lines (0.6.2 open item 142).
+    add_test(NAME rules_report_club_list COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/rules_report_club_list_check.py")
     add_executable(winfit_test tests/winfit/test_winfit.c)
     target_include_directories(winfit_test PRIVATE src/recomp_rt/win)
     add_test(NAME winfit COMMAND winfit_test)

@@ -9,6 +9,13 @@
 2018	bench	sco_fa_cup (Scottish Cup), row sco-142: game 5, table 7 (up to 7)
 2018	bench	tur_first (Süper Lig), row rus-tur-180: game 9, table 10 (10 (21-man matchday list from 2017–18))
 2018	bench	world_club_champ (FIFA Club World Cup), row club-world-325: game 7, table 12 (12)
+2018	club_list	American Major League: 12 of 22 listed clubs that the database holds (24 listed), 0 other clubs, 12 in all; not in it: Atlanta United, FC Cincinnati, Minnesota United FC, Montreal Impact, New York City FC, Orlando City SC, Philadelphia Union, Portland Timbers, Real Salt Lake City, Vancouver Whitecaps; others: -
+2018	club_list	Irish Premier Division: 10 of 10 listed clubs that the database holds (10 listed), 2 other clubs, 12 in all; not in it: -; others: Evergreen, Newbridge Town
+2018	club_list	Korean League: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Incheon United FC, Seongnam FC; others: -
+2018	club_list	Russian First Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: Spartak 2 Moscow, Zenit 2 St. Petersburg; others: -
+2018	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: Athletic Eskilstuna, Falkenbergs FF; others: -
+2018	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Karagümrük, Samsunspor
+2018	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: Airbus UK Broughton, Denbigh Town, Haverfordwest County, Port Talbot Town, Prestatyn Town FC, Rhyl
 2018	clubs	african_nations (Africa Cup of Nations), row int-continental-194: game 0, table 24 (24)
 2018	clubs	asia_club_champ (AFC Champions League), row club-world-336: game 16, table 32 (32)
 2018	clubs	asia_nations (AFC Asian Cup), row int-continental-196: game 0, table 24 (24)

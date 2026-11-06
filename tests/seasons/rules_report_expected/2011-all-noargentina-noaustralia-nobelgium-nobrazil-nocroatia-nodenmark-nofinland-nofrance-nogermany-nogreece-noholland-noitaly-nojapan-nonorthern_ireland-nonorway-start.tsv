@@ -5,6 +5,13 @@
 2011	bench	eng_fa_cup (FA Cup), row eng-358: game 5, table 7 (7)
 2011	bench	ire_chal_cup (FAI Cup), row wal-nir-irl-269: game 5, table 7 (7 (inference from final line-ups))
 2011	bench	world_club_champ (FIFA Club World Cup), row club-world-192: game 7, table 12 (12)
+2011	club_list	American Major League: 12 of 17 listed clubs that the database holds (19 listed), 0 other clubs, 12 in all; not in it: Montreal Impact, Portland Timbers, Seattle Sounders, Toronto FC, Vancouver Whitecaps; others: -
+2011	club_list	Irish First Division: 8 of 8 listed clubs that the database holds (8 listed), 2 other clubs, 10 in all; not in it: -; others: Cobh Ramblers, Galway United
+2011	club_list	Korean League: 10 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 10 in all; not in it: Daegu FC, Daejon Citizen, Gangwon Football Club, Gwangju FC, Incheon United, Sangju Sangmu Phoenix FC; others: -
+2011	club_list	Russian First Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: FC Yenisey Krasnoyarsk, Gazovik Orenburg; others: -
+2011	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: GIF Sundsvall, Syrianska Föreningen; others: -
+2011	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: BUGSAS Spor, Bandirmaspor
+2011	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: CPD Porthmadog, Caersws, GAP Connah's Quay, Haverfordwest County, Rhyl, Technogroup Welshpool
 2011	clubs	african_nations (Africa Cup of Nations), row int-continental-117: game 0, table 16 (16)
 2011	clubs	asia_club_champ (AFC Champions League), row club-world-203: game 16, table 32 (32)
 2011	clubs	euro_champ (UEFA European Championship), row int-continental-111: game 0, table 16 (16)

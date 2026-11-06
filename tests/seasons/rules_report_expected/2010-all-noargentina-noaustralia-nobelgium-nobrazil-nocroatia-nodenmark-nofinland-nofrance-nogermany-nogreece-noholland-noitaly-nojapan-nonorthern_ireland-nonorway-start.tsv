@@ -3,6 +3,14 @@
 2010	bench	eng_cc_cup (Football League Cup), row eng-353: game 5, table 7 (7)
 2010	bench	eng_fa_cup (FA Cup), row eng-352: game 5, table 7 (7)
 2010	bench	world_club_champ (FIFA Club World Cup), row club-world-173: game 7, table 12 (12)
+2010	club_list	American Major League: 12 of 16 listed clubs that the database holds (18 listed), 0 other clubs, 12 in all; not in it: Real Salt Lake, Seattle Sounders, Toronto FC, Vancouver Whitecaps; others: -
+2010	club_list	Irish First Division: 10 of 11 listed clubs that the database holds (11 listed), 0 other clubs, 10 in all; not in it: Cork City FORAS Co-op; others: -
+2010	club_list	Irish Premier Division: 10 of 10 listed clubs that the database holds (10 listed), 2 other clubs, 12 in all; not in it: -; others: Cork City FORAS Co-op, Sporting Fingal
+2010	club_list	Korean League: 10 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 10 in all; not in it: Daegu FC, Daejon Citizen, Gangwon FC, Gwangju FC, Gwangju Sangmu Bulsajo, Incheon United; others: -
+2010	club_list	Russian First Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: Fakel Voronezh, Zhemchuzhina Sochi; others: -
+2010	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: IFK Norrköping, Syrianska Föreningen; others: -
+2010	club_list	Turkish 2. Division Category A: 17 of 17 listed clubs that the database holds (17 listed), 3 other clubs, 20 in all; not in it: -; others: Gençlerbirligi Hacettepespor, Istanbulspor A.S., Malatyaspor
+2010	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: CPD Porthmadog, Caersws, Elements Cefn Druids, GAP Connah's Quay, Rhyl, Technogroup Welshpool
 2010	clubs	asia_club_champ (AFC Champions League), row club-world-184: game 16, table 32 (32)
 2010	clubs	asia_nations (AFC Asian Cup), row int-continental-108: game 0, table 16 (16)
 2010	clubs	euro_champ_qual (UEFA European Championship qualifying), row int-continental-101: game 5, table 51 (51)

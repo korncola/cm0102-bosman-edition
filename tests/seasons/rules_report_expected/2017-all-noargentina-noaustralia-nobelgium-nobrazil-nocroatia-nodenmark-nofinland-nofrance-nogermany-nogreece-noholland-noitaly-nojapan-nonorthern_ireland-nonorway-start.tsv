@@ -9,6 +9,14 @@
 2017	bench	tur_second (TFF 1. Lig), row rus-tur-206: game 9, table 10 (10)
 2017	bench	world_club_champ (FIFA Club World Cup), row club-world-306: game 7, table 12 (12)
 2017	bench	world_cup (FIFA World Cup), row int-world-194: game 7, table 12 (12)
+2017	club_list	American Major League: 12 of 20 listed clubs that the database holds (23 listed), 0 other clubs, 12 in all; not in it: Atlanta United, Montreal Impact, New York City FC, Orlando City, Philadelphia Union, Portland Timbers, Real Salt Lake, Vancouver Whitecaps; others: -
+2017	club_list	Irish Premier Division: 10 of 10 listed clubs that the database holds (10 listed), 2 other clubs, 12 in all; not in it: -; others: Newbridge Town, Tralee Dynamos
+2017	club_list	Korean League: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Daegu FC, Gangwon Football Club; others: -
+2017	club_list	Portuguese Second League: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: Sporting Clube de Portugal B, Vitória Sport Club B; others: -
+2017	club_list	Russian First Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: Spartak-2 Moscow, Zenit-2 St. Petersburg; others: -
+2017	club_list	Swedish Premier Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: Dalkurd FF, Trelleborgs FF; others: -
+2017	club_list	Turkish 2. Division Category A: 18 of 18 listed clubs that the database holds (18 listed), 2 other clubs, 20 in all; not in it: -; others: Bandirmaspor, Sanliurfaspor
+2017	club_list	Welsh Premier Division: 12 of 12 listed clubs that the database holds (12 listed), 6 other clubs, 18 in all; not in it: -; others: Airbus UK Broughton, Caernarfon Town, Cardiff Met, Denbigh Town, Haverfordwest County, Port Talbot Town
 2017	clubs	asia_club_champ (AFC Champions League), row club-world-317: game 16, table 32 (32)
 2017	clubs	ire_chal_cup (FAI Cup), row wal-nir-irl-419: game 42, table 40 (40 (inference from RSSSF round list))
 2017	clubs	ire_lge_cup (League of Ireland Cup), row wal-nir-irl-420: game 3, table 24 (24)

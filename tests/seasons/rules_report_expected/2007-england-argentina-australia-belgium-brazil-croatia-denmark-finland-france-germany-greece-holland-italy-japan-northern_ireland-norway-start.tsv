@@ -3,6 +3,21 @@
 2007	bench	fra_cup (Coupe de France), row fra-61: game 3, table 7 (7)
 2007	bench	fra_lge_cup (Coupe de la Ligue), row fra-62: game 3, table 7 (7)
 2007	bench	world_club_champ (FIFA Club World Cup), row club-world-116: game 7, table 12 (12)
+2007	club_list	Argentine Second Division: 20 of 20 listed clubs that the database holds (20 listed), 5 other clubs, 25 in all; not in it: -; others: All Boys, Deportivo Morón, Estudiantes de Buenos Aires, Los Andes, Racing de Córdoba
+2007	club_list	Belgian Second Division: 18 of 19 listed clubs that the database holds (19 listed), 0 other clubs, 18 in all; not in it: Union Royale Namur; others: -
+2007	club_list	Brazilian National Third Division: 52 of 52 listed clubs that the database holds (63 listed), 4 other clubs, 56 in all; not in it: -; others: Americano Futebol Clube (RJ), América Futebol Clube, Associação Desportiva Comercial Bandeirante, Sertãozinho Futebol Clube
+2007	club_list	Croatian First Division: 12 of 12 listed clubs that the database holds (12 listed), 4 other clubs, 16 in all; not in it: -; others: NK Bjelovar, NK Graficar Vodovod, NK Koprivnica, NK Metalac
+2007	club_list	Danish Second Division: 16 of 25 listed clubs that the database holds (32 listed), 0 other clubs, 16 in all; not in it: Amager Boldklub af 1970, Boldklubben af 1908, Greve Idrætsforening, Skovlunde Idrætsforening, Stenløse Boldklub, Vanløse Idræts Forening, Varde Idrætsforening, Vedbæk Boldklub, Værløse Boldklub; others: -
+2007	club_list	Dutch First Division: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: AGOVV Apeldoorn, FC Omniworld; others: -
+2007	club_list	Finnish Premier Division: 12 of 14 listed clubs that the database holds (14 listed), 0 other clubs, 12 in all; not in it: Kuopion Palloseura, Rovaniemen Palloseura; others: -
+2007	club_list	Greek National A Division: 14 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 14 in all; not in it: Asteras Tripolis, Levadiakos; others: -
+2007	club_list	Greek National B Division: 14 of 18 listed clubs that the database holds (18 listed), 0 other clubs, 14 in all; not in it: Agios Dimitrios, Agrotikos Asteras, Chaidari, Ethnikos Piraeus; others: -
+2007	club_list	Italian Serie A: 18 of 20 listed clubs that the database holds (20 listed), 0 other clubs, 18 in all; not in it: Livorno, Reggina; others: -
+2007	club_list	Italian Serie B: 20 of 22 listed clubs that the database holds (22 listed), 0 other clubs, 20 in all; not in it: Avellino, Cesena; others: -
+2007	club_list	Japanese J-League 1: 16 of 18 listed clubs that the database holds (18 listed), 0 other clubs, 16 in all; not in it: Consadole Sapporo, Tokyo Verdy 1969; others: -
+2007	club_list	Japanese J-League 2: 12 of 15 listed clubs that the database holds (15 listed), 0 other clubs, 12 in all; not in it: Gifu, NTT Kumamoto FC, Tokushima Vortis; others: -
+2007	club_list	Northern Irish League First Division: 10 of 12 listed clubs that the database holds (12 listed), 0 other clubs, 10 in all; not in it: Lurgan Celtic, Portstewart; others: -
+2007	club_list	Northern Irish League Premier Division: 10 of 16 listed clubs that the database holds (16 listed), 0 other clubs, 10 in all; not in it: Armagh City, Crusaders, Donegal Celtic, Glenavon, Institute, Larne; others: -
 2007	clubs	african_nations (Africa Cup of Nations), row int-continental-73: game 0, table 16 (16)
 2007	clubs	arg_second (Primera B Nacional), row arg-usa-34: game 25, table 20 (20)
 2007	clubs	asia_club_champ (AFC Champions League), row club-world-127: game 16, table 29 (29)
