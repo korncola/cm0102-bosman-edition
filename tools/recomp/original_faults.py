@@ -1,8 +1,8 @@
 """Faults of the original that long games reach (0.6.2 slice 11, Q23, Q24, Q27, open item 102;
 src/recomp_rt/win/original_faults.c). The fixes act in every game, the base game too. The test switch
 RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age", "keep:olympics",
-"keep:ire_super", "keep:nsl", "keep:holiday", "keep:callups" or "keep:confed" (or a list: "keep:money,age") turns
-off one group or more.
+"keep:ire_super", "keep:nsl", "keep:holiday", "keep:callups", "keep:confed" or "keep:callup_marks" (or a list:
+"keep:money,age") turns off one group or more.
 
 National managers (fault 26, Q23). `club_can_be_managed` 0x544820 takes a senior national team (club id from club
 count - 2 x nation count to club count - nation count, 0x544835..0x544857) only when its nation had more than 150
@@ -164,6 +164,22 @@ and the template already use for the date shift of every finals class. An editio
 moves its first group day to the Saturday on or before 18 June of its year, so all its matches are in June (2003: 14
 to 25 June). It acts from the new game on: the base game builds its 2003 edition there. Tests: ctest season_intl and
 tests/seasons/confed_dates_run.py.
+
+Clubs of a nation with no league keep their regulars (open item 160). NationalTeams::mark_clubs_with_fixtures
+0x7775c0 marks each club with a match within a day of a national match (this +0x24, a byte per club): 1 a match of its
+own league, 2 another competition of its nation, 3 a competition with no nation, a continental cup (0x77770f,
+0x777734, 0x777779). The squad pick NationalTeams::select_squad 0x76c120 leaves out a regular of a marked club
+(contract +0x3d, the playing-time mood, over -10: 0x76cd44..0x76cd73), and only a player who wants games goes. For a
+continental match the original marks a club only when its nation has a league in the game (nation +0x11c, the
+run-time league flags: 0x7776fc..0x777704 for the home club, 0x777721..0x777729 for the away club). A club of a nation
+with no league (Bolivia, Tunisia) is never marked, so its regulars go on duty on the day of its continental match: in
+run set pass 3 (changing rules off) Club Jorge Wilstermann played its Merconorte Cup match of 5 October 2011 without 3
+players that Bolivia had picked for a friendly of that day. Real clubs release players only for the days of the
+international match calendar (FIFA Regulations on the Status and Transfer of Players, annex 1, article 1), and the
+continental confederations keep their cups off those days, so a club keeps its regulars for a continental match. The
+two tests now mark every club of a continental match (rt_callup_mark_all). The marks change only the pick's gate: the
+call-up move NationalTeams::reschedule_clashing_club_fixtures 0x7777e0 acts on marks 1 and 2 (0x7778b7..0x7778bd),
+which need a league. Test: tests/seasons/callup_marks_run.py.
 """
 
 # address: (the instruction in the original, C code)
@@ -218,4 +234,6 @@ INSNS = {
     0x76CC9A: ("jmp 0x76cf82", "if (rt_callup_released(R8(esp + 0x8e4u))) goto L_76cd79; goto L_76cf82;"),
     0x76CD0B: ("je 0x76cf82", "if (cc_e(F) && !rt_callup_released(R8(esp + 0x8e4u))) goto L_76cf82;"),
     0x76CD3E: ("je 0x76cf82", "if (cc_e(F) && !rt_callup_released(R8(esp + 0x8e4u))) goto L_76cf82;"),
+    0x777704: ("je 0x777713", "if (cc_e(F) && !rt_callup_mark_all()) goto L_777713;"),
+    0x777729: ("je 0x77778f", "if (cc_e(F) && !rt_callup_mark_all()) goto L_77778f;"),
 }
