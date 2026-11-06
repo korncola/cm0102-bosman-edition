@@ -547,10 +547,22 @@ int win_is_file_handle(uint32_t h) { return fd_of(h) >= 0 || mem_slot(h) >= 0; }
  * handle of that file, opened with OPEN_EXISTING for read and write, keeps its host file open. The next
  * CreateFileA of the same host path with the same flags takes it at position 0, as a new open does. It is one
  * host file, read and written by the same calls, so the bytes are the same. A delete or rename of the path,
- * an unwind out of 0x7c1350 and its end close the kept file. RECOMP_KEEP_FILES=0 closes it at once. */
+ * an unwind out of 0x7c1350 and its end close the kept file. RECOMP_KEEP_FILES=0 closes it at once.
+ *
+ * Item 151: the constructor PlayerStats::PlayerStats 0x7bfd50 ("Player histories" of a new game) also keeps the
+ * file. Through FILE_LLIST::add_node_list 0x58e9b0 it opens the file 16,816 times in a 2025/26 start with four
+ * nations, each time for write with OPEN_ALWAYS (access 0x40000000, disposition 4), and the opens with their
+ * path lookups took about half of the step. A handle opened for write with OPEN_EXISTING or OPEN_ALWAYS keeps
+ * its host file at the close, with the game's name, access and disposition. A new CreateFileA with the same
+ * name, access and disposition takes the kept file at position 0 without the path lookup: the file exists
+ * (the game closed it a moment ago), so the slow path would find the same user-folder file, set no flag of
+ * a new file, and give ERROR_ALREADY_EXISTS for OPEN_ALWAYS. Every DeleteFileA, MoveFileA, CreateDirectoryA and
+ * SetCurrentDirectoryA closes all kept files, since a path lookup may then give another file. */
 #define KEEP_NAME "player stats history.tmp"
 #define KEEP_MAX 4
-static struct { char *path; int fd; int flags; } kept[KEEP_MAX];
+static struct { char *path; int fd; int flags; char *name; uint32_t access, disposition; } kept[KEEP_MAX];
+static char *fd_name[MAX_FILES];              /* the game's name, access and disposition of a handle of KEEP_NAME */
+static uint32_t fd_access[MAX_FILES], fd_disposition[MAX_FILES];
 static int keep_depth;
 static int fd_flags[MAX_FILES];     /* the host open flags of a handle */
 
@@ -579,8 +591,19 @@ static void keep_drop(const char *path)
             continue;
         host_close(kept[k].fd);
         free(kept[k].path);
-        kept[k].path = NULL;
+        free(kept[k].name);
+        kept[k].path = kept[k].name = NULL;
     }
+}
+
+/* A kept file for the game's name, access and disposition: its slot, or -1. */
+static int keep_find_name(const char *name, uint32_t access, uint32_t disposition)
+{
+    for (int k = 0; k < KEEP_MAX; k++)
+        if (kept[k].path && kept[k].name && kept[k].access == access && kept[k].disposition == disposition
+            && !strcmp(kept[k].name, name))
+            return k;
+    return -1;
 }
 
 /* A kept host file for path and flags, at position 0, or -1. */
@@ -590,7 +613,8 @@ static int keep_take(const char *path, int flags)
         if (!kept[k].path || kept[k].flags != flags || strcmp(kept[k].path, path)) continue;
         int fd = kept[k].fd;
         free(kept[k].path);
-        kept[k].path = NULL;
+        free(kept[k].name);
+        kept[k].path = kept[k].name = NULL;
         if (host_seek(fd, 0, SEEK_SET) == 0) return fd;
         host_close(fd);
         return -1;
@@ -611,6 +635,19 @@ RT_WRAP(007c1350, keep_files_archive)
     }
 }
 
+void o_007bfd50(void);
+
+/* PlayerStats::PlayerStats 0x7bfd50, thiscall, the "Player histories" step of a new game (item 151). */
+RT_WRAP(007bfd50, keep_files_histories)
+{
+    keep_depth++;
+    o_007bfd50();
+    if (--keep_depth == 0 || rt_unwinding) {
+        keep_depth = 0;
+        keep_drop(NULL);
+    }
+}
+
 int win_close_file(uint32_t h)
 {
     int m = mem_slot(h);
@@ -622,17 +659,24 @@ int win_close_file(uint32_t h)
     if (fd < 0) return 0;
     uint32_t i = (h - FILE_BASE) / 4;
     int k = KEEP_MAX;
-    if (keep_depth && keep_on() && fd_path[i] && fd_flags[i] == O_RDWR && kept_name(fd_path[i]))
+    if (keep_depth && keep_on() && fd_path[i] && (fd_flags[i] == O_RDWR || fd_flags[i] == (O_WRONLY | O_CREAT)
+                                                  || fd_flags[i] == (O_RDWR | O_CREAT)) && kept_name(fd_path[i]))
         for (k = 0; k < KEEP_MAX && kept[k].path; k++) {}
     if (k < KEEP_MAX) {
-        kept[k].path = fd_path[i];          /* the path moves to the kept file */
+        kept[k].path = fd_path[i];          /* the path and the game's name move to the kept file */
         kept[k].fd = fd;
         kept[k].flags = fd_flags[i];
+        kept[k].name = fd_name[i];
+        kept[k].access = fd_access[i];
+        kept[k].disposition = fd_disposition[i];
         fd_path[i] = NULL;
+        fd_name[i] = NULL;
     } else
         host_close(fd);
     free(fd_path[i]);
     fd_path[i] = NULL;
+    free(fd_name[i]);
+    fd_name[i] = NULL;
     fd_used[i] = 0;
     return 1;
 }
@@ -648,6 +692,28 @@ RT_IMPORT(CreateFileA)
     const char *name = win_str(rt_arg(0));
     uint32_t access = rt_arg(1), disposition = rt_arg(4);
     char h[2048], u[2048];
+    int kk = keep_depth && keep_on() && (access & 0x40000000u) && (disposition == 3 || disposition == 4)
+             ? keep_find_name(name, access, disposition) : -1;
+    if (kk >= 0) {                                      /* the kept file, as the path lookup would find it */
+        for (uint32_t i = 0; i < MAX_FILES; i++) {
+            if (fd_used[i]) continue;
+            int fd = kept[kk].fd;
+            if (host_seek(fd, 0, SEEK_SET) != 0) break;    /* the slow path below opens it again */
+            fd_used[i] = 1;
+            fds[i] = fd;
+            fd_flags[i] = kept[kk].flags;
+            fd_path[i] = kept[kk].path;
+            fd_name[i] = kept[kk].name;
+            fd_access[i] = access;
+            fd_disposition[i] = disposition;
+            kept[kk].path = kept[kk].name = NULL;
+            win_last_error = disposition == 4 ? ERROR_ALREADY_EXISTS : 0;
+            WIN_TRACE("CreateFileA(%s, %#x, %u) = %d (kept)\n", name, access, disposition, fd);
+            rt_ret_stdcall(FILE_BASE + 4 * i, 7);
+            return;
+        }
+        keep_drop(NULL);
+    }
     if (!win_paths(name, h, u, sizeof h)) {
         win_last_error = ERROR_PATH_NOT_FOUND;
         rt_ret_stdcall(INVALID_HANDLE, 7);
@@ -721,6 +787,9 @@ RT_IMPORT(CreateFileA)
             fds[i] = fd;
             fd_flags[i] = flags;
             fd_path[i] = write_intent ? strdup(target) : NULL;
+            fd_name[i] = fd_path[i] && kept_name(target) ? strdup(name) : NULL;
+            fd_access[i] = access;
+            fd_disposition[i] = disposition;
             win_last_error = existed && (disposition == 2 || disposition == 4) ? ERROR_ALREADY_EXISTS : 0;
             rt_ret_stdcall(FILE_BASE + 4 * i, 7);
             return;
@@ -926,7 +995,7 @@ RT_IMPORT(DeleteFileA)
     if (save_refused(name)) {
         errno = ENOSPC;
     } else if (win_paths(name, h, u, sizeof h)) {
-        keep_drop(u);
+        keep_drop(NULL);                                /* item 151: a kept name may now give another file */
         if (temp_save_beside(u) && save_backup(h, u, 0)) ok = 1;   /* a new save follows: the old moved to backups/ */
         else if (exists(u)) ok = host_unlink(u) == 0;
         /* A save without the temp file (no option bit 0x20000000) deletes the old .sav before it writes (0x82e62d). */
@@ -950,7 +1019,7 @@ RT_IMPORT(MoveFileA)
         ok = 0;
     } else if (ok && (exists(tu) || exists(th))) { win_last_error = ERROR_ALREADY_EXISTS; ok = 0; }
     else if (ok && exists(fu)) {
-        keep_drop(fu);
+        keep_drop(NULL);
         make_parents(tu);
         if (host_rename(fu, tu)) { win_error_from_errno(); ok = 0; }
     } else if (ok && exists(fh) && !is_dir(fh)) {
@@ -968,6 +1037,7 @@ RT_IMPORT(MoveFileA)
 RT_IMPORT(CreateDirectoryA)
 {
     char h[2048], u[2048], parent[2048];
+    keep_drop(NULL);                                    /* item 151: the kept names (keep_find_name) */
     int ok = win_paths(win_str(rt_arg(0)), h, u, sizeof h);
     if (ok && (exists(u) || exists(h))) { win_last_error = ERROR_ALREADY_EXISTS; rt_ret_stdcall(0, 2); return; }
     if (ok) {
@@ -993,6 +1063,7 @@ RT_IMPORT(SetCurrentDirectoryA)
 {
     const char *name = win_str(rt_arg(0));
     char h[2048], u[2048], full[1024];
+    keep_drop(NULL);                                    /* item 151: a relative kept name now means another file */
     if (!win_paths(name, h, u, sizeof h) || !(is_dir(u) || is_dir(h))) {
         win_last_error = ERROR_PATH_NOT_FOUND;
         rt_ret_stdcall(0, 1);
