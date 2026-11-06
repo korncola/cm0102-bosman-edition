@@ -48,9 +48,41 @@ static void fixture_text(uint32_t fix, char *out, size_t n)
              (int8_t)g_mem[fix + FIX_PRIORITY]);
 }
 
+/* RECOMP_DUTY_LOG_CLUB=<name>: after each call-up check, the mark of that club in the list of
+ * NationalTeams::mark_clubs_with_fixtures 0x7775c0 (this +0x24, a byte per club: 0 no match within a day, 1 its own
+ * league, 2 another competition of its nation, 3 a competition with no nation; 0x77770f, 0x777734, 0x777779). */
+#define CLUBS 0xae23b4u
+#define CLUB_COUNT 0xae235cu
+#define CLUB_SIZE 0x245u
+
+static void log_mark(uint32_t self)
+{
+    const char *name = getenv("RECOMP_DUTY_LOG_CLUB");
+    uint32_t marks = rd32(g_mem, self + 0x24u), table = rd32(g_mem, CLUBS);
+    if (!name || !*name || !readable(marks) || !readable(table)) return;
+    int count = (int)rd32(g_mem, CLUB_COUNT);
+    for (int i = 0; i < count; i++) {
+        if (strcmp(win_str(table + (uint32_t)i * CLUB_SIZE + 4u), name)) continue;
+        fprintf(stderr, "recomp: duty: %s has mark %d\n", name, g_mem[marks + (uint32_t)i]);
+        /* Its call-up records, as 0x7777e0 counts them (0x7778c3..0x77793b): this +0x20 + 6 x club, +0 the
+         * records of 9 bytes (+0 s16 day, +2 s16 year, +8 count), +5 their number. */
+        uint32_t lists = rd32(g_mem, self + 0x20u);
+        if (!readable(lists)) return;
+        uint32_t e = lists + (uint32_t)i * 6u, recs = rd32(g_mem, e);
+        int n = (int8_t)g_mem[e + 5u];
+        for (int k = 0; k < n && readable(recs); k++) {
+            uint32_t r = recs + 9u * (uint32_t)k;
+            fprintf(stderr, "recomp: duty:   record day %d of %d, count %d\n", (int16_t)rd16(g_mem, r),
+                    (int16_t)rd16(g_mem, r + 2u), (int8_t)g_mem[r + 8u]);
+        }
+        return;
+    }
+}
+
 void o_007777e0(void);
 RT_WRAP(007777e0, duty_reschedule)
 {
+    uint32_t self = cpu.ecx;
     if (duty_log_on()) {
         uint32_t d = rt_arg(0);
         fprintf(stderr, "recomp: duty: call-up check for day %d of %d (today day %d of %d, from 0x%x)\n",
@@ -58,6 +90,7 @@ RT_WRAP(007777e0, duty_reschedule)
                 (int16_t)rd16(g_mem, TODAY + 2u), rd32(g_mem, cpu.esp));
     }
     o_007777e0();
+    if (duty_log_on() && !rt_unwinding) log_mark(self);
 }
 
 void o_005abb10(void);

@@ -36,8 +36,10 @@ import soak_run  # noqa: E402
 
 SAVE = "samesave.sav"
 FIRST_DAY = 2001 * 366 + 181             # the first human turn of a new game (game_days, run_set.py)
-SAVE_1 = 2003 * 366 + 163                 # 13 June 2003 (day 163 from 0)
-SAVE_2 = 2003 * 366 + 205                 # 25 July 2003
+# The save comes 12 days after the target here: a new game's first human turn is before day 181, and game_days counts
+# 366 days a year (red run on main: targets 163 and 205 saved on days 175 and 217 of 2003).
+SAVE_1 = 2003 * 366 + 151                 # saves on about 13 June 2003 (day 163 from 0)
+SAVE_2 = 2003 * 366 + 193                 # saves on about 25 July 2003
 
 
 def confed_days(game):
