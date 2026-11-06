@@ -538,7 +538,7 @@ int season_change_part_read(const uint8_t *in, uint32_t n, uint32_t form)
         renames[i].index = get32(in + at);
         memcpy(renames[i].original, in + at + 4, NAME_ROOM);
         renames[i].original[NAME_ROOM - 1] = 0;
-        /* Item 152: a save made before the fix holds unset bytes after the name; the next save writes zeros. */
+        /* Open item 152: a save made before the fix holds unset bytes after the name: the next save writes zeros. */
         size_t end = strlen(renames[i].original);
         memset(renames[i].original + end, 0, NAME_ROOM - end);
         at += 4 + NAME_ROOM;
