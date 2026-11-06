@@ -507,8 +507,11 @@ static int mem_files;
 static int mem_of[MAX_FILES];
 static size_t mem_pos[MAX_FILES];
 
+static void keep_drop(const char *path);
+
 void win_memory_file(const char *host_path, const uint8_t *data, size_t size)
 {
+    keep_drop(NULL);                        /* item 151: a kept read handle must not hide a new memory file */
     if (mem_files == MAX_MEM_FILES || strlen(host_path) >= sizeof mem_file[0].path) rt_fatal("too many memory files");
     snprintf(mem_file[mem_files].path, sizeof mem_file[0].path, "%s", host_path);
     mem_file[mem_files].data = data;
@@ -518,6 +521,7 @@ void win_memory_file(const char *host_path, const uint8_t *data, size_t size)
 
 void win_memory_files_clear(void)
 {
+    keep_drop(NULL);
     for (uint32_t i = 0; i < MAX_FILES; i++)
         if (fd_used[i] && fds[i] == MEM_FD) fd_used[i] = 0;
     mem_files = 0;
@@ -557,11 +561,15 @@ int win_is_file_handle(uint32_t h) { return fd_of(h) >= 0 || mem_slot(h) >= 0; }
  * name, access and disposition takes the kept file at position 0 without the path lookup: the file exists
  * (the game closed it a moment ago), so the slow path would find the same user-folder file, set no flag of
  * a new file, and give ERROR_ALREADY_EXISTS for OPEN_ALWAYS. Every DeleteFileA, MoveFileA, CreateDirectoryA and
- * SetCurrentDirectoryA closes all kept files, since a path lookup may then give another file. */
+ * SetCurrentDirectoryA closes all kept files, since a path lookup may then give another file. A handle for read
+ * is kept too (the last "Initialising game data", FOG_OF_WAR_MAP 0x5aff00), but only a file of the user folder:
+ * a read of a file that exists only in the game folder would find the user-folder copy once a write makes one.
+ * A new or cleared memory file closes the kept files too, since a read open would then take the memory file. */
 #define KEEP_NAME "player stats history.tmp"
 #define KEEP_MAX 4
 static struct { char *path; int fd; int flags; char *name; uint32_t access, disposition; } kept[KEEP_MAX];
-static char *fd_name[MAX_FILES];              /* the game's name, access and disposition of a handle of KEEP_NAME */
+static char *fd_keep[MAX_FILES];              /* the host path of a handle of KEEP_NAME in the user folder */
+static char *fd_name[MAX_FILES];              /* the game's name, access and disposition of that handle */
 static uint32_t fd_access[MAX_FILES], fd_disposition[MAX_FILES];
 static int keep_depth;
 static int fd_flags[MAX_FILES];     /* the host open flags of a handle */
@@ -637,6 +645,22 @@ RT_WRAP(007c1350, keep_files_archive)
 
 void o_007bfd50(void);
 
+void o_005aff00(void);
+
+/* FOG_OF_WAR_MAP::FOG_OF_WAR_MAP 0x5aff00 (item 151): the last "Initialising game data" of a new game reads the
+ * history of each player through PlayerStats::build_career_history 0x7c3e40 and FILE_LLIST::get_nodes 0x58f120,
+ * which opens the file for read (access 0x80000000, OPEN_EXISTING) 14,706 times in a 2025/26 start with four
+ * nations. */
+RT_WRAP(005aff00, keep_files_fog)
+{
+    keep_depth++;
+    o_005aff00();
+    if (--keep_depth == 0 || rt_unwinding) {
+        keep_depth = 0;
+        keep_drop(NULL);
+    }
+}
+
 /* PlayerStats::PlayerStats 0x7bfd50, thiscall, the "Player histories" step of a new game (item 151). */
 RT_WRAP(007bfd50, keep_files_histories)
 {
@@ -659,22 +683,23 @@ int win_close_file(uint32_t h)
     if (fd < 0) return 0;
     uint32_t i = (h - FILE_BASE) / 4;
     int k = KEEP_MAX;
-    if (keep_depth && keep_on() && fd_path[i] && (fd_flags[i] == O_RDWR || fd_flags[i] == (O_WRONLY | O_CREAT)
-                                                  || fd_flags[i] == (O_RDWR | O_CREAT)) && kept_name(fd_path[i]))
+    if (keep_depth && keep_on() && fd_keep[i] && !(fd_flags[i] & (O_TRUNC | O_EXCL)))
         for (k = 0; k < KEEP_MAX && kept[k].path; k++) {}
     if (k < KEEP_MAX) {
-        kept[k].path = fd_path[i];          /* the path and the game's name move to the kept file */
+        kept[k].path = fd_keep[i];          /* the path and the game's name move to the kept file */
         kept[k].fd = fd;
         kept[k].flags = fd_flags[i];
         kept[k].name = fd_name[i];
         kept[k].access = fd_access[i];
         kept[k].disposition = fd_disposition[i];
-        fd_path[i] = NULL;
+        fd_keep[i] = NULL;
         fd_name[i] = NULL;
     } else
         host_close(fd);
     free(fd_path[i]);
     fd_path[i] = NULL;
+    free(fd_keep[i]);
+    fd_keep[i] = NULL;
     free(fd_name[i]);
     fd_name[i] = NULL;
     fd_used[i] = 0;
@@ -692,7 +717,7 @@ RT_IMPORT(CreateFileA)
     const char *name = win_str(rt_arg(0));
     uint32_t access = rt_arg(1), disposition = rt_arg(4);
     char h[2048], u[2048];
-    int kk = keep_depth && keep_on() && (access & 0x40000000u) && (disposition == 3 || disposition == 4)
+    int kk = keep_depth && keep_on() && (disposition == 3 || disposition == 4)
              ? keep_find_name(name, access, disposition) : -1;
     if (kk >= 0) {                                      /* the kept file, as the path lookup would find it */
         for (uint32_t i = 0; i < MAX_FILES; i++) {
@@ -702,7 +727,8 @@ RT_IMPORT(CreateFileA)
             fd_used[i] = 1;
             fds[i] = fd;
             fd_flags[i] = kept[kk].flags;
-            fd_path[i] = kept[kk].path;
+            fd_path[i] = (access & 0x40000000u) ? strdup(kept[kk].path) : NULL;
+            fd_keep[i] = kept[kk].path;
             fd_name[i] = kept[kk].name;
             fd_access[i] = access;
             fd_disposition[i] = disposition;
@@ -787,7 +813,9 @@ RT_IMPORT(CreateFileA)
             fds[i] = fd;
             fd_flags[i] = flags;
             fd_path[i] = write_intent ? strdup(target) : NULL;
-            fd_name[i] = fd_path[i] && kept_name(target) ? strdup(name) : NULL;
+            /* Item 151: a handle of KEEP_NAME in the user folder can be kept at its close. */
+            fd_keep[i] = target == u && kept_name(target) ? strdup(target) : NULL;
+            fd_name[i] = fd_keep[i] ? strdup(name) : NULL;
             fd_access[i] = access;
             fd_disposition[i] = disposition;
             win_last_error = existed && (disposition == 2 || disposition == 4) ? ERROR_ALREADY_EXISTS : 0;

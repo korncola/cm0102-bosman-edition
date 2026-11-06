@@ -48,7 +48,16 @@
  * (pushes at 0x600a56..0x600a59) at esp - 0x204..esp - 0x210, the argument and return address 0x600beb
  * of the call at esp - 0x214 and esp - 0x218, and the esi that 0x5409b0 pushes (0x540a36) at esp - 0x41c.
  * eax and edx are 0, ecx holds [0xae235c] - [0xae2350]. No caller reads the flags (the port keeps no flags
- * across a call). */
+ * across a call).
+ *
+ * 0x53a610 database_player_to_attribute_vector, cdecl (player, staff, vector, sides_end, positions_end,
+ * weighted_end), item 151. database_player_initialisation 0x535a80 calls it for each player, and with all
+ * nations it took 36 % of "Player Initialisation". It has no branch on the data: it clears the third byte of
+ * the 63 rows of 3 bytes of the vector, writes 55 words (each a signed byte of the player record, the last of
+ * the staff record at +0x58), 18 bytes of 1 or 2, and 9, 12 and 32 to the three end pointers that are not 0.
+ * The tables below are read from 0x53a610..0x53a8a4 in that order. It pushes esi (esp - 4). It returns eax =
+ * the vector, ecx = the upper half of the player pointer and the sign-extended byte at staff + 0x58 in cx, and
+ * edx = the staff. */
 #include "win.h"
 
 #include <stdio.h>
@@ -58,12 +67,17 @@
 #define LIST_HAS 0x7ae350u
 #define LLIST_HAS 0x69fc60u
 #define HUMAN_CLUB 0x600a50u
+#define ATTR_VECTOR 0x53a610u
 
 void o_007ae350(void);
 void o_0069fc60(void);
 void o_0069ba50(void);
+void o_0053a610(void);
 void o_00600a50(void);
 void o_007a56f0(void);
+
+static void attr_vector_host(void);
+static int attr_vector_check(void);
 
 static int hot_mode = -1;          /* 0 host, 1 check, 2 original, 3 the self-test */
 
@@ -292,6 +306,19 @@ static int human_club_check(void)
     return bad;
 }
 
+RT_WRAP(0053a610, attr_vector)
+{
+    hot_mode_read();
+    if (hot_mode == 2) { o_0053a610(); return; }
+    if (hot_mode == 1) {
+        if (attr_vector_check()) abort();
+        if (!hot_checked++) atexit(print_hot_checked);
+        return;
+    }
+    if (hot_mode == 3) { hot_test_fails += attr_vector_check(); return; }
+    attr_vector_host();
+}
+
 RT_WRAP(00600a50, human_club)
 {
     hot_mode_read();
@@ -303,6 +330,136 @@ RT_WRAP(00600a50, human_club)
     }
     if (hot_mode == 3) { hot_test_fails += human_club_check(); return; }
     if (!human_club_host()) o_00600a50();
+}
+
+/* 0x53a610: its writes in the order of the code (0x53a625..0x53a8a4). W: a word of the vector at +a from the signed
+ * byte of the player at +b; T: the same from the staff; B: the byte b at +a; P, S, G: the byte b to positions_end,
+ * sides_end, weighted_end when that pointer is not 0; U: push esi. */
+static const struct { char op; uint8_t a, b; } attr_ops[77] = {
+    {'W', 0x0, 0xf},
+    {'W', 0x3, 0x10},
+    {'W', 0x6, 0x11},
+    {'W', 0x9, 0x12},
+    {'W', 0xc, 0x13},
+    {'W', 0xf, 0x14},
+    {'W', 0x12, 0x15},
+    {'W', 0x15, 0x16},
+    {'W', 0x18, 0x1a},
+    {'P', 0, 9},
+    {'W', 0x1b, 0x17},
+    {'W', 0x1e, 0x18},
+    {'W', 0x21, 0x19},
+    {'S', 0, 12},
+    {'W', 0x24, 0x30},
+    {'U', 0, 0},
+    {'W', 0x27, 0x3b},
+    {'W', 0x2a, 0x1e},
+    {'B', 0x2f, 2},
+    {'W', 0x2d, 0x23},
+    {'W', 0x30, 0x24},
+    {'B', 0x35, 2},
+    {'W', 0x33, 0x26},
+    {'B', 0x38, 2},
+    {'W', 0x36, 0x27},
+    {'B', 0x3b, 1},
+    {'W', 0x39, 0x2a},
+    {'B', 0x3e, 2},
+    {'W', 0x3c, 0x2b},
+    {'B', 0x41, 2},
+    {'W', 0x3f, 0x31},
+    {'B', 0x44, 2},
+    {'W', 0x42, 0x32},
+    {'B', 0x47, 2},
+    {'W', 0x45, 0x33},
+    {'W', 0x48, 0x35},
+    {'B', 0x4d, 2},
+    {'W', 0x4b, 0x37},
+    {'B', 0x50, 2},
+    {'W', 0x4e, 0x38},
+    {'W', 0x51, 0x39},
+    {'W', 0x54, 0x3a},
+    {'B', 0x59, 2},
+    {'W', 0x57, 0x3e},
+    {'W', 0x5a, 0x41},
+    {'B', 0x5f, 2},
+    {'W', 0x5d, 0x43},
+    {'G', 0, 32},
+    {'B', 0x62, 2},
+    {'W', 0x60, 0x28},
+    {'B', 0x65, 2},
+    {'W', 0x63, 0x22},
+    {'W', 0x66, 0x29},
+    {'B', 0x6b, 2},
+    {'W', 0x69, 0x40},
+    {'W', 0x6c, 0x3d},
+    {'W', 0x6f, 0x3c},
+    {'W', 0x72, 0x36},
+    {'W', 0x75, 0x2e},
+    {'W', 0x78, 0x2f},
+    {'W', 0x7b, 0x25},
+    {'W', 0x7e, 0x1f},
+    {'W', 0x81, 0x20},
+    {'W', 0x84, 0x21},
+    {'B', 0x89, 2},
+    {'W', 0x87, 0x1b},
+    {'W', 0x8a, 0x1c},
+    {'W', 0x8d, 0x1d},
+    {'W', 0x90, 0x2c},
+    {'W', 0x93, 0x2d},
+    {'W', 0x96, 0x42},
+    {'B', 0x9b, 2},
+    {'W', 0x99, 0x3f},
+    {'B', 0x9e, 2},
+    {'W', 0x9c, 0x44},
+    {'W', 0x9f, 0x34},
+    {'T', 0xa2, 0x58}};
+
+static void attr_vector_host(void)
+{
+    uint32_t esp = cpu.esp, player = rd32(g_mem, esp + 4), staff = rd32(g_mem, esp + 8), vec = rd32(g_mem, esp + 0xc);
+    uint32_t sides = rd32(g_mem, esp + 0x10), positions = rd32(g_mem, esp + 0x14), weighted = rd32(g_mem, esp + 0x18);
+    uint32_t last = 0;
+    for (uint32_t k = 0; k < 0x3f; k++) wr8(g_mem, vec + 2 + 3 * k, 0);
+    for (int k = 0; k < 77; k++) {
+        uint32_t a = attr_ops[k].a, b = attr_ops[k].b;
+        switch (attr_ops[k].op) {
+        case 'W': wr16(g_mem, vec + a, (uint32_t)(int32_t)(int8_t)rd8(g_mem, player + b)); break;
+        case 'T': last = (uint32_t)(int32_t)(int8_t)rd8(g_mem, staff + b); wr16(g_mem, vec + a, last); break;
+        case 'B': wr8(g_mem, vec + a, b); break;
+        case 'P': if (positions) wr8(g_mem, positions, b); break;
+        case 'S': if (sides) wr8(g_mem, sides, b); break;
+        case 'G': if (weighted) wr8(g_mem, weighted, b); break;
+        case 'U': wr32(g_mem, esp - 4, cpu.esi); break;
+        }
+    }
+    cpu.eax = vec;
+    cpu.ecx = (player & 0xffff0000u) | (last & 0xffffu);
+    cpu.edx = staff;
+    cpu.esp = esp + 4;
+}
+
+static int attr_vector_check(void)
+{
+    uint32_t esp = cpu.esp, vec = rd32(g_mem, esp + 0xc);
+    uint32_t outs[3] = {rd32(g_mem, esp + 0x10), rd32(g_mem, esp + 0x14), rd32(g_mem, esp + 0x18)};
+    uint8_t before[0xc0], host[0xc0], ob[3] = {0}, oh[3] = {0};
+    uint32_t sb = rd32(g_mem, esp - 4), sh;
+    memcpy(before, g_mem + vec, sizeof before);
+    for (int i = 0; i < 3; i++) if (outs[i]) ob[i] = g_mem[outs[i]];
+    Cpu in = cpu;
+    attr_vector_host();
+    Cpu want = cpu;
+    memcpy(host, g_mem + vec, sizeof host);
+    for (int i = 0; i < 3; i++) if (outs[i]) { oh[i] = g_mem[outs[i]]; g_mem[outs[i]] = ob[i]; }
+    sh = rd32(g_mem, esp - 4);
+    memcpy(g_mem + vec, before, sizeof before);
+    wr32(g_mem, esp - 4, sb);
+    cpu = in;
+    o_0053a610();
+    int bad = memcmp(&want, &cpu, sizeof cpu) || memcmp(host, g_mem + vec, sizeof host) || sh != rd32(g_mem, esp - 4);
+    for (int i = 0; i < 3; i++) if (outs[i] && oh[i] != g_mem[outs[i]]) bad = 1;
+    if (bad) fprintf(stderr, "recomp: hot check: 0x53a610 differs (ecx 0x%x host 0x%x)\n", cpu.ecx, want.ecx);
+    return bad;
 }
 
 /* MANAGER_MANAGER::add_job_vacancy 0x69ba50: the index of 0x7ae350 lives while it runs. A nested call
@@ -428,6 +585,20 @@ int hot_loops_self_test(void)
     wr32(g_mem, 0xae2364u, g64);
     wr32(g_mem, 0xae235cu, g5c);
     wr32(g_mem, 0xae2350u, g50);
+    /* 0x53a610 (item 151): random player and staff records, each end pointer set or 0. */
+    uint32_t prec = rt_alloc(0x80), srec = rt_alloc(0x80), vec = rt_alloc(0xc0), ends = rt_alloc(4);
+    for (int k = 0; k < 64; k++) {
+        for (int i = 0; i < 0x80; i++) {
+            seed = seed * 1103515245u + 12345u;
+            g_mem[prec + (uint32_t)i] = (uint8_t)(seed >> 16);
+            g_mem[srec + (uint32_t)i] = (uint8_t)(seed >> 8);
+        }
+        for (int i = 0; i < 0xc0; i++) g_mem[vec + (uint32_t)i] = (uint8_t)(i * 7 + k);
+        uint32_t args[6] = {prec, srec, vec, k & 1 ? ends : 0, k & 2 ? ends + 1 : 0, k & 4 ? ends + 2 : 0};
+        cpu.eax = 0x1111u, cpu.ecx = 0x2222u + (uint32_t)k, cpu.edx = 0x3333u, cpu.esi = 0x4444u + (uint32_t)k;
+        rt_callback(ATTR_VECTOR, 6, args);
+        calls++;
+    }
     /* Linked lists of 0 to 30 nodes, a count from -2 to the length (a count below the length stops early),
      * ids from a small range, found and not found. */
     uint32_t head = rt_alloc(16), nodes = rt_alloc(31 * 10), datas = rt_alloc(31 * 10), this_ = rt_alloc(12);
