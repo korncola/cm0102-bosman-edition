@@ -16,12 +16,13 @@ The run loads --save (a game before 27 December 2001 whose pots hold 0xff), wait
     - the log line "recomp: World Cup 2002 draw: <n> pot 1 slots hold 0xff, the pots are cleared"
     - the program ends with code 0 before --timeout seconds and leaves samesave.sav (the day loop got past the draw)
     - no message box
---keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:wc_pots. The checks must then fail: the game stops at the draw
-and the run reaches --timeout (give a short one, for example 600).
+--keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:wc_pots (give a short --timeout, for example 300). It passes when
+the checks find the fault: the line ends in "the pots are kept" and the game stops at the draw (a timeout, no
+samesave.sav).
 
-The save of the player's report (run-logs/0.6.2-s166/player-man-utd.sav, 26 December 2001, outside the repo) is such
-a game. The run folder holds user/ (the save and samesave.sav) and stderr.txt. The run deletes the game's work files
-(*.tmp, *.lng) from user/ at the end.
+The save: a game of 26 December 2001 whose 2002 pots hold 0xff, kept outside the repo. The run folder holds home/,
+user/ (settings.txt, player.sav, samesave.sav) and stderr.txt. The run deletes the game's work files (*.tmp, *.lng)
+from user/ at the end.
 """
 import os
 import shutil
@@ -42,7 +43,7 @@ STEPS = [
     "1000 click 277 242",                   # Load Game
     "4000 click 445 257",                   # the first save in the list
     "5000 click 705 573",                   # Ok
-    "wait continue 900000",                 # a player's save opens on any screen: wait for Continue Game
+    "wait continue 300000",                 # a player's save opens on any screen: wait for Continue Game
     "2500 click 45 165",                    # the manager menu
     "4500 click 150 427",                   # Go on Holiday
     "7000 click 705 572",                   # Please Confirm: Yes
@@ -90,14 +91,23 @@ def main(argv):
     lines = [x for x in text if x.startswith(LINE)]
     print(f"{'keep:wc_pots' if faults else 'fix'}: code {code} after {took:.0f} s; " +
           (lines[0] if lines else "no World Cup 2002 draw line"))
+    boxes = [x.strip() for x in text if "recomp: message box from" in x]
+    saved = os.path.exists(os.path.join(user, "samesave.sav"))
+    if faults:      # the proof that the checks find the fault
+        found = [x for x in lines if x.endswith("the pots are kept")] and code == "timeout" and not saved
+        for x in boxes:
+            print(f"FAIL: {x}")
+        print("PASS: the checks find the fault" if found and not boxes else
+              "FAIL: with keep:wc_pots the game did not stop at the draw")
+        return 0 if found and not boxes else 1
     fails = []
     if not [x for x in lines if x.endswith("the pots are cleared")]:
         fails.append("no line that the 2002 pots were cleared (the save holds no 0xff, or the fix did not act)")
     if code != 0:
         fails.append(f"the program did not end with code 0 ({code}): the day loop stopped")
-    if not os.path.exists(os.path.join(user, "samesave.sav")):
+    if not saved:
         fails.append(f"no samesave.sav {days} days after the load")
-    fails += [x.strip() for x in text if "recomp: message box from" in x]
+    fails += boxes
     for x in fails:
         print(f"FAIL: {x}")
     if not fails:

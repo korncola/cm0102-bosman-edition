@@ -281,10 +281,10 @@ SAME_SAVE_RUNS = [
     # squad pick inside a senior squad's window, at the season change of the Australian NSL (19 July from 2002,
     # outside the 14 days of each saved game), and for a club on holiday with "Reject all offers" or "below asking
     # price" (open item 132; these runs go on holiday with every setting off), and at the draw of the 2002 World Cup
-    # on 27 December 2001 (open item 166): in these runs none of that happens,
-    # so with their test switch off the save is that of normal. A saved game whose days pass a month change keeps
-    # only the other groups (FAULTS_ACT). The senior call-ups (group callups, open item 143) act at a senior pick
-    # that meets a player abroad, which can come in the first days of a game (in a game with every league,
+    # on 27 December 2001 (open item 166): in these runs none of that happens, so with their test switch off the save
+    # is that of normal. A saved game whose days pass a month change keeps only the other groups (FAULTS_ACT). The
+    # senior call-ups (group callups, open item 143) act at a senior pick that meets a player abroad, which can come
+    # in the first days of a game (in a game with every league,
     # Argentina's pick on 14.7.01 refuses 60 players with the original's rule), so this run keeps every other group
     # (KEEP_IN_RUNS). Its proof is a set with RECOMP_ORIGINAL_FAULTS=keep:callups for every run against --ref-build
     # (with_set_keep), and tests/seasons/callups_run.py.

@@ -316,8 +316,8 @@ uint32_t rt_olympic_keeps_senior(uint32_t player, uint32_t nation, uint32_t slot
 uint32_t rt_ire_super_has(uint32_t cup, uint32_t club, uint32_t rows);
 /* Item 127: forget the game year that the Irish Super Cup restart last saw (a load or a new game). */
 void rt_ire_super_forget(void);
-/* Item 166: clear the unset pots of the 2002 World Cup before its draw (win/original_faults.c, from the draw wrap
- * of win/season_wc48.c). */
+/* Item 166: free the pot 1 slots of the 2002 World Cup that hold 0xff before its draw (win/original_faults.c,
+ * from the draw wrap of win/season_wc48.c). */
 void rt_wc2002_pots(uint32_t cup);
 /* AusNsl::start_new_season frees the stages and sets the stage index to -1 (open item 128; win/original_faults.c,
  * tools/recomp/original_faults.py at 0x411e1c). */

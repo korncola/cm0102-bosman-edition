@@ -544,16 +544,21 @@ uint32_t rt_callup_released(uint32_t slot)
  * (0x92f240). The constructor 0x92bf50 never writes them, and operator new 0x944cf1 does not clear, so the 2002
  * pots hold what the heap held. The save writes them (0x92f150) and the load reads them back (0x92f000). One byte of
  * 0xff in the slots 2 to 7 leaves five slots for six picks, and the loop at 0x92ea57..0x92ea71 never ends: the game
- * stops on the draw day (+0xb6, 27 December 2001) in every load of that game. The fix writes zeros into the pots of
- * the 2002 edition before its draw. The 2002 result never uses them, and only the test for 0xff reads them, so a
- * game whose pots hold no 0xff draws as before. With the group off (keep:wc_pots) the pots stay as they are. */
+ * stops on the draw day (+0xb6, 27 December 2001) in every load of that game. Before the 2002 draw the fix writes 0
+ * into each byte +4 of the slots 2 to 7 that holds 0xff, so all six slots are free, as seed_teams leaves them for the
+ * other editions (0x92f536). The 2002 result never uses the pots, and only the test for 0xff reads them, so a game
+ * whose pots hold no 0xff draws as before and saves the same bytes. With the group off (keep:wc_pots) the pots stay
+ * as they are. */
 void rt_wc2002_pots(uint32_t cup)
 {
-    int ff = 0;
-    for (uint32_t k = 2; k < 8u; k++) ff += rd8(g_mem, cup + 0xeeu + 5u * k + 4u) == 0xffu;
-    int on = fixes_on_group(WC_POTS);
+    int ff = 0, on = fixes_on_group(WC_POTS);
+    for (uint32_t k = 2; k < 8u; k++) {
+        uint32_t at = cup + 0xeeu + 5u * k + 4u;
+        if (rd8(g_mem, at) != 0xffu) continue;
+        ff++;
+        if (on) wr8(g_mem, at, 0);
+    }
     if (ff)
         fprintf(stderr, "recomp: World Cup 2002 draw: %d pot 1 slots hold 0xff, the pots are %s\n", ff,
                 on ? "cleared" : "kept");
-    if (on) memset(g_mem + cup + 0xeeu, 0, 32u * 5u);
 }
