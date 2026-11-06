@@ -16,7 +16,22 @@
  * back the eax of the original (0x7c6a30 returns it, and its caller at 0x7c0166 sets only al).
  *
  * Pointer compares are unsigned, as in the original (jb, ja, jbe, jae), and the size test after the
- * partition is signed (jl at 0x945420). */
+ * partition is signed (jl at 0x945420).
+ *
+ * Rows in strict order (item 151b). 0x7c6a30 sorts the whole list again after each new row, and with the
+ * December 2025 data set of Max's game the list holds about 59,000 rows at each of 28,339 sorts. Before 27,000
+ * of those sorts the list is already in strict order: the rows before the new row have no two rows that
+ * compare equal, and the new row compares above the last. When st->sorted says so, the steps of the sort are
+ * known without a compare, and qsort6 takes them with the same stack writes, swaps and eax:
+ *  - the partition: the middle row P goes to lo. The rows from lo + 1 to mid - 1 and the old lo row (now at
+ *    mid) compare below P, and the row at mid + 1 above it, so the up scan stops at mid + 1. The rows from hi
+ *    down to mid + 1 compare above P and the row at mid below it, so the down scan stops at mid. down < up
+ *    ends the loop at once, and the swap of lo and mid puts the rows back in order. Both parts are in order.
+ *  - the short sort: the largest row of lo..hi is always the row at hi, after a search that ends at hi + 1.
+ * A strict order needs a compare that is an order: the id compare is the 32-bit difference (wrong for ids
+ * 0x80000000 or more apart), and 0xff makes two rows of one id equal. qsort6_strict asks for ids below
+ * 0x80000000 and each row below the next. Then rows of one id have no 0xff byte (or are alone), and any two
+ * rows compare as their places in the list. */
 #include "qsort6.h"
 
 #include <stddef.h>
@@ -91,8 +106,10 @@ static uint8_t *short_sort(const Sort *s, uint8_t *lo, uint8_t *hi, uint32_t q_e
     put(s, -0x110, addr(s, lo + w));                /* mov [ebp+0xc], eax */
     while (hi > lo) {
         uint8_t *max = lo, *p;
-        for (p = lo + w; p <= hi; p += w)
-            if (compare(p, max) > 0) max = p;
+        if (s->st->sorted) max = hi, p = hi + w;    /* item 151b: the largest row is the last */
+        else
+            for (p = lo + w; p <= hi; p += w)
+                if (compare(p, max) > 0) max = p;
         put(s, -0x12c, w);
         put(s, -0x130, addr(s, hi));
         put(s, -0x134, addr(s, max));
@@ -133,17 +150,21 @@ uint8_t *qsort6(uint8_t *base, uint32_t num, uint32_t width, const qsort6_stack 
             uint8_t *up = lo, *down = hi + width;
             put(&s, -8, lo_a);
             for (;;) {
-                for (;;) {                          /* each step writes up at q - 8: the last one stays */
-                    up += width;
-                    if (up > hi) break;
-                    if (compare(up, lo) > 0) break;
-                }
+                if (st->sorted) up = mid + width;  /* item 151b: the scans stop next to the old middle */
+                else
+                    for (;;) {                      /* each step writes up at q - 8: the last one stays */
+                        up += width;
+                        if (up > hi) break;
+                        if (compare(up, lo) > 0) break;
+                    }
                 put(&s, -8, addr(&s, up));
-                for (;;) {
-                    down -= width;
-                    if (down <= lo) break;
-                    if (compare(down, lo) < 0) break;
-                }
+                if (st->sorted) down = mid;
+                else
+                    for (;;) {
+                        down -= width;
+                        if (down <= lo) break;
+                        if (compare(down, lo) < 0) break;
+                    }
                 put(&s, -0x108, width);
                 put(&s, -0x10c, addr(&s, down));
                 if (down < up) break;
@@ -186,4 +207,14 @@ uint8_t *qsort6(uint8_t *base, uint32_t num, uint32_t width, const qsort6_stack 
         lo = lo_stack[top];
         hi = hi_stack[top];
     }
+}
+
+int qsort6_strict(const uint8_t *base, uint32_t num, uint32_t width)
+{
+    for (uint32_t i = 0; i < num; i++) {
+        const uint8_t *row = base + (size_t)i * width;
+        if (row[3] & 0x80) return 0;                /* an id of 0x80000000 or more */
+        if (i && qsort6_history_cmp(row - width, row) >= 0) return 0;
+    }
+    return 1;
 }
