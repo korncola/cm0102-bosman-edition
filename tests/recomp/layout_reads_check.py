@@ -15,6 +15,15 @@ when one is not in its INSNS:
 - MATCH_PLAYER::MATCH_PLAYER 0x6eada0 sets no byte from +0x1d to +0x22, which match_eng_update_post_match_reputations
   0x6d1cc0 reads for an empty bench slot (+0x1f, +0x20, +0x21). The patch at 0x6eada0 must clear the record. The
   ctest layout_reads runs the constructor itself.
+- SimulatedStats::play_daily_matches 0x84be20 builds a fixture at [esp + 0x40] (it passes [esp + 0x48] after two
+  pushes at 0x84c3df) and no instruction of the function writes its match flags word +0x38, at any push depth from 0
+  to 12 bytes. quick_simulate_match reads the word (0x6bfeb1). The patch at 0x84c266 must clear the fixture.
+- TRANSFER_MANAGER::add_config_loan 0x8bf400 builds a contract at [esp + 0x28] (0x8bf420, also passed at 0x8bf5af)
+  and gives it to sign_loan_contract. Neither the function nor STAFF_CONTRACT::STAFF_CONTRACT 0x85e410 nor
+  init_from_current_contract 0x85e590 writes its morale byte +0x3d. The patch at 0x8bf420 must clear the contract.
+- NationalTeams::select_squad 0x76c120 sets 26 place masks at [esp + 0x70] for squad size 26 (cmp 0x1a at 0x76c769),
+  24 for size 24 (cmp 0x18 at 0x76c859) and 22 for any other size: the branch 0x76c939..0x76c9e6 (with 0x76c860 and
+  0x76c865) writes no word from [esp + 0x9c]. The patch at 0x76c939 must set the masks from the 23rd to the 50th.
 Each INSNS row must name the instruction that the original has at its address.
 Exit code 0 when every case passes.
 """
@@ -29,6 +38,12 @@ from pe import Image  # noqa: E402
 
 DAILY, DAILY_READS, DAILY_LOCAL = 0x5CE2D0, (0x5CE830, 0x5CE84F), "dword ptr [esp + 0x70]"
 CTOR, CTOR_END, UNSET = 0x6EADA0, 0x6EAE98, range(0x1D, 0x23)
+STATS, STATS_END, STATS_PASS, STATS_FIXTURE, FLAGS = 0x84BE20, 0x84C500, 0x84C3DF, 0x40, {0x38, 0x39}
+LOAN, LOAN_END, LOAN_AT, MORALE = 0x8BF400, 0x8BF5B9, 0x8BF420, 0x3D
+CONTRACT_FUNCS = ((0x85E410, 0x85E473), (0x85E590, 0x85E746))   # STAFF_CONTRACT::STAFF_CONTRACT, init_from_current_contract
+WRITES = ("mov", "and", "or", "xor", "add", "sub", "inc", "dec", "adc", "sbb", "neg", "not", "shl", "shr", "sar",
+          "sete", "setne", "setl", "setle", "setg", "setge", "setb", "setbe", "seta", "setae", "sets", "setns")
+SIZES = {"byte": 1, "word": 2, "dword": 4}
 
 
 def disassemble(img):
@@ -94,6 +109,40 @@ def main():
         fails.append(f"{CTOR:#x}: the original sets a byte of +0x1d..+0x22; read the case again")
     if "memset(M + ecx, 0, 0x1beu)" not in layout_reads.INSNS.get(CTOR, ("", ""))[1]:
         fails.append(f"{CTOR:#x}: the match player's bytes +0x1d..+0x22 stay unset, and no patch clears them")
+    if at.get(STATS_PASS) != ("lea", "ecx, [esp + 0x48]"):
+        fails.append(f"{STATS_PASS:#x}: not the fixture at [esp + 0x48]; read the case again")
+    for a, m, o in code:
+        w = re.match(r"(byte|word|dword) ptr \[esp \+ (0x[0-9a-f]+)\]", o) \
+            if STATS <= a < STATS_END and m in WRITES else None
+        if w and any(set(range(int(w.group(2), 16) - d - STATS_FIXTURE, int(w.group(2), 16) - d - STATS_FIXTURE
+                               + SIZES[w.group(1)])) & FLAGS for d in (0, 4, 8, 12)):
+            fails.append(f"{a:#x}: the original may write the simulated fixture's flags ({m} {o}); read the case again")
+    if "memset(M + esp + 0x40u, 0, 0x4fu)" not in layout_reads.INSNS.get(0x84C266, ("", ""))[1]:
+        fails.append(f"{STATS:#x}: the simulated fixture's match flags +0x38 stay unset, and no patch clears them")
+    if at.get(LOAN_AT) != ("lea", "ecx, [esp + 0x28]") or at.get(0x8BF5AF) != ("lea", "eax, [esp + 0x28]"):
+        fails.append(f"{LOAN_AT:#x}: not the loan contract at [esp + 0x28]; read the case again")
+    for a, m, o in code:
+        own = LOAN <= a < LOAN_END
+        if not (own or any(lo <= a < hi for lo, hi in CONTRACT_FUNCS)) or m not in WRITES:
+            continue
+        w = re.match(r"(byte|word|dword) ptr \[(e[a-z]{2}) \+ (0x[0-9a-f]+)\]", o)
+        if not w or (own and w.group(2) != "esp") or (not own and w.group(2) == "esp"):
+            continue
+        base = 0x28 if own else 0
+        if MORALE in {int(w.group(3), 16) - d - base + k for d in ((0, 4, 8, 12, 16, 20, 24) if own else (0,))
+                      for k in range(SIZES[w.group(1)])}:
+            fails.append(f"{a:#x}: the original may write the loan contract's morale ({m} {o}); read the case again")
+    if "memset(M + esp + 0x28u, 0, 0x50u)" not in layout_reads.INSNS.get(LOAN_AT, ("", ""))[1]:
+        fails.append(f"{LOAN:#x}: the loan contract's morale +0x3d stays unset, and no patch clears it")
+    if at.get(0x76C769) != ("cmp", "al, 0x1a") or at.get(0x76C859) != ("cmp", "al, 0x18"):
+        fails.append("0x76c120: the squad sizes are not tested at 0x76c769 and 0x76c859; read the case again")
+    other = {int(m.group(1), 16) for a, mn, o in code if 0x76C939 <= a < 0x76C9E6 or a in (0x76C860, 0x76C865)
+             for m in [re.match(r"word ptr \[esp \+ (0x[0-9a-f]+)\], ", o)] if m and mn == "mov"}
+    if other != set(range(0x70, 0x9C, 2)):
+        fails.append(f"0x76c939: the 22-place branch writes the masks {sorted(map(hex, other))}; read the case again")
+    if "memset(M + esp + 0x9cu, 0xff, 0x38u)" not in layout_reads.INSNS.get(0x76C939, ("", ""))[1]:
+        fails.append("0x76c120: the place masks after the 22nd stay unset for other squad sizes, "
+                     "and no patch sets them")
     for f in fails:
         print("FAIL  " + f)
     print("PASS" if not fails else f"FAILED: {len(fails)}")

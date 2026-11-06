@@ -2,11 +2,12 @@
 
 A base game (changing rules off) gave other results when only the Setup Game screen of the runtime changed (Setup
 Game menu B, 25298081): the screen's blocks moved the database tables to other heap addresses, and the game read
-an address as a number, a heap block that nothing had set and a stack slot that nothing had set. None of these is
+an address as a number, a heap block that nothing had set and stack bytes that nothing had set. None of these is
 a value of the game: the original's own layout is not fixed either (its heap is the CRT heap of the computer it runs
-on). So each read takes a defined value in its place: the record's id for the address, and 0, as fresh memory, for
-the unset bytes. The fixes act in every game, the base game too. The test switch RECOMP_LAYOUT_FIXES=keep, or
-keep:captain, keep:players, keep:daily, turns them off (layout_reads.c).
+on). So each read takes a defined value in its place: the record's id for the address, 0, as fresh memory, for the
+unset bytes, and 0xffff, every position, for the place masks of a national squad. The fixes act in every game, the
+base game too. The test switch RECOMP_LAYOUT_FIXES=keep, or keep:captain, keep:players, keep:daily, keep:stats,
+keep:loans, keep:squads, turns them off (layout_reads.c).
 
 The captain (MATCH_MAN::choose_captain 0x6e1940). For each player of the list it takes the captain score
 (match_man_get_captain_score 0x6e1cf0). When the manager's rating (non_player_attribute_rating 0x544410 with the
@@ -40,6 +41,40 @@ from what an earlier call left on the stack, and in a 2001 base game that was a 
 Setup Game screen, 0x73104602 with the other): before the 2001/02 season the draw at 0x5cf116 had the range 31821
 or 22541, and the games went apart. Here the local is 0 when the function starts, where it already clears
 [esp + 0x8a0] (0x5ce311).
+
+The simulated matches (SimulatedStats::play_daily_matches 0x84be20). For each pair of clubs it plays (0x84c249..)
+it builds a fixture (0x4f bytes) on its stack at [esp + 0x40] and gives it to the match engine (init_match 0x6b7f20,
+call at 0x84c3e8; the engine keeps it at +0x4792, 0x6b7f4e). It sets the id -2, the clubs, the competition type and
+the result bytes (0x84c271..0x84c331, VIRTUAL_STAFF::fill_fixture_squads 0x90d2f0 for the squads), but not the match
+flags word +0x38 (2026-10-17-cup-round-record.md, section 2) and some other fields. quick_simulate_match 0x6beeb0
+reads the flags at 90 minutes (0x6bfe8e..0x6bfee6: bit 0x80 golden goal, bit 0x02 extra time), so a level match
+went to extra time and golden goal by what an earlier call left on the stack. In a 2001 base game the word held the
+low half of a heap address (0x17c0 with one Setup Game screen, 0xefd0 with the other), and on day 251 a level match
+had golden goal with one and not with the other. Here the fixture is 0 before each match, as fresh memory is (0x84c266,
+the first instruction of each match): the flags are 0, and a level simulated match ends level at 90 minutes.
+
+The loans of the database (TRANSFER_MANAGER::add_config_loan 0x8bf400). It builds a contract (0x50 bytes) on its
+stack at [esp + 0x28] (STAFF_CONTRACT::STAFF_CONTRACT 0x85e410 at 0x8bf424, init_from_current_contract 0x85e590 at
+0x8bf58e) and gives it to CONTRACT_MANAGER::sign_loan_contract 0x4d01e0 (0x8bf5b4), which copies it into the contract
+table (STAFF_CONTRACT::operator= 0x4cc810 at 0x4d0786; byte +0x3d also at 0x4d0516 and 0x4d0675). Neither function
+sets +0x3d, the player's morale at the club (-100 to 100; the sign-contract code sets it by squad status, 75, 50, 40
+or 0, at 0x4cfadf..0x4cfaf1). Media::apply_story_effect_flags_fragment 0x737070 draws with the range +0x3d + 150
+(0x737109..0x737114) and changes the player's morale by the result. In a 2001 base game the loan of staff 6943 to
+club 657 had 0x5e with one Setup Game screen and 0x40 with the other, and on day 269 the draw ranges were 244 and
+214. Here the contract is 0 before the constructor, as fresh memory is (0x8bf420): the loan starts at morale 0.
+
+The national squads (NationalTeams::select_squad 0x76c120). It gives each squad place a position mask in the local
+array [esp + 0x70] (one word per place) and passes it to match_man_assign_players_to_positions 0x6e2000 (0x76d035,
+0x76d047) and to the place test at 0x76d092. The squad size is the byte +0x42 of the competition's squad record
+(0x76c74e..0x76c767). For 26 places it sets 26 masks (0x76c771..0x76c84c), for 24 places 24 (0x76c870..0x76c92c),
+and for any other size 22 (0x76c939..0x76c9de, with 0x76c860 and 0x76c865). A squad of 23 places (as in the 2002
+World Cup qualifiers of Oceania) has a 23rd mask that nothing set: [esp + 0x9c] held what an earlier call left on the
+stack (0xc2b0 with one Setup Game screen, 0xa570 with the other), the place took another player, and on day 26 of
+2002 another squad went to the qualifier. The array has 50 words ([esp + 0x70] to [esp + 0xd3], the place loop
+runs to the size byte, 0x76d384..0x76d394), so a size from 27 to 50 would leave more masks unset. Here the masks
+from the 23rd to the 50th are 0xffff for the other sizes (0x76c939), every position: a squad of 23 places names
+23 players, as it does in real life, and the 23rd place takes the best player left. A mask of 0 would leave the
+place empty (0x76d092), so a squad of 23 would have 22 players.
 """
 
 # address: (the instruction in the original, C code)
@@ -48,4 +83,10 @@ INSNS = {
                "eax = rt_layout_fix(0u) ? R32(R32(ebx + 0x1fu)) : R32(ebx + 0x1fu);"),
     0x6EADA0: ("mov eax, ecx", "if (rt_layout_fix(1u)) memset(M + ecx, 0, 0x1beu); eax = ecx;"),
     0x5CE311: ("mov dword ptr [esp + 0x8a0], 0", "W32(esp + 0x8a0u, 0u); if (rt_layout_fix(2u)) W32(esp + 0x70u, 0u);"),
+    0x84C266: ("mov eax, dword ptr [edi - 4]",
+               "if (rt_layout_fix(3u)) memset(M + esp + 0x40u, 0, 0x4fu); eax = R32(edi - 4u);"),
+    0x8BF420: ("lea ecx, [esp + 0x28]",
+               "if (rt_layout_fix(4u)) memset(M + esp + 0x28u, 0, 0x50u); ecx = (uint32_t)(esp + 0x28u);"),
+    0x76C939: ("mov word ptr [esp + 0x74], ax",
+               "if (rt_layout_fix(5u)) memset(M + esp + 0x9cu, 0xff, 0x38u); W16(esp + 0x74u, (uint16_t)eax);"),
 }
