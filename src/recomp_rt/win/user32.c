@@ -464,18 +464,37 @@ static struct {
     uint64_t at;
 } key_click;
 
-/* The same rule for a click of RECOMP_SCRIPT (test runs only): its up step waits until the input poll has run
- * once with the down in the game, or SCRIPT_CLICK_LONGEST ms. Under a slow emulation (the Windows build under
- * wine in an emulated container) one frame took longer than the 100 ms from the down to the up, the game took
- * both in one poll and the button did not react. On a normal machine the poll runs within the 100 ms, so the
- * up keeps its time. */
+/* A like rule for a click of RECOMP_SCRIPT (test runs only): its up step waits until the input poll has run
+ * SCRIPT_CLICK_POLLS times with the down in the game, or SCRIPT_CLICK_LONGEST ms. Under a slow emulation (the
+ * Windows build under wine in an emulated container) one frame took longer than the 100 ms from the down to the
+ * up, the game took both in one poll and the button did not react. Two polls, not one: the input function
+ * 0x560490 first gives each text entry to 0x5617c0. For a button down outside an entry that has the cursor,
+ * 0x5617c0 ends the entry (cursor field +0xba9a2 to -1) and returns non-zero when its text changed (+0xbaade).
+ * 0x560490 then returns the entry's widget at once, and only the next poll gives the down to the button under
+ * the pointer. At a load of 15 to 18 one poll took about 1 s, the up came after the first poll, and Next of
+ * the name screen 0x820f50 never acted (item 154; tests/smoke/slow_machine_run.py). On a normal machine dozens
+ * of polls run in the 100 ms, so the up keeps its time. */
 #define SCRIPT_CLICK_LONGEST 10000u
+#define SCRIPT_CLICK_POLLS 2
 static struct {
     int on;
     uint32_t down_at;
     int polls;
     uint64_t at;
 } script_click;
+
+/* A character of the script (the steps of "type") waits until the input poll has run once with the character
+ * before it in the game, or SCRIPT_CLICK_LONGEST ms. The window procedure 0x68d630 keeps only the last WM_CHAR
+ * (0xb67a24), and the text entry 0x5617c0 takes it at the next input poll, so two characters in one frame lost
+ * the first: under load the name "Test Smoke" became "st Sme" (item 154). One loss stays, in the original too:
+ * at the start of each poll 0x569610 redraws a blinking widget (the cursor of a text entry every 1000 ms) with
+ * 0x55f300, which clears 0xb67a24, so a character that comes in the frame of that redraw is lost. */
+static struct {
+    int on;
+    uint32_t sent_at;
+    int polls;
+    uint64_t at;
+} script_char;
 
 static int click_for_key(int x, int y)
 {
@@ -848,6 +867,9 @@ static void press_key(const char *name)
     }
     SDL_Keycode k = SDL_GetKeyFromName(name);
     if (k == SDLK_UNKNOWN) { fprintf(stderr, "recomp: script: unknown key %s\n", name); return; }
+    int x, y;
+    if (k == SDLK_SPACE && !mod && options_bool(OPT_SPACE_TO_CONTINUE) && !keys_continue_game(&x, &y))
+        fprintf(stderr, "recomp: script: Space finds no Continue Game, so the game gets the key\n");
     e.type = SDL_KEYDOWN;
     e.key.state = SDL_PRESSED;
     e.key.keysym.sym = k;
@@ -878,8 +900,11 @@ static void run_script(void)
             part_start = now;
             continue;
         }
-        if (!strcmp(s->action, "up") && script_click.on && script_click.polls < 1 &&
+        if (!strcmp(s->action, "up") && script_click.on && script_click.polls < SCRIPT_CLICK_POLLS &&
             SDL_GetTicks64() - script_click.at < SCRIPT_CLICK_LONGEST)
+            break;
+        if (!strcmp(s->action, "char") && script_char.on && script_char.polls < 1 &&
+            SDL_GetTicks64() - script_char.at < SCRIPT_CLICK_LONGEST)
             break;
         step_next++;
         fprintf(stderr, "recomp: script %llu %s %d %d %s\n", (unsigned long long)(part_start + s->at), s->action, s->a,
@@ -907,7 +932,13 @@ static void run_script(void)
         } else if (!strcmp(s->action, "key")) {
             post(WM_KEYDOWN, (uint32_t)s->a, 1);
             post(WM_KEYUP, (uint32_t)s->a, 0xC0000001u);
-        } else if (!strcmp(s->action, "char")) post(WM_CHAR, (uint32_t)s->a, 1);
+        } else if (!strcmp(s->action, "char")) {
+            post(WM_CHAR, (uint32_t)s->a, 1);
+            script_char.on = 1;
+            script_char.sent_at = q_tail;
+            script_char.polls = 0;
+            script_char.at = SDL_GetTicks64();
+        }
         else if (!strcmp(s->action, "press")) press_key(s->text);
         else if (!strcmp(s->action, "resize")) {
             SDL_SetWindowSize(window, s->a, s->b);
@@ -1129,6 +1160,7 @@ RT_WRAP(0055f620, input_poll)
     names_after_poll();
     if (key_down_in) key_click.polls++;
     if (script_click.on && (int32_t)(q_head - script_click.down_at) >= 0) script_click.polls++;
+    if (script_char.on && (int32_t)(q_head - script_char.sent_at) >= 0) script_char.polls++;
     uint32_t widget = cpu.eax & 0xffffu;
     int held = replay || ((buttons & 1) && rd32(g_mem, 0xb67a34u) && !rd32(g_mem, 0xb67a3cu));
     idle_rest(widget);

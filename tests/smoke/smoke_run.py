@@ -306,10 +306,13 @@ TEXT_050_RUN = ("text-0.5.0", {"faster_days": "off", "_against": "ref-0.5.0",
                                "_env": {"RECOMP_SETUP_TEXT": "0.5.0", "RECOMP_SEASON_CODE": "off"}})
 
 # The match check (--match): the steps after the load of prematch.sav (fixtures.LOAD_STEPS), positions
-# for 800x600 as in STEPS. The times after a wait count from the moment it was reached. Each Space has
-# a wait after it, so a busy machine does not lose one. Screens: news 0x7881e0, bid negotiation
-# 0x8e9760, reject confirm 0x8efda0, fixtures and results 0x717db0, squad 0x454900, "Proceed to the
-# match?" 0x7260f0, match 0x718e90 (RECOMP_SCREEN_LOG=1 prints them). A match event that stops the
+# for 800x600 as in STEPS. The times after a wait count from the moment it was reached. Each Space that
+# stands for Continue Game has "wait continue" before it and a wait after it, so a busy machine does not
+# lose one: the date of a new day comes before the screen of that day offers Continue Game, and a Space
+# without Continue Game goes to the game as a plain key, which does not continue (item 154; the runtime
+# then prints "Space finds no Continue Game"). Screens: news 0x7881e0, bid negotiation 0x8e9760, reject
+# confirm 0x8efda0, fixtures and results 0x717db0, squad 0x454900, "Proceed to the match?" 0x7260f0,
+# match 0x718e90 (RECOMP_SCREEN_LOG=1 prints them). A match event that stops the
 # match, for example a red card that opens the tactics screen 0x899ea0, needs more steps: Ok, then
 # Resume (label:Resume) at the same place as Kick Off.
 MATCH_SAVE = "prematch.sav"
@@ -322,15 +325,19 @@ MATCH_STEPS = [
     "wait screen:0x8efda0",
     "1000 click 705 573",                   # Yes
     "wait news",
+    "wait continue",
     "500 press space",                      # Continue Game: fixtures of 18.7.01
     "wait day:18.7.01",
+    "wait continue",
     "500 press space",                      # results of 18.7.01, the same screen
     "1500 move 400 30",
     "wait continue",
     "500 press space",                      # fixtures of 20.7.01
     "wait day:20.7.01",
+    "wait continue",
     "500 press space",
     "wait screen:0x454900",
+    "wait continue",
     "500 press space",
     "wait screen:0x7260f0",
     "1000 click 705 573",                   # Proceed to the match? Yes
