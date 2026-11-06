@@ -518,7 +518,7 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
                    RECOMP_FIXED_CLOCK="1", RECOMP_SAVE_AFTER_DAYS=str(days), RECOMP_IDLE_COUNT="1",
                    RECOMP_SCRIPT="; ".join(scaled_steps(mode, shots, steps_of_run)), **extra_env)
         start = time.time()
-        r = subprocess.run([run_program, "--game", game, "-seed", "1"], env=env, capture_output=True, text=True,
+        r = subprocess.run([run_program, "--game", game, "-seed", "1"], env=env, capture_output=True, text=True, errors="replace",
                            timeout=timeout)
         return r, os.path.join(user, SAVE_NAME), time.time() - start
 
@@ -912,7 +912,7 @@ def main(argv):
         table = os.path.join(os.path.dirname(program), "seasons", "rules.tsv")
         if os.path.exists(table) and "RECOMP_RULES_TABLE" not in env:
             env["RECOMP_RULES_TABLE"] = table
-        r = subprocess.run([program, "--game", game], env=env, capture_output=True, text=True, timeout=300)
+        r = subprocess.run([program, "--game", game], env=env, capture_output=True, text=True, errors="replace", timeout=300)
         if r.returncode != 0:
             print(r.stderr[-2000:])
             print(f"FAIL: the game ended with code {r.returncode}")
