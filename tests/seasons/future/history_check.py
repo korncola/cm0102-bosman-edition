@@ -99,10 +99,11 @@ A confederation check for every edition:
                   players of one of the clubs (they are on duty, 0x7757d0; open item 93). For an Olympic match of the
                   under-21 sides the fault is only a club that keeps fewer than 11 players it can field: not on duty,
                   at the club, not injured (open item 107), with the virtual players of its free squad slots for a
-                  club with a nation (open item 164). The squad count only for a national match up to 14 days after
-                  the save (the squads picked); after that, a club's match within one day of a match of its own
-                  nation's senior side (open items 157 to 162). Fixtures still to be played; not in a 2001 game with
-                  changing rules off
+                  club with a nation (open item 164). The squad count of a senior or 'B' side applies to its matches
+                  up to 14 days after the save (the squads already picked); for a later match a club's match within
+                  one day of a match of its own nation's senior side is the fault (open items 157 to 162). The
+                  Olympic count has no such limit. Fixtures still to be played; not in a 2001 game with changing
+                  rules off
     entrant-holder the title holder is not an entrant (access.tsv "holder": the Champions League from 2006, the
                   Libertadores), when the edition before is at most one cycle and one year before; not for an
                   edition of the start year or before (it began before the game, the holder may be out)
@@ -1024,8 +1025,11 @@ def duty_clashes(game):
     replay of a2001offs2, the pick of day 213 of 2041 is for Japan's match of day 227), and the original's call-up move
     0x7777e0 acts on them that day. For a later match the squad count is not used (Argentina's of 3 September 2041 held
     3 players of San Lorenzo in the July save and fewer in its own pick, run set pass 3, a2001offs1). A club's match
-    within a day of a match of its own nation's senior side is a fault there with no count (open items 95 and 96 were
-    found from July saves 20 days or more before the match; lead, 6 November 2026). The senior side of a nation is the
+    within a day of a match of its own nation's senior side is a fault there with no count: real continental cups
+    keep off the days of the international match calendar, and open items 95 and 96 were found from July saves 20
+    days or more before the match. Such a club may keep its regulars (original-faults group club_regulars), so the
+    date test also finds calendars that meet with no player away. The Olympic count above has no PICK_AHEAD limit:
+    Olympic squads are not read from these picks. The senior side of a nation is the
     lower id of its two in nat_club.dat (the under-21 sides come after, 0x540a2a..0x540a40). One fault per competition
     and year, with its first case."""
     sav = game.sav

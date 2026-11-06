@@ -571,8 +571,9 @@ def duty_dates_rule():
     """duty-clash for a national match more than PICK_AHEAD days after the save (open items 157 to 162): the squads of
     the save are not that match's (the game picks them two weeks ahead), so the squad count is not used; a club's
     continental match within a day of a match of its own nation's senior side is a fault. Clubs 1 (nation 7) and 2
-    (nation 8) and 3 (nation 7, 5 players in side 100's squad); senior sides 100 (nation 7) and 101 (nation 8),
-    under-21 sides 110 and 111 after them. The save is on 2040-07-01 (day 182 from 0)."""
+    (nation 8) and 3 (nation 7, 5 players in side 100's squad) and 4 (nation 8, 3 players in side 100's squad); senior
+    sides 100 (nation 7) and 101 (nation 8), under-21 sides 110 and 111 after them. The save is on 2040-07-01 (day 182
+    from 0), so the squad count holds to 15 July (day + 14) and not from 16 July."""
     sys.path.insert(0, HERE)
     import history_check as hc
 
@@ -585,15 +586,16 @@ def duty_dates_rule():
         return bytes(r)
 
     staff = bytearray()
-    for sid in range(5):
+    for sid in range(8):
         r = bytearray(0x6E)
         struct.pack_into("<i", r, 0, sid)
         struct.pack_into("<i", r, 0x24, 100)
-        struct.pack_into("<i", r, 0x39, 3)
+        struct.pack_into("<i", r, 0x39, 3 if sid < 5 else 4)
         staff += r
 
     class Sav:
-        parts = {"staff.dat": bytes(staff), "injury.dat": b"", "club.dat": rec(1, 7) + rec(2, 8) + rec(3, 7, range(5)),
+        parts = {"staff.dat": bytes(staff), "injury.dat": b"", "club.dat": rec(1, 7) + rec(2, 8) + rec(3, 7, range(5)) +
+                 rec(4, 8, range(5, 8)),
                  "nat_club.dat": rec(100, 7) + rec(101, 8) + rec(110, 7) + rec(111, 8)}
 
         def has(self, name):
@@ -610,12 +612,18 @@ def duty_dates_rule():
 
     g = Game()
     g.sav, g.start, g.date, g.data_names = Sav(), 2025, (2040, 182), {}
-    names = {20: "Club Plate", 21: "Club Bowl", 22: "Club Vase", 23: "Club Cup", 40: "International"}
+    names = {20: "Club Plate", 21: "Club Bowl", 22: "Club Vase", 23: "Club Cup", 24: "Club Shield", 25: "Club Medal",
+             26: "Club Salver", 40: "International", 41: "Under 21 International"}
     g.comps = {cid: {"name": n, "nation": -1} for cid, n in names.items()}
-    g.comps[40]["nation"] = 7
+    g.comps[40]["nation"] = g.comps[41]["nation"] = 7
     g.sides = {100, 101, 110, 111}
     g.club = lambda cid: (f"club {cid}", "", "")
-    g.fixture_list = {40: [(day(8, 31), 100, 101), (day(7, 10), 100, 101)],
+    g.fixture_list = {40: [(day(8, 31), 100, 101), (day(7, 10), 100, 101), (day(7, 15), 100, 101),
+                           (day(7, 16), 100, 110)],
+                      41: [(day(9, 20), 110, 111)],
+                      24: [(day(7, 15), 4, 2)],   # day + 14: the count, 3 of club 4 in side 100: a fault
+                      25: [(day(7, 17), 4, 2)],   # side 100 on day + 15: no count; club 4's side 101 does not play
+                      26: [(day(9, 21), 1, 4)],   # only the under-21 sides play the day before: no fault
                       20: [(day(9, 1), 1, 2)],    # club 1 the day after its side 100: a fault (61 days ahead)
                       21: [(day(8, 31), 2, 2)],   # club 2's side 101 plays that day too: a fault
                       22: [(day(9, 5), 1, 2)],    # no national match near: no fault
@@ -623,7 +631,8 @@ def duty_dates_rule():
     got = {f[1]: f[3] for f in hc.duty_clashes(g)}
     want = {"Club Plate": "club 1 on 2040-09-01 plays within a day of its nation's side club 100",
             "Club Bowl": "club 2 on 2040-08-31 plays within a day of its nation's side club 101",
-            "Club Cup": "club 3 on 2040-07-11 has 5 players in the squad of club 100"}
+            "Club Cup": "club 3 on 2040-07-11 has 5 players in the squad of club 100",
+            "Club Shield": "club 4 on 2040-07-15 has 3 players in the squad of club 100"}
     if set(got) != set(want) or any(not got[k].startswith(v) for k, v in want.items()):
         return [f"duty-clash dates: {got}, want {want}"]
     return []

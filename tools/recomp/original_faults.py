@@ -165,7 +165,8 @@ moves its first group day to the Saturday on or before 18 June of its year, so a
 to 25 June). It acts from the new game on: the base game builds its 2003 edition there. Tests: ctest season_intl and
 tests/seasons/confed_dates_run.py.
 
-Clubs of a nation with no league keep their regulars (open item 160). NationalTeams::mark_clubs_with_fixtures
+A club keeps its regulars for a continental match (open item 160, group club_regulars: two patches, and
+keep:club_regulars turns off both). NationalTeams::mark_clubs_with_fixtures
 0x7775c0 marks each club with a match within a day of a national match (this +0x24, a byte per club): 1 a match of its
 own league, 2 another competition of its nation, 3 a competition with no nation, a continental cup (0x77770f,
 0x777734, 0x777779). The squad pick NationalTeams::select_squad 0x76c120 leaves out a regular of a marked club
@@ -177,14 +178,19 @@ run set pass 3 (changing rules off) Club Jorge Wilstermann played its Merconorte
 players that Bolivia had picked for a friendly of that day. Real clubs release players only for the days of the
 international match calendar (FIFA Regulations on the Status and Transfer of Players, annex 1, article 1), and the
 continental confederations keep their cups off those days, so a club keeps its regulars for a continental match. The
-two tests now mark every club of a continental match (rt_callup_mark_all). The marks change only the pick's gate: the
+two tests now mark every club with a nation of a continental match (rt_callup_mark_all); a club with no nation stays
+unmarked (0x7776fa, 0x77771f). The marks change only the pick's gate: the
 call-up move NationalTeams::reschedule_clashing_club_fixtures 0x7777e0 acts on marks 1 and 2 (0x7778b7..0x7778bd),
 which need a league. A squad can also skip the gate: the squad check of a national fixture 0x76bab0 keeps a side's squad
 for its next match when the check comes at most 14 days after the window end (0x54cdb0 at 0x76bb99 and 0x76be0c, cmp
 0xe), so Bolivia's squad of 2 August 2011 played the friendly of 5 October with the 3 Wilstermann players. Now a
 senior side picks again (select_squad 0x76c120) when one of its squad is a regular (mood over -10) of a club with mark
-3, at the keep tests of the home side (0x76bba8) and the away side (0x76be1b) (rt_squad_kept). The marks and the new
-pick are one group: one rule of real life, and the reported case needs both. Test: tests/seasons/club_regulars_run.py.
+3, at the keep tests of the home side (0x76bba8) and the away side (0x76be1b) (rt_squad_kept), only when no match of
+the squad's window is still to come (today on or after the window end, nation record +0x3a; 0x54cdb0 gives today
+minus that day) and the fixture is the one of the day two weeks ahead, the day of the marks (daily_update 0x76b100
+builds them for that day, 0x76b257..0x76b2bf; 0x76bab0 also runs for a new fixture, from 0x5aab15).
+The marks and the new pick are one group: one rule of real life, and the reported case needs both. Test:
+tests/seasons/club_regulars_run.py.
 """
 
 # address: (the instruction in the original, C code)
@@ -241,6 +247,6 @@ INSNS = {
     0x76CD3E: ("je 0x76cf82", "if (cc_e(F) && !rt_callup_released(R8(esp + 0x8e4u))) goto L_76cf82;"),
     0x777704: ("je 0x777713", "if (cc_e(F) && !rt_callup_mark_all()) goto L_777713;"),
     0x777729: ("je 0x77778f", "if (cc_e(F) && !rt_callup_mark_all()) goto L_77778f;"),
-    0x76BBA8: ("je 0x76bc10", "if (cc_e(F) || !rt_squad_kept(ebp, R32(esi + 0x1cu))) goto L_76bc10;"),
-    0x76BE1B: ("je 0x76be83", "if (cc_e(F) || !rt_squad_kept(ebp, R32(esi + 0x20u))) goto L_76be83;"),
+    0x76BBA8: ("je 0x76bc10", "if (cc_e(F) || !rt_squad_kept(ebp, R32(esi + 0x1cu), edi, esi)) goto L_76bc10;"),
+    0x76BE1B: ("je 0x76be83", "if (cc_e(F) || !rt_squad_kept(ebp, R32(esi + 0x20u), edi, esi)) goto L_76be83;"),
 }

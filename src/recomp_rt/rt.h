@@ -325,8 +325,10 @@ uint32_t rt_holiday_predict(uint32_t club, uint32_t contract, uint32_t player);
 uint32_t rt_holiday_refuses_loan(uint32_t club);
 uint32_t rt_holiday_below_asking(uint32_t option, uint32_t slot);
 uint32_t rt_callup_released(uint32_t slot);
-uint32_t rt_callup_mark_all(void);           /* group club_regulars (open item 160): 0x777704, 0x777729 */
-uint32_t rt_squad_kept(uint32_t nt, uint32_t side); /* group club_regulars: 0x76bba8, 0x76be1b */
+/* Group club_regulars (open item 160; win/original_faults.c): the marks at 0x777704 and 0x777729 and the new pick of a
+ * kept squad at 0x76bba8 and 0x76be1b. keep:club_regulars turns off both. */
+uint32_t rt_callup_mark_all(void);
+uint32_t rt_squad_kept(uint32_t nt, uint32_t side, uint32_t record, uint32_t fixture);
 /* Money above 2,147,483,647 (0.6.2 slice 11, Q24; win/original_faults.c, tools/recomp/original_faults.py). */
 uint32_t rt_budget_hi(uint32_t lo, uint32_t hi);          /* get_transfer_budget: the high word in place of cdq */
 uint32_t rt_budget_floor(uint32_t finance, uint32_t less); /* the balance less 10m or 15m (0x599135, 0x599185) */
