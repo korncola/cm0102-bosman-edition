@@ -93,6 +93,7 @@ answer. The news of the days is random, so screen 5 is only checked for a new da
 game passes about two weeks, with more than five days in every run so far.
 """
 import concurrent.futures
+import contextlib
 import os
 import re
 import shutil
@@ -521,6 +522,29 @@ def base_game_only(name, season):
             f"base game only (BASE_GAME_RUNS)")
 
 
+
+# RECOMP_SMOKE_KEEP=<folder>: a check that fails (a difference, no saved game, a timeout or an error) keeps its
+# work folder in that folder and prints the path. Each run's folder then also holds its stderr.txt. A check that
+# passes deletes its folder. Without the switch the work folder goes at the end, as before.
+KEEP_FAILED = os.environ.get("RECOMP_SMOKE_KEEP")
+
+
+@contextlib.contextmanager
+def work_folder(prefix, result):
+    """A work folder for one check. result: a dict; the check sets result["failed"] before the end. A check that
+    ends with no result (an exception or an early return) counts as failed."""
+    if KEEP_FAILED:
+        os.makedirs(KEEP_FAILED, exist_ok=True)
+    work = tempfile.mkdtemp(prefix=prefix, dir=KEEP_FAILED or None)
+    try:
+        yield work
+    finally:
+        if KEEP_FAILED and result.get("failed", True):
+            print(f"kept  the work folder of the failed check: {work}")
+        else:
+            shutil.rmtree(work, ignore_errors=True)
+
+
 def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600, allowed=(), required=None,
                  text_050=False, rows=None):
     """Plays the runs at the same time, each with its option lines, and compares each saved game with
@@ -578,14 +602,24 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
                    RECOMP_FIXED_CLOCK="1", RECOMP_SAVE_AFTER_DAYS=str(days), RECOMP_IDLE_COUNT="1",
                    RECOMP_SCRIPT="; ".join(scaled_steps(mode, shots, steps_of_run)), **extra_env)
         start = time.time()
-        r = subprocess.run([run_program, "--game", game, "-seed", "1"], env=env, capture_output=True, text=True, errors="replace",
-                           timeout=timeout)
+        try:
+            r = subprocess.run([run_program, "--game", game, "-seed", "1"], env=env, capture_output=True, text=True,
+                               errors="replace", timeout=timeout)
+        except subprocess.TimeoutExpired as e:
+            if KEEP_FAILED:
+                with open(os.path.join(run, "stderr.txt"), "wb") as f:
+                    f.write(e.stderr or b"")
+            raise
+        if KEEP_FAILED:
+            with open(os.path.join(run, "stderr.txt"), "w", encoding="latin-1", errors="replace") as f:
+                f.write(r.stderr)
         return r, os.path.join(user, SAVE_NAME), time.time() - start
 
     # The runs play at the same time. The test clock and the wait steps make each run the same on a
     # busy machine.
     saves = {}
-    with tempfile.TemporaryDirectory(prefix="cm0102-same-save-") as work:
+    result = {}
+    with work_folder("cm0102-same-save-", result) as work:
         with concurrent.futures.ThreadPoolExecutor(min(len(runs), JOBS) if JOBS else len(runs)) as pool:
             jobs = [(name, pool.submit(play, name, options, work)) for name, options in runs]
             failed_runs = 0
@@ -611,6 +645,7 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
         if CUSTOM_DB:
             season_want = season_of_save(save) if save else expected_season(CUSTOM_DB)
         failed = compare_saves(runs, saves, against, allowed, required, rows, season_want)
+        result["failed"] = bool(failed)
     print("PASS" if not failed else "FAIL")
     return 1 if failed else 0
 
