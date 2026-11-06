@@ -27,6 +27,12 @@ when one is not in its INSNS:
   to 0x240, the mask that each size's last places take (0x76c7d9, 0x76c8c1, 0x76c973).
 - SimulatedStats: the push depth at 0x84c266 is 0 (0x84c271 writes the fixture's +0xc at [esp + 0x4c]), and
   VIRTUAL_STAFF::fill_fixture_squads 0x90d2f0, which gets the fixture, writes no +0x38 or +0x39 through a register.
+- officials_manager_add_random_officials 0x79c5c0 fills each new record in the loop 0x79c6aa..0x79c772 (esi the record
+  + 8, 0x79c6a7) and writes no byte of the id +0..+3 there, and the sort it calls (0x79c78c) breaks ties by the id
+  (0x79d4c2). The patch at 0x79c6aa must clear the record and set the id.
+- AWOL::miss_training 0x41a360 writes the stack only at 0x41a38a, 0x41a3e6 and 0x41a57b (the record's staff id), adds a
+  13-byte record from [esp + 0x18] (0x41a587, 0x41a58b), and Date::Date 0x54a110 and 0x417c10 write 8 bytes from the
+  date +4. So nothing writes the flag +0xc. The patch at 0x41a56b must clear it.
 - Each patch calls rt_layout_fix with the index of its group in names[] of layout_reads.c.
 Each INSNS row must name the instruction that the original has at its address.
 Exit code 0 when every case passes.
@@ -50,7 +56,7 @@ WRITES = ("mov", "and", "or", "xor", "add", "sub", "inc", "dec", "adc", "sbb", "
 SIZES = {"byte": 1, "word": 2, "dword": 4}
 FILL, FILL_END = 0x90D2F0, 0x90D4EC   # VIRTUAL_STAFF::fill_fixture_squads, which gets the fixture (0x84c2a9, 0x84c2b7)
 GROUP_OF = {0x6E19B9: "captain", 0x6EADA0: "players", 0x5CE311: "daily", 0x84C266: "stats", 0x8BF420: "loans",
-            0x76C939: "squads"}
+            0x76C939: "squads", 0x79C6AA: "officials", 0x41A56B: "training"}
 
 
 def disassemble(img):
@@ -160,6 +166,31 @@ def main():
             layout_reads.INSNS.get(0x76C939, ("", ""))[1]:
         fails.append("0x76c120: the place masks after the 22nd stay unset for other squad sizes, "
                      "or do not take the original's mask 0x240")
+    if at.get(0x79C6A7) != ("lea", "esi, [ecx + 8]") or at.get(0x79C78C) != ("push", "0x79d480") or \
+            at.get(0x79D4C2) != ("mov", "eax, dword ptr [edx]") or at.get(0x79D4C4) != ("mov", "ecx, dword ptr [esi]"):
+        fails.append("0x79c5c0: not the new official loop and its sort by id; read the case again")
+    for a, m, o in code:
+        w = re.match(r"(byte|word|dword) ptr \[esi( [+-] 0x[0-9a-f]+|)\]", o) if 0x79C6AA <= a < 0x79C772 and m in WRITES else None
+        if w and o.startswith(w.group(0)):
+            off = 8 + (int(w.group(2).replace(" ", ""), 16) if w.group(2) else 0)
+            if set(range(off, off + SIZES[w.group(1)])) & set(range(0, 4)):
+                fails.append(f"{a:#x}: the original may set the new official's id ({m} {o}); read the case again")
+    if "memset(M + r_, 0, 0x2bu); W32(r_, (r_ - R32(0xae23e8u)) / 0x2bu);" not in \
+            layout_reads.INSNS.get(0x79C6AA, ("", ""))[1]:
+        fails.append("0x79c5c0: a new official's id stays unset, and no patch sets it")
+    esp_writes = {a for a, m, o in code if 0x41A360 <= a < 0x41A62A and m in WRITES and o.startswith(("byte ptr [esp",
+                  "word ptr [esp", "dword ptr [esp"))}
+    if esp_writes != {0x41A38A, 0x41A3E6, 0x41A57B} or at.get(0x41A587) != ("lea", "edx, [esp + 0x18]") or \
+            at.get(0x41A58B) != ("push", "0xd") or at.get(0x41A57B) != ("mov", "dword ptr [esp + 0x20], eax"):
+        fails.append(f"0x41a360: the missed training record's writes are {sorted(map(hex, esp_writes))}; read the case again")
+    for lo, hi in ((0x54A110, 0x54A124), (0x417C10, 0x417C40)):
+        for a, m, o in code:
+            w = re.match(r"(byte|word|dword) ptr \[(eax|ecx)( \+ (0x[0-9a-f]+|[0-9]))?\]", o) \
+                if lo <= a < hi and m in WRITES else None
+            if w and (int(w.group(4), 0) if w.group(4) else 0) + SIZES[w.group(1)] > 8:
+                fails.append(f"{a:#x}: the date writes past its 8 bytes ({m} {o}); read the case again")
+    if "W8(esp + 0x24u, 0u)" not in layout_reads.INSNS.get(0x41A56B, ("", ""))[1]:
+        fails.append("0x41a360: the missed training record's flag +0xc stays unset, and no patch clears it")
     # Each patch asks the switch for its own group: the index of its name in names[] of layout_reads.c.
     src = open(os.path.join(HERE, "..", "..", "src", "recomp_rt", "win", "layout_reads.c")).read()
     names = re.findall(r'"([a-z]+)"', re.search(r"names\[GROUPS\] = \{([^}]*)\}", src).group(1))

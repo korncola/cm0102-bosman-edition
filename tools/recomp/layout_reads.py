@@ -5,9 +5,10 @@ Game menu B, 25298081): the screen's blocks moved the database tables to other h
 an address as a number, a heap block that nothing had set and stack bytes that nothing had set. None of these is
 a value of the game: the original's own layout is not fixed either (its heap is the CRT heap of the computer it runs
 on). So each read takes a defined value in its place: the record's id for the address, 0, as fresh memory, for the
-unset bytes, and 0x240, the mask of the original's last places, for the place masks of a national squad. The fixes
-act in every game, the base game too. The test switch RECOMP_LAYOUT_FIXES=keep, or keep:captain, keep:players,
-keep:daily, keep:stats, keep:loans, keep:squads, turns them off (layout_reads.c).
+unset bytes, 0x240, the mask of the original's last places, for the place masks of a national squad, and its place
+in the table for the id of a new official. The fixes act in every game, the base game too. The test switch
+RECOMP_LAYOUT_FIXES=keep, or keep:captain, keep:players, keep:daily, keep:stats, keep:loans, keep:squads,
+keep:officials, keep:training, turns them off (layout_reads.c).
 
 The captain (MATCH_MAN::choose_captain 0x6e1940). For each player of the list it takes the captain score
 (match_man_get_captain_score 0x6e1cf0). When the manager's rating (non_player_attribute_rating 0x544410 with the
@@ -78,6 +79,27 @@ places of each size it knows: places 19 to 22 of 22, 21 to 24 of 24 and 22 to 26
 23rd place takes an outfield player as the 24-place squad's 23rd place does. A mask of 0 would leave the place empty
 (0x76d092), so a squad of 23 would have 22 players. A mask of 0xffff would make it a fourth goalkeeper: the scorer
 match_man_score_player_for_role 0x6e2f20 tests bit 1, the goalkeeper, first (0x6e30a0).
+
+The new officials (officials_manager_add_random_officials 0x79c5c0). OfficialsManager::set_up_officials 0x79bf60 tops
+up each nation's officials with it (0x79c2d5, 0x79c328) when a game starts: in a 2001 base game the table grows from
+664 to 1246 officials. It grows the table (0x79c603) and fills each new record (loop 0x79c6aa..0x79c772, esi the
+record + 8): names, nation, birth date and ratings, from draws. It does not set the id +0 or the bytes +0x10..+0x15,
+so they hold what the heap block held before. Then it sorts the table (0x79c79b) with
+officials_manager_compare_nation_then_quality_asc 0x79d480: by nation, by quality, and for equal quality by the id
+(0x79d4c2). So new officials of one nation with equal quality took their order from heap bytes, and set_up_officials
+then gave each official its place as its id (0x79c381). In a 2001 base game official 468 was another person with
+each Setup Game screen (born 1966 or 1960, current ability 59 or 72), and on 15 June 2002 MATCH_OFFICIAL::init
+0x6e9470 compared his ability with draws (0x6e94b3) and the games went apart. Here each new record is 0 before the
+loop fills it, and its id is its place in the table (0x79c6aa), as set_up_officials later gives every official.
+
+The missed training records (AWOL::miss_training 0x41a360). It builds the record (13 bytes) on its stack at
+[esp + 0x18] (at 0x41a56b, after the push at 0x41a4c2): the staff id +0 (0x41a57b), the date +4 (Date::Date 0x54a110
+at 0x41a381, 0x417c10 at 0x41a57f, 8 bytes) and a flag byte +0xc that nothing sets. It adds the 13 bytes to the
+missed training list (0x68d0d0 at 0x41a58e), and no other code adds to the list or writes the flag. A week later
+AWOL::daily_update 0x4190d0 tests the flag (0x4191d2): set, the player's own professionalism decides whether he
+misses training again (0x4191fc..); clear, his squad mates count as well (0x4192c1..). In a 2001 base game the flag
+differed with the two Setup Game screens on day 268
+(with the fix of the officials). Here the flag is 0 at 0x41a56b, as fresh memory is.
 """
 
 # address: (the instruction in the original, C code)
@@ -93,4 +115,8 @@ INSNS = {
     0x76C939: ("mov word ptr [esp + 0x74], ax",
                "if (rt_layout_fix(5u)) for (uint32_t i = 0x9cu; i < 0xd4u; i += 2u) W16(esp + i, 0x240u); "
                "W16(esp + 0x74u, (uint16_t)eax);"),
+    0x79C6AA: ("push edi",
+               "if (rt_layout_fix(6u)) { uint32_t r_ = esi - 8u; memset(M + r_, 0, 0x2bu); "
+               "W32(r_, (r_ - R32(0xae23e8u)) / 0x2bu); } t0 = edi; esp -= 4; W32(esp, t0);"),
+    0x41A56B: ("mov eax, dword ptr [esi]", "if (rt_layout_fix(7u)) W8(esp + 0x24u, 0u); eax = R32(esi);"),
 }
