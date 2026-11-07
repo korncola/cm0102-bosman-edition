@@ -315,6 +315,7 @@ static void write_season(int season, const char *phase)
     season_uefa_report(report, season, phase);      /* slice 22: the stages of the Champions League */
     season_cups_more_report(report, season, phase); /* slice 21c: super cups, group stages, new cups */
     if (*phase == 's') write_clubs(season, phase);
+    if (*phase == 's') rt_squad_move_test();       /* open item 187 (original_faults.c) */
     if (sweep_on) {
         fprintf(report, "sweepok\t%d\t%s\t%d objects\t%d round tables\t%d dates\t%d faults\n", season, phase,
                 sweep_objects, sweep_tables, sweep_rounds, sweep_faults);
