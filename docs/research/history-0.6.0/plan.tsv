@@ -34285,6 +34285,7 @@ add	March 2012 SIM	2011	FIFA World Cup	2006		add	Italy		France		Germany		Germany
 add	March 2012 SIM	2011	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa	
 add	March 2012 SIM	2011	European Football Championship	2004		add	Greece		Portugal				Portugal	
 add	March 2012 SIM	2011	European Football Championship	2008		add	Spain		Germany				Austria	
+clear	Autumn 2013	2013	French Champions Trophy	2011										
 clear	Autumn 2013	2013	Croatian First Division	2012										
 add	Autumn 2013	2013	Croatian First Division	2013		differ	GNK Dinamo Zagreb	Croatia	NK Lokomotiva Zagreb	Croatia	HNK Rijeka	Croatia		
 add	Autumn 2013	2013	Croatian First Division	2012		differ	GNK Dinamo Zagreb	Croatia	HNK Hajduk Split	Croatia	NK Koprivnica	Croatia		
@@ -34300,6 +34301,12 @@ add	Autumn 2013	2013	Northern Irish League First Division	2013		differ	Ards	Nort
 clear	Autumn 2013	2013	Northern Irish League Cup	2012										
 add	Autumn 2013	2013	Northern Irish League Cup	2013		differ	Cliftonville	Northern Ireland	Crusaders	Northern Ireland				
 add	Autumn 2013	2013	Northern Irish League Cup	2012		differ	Crusaders	Northern Ireland	Coleraine	Northern Ireland				
+clear	Autumn 2013	2013	English Southern League Premier Division	2012										
+add	Autumn 2013	2013	English Southern League Premier Division	2013		differ	Leamington	England	Gosport Borough	England	Hemel Hempstead Town	England		
+add	Autumn 2013	2013	English Southern League Premier Division	2012		differ	Woking	England	Dartford	England	Welling United	England		
+clear	Autumn 2013	2013	French Champions Trophy	2012										
+add	Autumn 2013	2013	French Champions Trophy	2011		differ	Olympique de Marseille	France	Lille Olympique SC	France				
+add	Autumn 2013	2013	French Champions Trophy	2012		differ	Olympique Lyonnais	France	Montpellier Hérault SC	France				
 clear	April 2021	2020	US Open Cup	2019										
 add	April 2021	2020	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
 clear	November 2020	2020	US Open Cup	2019										

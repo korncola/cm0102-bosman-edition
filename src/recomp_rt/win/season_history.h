@@ -46,6 +46,8 @@
  * label S of a split season, which that data labels by the year where it starts), and when the game writes a row
  * (0x4afce0), every other row of that competition with a later label goes, and in the calendar year S the row of
  * the data with the same label (not when the data holds two or more of them: the halves of a split season). A row
+ * of a Brazilian region record that names a club of another state than the one the game plays on it (the data files
+ * several state championships there, open item 176) is neither cleared nor counted in that test. A row
  * of the year S of a competition that ends before July (the English Premier Division 2001 in a 2001/02 game)
  * stays: the game writes no row of that label. A second edition of a competition in one calendar year (a final that
  * moves across the new year, as the Emperor's Cup) takes the next free label, unless the competition is a split

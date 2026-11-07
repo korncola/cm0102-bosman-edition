@@ -430,13 +430,39 @@ SEVERAL_TITLES = ((re.compile(r"(UEFA )?Inter-?Toto Cup", re.I), 0, 3),         
 # 2001 holds both at label 2000, the start year of a season (docs/research/history-0.6.0/aus-rsa.md).
 TITLES_OF_YEAR = {("Argentine Premier Division", 2025): 3,
                   ("New South Wales Super League", 2000): 2}
+# Open item 176 (Autumn 2013 rows, sources read 7 November 2026). The Belgian Third Division played in two groups:
+# R. Mouscron-Peruwelz won group A and KFC Dessel Sport group B in 2011/12 (nl.wikipedia.org, Derde klasse 2011-12
+# (voetbal Belgie)); the game renames the record Belgian National Division 1, later Belgian Division 1. The CFA of
+# 2012/13 played in four groups, won by USL Dunkerque, RC Strasbourg, US Colomiers and Lucon VF
+# (fr.wikipedia.org, Championnat de France amateur 2012-2013).
+TITLES_OF_YEAR.update({("Belgian Third Division", 2012): 2, ("Belgian National Division 1", 2012): 2,
+                       ("Belgian Division 1", 2012): 2, ("French CFA", 2013): 4})
 
 
-def titles_allowed(name, year, start, most, several):
+def titles_allowed(name, year, start, most, several, played=True):
     """The rows a competition may hold in a label year: most (1, or 2 for a split season), the count of its
     SEVERAL_TITLES format from that format's first year, or the count of TITLES_OF_YEAR. TITLES_OF_YEAR counts only
-    before the start year: those rows come from the database, and a game writes its own rows with its own format."""
-    return max(most, several[0] if year >= several[1] else 1, TITLES_OF_YEAR.get((name, year), 1) if year < start else 1)
+    before the start year: those rows come from the database, and a game writes its own rows with its own format.
+    played False: the game does not play the competition (no .tmp part), so every row comes from the database and
+    TITLES_OF_YEAR counts in every year."""
+    return max(most, several[0] if year >= several[1] else 1,
+               TITLES_OF_YEAR.get((name, year), 1) if year < start or not played else 1)
+
+
+def filed_titles(per_year, year, start):
+    """The rows a record may hold in a label year when the database files several championships under it (open item
+    176: Autumn 2013 files the champions of Alagoas, Ceara, Paraiba and others under the Brazilian Northeast record,
+    3 or 4 rows every year). k is the largest count of 2 or more that more than half of the 10 years before the start
+    with rows reach. Before the start the record may hold k rows. In the start year it may hold at most the rows of
+    the year before: at the creation the game writes the row of its own championship (League::record_season_honours
+    0x684640, 0x4afce0 at 0x684771) and the data row of that championship goes (season_history.c). After the start
+    the game writes one row a year. 1 for a record with no such years."""
+    years = [per_year.get(y, 0) for y in range(start - 10, start) if per_year.get(y, 0)]
+    k = max((k for k in range(2, max(years, default=0) + 1) if sum(1 for n in years if n >= k) * 2 > len(years)),
+            default=1)
+    if k == 1 or year > start:
+        return 1
+    return k if year < start else min(k, per_year.get(start - 1, 0) or k)
 
 
 def data_names(sav, part):
@@ -500,7 +526,8 @@ def check(game, rules=None, changes=()):
         several = next((k, f) for pat, f, k in SEVERAL_TITLES if pat.fullmatch(name)) \
             if any(pat.fullmatch(name) for pat, f, k in SEVERAL_TITLES) else (1, 0)
         for y, n in sorted(per_year.items()):
-            if n > titles_allowed(name, y, start, most, several) and y >= start - 1:
+            if n > max(titles_allowed(name, y, start, most, several, cid in game.parts),
+                       filed_titles(per_year, y, start)) and y >= start - 1:
                 pairs = "; ".join(f"{r[4][0]} / {r[5][0]}" for r in rs if r[3] == y)
                 faults.append(("duplicate", name, y, f"{n} rows: {pairs}"))
         # a missing host where the competition has hosts

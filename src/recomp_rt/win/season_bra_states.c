@@ -351,6 +351,20 @@ static struct { uint32_t obj, rec; int n; } planned[PLANS];
  * of another object at a reused address is not taken (reviews of 2026-10-20). */
 void season_bra_states_reset(void) { memset(planned, 0, sizeof planned); }
 
+/* The history rows of a region record (open item 176). The Update Team databases file the champions of several
+ * states under one region record: Autumn 2013 holds Alagoas (CRB / ASA), Ceara (Ceara / Guarany) and Paraiba
+ * (Botafogo-PB / Treze) under the Northeast record in 2013, and 3 or 4 such rows every year before. In this game the
+ * region object plays the championship of one state, so a row of the record is that championship's only when its
+ * club is of that state. */
+int season_bra_states_other_state(uint32_t rec, uint32_t club)
+{
+    const State *st = season_comps_on() ? state_of_record(rec) : NULL;
+    char code[3];
+    if (!st || !readable(club) || (st - STATES < 3 && keeps_region((int)(st - STATES))) || !club_state(club, code))
+        return -1;
+    return strcmp(code, st->code) != 0;
+}
+
 static void keep_plan(uint32_t obj, int n)
 {
     uint32_t rec = rd32(g_mem, obj + COMP_RECORD);
