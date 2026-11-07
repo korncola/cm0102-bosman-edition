@@ -215,7 +215,9 @@ assert not set(ORIGINAL_FAULT_INSNS) & (set(INSNS) | set(PATCHES))
 INSNS.update(ORIGINAL_FAULT_INSNS)
 
 # Reads of the original that depend on where memory lies (0.6.2 open item 138b, layout_reads.py): the captain's
-# scale, the match players' unset fields and a local of the daily staff update.
+# scale, the match players' unset fields, a local of the daily staff update, the simulated fixtures' flags, the
+# database loans' morale, the place masks of a national squad, the new officials' ids and the missed-training
+# records.
 from layout_reads import INSNS as LAYOUT_INSNS  # noqa: E402
 
 assert not set(LAYOUT_INSNS) & (set(INSNS) | set(PATCHES))

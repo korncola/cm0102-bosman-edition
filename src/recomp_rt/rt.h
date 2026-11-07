@@ -305,8 +305,9 @@ uint32_t rt_league_row_read_failed(uint32_t league);
 /* The ban release's nation index (win/discipline_ban.c, tools/recomp/discipline_ban.py at 0x556dcf): the entry
  * of the staff id under any nation, 0 for none, or 1 when the fix is off (the original's box). */
 uint32_t rt_discipline_ban_entry(uint32_t discipline, uint32_t staff);
-/* 1 when the fix of group 0 (captain), 1 (players) or 2 (daily) of the reads that depend on where memory lies acts
- * (open item 138b; win/layout_reads.c, tools/recomp/layout_reads.py). RECOMP_LAYOUT_FIXES=keep... turns it off. */
+/* 1 when the fix of group 0 (captain), 1 (players), 2 (daily), 3 (stats), 4 (loans), 5 (squads), 6 (officials) or
+ * 7 (training) of the reads that depend on where memory lies acts (open item 138b; win/layout_reads.c,
+ * tools/recomp/layout_reads.py). RECOMP_LAYOUT_FIXES=keep... turns it off. */
 uint32_t rt_layout_fix(uint32_t group);
 /* 1 when a senior national team gets a manager vacancy that the original refuses (0.6.2 slice 11, Q23; win/original_faults.c,
  * tools/recomp/original_faults.py at 0x69bb02, 0x7ab158, 0x68fe65, 0x69d0a5, 0x69b6d8: site 0 to 4). */

@@ -2,11 +2,13 @@
 
 A base game (changing rules off) gave other results when only the Setup Game screen of the runtime changed (Setup
 Game menu B, 25298081): the screen's blocks moved the database tables to other heap addresses, and the game read
-an address as a number, a heap block that nothing had set and a stack slot that nothing had set. None of these is
+an address as a number, a heap block that nothing had set and stack bytes that nothing had set. None of these is
 a value of the game: the original's own layout is not fixed either (its heap is the CRT heap of the computer it runs
-on). So each read takes a defined value in its place: the record's id for the address, and 0, as fresh memory, for
-the unset bytes. The fixes act in every game, the base game too. The test switch RECOMP_LAYOUT_FIXES=keep, or
-keep:captain, keep:players, keep:daily, turns them off (layout_reads.c).
+on). So each read takes a defined value in its place: the record's id for the address, 0, as fresh memory, for the
+unset bytes, 0x240, the mask of the original's last places, for the place masks of a national squad, and its place
+in the table for the id of a new official. The fixes act in every game, the base game too. The test switch
+RECOMP_LAYOUT_FIXES=keep, or keep:captain, keep:players, keep:daily, keep:stats, keep:loans, keep:squads,
+keep:officials, keep:training, turns them off (layout_reads.c).
 
 The captain (MATCH_MAN::choose_captain 0x6e1940). For each player of the list it takes the captain score
 (match_man_get_captain_score 0x6e1cf0). When the manager's rating (non_player_attribute_rating 0x544410 with the
@@ -40,6 +42,66 @@ from what an earlier call left on the stack, and in a 2001 base game that was a 
 Setup Game screen, 0x73104602 with the other): before the 2001/02 season the draw at 0x5cf116 had the range 31821
 or 22541, and the games went apart. Here the local is 0 when the function starts, where it already clears
 [esp + 0x8a0] (0x5ce311).
+
+The simulated matches (SimulatedStats::play_daily_matches 0x84be20). For each pair of clubs it plays (0x84c249..)
+it builds a fixture (0x4f bytes) on its stack at [esp + 0x40] and gives it to the match engine (init_match 0x6b7f20,
+call at 0x84c3e8; the engine keeps it at +0x4792, 0x6b7f4e). It sets the id -2, the clubs, the competition type and
+the result bytes (0x84c271..0x84c331, VIRTUAL_STAFF::fill_fixture_squads 0x90d2f0 for the squads), but not the match
+flags word +0x38 (2026-10-17-cup-round-record.md, section 2) and some other fields. quick_simulate_match 0x6beeb0
+reads the flags at 90 minutes (0x6bfe8e..0x6bfee6: bit 0x80 golden goal, bit 0x02 extra time), so a level match
+went to extra time and golden goal by what an earlier call left on the stack. In a 2001 base game the word held the
+low half of a heap address (0x17c0 with one Setup Game screen, 0xefd0 with the other), and on day 251 a level match
+had golden goal with one and not with the other. Here the fixture is 0 before each match, as fresh memory is (0x84c266,
+the first instruction of each match): the flags are 0, and a level simulated match ends level at 90 minutes.
+
+The loans of the database (TRANSFER_MANAGER::add_config_loan 0x8bf400). It builds a contract (0x50 bytes) on its
+stack at [esp + 0x28] (STAFF_CONTRACT::STAFF_CONTRACT 0x85e410 at 0x8bf424, init_from_current_contract 0x85e590 at
+0x8bf58e) and gives it to CONTRACT_MANAGER::sign_loan_contract 0x4d01e0 (0x8bf5b4), which copies it into the contract
+table (STAFF_CONTRACT::operator= 0x4cc810 at 0x4d0786; byte +0x3d also at 0x4d0516 and 0x4d0675). Neither function
+sets +0x3d, the player's morale at the club (-100 to 100; the sign-contract code sets it by squad status, 75, 50, 40
+or 0, at 0x4cfadf..0x4cfaf1). Media::apply_story_effect_flags_fragment 0x737070 draws with the range +0x3d + 150
+(0x737109..0x737114) and changes the player's morale by the result. In a 2001 base game the loan of staff 6943 to
+club 657 had 0x5e with one Setup Game screen and 0x40 with the other, and on day 269 the draw ranges were 244 and
+214. Here the contract is 0 before the constructor, as fresh memory is (0x8bf420): the loan starts at morale 0.
+
+The national squads (NationalTeams::select_squad 0x76c120). It gives each squad place a position mask in the local
+array [esp + 0x70] (one word per place) and passes it to match_man_assign_players_to_positions 0x6e2000 (0x76d035,
+0x76d047) and to the place test at 0x76d092. The squad size is the byte +0x42 of the competition's squad record
+(0x76c74e..0x76c767). For 26 places it sets 26 masks (0x76c771..0x76c84c), for 24 places 24 (0x76c870..0x76c92c),
+and for any other size 22 (0x76c939..0x76c9de, with 0x76c860 and 0x76c865). A squad of 23 places (as in the 2002
+World Cup qualifiers of Oceania) has a 23rd mask that nothing set: [esp + 0x9c] held what an earlier call left on the
+stack (0xc2b0 with one Setup Game screen, 0xa570 with the other), the place took another player, and on day 26 of
+2002 another squad went to the qualifier. The array has 50 words ([esp + 0x70] to [esp + 0xd3], the place loop
+runs to the size byte, 0x76d384..0x76d394), so a size from 27 to 50 would leave more masks unset. Here the masks
+from the 23rd to the 50th are 0x240 for the other sizes (0x76c939). That is the mask the original gives the last
+places of each size it knows: places 19 to 22 of 22, 21 to 24 of 24 and 22 to 26 of 26 (0x76c82c..0x76c84c,
+0x76c914..0x76c92c, 0x76c9c6..0x76c9de). So a squad of 23 places names 23 players, as it does in real life, and the
+23rd place takes an outfield player as the 24-place squad's 23rd place does. A mask of 0 would leave the place empty
+(0x76d092), so a squad of 23 would have 22 players. A mask of 0xffff would make it a fourth goalkeeper: the scorer
+match_man_score_player_for_role 0x6e2f20 tests bit 1, the goalkeeper, first (0x6e30a0).
+
+The new officials (officials_manager_add_random_officials 0x79c5c0). OfficialsManager::set_up_officials 0x79bf60 tops
+up each nation's officials with it (0x79c2d5, 0x79c328) when a game starts: in a 2001 base game the table grows from
+664 to 1246 officials. It grows the table (0x79c603) and fills each new record (loop 0x79c6aa..0x79c772, esi the
+record + 8): names, nation, the day and year of the birth date and ratings, from draws. It does not set the id +0,
+the birth date's leap year flag +0x10 (Date::Date 0x549ef0 sets it, at +4 of the date) or the word +0x14, so they
+hold what the heap block held before. Then it sorts the table (0x79c79b) with
+officials_manager_compare_nation_then_quality_asc 0x79d480: by nation, by quality, and for equal quality by the id
+(0x79d4c2). So new officials of one nation with equal quality took their order from heap bytes, and set_up_officials
+then gave each official its place as its id (0x79c381). In a 2001 base game official 468 was another person with
+each Setup Game screen (born 1966 or 1960, current ability 59 or 72), and on 15 June 2002 MATCH_OFFICIAL::init
+0x6e9470 compared his ability with draws (0x6e94b3) and the games went apart. Here each new record is 0 before the
+loop fills it, and its id is its place in the table (0x79c6aa), as set_up_officials later gives every official.
+After the loop's last fill the leap year flag follows the year by the rule of Date::Date (0x79c76a).
+
+The missed training records (AWOL::miss_training 0x41a360). It builds the record (13 bytes) on its stack at [esp + 0x18]
+(at 0x41a56b, after the pushes at 0x41a4c2 and 0x41a4c3): the staff id +0 (0x41a57b), the date +4 (Date::Date 0x54a110
+at 0x41a381, 0x417c10 at 0x41a57f, 8 bytes) and a flag byte +0xc that nothing sets. It adds the 13 bytes to the missed
+training list (0x68d0d0 at 0x41a58e). The only other code that adds to the list is AWOL::load (0x418892, the 13 bytes of
+a saved game), and no code writes the flag. A week later AWOL::daily_update 0x4190d0 tests the flag (0x4191d2): set, the
+player's own professionalism decides whether he misses training again (0x4191fc..); clear, his squad mates count as well
+(0x4192c1..). In a 2001 base game the flag differed with the two Setup Game screens on day 268 (with the fix of the
+officials). Here the flag is 0 at 0x41a56b, as fresh memory is.
 """
 
 # address: (the instruction in the original, C code)
@@ -48,4 +110,18 @@ INSNS = {
                "eax = rt_layout_fix(0u) ? R32(R32(ebx + 0x1fu)) : R32(ebx + 0x1fu);"),
     0x6EADA0: ("mov eax, ecx", "if (rt_layout_fix(1u)) memset(M + ecx, 0, 0x1beu); eax = ecx;"),
     0x5CE311: ("mov dword ptr [esp + 0x8a0], 0", "W32(esp + 0x8a0u, 0u); if (rt_layout_fix(2u)) W32(esp + 0x70u, 0u);"),
+    0x84C266: ("mov eax, dword ptr [edi - 4]",
+               "if (rt_layout_fix(3u)) memset(M + esp + 0x40u, 0, 0x4fu); eax = R32(edi - 4u);"),
+    0x8BF420: ("lea ecx, [esp + 0x28]",
+               "if (rt_layout_fix(4u)) memset(M + esp + 0x28u, 0, 0x50u); ecx = (uint32_t)(esp + 0x28u);"),
+    0x76C939: ("mov word ptr [esp + 0x74], ax",
+               "if (rt_layout_fix(5u)) for (uint32_t i = 0x9cu; i < 0xd4u; i += 2u) W16(esp + i, 0x240u); "
+               "W16(esp + 0x74u, (uint16_t)eax);"),
+    0x79C6AA: ("push edi",
+               "if (rt_layout_fix(6u)) { uint32_t r_ = esi - 8u; memset(M + r_, 0, 0x2bu); "
+               "W32(r_, (r_ - R32(0xae23e8u)) / 0x2bu); } t0 = edi; esp -= 4; W32(esp, t0);"),
+    0x79C76A: ("mov word ptr [esi + 4], ax",
+               "W16(esi + 4u, (uint16_t)eax); if (rt_layout_fix(6u)) { uint32_t y_ = R16(esi + 6u); "
+               "W32(esi + 8u, y_ % 4u == 0u && (y_ % 100u != 0u || y_ % 400u == 0u) ? 1u : 0u); }"),
+    0x41A56B: ("mov eax, dword ptr [esi]", "if (rt_layout_fix(7u)) W8(esp + 0x24u, 0u); eax = R32(esi);"),
 }
