@@ -8,7 +8,7 @@ on). So each read takes a defined value in its place: the record's id for the ad
 unset bytes, 0x240, the mask of the original's last places, for the place masks of a national squad, and its place
 in the table for the id of a new official. The fixes act in every game, the base game too. The test switch
 RECOMP_LAYOUT_FIXES=keep, or keep:captain, keep:players, keep:daily, keep:stats, keep:loans, keep:squads,
-keep:officials, keep:training, turns them off (layout_reads.c).
+keep:officials, keep:training, keep:contracts, keep:schedules, turns them off (layout_reads.c).
 
 The captain (MATCH_MAN::choose_captain 0x6e1940). For each player of the list it takes the captain score
 (match_man_get_captain_score 0x6e1cf0). When the manager's rating (non_player_attribute_rating 0x544410 with the
@@ -102,6 +102,44 @@ a saved game), and no code writes the flag. A week later AWOL::daily_update 0x41
 player's own professionalism decides whether he misses training again (0x4191fc..); clear, his squad mates count as well
 (0x4192c1..). In a 2001 base game the flag differed with the two Setup Game screens on day 268 (with the fix of the
 officials). Here the flag is 0 at 0x41a56b, as fresh memory is.
+
+The staff contract table (CONTRACT_MANAGER). CONTRACT_MANAGER::initialise_all_staff_contracts 0x4c7560 makes the first
+table with one slot per staff member (0x4c759a, malloc 0x944e46 at 0x4c75a4) and fills the slots of the staff who have a
+job (0x4c7873). get_free_staff_contract_space 0x4c79a0 gives the next slot after the last one in use (both callers ask
+for that, 0x4c786f and 0x4c7953), and when the table is full it grows it by 200 slots (0x4c79dd) with realloc 0x945667
+(0x4c79f1), or malloc 0x944e46 (0x4c7a02) when there is no table. Neither clears the new slots, so they hold what the
+heap held before. CONTRACT_MANAGER::add_staff_contract 0x4c7950 has STAFF_CONTRACT::generate_initial_contract 0x85e960
+fill a slot (0x4c798d), and it does not set the morale +0x3d. So a contract started with heap bytes as its morale. In a
+2001 base game the contract of the regen staff 4346 at club 1483 (player_regen_sign_for_club 0x7a6f10, 4 January 2007)
+had morale 0 with one Setup Game screen and 0x5e with the other, and on 6 January 2007 game_daily_staff_update 0x5ce2d0
+compared it with a draw (0x5d00ad..0x5d00c2). Here the first table is 0 when it is made (0x4c75ae) and the new slots are
+0 when it grows (0x4c7a0c), as fresh memory is. A table loaded from a saved game has one slot per saved contract
+(load_from_disk 0x4db5c0, the count at 0x4db7e2 and malloc at 0x4db7f2), each read from the save.
+
+The staff contract constructor (STAFF_CONTRACT::STAFF_CONTRACT 0x85e410). It sets the dates, the club, the flag fields
+and the values, among them the word +0x3b (0x85e454), but not the morale +0x3d or the bytes +0x00..+0x03, +0x0c..+0x24,
++0x35..+0x3a, +0x3e, +0x3f, +0x44 and +0x4f. 39 sites build a contract with it, on their stack or in memory fresh from
+new, and pass it on, for example to CONTRACT_MANAGER::sign_loan_contract 0x4d01e0 (0x8bf5b4, 0x8c2684), which sets no
+morale. In a 2001 base game (with the fixes above) staff 6037 had a second contract, at club 1505, while his own
+contract stayed at his club; its morale was 0x5c with one Setup Game screen and 0x3f with the other on 23 October 2002,
+and in April 2003 the games went apart in MATCH_PLAYER code that reads that contract (0x6ebaf6..). Here the contract is
+0 before the constructor (0x85e428), as fresh memory is. The sign-contract code then sets the morale by the contract
+type for some types (0x4cfad8..0x4cfaf1) or copies it from the existing contract (0x4cf99f); other contracts, loans
+among them, keep morale 0.
+
+The training schedules (TRAINING_SCHEDULE::TRAINING_SCHEDULE 0x8b4e10). The training manager holds 167 schedules of 0x9b
+bytes, built with this constructor (TRAINING_MANAGER::TRAINING_MANAGER 0x8b0ec0, 0x8b0ef8; the training edit session
+builds 11 more at 0x8b0a3a and the schedule editor one at 0x8b989b, all in memory fresh from new), which sets the
+header, the version and the flags but not the five category levels +4..+8. TRAINING_MANAGER::set_default_schedules
+0x8b3d40 gives the seven default schedules and each human manager's slots a type with TRAINING_SCHEDULE::set_type
+0x8b4e50, which fills the levels for the types 0 to 7. Slot 0 of each human manager gets the type -1 (0x8b3e63), and
+set_type then fills nothing (0x8b4e64), so its levels held what the heap block held before.
+TRAINING_MANAGER::get_player_schedule 0x8b39f0 gives that slot to a player at a human manager's club whose training
+entry names slot 0 (0x8b3b46), and the weekly training (0x8b1d90, get_category_level 0x8b4f50) reads the level. In a
+2001 base game (with the fixes above) the first human slot (+0x43d) had the level -84 with one Setup Game screen and 7
+with the other on 19 August 2004, and a draw range at 0x8b1f43 was 60 or 134. Here each schedule is 0 before its
+constructor (0x8b4e13), as fresh memory is: the levels of that slot are 0 until the manager sets them. A loaded game
+reads its schedules from training.dat.
 """
 
 # address: (the instruction in the original, C code)
@@ -123,5 +161,13 @@ INSNS = {
     0x79C76A: ("mov word ptr [esi + 4], ax",
                "W16(esi + 4u, (uint16_t)eax); if (rt_layout_fix(6u)) { uint32_t y_ = R16(esi + 6u); "
                "W32(esi + 8u, y_ % 4u == 0u && (y_ % 100u != 0u || y_ % 400u == 0u) ? 1u : 0u); }"),
+    0x85E428: ("mov esi, ecx", "if (rt_layout_fix(8u)) memset(M + ecx, 0, 0x50u); esi = ecx;"),
+    0x4C75AE: ("mov dword ptr [ebx], eax",
+               "if (rt_layout_fix(8u) && eax) memset(M + eax, 0, R32(ebx + 4u) * 0x50u); W32(ebx, eax);"),
+    0x4C7A0C: ("mov dword ptr [esi], eax",
+               "if (rt_layout_fix(8u) && eax) memset(M + eax + (R32(esi + 4u) - 200u) * 0x50u, 0, 200u * 0x50u); "
+               "W32(esi, eax);"),
+    0x8B4E13: ("lea ecx, [esi + 0x18]",
+               "if (rt_layout_fix(9u)) memset(M + esi, 0, 0x9bu); ecx = (uint32_t)(esi + 0x18u);"),
     0x41A56B: ("mov eax, dword ptr [esi]", "if (rt_layout_fix(7u)) W8(esp + 0x24u, 0u); eax = R32(esi);"),
 }

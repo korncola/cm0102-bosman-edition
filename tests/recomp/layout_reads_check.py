@@ -34,6 +34,15 @@ when one is not in its INSNS:
 - AWOL::miss_training 0x41a360 writes the stack only at 0x41a38a, 0x41a3e6 and 0x41a57b (the record's staff id), adds a
   13-byte record from [esp + 0x18] (0x41a587, 0x41a58b), and Date::Date 0x54a110 and 0x417c10 write 8 bytes from the
   date +4. So nothing writes the flag +0xc. The patch at 0x41a56b must clear it.
+- CONTRACT_MANAGER::initialise_all_staff_contracts 0x4c7560 makes the first contract table (one 0x50-byte slot per
+  staff member, malloc at 0x4c75a4, stored at 0x4c75ae), and get_free_staff_contract_space 0x4c79a0 grows it by 200
+  slots (0x4c79dd) with realloc 0x945667 or malloc 0x944e46, which both come to 0x4c7a0a, and stores it at 0x4c7a0c.
+  Neither writes the new slots, and STAFF_CONTRACT::generate_initial_contract 0x85e960 writes no morale +0x3d. The
+  patches at 0x4c75ae and 0x4c7a0c must clear the new slots.
+- STAFF_CONTRACT::STAFF_CONTRACT 0x85e410 (this in ecx, 0x85e428) writes the word +0x3b at 0x85e454 and no byte +0x3d.
+  The patch at 0x85e428 must clear the 0x50-byte contract.
+- TRAINING_SCHEDULE::TRAINING_SCHEDULE 0x8b4e10 writes no category level +4..+8, set_type 0x8b4e50 skips a type above
+  7 (0x8b4e64), and set_default_schedules gives the type -1 (0x8b3e63). The patch at 0x8b4e13 must clear the schedule.
 - Each patch calls rt_layout_fix with the index of its group in names[] of layout_reads.c.
 Each INSNS row must name the instruction that the original has at its address.
 Exit code 0 when every case passes.
@@ -57,7 +66,9 @@ WRITES = ("mov", "and", "or", "xor", "add", "sub", "inc", "dec", "adc", "sbb", "
 SIZES = {"byte": 1, "word": 2, "dword": 4}
 FILL, FILL_END = 0x90D2F0, 0x90D4EC   # VIRTUAL_STAFF::fill_fixture_squads, which gets the fixture (0x84c2a9, 0x84c2b7)
 GROUP_OF = {0x6E19B9: "captain", 0x6EADA0: "players", 0x5CE311: "daily", 0x84C266: "stats", 0x8BF420: "loans",
-            0x76C939: "squads", 0x79C6AA: "officials", 0x79C76A: "officials", 0x41A56B: "training"}
+            0x76C939: "squads", 0x79C6AA: "officials", 0x79C76A: "officials", 0x41A56B: "training",
+            0x4C7A0C: "contracts", 0x4C75AE: "contracts",
+            0x85E428: "contracts", 0x8B4E13: "schedules"}
 
 
 def disassemble(img):
@@ -202,6 +213,39 @@ def main():
                 fails.append(f"{a:#x}: the date writes past its 8 bytes ({m} {o}); read the case again")
     if "W8(esp + 0x24u, 0u)" not in layout_reads.INSNS.get(0x41A56B, ("", ""))[1]:
         fails.append("0x41a360: the missed training record's flag +0xc stays unset, and no patch clears it")
+    grow = [(0x4C79DD, "add", "eax, 0xc8"), (0x4C79E4, "mov", "dword ptr [esi + 4], eax"),
+            (0x4C79F1, "call", "0x945667"), (0x4C79F9, "jmp", "0x4c7a0a"), (0x4C7A02, "call", "0x944e46"),
+            (0x4C7A0A, "test", "eax, eax"), (0x4C79E9, "lea", "eax, [eax + eax*4]"), (0x4C79EC, "shl", "eax, 4"),
+            (0x4C759A, "mov", "dword ptr [ebx + 4], eax"), (0x4C759D, "lea", "ecx, [eax + eax*4]"),
+            (0x4C75A0, "shl", "ecx, 4"), (0x4C75A4, "call", "0x944e46")]
+    if any(at.get(a) != (m, o) for a, m, o in grow):
+        fails.append("0x4c79a0: not the growth of the contract table by 200 slots; read the case again")
+    for a, m, o in code:
+        w = re.match(r"(byte|word|dword) ptr \[(e[a-z]{2}) \+ (0x[0-9a-f]+)\]", o) \
+            if 0x85E960 <= a < 0x85ED79 and m in WRITES else None
+        if w and w.group(2) != "esp" and MORALE in range(int(w.group(3), 16), int(w.group(3), 16) + SIZES[w.group(1)]):
+            fails.append(f"{a:#x}: generate_initial_contract may write the morale ({m} {o}); read the case again")
+    if "memset(M + eax + (R32(esi + 4u) - 200u) * 0x50u, 0, 200u * 0x50u)" not in \
+            layout_reads.INSNS.get(0x4C7A0C, ("", ""))[1] or "memset(M + eax, 0, R32(ebx + 4u) * 0x50u)" not in \
+            layout_reads.INSNS.get(0x4C75AE, ("", ""))[1]:
+        fails.append("0x4c79a0: the new slots of the contract table stay unset, and no patch clears them")
+    if at.get(0x85E428) != ("mov", "esi, ecx") or at.get(0x85E454) != ("mov", "word ptr [esi + 0x3b], bx") or any(
+            m in WRITES and o.startswith(("byte ptr [esi + 0x3d]", "word ptr [esi + 0x3c]", "dword ptr [esi + 0x3a]",
+                                          "dword ptr [esi + 0x3b]", "dword ptr [esi + 0x3c]", "dword ptr [esi + 0x3d]",
+                                          "word ptr [esi + 0x3d]"))
+            for a, m, o in code if 0x85E410 <= a < 0x85E473):
+        fails.append("0x85e410: the contract constructor's writes near the morale +0x3d differ; read the case again")
+    if "memset(M + ecx, 0, 0x50u)" not in layout_reads.INSNS.get(0x85E428, ("", ""))[1]:
+        fails.append("0x85e410: the contract constructor leaves the morale +0x3d unset, and no patch sets it")
+    sched = [a for a, m, o in code if 0x8B4E10 <= a < 0x8B4E43 and m in WRITES
+             for w in [re.match(r"(byte|word|dword) ptr \[esi \+ (0x[0-9a-f]+|\d+)\]", o)] if w
+             and set(range(int(w.group(2), 0), int(w.group(2), 0) + SIZES[w.group(1)])) & set(range(4, 9))]
+    sizes = [at.get(a) for a in (0x8B0EEE, 0x8B0A30, 0x8B987D)]   # the schedule size at each place that builds them
+    if sched or sizes != [("push", "0x9b")] * 3 or at.get(0x8B4E64) != ("ja", "0x8b4f05") or at.get(0x8B4E61) != ("cmp", "eax, 7") \
+            or at.get(0x8B3E63) != ("push", "-1"):
+        fails.append("0x8b4e10: the schedule constructor or set_type differ at the levels; read the case again")
+    if "memset(M + esi, 0, 0x9bu)" not in layout_reads.INSNS.get(0x8B4E13, ("", ""))[1]:
+        fails.append("0x8b4e10: the training schedule levels stay unset, and no patch clears them")
     # Each patch asks the switch for its own group: the index of its name in names[] of layout_reads.c.
     src = open(os.path.join(HERE, "..", "..", "src", "recomp_rt", "win", "layout_reads.c")).read()
     names = re.findall(r'"([a-z]+)"', re.search(r"names\[GROUPS\] = \{([^}]*)\}", src).group(1))
