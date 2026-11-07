@@ -7,8 +7,9 @@ Usage:
 
 The run is the start-only run of tests/seasons/rules_report_check.py (a new 2001 game, the report of the first day,
 then the program ends) with RECOMP_SQUAD_MOVE_TEST=1. At that report the runtime (rt_squad_move_test,
-src/recomp_rt/win/original_faults.c) takes the first senior club with a linked B side and a player of it with one
-contract and the placement 4 (at the senior club of a linked side, get_squad_placement 0x4cbb60), calls
+src/recomp_rt/win/original_faults.c) takes the first senior club with a linked B side that does not link back to it (as
+Hertha BSC Amateure in item 187, so the placement of a player at the B side comes from bit 0x40 of his contract) and
+a player of the senior club with one contract and the placement 4 (at the senior club of a linked side, get_squad_placement 0x4cbb60), calls
 CONTRACT_MANAGER::move_to_reserves 0x4cc0f0 twice, as the squad assessment does, and prints the placement before and
 after the first move and how many squad slots of each side hold him.
 

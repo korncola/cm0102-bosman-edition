@@ -585,6 +585,13 @@ void rt_squad_move_test(void)
         uint32_t b = rt_callback(0x540a50u, 3, args);
         if (rt_unwinding) return;
         if (!b || !rd32(g_mem, flag)) continue;          /* the flag: this club is the senior side (0x4cbbe6) */
+        /* The B side must not lead back to the club (as Hertha BSC Amateure in item 187): then get_squad_placement
+           0x4cbb60 of a player at the B side with his contract at the club answers from bit 0x40 (0x4cbcff), not
+           from his club +0x39 (0x4cbbfd). */
+        uint32_t bargs[3] = {b, flag, 1};
+        uint32_t back = rt_callback(0x540a50u, 3, bargs);
+        if (rt_unwinding) return;
+        if (back == club) continue;
         for (uint32_t k = 0; k < 50u; k++) {
             uint32_t p = rd32(g_mem, club + 0xd7u + 4u * k);
             if (!p || rd32(g_mem, p + 0x39u) != club || !rd32(g_mem, p + 0x61u)) continue;
@@ -605,5 +612,5 @@ void rt_squad_move_test(void)
             return;
         }
     }
-    fprintf(stderr, "recomp: squad move test: no senior club with a B side and a one-contract player at placement 4\n");
+    fprintf(stderr, "recomp: squad move test: no senior club with a one-way B side and a one-contract player at placement 4\n");
 }
