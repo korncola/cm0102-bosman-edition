@@ -79,7 +79,6 @@
 2003	clubs	european_cup (European Champions Cup), row uefa-18: game 55, table 72 (72 (32 in the group stage))
 2003	clubs	intertoto_cup (Inter-Toto Cup), row uefa-23: game 60, table 61 (61)
 2003	clubs	oceania_nations (Oceania Nations Cup), row int-continental-32: game 3, table 6 (6)
-2003	clubs	uefa_cup (UEFA Cup), row uefa-21: game 146, table 145 (145)
 2003	clubs	wc_african_cup (World Cup African Qualifying Section), row int-world-30: game 50, table 51 (51 entrants)
 2003	clubs	wc_asia_league (World Cup Asian Qualifying Section), row int-world-31: game 0, table 39 (39 entrants)
 2003	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-29: game 24, table 34 (34 entrants)
@@ -505,7 +504,7 @@
 2010	no_row	record_utils (Reserve): no table row
 2010	no_row	record_utils (Under 21 International): no table row
 2010	not_held	african_nations (African Cup of Nations), row int-continental-106: the game holds 2010, the table says not held
-2010	not_held	fifa_confed (Confederations Cup), row int-world-118: the game holds 2009, the table says not held
+2010	not_held	fifa_confed (Confederations Cup), row int-world-118: the game holds 2011, the table says not held
 2010	not_held	goldcup (Copa America), row int-continental-110: the game holds 2011, the table says not held
 2010	not_held	inter_amer_cup (Inter-American Cup), row club-world-183: the game holds 2010, the table says not held
 2010	not_held	intertoto_cup (Inter-Toto Cup), row uefa-79: the game holds 2010, the table says not held
@@ -525,7 +524,7 @@
 2011	clubs	european_cup (European Champions Cup), row uefa-82: game 55, table 76 (76 (32 in the group stage))
 2011	clubs	goldcup (Copa America), row int-continental-121: game 0/4, table 12 (12)
 2011	clubs	oceania_nations (Oceania Nations Cup), row int-continental-120: game 3, table 8 (8)
-2011	clubs	uefa_cup (UEFA Cup), row uefa-85: game 145, table 194 (194 (161 entered + 33 from the Champions League); 48 in the group stage (+8 Cham)
+2011	clubs	uefa_cup (UEFA Cup), row uefa-85: game 146, table 194 (194 (161 entered + 33 from the Champions League); 48 in the group stage (+8 Cham)
 2011	clubs	wc_african_cup (World Cup African Qualifying Section), row int-world-126: game 50, table 52 (52 entrants)
 2011	clubs	wc_asia_league (World Cup Asian Qualifying Section), row int-world-127: game 0, table 20 (20, then 10)
 2011	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-125: game 24, table 30 (30, then 12)
@@ -1087,7 +1086,6 @@
 2020	clubs	wc_asia_league (World Cup Asian Qualifying Section), row int-world-235: game 0/4, table 40 (40)
 2020	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-233: game 24, table 30 (30, then 6)
 2020	clubs	wc_europe_league (World Cup European Qualifying Section), row int-world-231: game 5, table 55 (55 entrants)
-2020	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-232: game 9, table 10 (10)
 2020	clubs	world_club_champ (FIFA Club World Championship), row club-world-363: game 0/4, table 6 (6)
 2020	down	eng_third (English Third Division), row eng-221: game 1 (+0 play-off places), table 2 (2)
 2020	format	european_cup, row uefa-154: game 16 clubs in a second group stage and 8 in the first knockout round, table 0 and 16
@@ -1160,7 +1158,6 @@
 2021	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-245: game 24, table 8 (8)
 2021	clubs	wc_europe_league (World Cup European Qualifying Section), row int-world-243: game 5, table 55 (55 entrants)
 2021	clubs	wc_oceania_league (World Cup Oceania Qualifying Section), row int-world-248: game 5, table 8 (8 in groups (Tonga withdrew); Cook Islands and Vanuatu withdrew because of COVID)
-2021	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-244: game 9, table 10 (10)
 2021	clubs	world_club_champ (FIFA Club World Championship), row club-world-382: game 4, table 7 (7)
 2021	down	eng_third (English Third Division), row eng-231: game 1 (+0 play-off places), table 2 (2)
 2021	format	european_cup, row uefa-162: game 16 clubs in a second group stage and 8 in the first knockout round, table 0 and 16
@@ -1232,7 +1229,7 @@
 2022	clubs	african_nations (African Cup of Nations), row int-continental-238: game 0/4, table 24 (24)
 2022	clubs	euro_champ_qual (European Championship Qualifying), row int-continental-233: game 5, table 53 (53)
 2022	clubs	european_cup (European Champions Cup), row uefa-170: game 55, table 78 (78 (32 in the group stage))
-2022	clubs	uefa_cup (UEFA Cup), row uefa-173: game 146, table 57 (57 (21 entered + 36 from the Champions League); 32 in the group stage (+8 Champi)
+2022	clubs	uefa_cup (UEFA Cup), row uefa-173: game 145, table 57 (57 (21 entered + 36 from the Champions League); 32 in the group stage (+8 Champi)
 2022	clubs	world_club_champ (FIFA Club World Championship), row club-world-401: game 0/4, table 7 (7)
 2022	down	eng_third (English Third Division), row eng-241: game 1 (+0 play-off places), table 2 (2)
 2022	format	european_cup, row uefa-170: game 16 clubs in a second group stage and 8 in the first knockout round, table 0 and 16
@@ -1304,6 +1301,7 @@
 2023	clubs	wc_african_cup (World Cup African Qualifying Section), row int-world-270: game 50, table 53 (53 entrants)
 2023	clubs	wc_asia_league (World Cup Asian Qualifying Section), row int-world-271: game 0, table 46 (46 entrants)
 2023	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-269: game 24, table 32 (32 entrants (hosts exempt))
+2023	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-268: game 9, table 10 (10)
 2023	clubs	world_club_champ (FIFA Club World Championship), row club-world-420: game 4, table 7 (7)
 2023	down	eng_third (English Third Division), row eng-251: game 1 (+0 play-off places), table 2 (2)
 2023	format	european_cup, row uefa-178: game 16 clubs in a second group stage and 8 in the first knockout round, table 0 and 16
@@ -1383,6 +1381,7 @@
 2024	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-281: game 24, table 30 (30)
 2024	clubs	wc_europe_league (World Cup European Qualifying Section), row int-world-279: game 5, table 54 (54 entrants)
 2024	clubs	wc_oceania_league (World Cup Oceania Qualifying Section), row int-world-284: game 5, table 11 (11 entrants)
+2024	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-280: game 9, table 10 (10)
 2024	clubs	world_club_champ (FIFA Club World Championship), row club-world-439: game 0/4, table 32 (32)
 2024	down	eng_third (English Third Division), row eng-261: game 1 (+0 play-off places), table 2 (2)
 2024	format	european_cup, row uefa-186: game 16 and 8 clubs in the league phase and its knockout stage, table 0 and 24
@@ -1459,6 +1458,7 @@
 2025	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-293: game 24, table 12 (12)
 2025	clubs	wc_europe_league (World Cup European Qualifying Section), row int-world-291: game 5, table 54 (54 entrants)
 2025	clubs	wc_oceania_league (World Cup Oceania Qualifying Section), row int-world-296: game 5, table 1 (1)
+2025	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-292: game 9, table 10 (10)
 2025	clubs	world_cup (FIFA World Cup), row int-world-290: game 0/4, table 48 (48)
 2025	down	eng_third (English Third Division), row eng-271: game 1 (+0 play-off places), table 2 (2)
 2025	format	european_cup, row uefa-194: game 16 and 8 clubs in the league phase and its knockout stage, table 0 and 24
@@ -1595,7 +1595,7 @@
 2027	clubs	euro_champ (European Football Championship), row int-continental-287: game 0/4, table 24 (24)
 2027	clubs	euro_champ_qual (European Championship Qualifying), row int-continental-288: game 5, table 54 (54 (scheduled))
 2027	clubs	european_cup (European Champions Cup), row uefa-210: game 55, table 83 (83 (36 in the league phase))
-2027	clubs	uefa_cup (UEFA Cup), row uefa-213: game 145, table 36 (36 in the league phase; total unknown)
+2027	clubs	uefa_cup (UEFA Cup), row uefa-213: game 146, table 36 (36 in the league phase; total unknown)
 2027	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-317: game 24, table 35 (35 (22 in round 1))
 2027	down	eng_third (English Third Division), row eng-291: game 1 (+0 play-off places), table 2 (2)
 2027	format	european_cup, row uefa-210: game 16 and 8 clubs in the league phase and its knockout stage, table 0 and 24
