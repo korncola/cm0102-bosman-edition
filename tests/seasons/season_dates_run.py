@@ -33,6 +33,10 @@ Also:
                2010/11 tile, a start again: the game is a 2010/11 game with the September 2010 ODB data and
                passes the checks above.
     base       October 2019 in a game that starts in 2001/02: nothing moves (the database plays as in 0.5.0).
+    other      October 2019 in a game that starts in 2020/21, a season after its own (open item 169): the last
+               FIFA World Cup and Euro rows are the last finals before the start in their real years (2018
+               France, 2016 Portugal). The whole database moves by 1 year, but the nation rows move by whole
+               4-year cycles only, so no final lands in a year without one.
     off        October 2019 in 2019/20 with RECOMP_SEASON_CODE=off: nothing moves.
     again      the 2010/11 game twice: the saves are byte for byte the same.
 With --extras the extra databases of each season run too (people and champions of their data season).
@@ -327,6 +331,9 @@ def main(argv):
     if "--no-base" not in argv and "October 2019" in dbs:
         runs.append(("base", 2001, "October 2019", None))
         runs.append(("off", 2019, "October 2019", {"RECOMP_SEASON_CODE": "off"}))
+    if "October 2019" in dbs and ("--no-base" not in argv or (only and "other" in only)):
+        # open item 169: a database in a later season than its own (October 2019 in 2020/21, 1 year on)
+        runs.append(("other", 2020, "October 2019", None))
     if "--no-base" not in argv and "September 2010 ODB" in dbs and "October 2019" in dbs:
         # Choose Season: a start in 2019/20, Back, the 2010/11 tile, a start again (Q344, review of slice 11b).
         runs.append(("second", 2010, "October 2019", {"_second": "September 2010 ODB"}))
@@ -376,6 +383,16 @@ def main(argv):
                     print("ok    again: the 2010/11 game gives the same save twice")
                 else:
                     fail("again: the two 2010/11 saves differ or are missing")
+                continue
+            if label == "other":
+                # The finals keep their real years (open item 169): the nation rows move by whole 4-year cycles,
+                # so the last rows are the last finals before the start, as in a game of the data's own season.
+                for comp in FINALS:
+                    want, have = last_final(comp, year), res["finals"].get(comp)
+                    if have == want:
+                        print(f"ok    other: last {comp} row {have[0]} {have[1]}")
+                    else:
+                        fail(f"other: last {comp} row {have}, the last final before the start is {want}")
                 continue
             if res["date"][1] != year:
                 fail(f"{label}: the game starts in {res['date'][1]}, not {year}")

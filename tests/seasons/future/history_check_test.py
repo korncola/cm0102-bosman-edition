@@ -465,6 +465,31 @@ def titles_rule():
     return bad
 
 
+def start_season_rule():
+    """missing and gap (open item 169): an edition of a season before the start season is history of the database.
+    The World Cup of 2098 ends the 2097/98 season, so a 2098 game (a date jump with December 2025 data, whose last
+    World Cup row is 2094) next plays 2102, and the Euro of 2096 (season 2095/96) is history there too. A year of the
+    table without an edition (the Africa Cup of Nations of 2020) is no history, nor a competition outside the
+    table."""
+    sys.path.insert(0, HERE)
+    import history_check as hc
+    bad = []
+    for key, last, cyc, start, want in (("world_cup", 2094, 4, 2098, 2102), ("world_cup", 2095, 4, 2098, 2099),
+                                        ("world_cup", 2018, 4, 2022, 2022), ("world_cup", 2022, 4, 2026, 2030),
+                                        ("world_cup", 2018, 4, 2021, 2022), ("african_nations", 2018, 2, 2025, 2020),
+                                        ("euro_champ", 2092, 4, 2098, 2100), ("", 2094, 4, 2098, 2098)):
+        got = hc.due_edition(key, last, cyc, start)
+        if got != want:
+            bad.append(f"due_edition {key or 'a competition outside the table'} after {last} in a {start} start: "
+                       f"{got}, not {want}")
+    for key, years, start, want in (("world_cup", [2098], 2098, True), ("world_cup", [2098, 2102], 2098, False),
+                                    ("african_nations", [2020], 2025, False),
+                                    ("world_cup", [], 2098, False)):
+        if hc.before_start(key, years, start) != want:
+            bad.append(f"before_start {key} {years} in a {start} start: not {want}")
+    return bad
+
+
 def olympics_rule():
     """duty-clash and the Olympics (open item 107): an Olympic match of the under-21 sides is a fault only when a club
     with a player in it keeps fewer than 11 players it can field (not on duty, at the club, not injured). The save
@@ -795,6 +820,7 @@ def main():
     bad += uefa_missing_rule()
     bad += titles_rule()
     bad += olympics_rule()
+    bad += start_season_rule()
 
     for b in bad:
         print("FAIL  " + b)

@@ -530,12 +530,15 @@ def check(game, rules=None, changes=()):
         if rule.get("ended"):
             continue                                  # ended by the rules: no later edition is expected
         if cyc and ys and cid in game.parts and ys[-1] >= start - 2 * cyc:
+            key = rule.get("key")
             for a, b in zip(ys, ys[1:]):
-                if b >= start and a >= start - cyc and b - a > cyc + 1 and not (end and a >= end):
+                if b >= start and a >= start - cyc and b - a > cyc + 1 and not (end and a >= end) and \
+                        not before_start(key, range(a + cyc, b, cyc), start):
                     faults.append(("gap", name, b, f"no edition between {a} and {b} (cycle {cyc})"))
             ended = edition == ENDED_YEAR or (end is not None and end < save_year)
-            if not ended and ys[-1] + cyc + 1 < save_year:
-                faults.append(("missing", name, ys[-1] + cyc,
+            due = due_edition(key, ys[-1], cyc, start)
+            if not ended and due + 1 < save_year:
+                faults.append(("missing", name, due,
                                f"last edition {ys[-1]}, cycle {cyc}, the save is in {save_year}"))
         # the next draw or start more than one cycle after the save date
         if edition in IDLE_YEARS:
@@ -741,6 +744,54 @@ def finals_table(path=None):
     if os.path.exists(path) and not out:
         raise ValueError(f"{path}: no row of the finals table read (has its struct changed?)")
     return out
+
+
+_SEASONS = {}
+
+
+def finals_seasons(path=None):
+    """{class: {year: season}} of the finals table of the season code (season_intl_table.c): the season of each
+    edition (2025 for the World Cup of 2026, whose finals end the 2025/26 season; 2022 for that of 2022)."""
+    path = path or os.path.join(ROOT, "src", "recomp_rt", "win", "season_intl_table.c")
+    if path not in _SEASONS:
+        out = collections.defaultdict(dict)
+        if os.path.exists(path):
+            for cls, season, year in re.findall(r'\{"(\w+)", (\d+), (\d+), \d+, \d+, \d+, \d+, \d+, "',
+                                                open(path, encoding="latin-1").read()):
+                out[cls][int(year)] = int(season)
+        _SEASONS[path] = out
+    return _SEASONS[path]
+
+
+def edition_season(key, year):
+    """The season of a finals class's edition of a year, or None for a competition outside the finals table or a
+    year of the table without an edition: the table's season, and after the table the season of the last table edition moved on by the same years
+    (season_intl_rules.c season_intl_first: the class continues on its cycle)."""
+    rows = finals_seasons().get(key) if key else None
+    if not rows:
+        return None
+    if year in rows:
+        return rows[year]
+    last = max(rows)
+    return year - (last - rows[last]) if year > last else None       # None: no edition of the table
+
+
+def before_start(key, years, start):
+    """1 when every edition of years is of a season before the start season (open item 169). Such an edition is
+    history that only the database can hold: the game plays a finals class from the first edition of its start
+    season (rt_intl_first_year, the class constructor's year from season_intl_first). A database of an earlier
+    season (December 2025 in a 2098 date jump) holds none of them."""
+    seasons = [edition_season(key, y) for y in years]
+    return bool(seasons) and all(s is not None and s < start for s in seasons)
+
+
+def due_edition(key, last, cyc, start):
+    """The first edition after the last row that the game must write: the next one on the cycle that is not of a
+    season before the start season (before_start)."""
+    due = last + cyc
+    while before_start(key, [due], start):
+        due += cyc
+    return due
 
 
 def read_access(path):
