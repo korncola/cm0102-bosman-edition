@@ -823,19 +823,30 @@ Q48_COPA_2001 = (450, 2001)                 # (competition id, label year) of th
 Q48_SAVE_ROWS = {"start.sav": [Q48_COPA_2001], "prematch.sav": [Q48_COPA_2001]}
 
 
+# The new-game pair rules-on and history-q48-off runs with original-faults group club_regulars off (lead, 7 November
+# 2026, open item 160). The two games split after some days in the original too (item 184: by 28 days with the group
+# off); the group's marks keep more players at their clubs, which brings that split inside the 14 days of the check.
+# season-code-off, which a new game compares with history-q48-off, runs with it off too. The group stays on in every
+# other run.
+PAIR_KEEP = {"RECOMP_ORIGINAL_FAULTS": "keep:club_regulars"}
+
+
 def q48_runs(runs, new_game):
     """The runs with the Q48 comparisons (above)."""
     out = []
     for name, o in runs:
         if name == "season-code-off":
             o = dict(o, _against=Q48_REFERENCE)
+            if new_game:                          # compared with history-q48-off, so with the same groups
+                o = dict(o, _env=dict(o.get("_env", {}), **PAIR_KEEP))
         elif name == "rules-on" and new_game:
             out.append(("rules-on-q48", dict(o, _against="rules-on-q48-ref" if REF_BUILD else "")))
             if REF_BUILD:
                 out.append(("rules-on-q48-ref", dict(o, _program=REF_BUILD, _against="")))
-            o = dict(o, _env=dict(o.get("_env", {}), RECOMP_HISTORY_AFTER_START="off"), _against=Q48_REFERENCE)
+            o = dict(o, _env=dict(o.get("_env", {}), RECOMP_HISTORY_AFTER_START="off", **PAIR_KEEP),
+                     _against=Q48_REFERENCE)
         elif name == Q48_REFERENCE and new_game:
-            o = dict(o, _against="")
+            o = dict(o, _env=dict(o.get("_env", {}), **PAIR_KEEP), _against="")
         out.append((name, o))
     return out
 
