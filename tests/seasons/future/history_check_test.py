@@ -568,12 +568,12 @@ def olympics_rule():
 
 
 def duty_dates_rule():
-    """duty-clash for a national match more than PICK_AHEAD days after the save (open items 157 to 162): the squads of
-    the save are not that match's (the game picks them two weeks ahead), so the squad count is not used; a club's
-    continental match within a day of a match of its own nation's senior side is a fault. Clubs 1 (nation 7) and 2
-    (nation 8) and 3 (nation 7, 5 players in side 100's squad) and 4 (nation 8, 3 players in side 100's squad); senior
-    sides 100 (nation 7) and 101 (nation 8), under-21 sides 110 and 111 after them. The save is on 2040-07-01 (day 182
-    from 0), so the squad count holds to 15 July (day + 14) and not from 16 July."""
+    """duty-clash judges only national matches up to PICK_AHEAD days after the save (open items 157 to 162): the squads
+    of the save are not a later match's (the game picks them two weeks ahead), and a club match on its nation's match
+    day is no fault in itself. Clubs 1 (nation 7) and 2 (nation 8) and 3 (nation 7, 5 players in side 100's squad) and
+    4 (nation 8, 3 players in side 100's squad); senior sides 100 (nation 7) and 101 (nation 8), under-21 sides 110 and
+    111 after them. The save is on 2040-07-01 (day 182 from 0), so the squad count holds to 15 July (day + 14) and not
+    from 16 July."""
     sys.path.insert(0, HERE)
     import history_check as hc
 
@@ -622,16 +622,14 @@ def duty_dates_rule():
                            (day(7, 16), 100, 110)],
                       41: [(day(9, 20), 110, 111)],
                       24: [(day(7, 15), 4, 2)],   # day + 14: the count, 3 of club 4 in side 100: a fault
-                      25: [(day(7, 17), 4, 2)],   # side 100 on day + 15: no count; club 4's side 101 does not play
-                      26: [(day(9, 21), 1, 4)],   # only the under-21 sides play the day before: no fault
-                      20: [(day(9, 1), 1, 2)],    # club 1 the day after its side 100: a fault (61 days ahead)
-                      21: [(day(8, 31), 2, 2)],   # club 2's side 101 plays that day too: a fault
+                      25: [(day(7, 17), 4, 2)],   # side 100 on day + 15: no count
+                      26: [(day(9, 21), 1, 4)],   # the under-21 sides the day before: no fault
+                      20: [(day(9, 1), 1, 2)],    # club 1 the day after its side 100, 61 days ahead: no fault
+                      21: [(day(8, 31), 2, 2)],   # club 2's side 101 plays that day too: no fault
                       22: [(day(9, 5), 1, 2)],    # no national match near: no fault
                       23: [(day(7, 11), 3, 2)]}   # 9 days ahead: the squad count, 5 of club 3 in side 100: a fault
     got = {f[1]: f[3] for f in hc.duty_clashes(g)}
-    want = {"Club Plate": "club 1 on 2040-09-01 plays within a day of its nation's side club 100",
-            "Club Bowl": "club 2 on 2040-08-31 plays within a day of its nation's side club 101",
-            "Club Cup": "club 3 on 2040-07-11 has 5 players in the squad of club 100",
+    want = {"Club Cup": "club 3 on 2040-07-11 has 5 players in the squad of club 100",
             "Club Shield": "club 4 on 2040-07-15 has 3 players in the squad of club 100"}
     if set(got) != set(want) or any(not got[k].startswith(v) for k, v in want.items()):
         return [f"duty-clash dates: {got}, want {want}"]
