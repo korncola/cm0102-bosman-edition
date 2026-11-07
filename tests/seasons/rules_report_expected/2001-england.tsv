@@ -83,7 +83,6 @@
 2003	clubs	wc_asia_league (World Cup Asian Qualifying Section), row int-world-31: game 0, table 39 (39 entrants)
 2003	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-29: game 24, table 34 (34 entrants)
 2003	clubs	wc_oceania_league (World Cup Oceania Qualifying Section), row int-world-32: game 5, table 12 (12 entrants)
-2003	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-28: game 9, table 10 (10)
 2003	down	eng_third (English Third Division), row eng-51: game 1 (+0 play-off places), table 2 (2)
 2003	format	european_cup, row uefa-18: game 16 clubs in a second group stage and 8 in the first knockout round, table 0 and 16
 2003	name	asia_nations (Asian Cup), row int-continental-31: game 'Asian Cup', table 'AFC Asian Cup'
@@ -137,7 +136,6 @@
 2004	clubs	wc_asia_league (World Cup Asian Qualifying Section), row int-world-43: game 0/4, table 32 (32, then 8)
 2004	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-41: game 24, table 12 (12, then 6)
 2004	clubs	wc_europe_league (World Cup European Qualifying Section), row int-world-39: game 5, table 51 (51 entrants)
-2004	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-40: game 9, table 10 (10)
 2004	down	eng_third (English Third Division), row eng-61: game 1 (+0 play-off places), table 2 (2)
 2004	format	european_cup, row uefa-26: game 16 clubs in a second group stage and 8 in the first knockout round, table 0 and 16
 2004	format	uefa_cup, row uefa-29: game 0 clubs in the group stage and 0 in the knockout round after it, table 40 and 32
@@ -191,7 +189,6 @@
 2005	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-53: game 24, table 6 (6)
 2005	clubs	wc_europe_league (World Cup European Qualifying Section), row int-world-51: game 5, table 51 (51 entrants)
 2005	clubs	wc_oceania_league (World Cup Oceania Qualifying Section), row int-world-56: game 5, table 2 (2)
-2005	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-52: game 9, table 10 (10)
 2005	clubs	world_club_champ (FIFA Club World Championship), row club-world-78: game 4, table 6 (6)
 2005	clubs	world_cup (FIFA World Cup), row int-world-50: game 0/4, table 32 (32)
 2005	down	eng_third (English Third Division), row eng-71: game 1 (+0 play-off places), table 2 (2)
@@ -288,11 +285,10 @@
 2007	clubs	intertoto_cup (Inter-Toto Cup), row uefa-55: game 60, table 50 (50)
 2007	clubs	oceania_nations (Oceania Nations Cup), row int-continental-76: game 3, table 4 (4)
 2007	clubs	uefa_cup (UEFA Cup), row uefa-53: game 145, table 80 (80 in the first round; total not stated on the page)
-2007	clubs	wc_african_cup (World Cup African Qualifying Section), row int-world-78: game 50, table 53 (53 entrants)
+2007	clubs	wc_african_cup (World Cup African Qualifying Section), row int-world-78: game 48, table 53 (53 entrants)
 2007	clubs	wc_asia_league (World Cup Asian Qualifying Section), row int-world-79: game 0, table 43 (43 entrants)
 2007	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-77: game 24, table 35 (35 entrants)
 2007	clubs	wc_oceania_league (World Cup Oceania Qualifying Section), row int-world-80: game 5, table 11 (11 entrants)
-2007	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-76: game 9, table 10 (10)
 2007	clubs	world_club_champ (FIFA Club World Championship), row club-world-116: game 4, table 7 (7)
 2007	down	eng_third (English Third Division), row eng-91: game 1 (+0 play-off places), table 2 (2)
 2007	format	european_cup, row uefa-50: game 16 clubs in a second group stage and 8 in the first knockout round, table 0 and 16
@@ -349,12 +345,11 @@
 2008	clubs	oceania_nations (Oceania Nations Cup), row int-continental-87: game 0/3, table 4 (4)
 2008	clubs	olympics (Olympic Games), row int-world-95: game 4, table 16 (16)
 2008	clubs	uefa_cup (UEFA Cup), row uefa-61: game 145, table 157 (157 in all, with the 24 Champions League clubs (the page labels it qualifying; i)
-2008	clubs	wc_african_cup (World Cup African Qualifying Section), row int-world-90: game 50, table 20 (20)
+2008	clubs	wc_african_cup (World Cup African Qualifying Section), row int-world-90: game 48, table 20 (20)
 2008	clubs	wc_asia_league (World Cup Asian Qualifying Section), row int-world-91: game 0/4, table 10 (10)
 2008	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-89: game 24, table 12 (12, then 6)
 2008	clubs	wc_europe_league (World Cup European Qualifying Section), row int-world-87: game 5, table 53 (53 entrants)
 2008	clubs	wc_oceania_league (World Cup Oceania Qualifying Section), row int-world-92: game 5, table 4 (4)
-2008	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-88: game 9, table 10 (10)
 2008	clubs	world_club_champ (FIFA Club World Championship), row club-world-135: game 0/4, table 7 (7)
 2008	down	eng_third (English Third Division), row eng-101: game 1 (+0 play-off places), table 2 (2)
 2008	format	european_cup, row uefa-58: game 16 clubs in a second group stage and 8 in the first knockout round, table 0 and 16
@@ -411,12 +406,11 @@
 2009	clubs	african_nations (African Cup of Nations), row int-continental-95: game 0/4, table 16 (16 (15 played))
 2009	clubs	european_cup (European Champions Cup), row uefa-66: game 55, table 76 (76 (32 in the group stage))
 2009	clubs	uefa_cup (UEFA Cup), row uefa-69: game 145, table 192 (192 (159 entered + 33 from the Champions League); 48 in the group stage (+8 Cham)
-2009	clubs	wc_african_cup (World Cup African Qualifying Section), row int-world-102: game 50, table 20 (20)
+2009	clubs	wc_african_cup (World Cup African Qualifying Section), row int-world-102: game 48, table 20 (20)
 2009	clubs	wc_asia_league (World Cup Asian Qualifying Section), row int-world-103: game 4, table 2 (2)
 2009	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-101: game 24, table 6 (6)
 2009	clubs	wc_europe_league (World Cup European Qualifying Section), row int-world-99: game 5, table 53 (53 entrants)
 2009	clubs	wc_oceania_league (World Cup Oceania Qualifying Section), row int-world-104: game 5, table 1 (1)
-2009	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-100: game 9, table 10 (10)
 2009	clubs	world_club_champ (FIFA Club World Championship), row club-world-154: game 4, table 7 (7)
 2009	clubs	world_cup (FIFA World Cup), row int-world-98: game 0/4, table 32 (32)
 2009	down	eng_third (English Third Division), row eng-111: game 1 (+0 play-off places), table 2 (2)
@@ -776,6 +770,7 @@
 2015	clubs	wc_asia_league (World Cup Asian Qualifying Section), row int-world-175: game 0, table 40 (40)
 2015	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-173: game 24, table 12 (12)
 2015	clubs	wc_oceania_league (World Cup Oceania Qualifying Section), row int-world-176: game 5, table 11 (11 entrants)
+2015	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-172: game 9, table 10 (10)
 2015	clubs	world_club_champ (FIFA Club World Championship), row club-world-268: game 4, table 7 (7)
 2015	down	eng_third (English Third Division), row eng-171: game 1 (+0 play-off places), table 2 (2)
 2015	format	european_cup, row uefa-114: game 16 clubs in a second group stage and 8 in the first knockout round, table 0 and 16
@@ -842,6 +837,7 @@
 2016	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-185: game 24, table 6 (6)
 2016	clubs	wc_europe_league (World Cup European Qualifying Section), row int-world-183: game 5, table 54 (54 entrants)
 2016	clubs	wc_oceania_league (World Cup Oceania Qualifying Section), row int-world-188: game 5, table 6 (6)
+2016	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-184: game 9, table 10 (10)
 2016	clubs	world_club_champ (FIFA Club World Championship), row club-world-287: game 0/4, table 7 (7)
 2016	down	eng_third (English Third Division), row eng-181: game 1 (+0 play-off places), table 2 (2)
 2016	format	european_cup, row uefa-122: game 16 clubs in a second group stage and 8 in the first knockout round, table 0 and 16
@@ -903,6 +899,7 @@
 2017	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-197: game 24, table 6 (6)
 2017	clubs	wc_europe_league (World Cup European Qualifying Section), row int-world-195: game 5, table 54 (54 entrants)
 2017	clubs	wc_oceania_league (World Cup Oceania Qualifying Section), row int-world-200: game 5, table 2 (2)
+2017	clubs	wc_south_american_league (World Cup South American Qualifying Section), row int-world-196: game 9, table 10 (10)
 2017	clubs	world_club_champ (FIFA Club World Championship), row club-world-306: game 4, table 7 (7)
 2017	clubs	world_cup (FIFA World Cup), row int-world-194: game 0/4, table 32 (32)
 2017	down	eng_third (English Third Division), row eng-191: game 1 (+0 play-off places), table 2 (2)
