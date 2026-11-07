@@ -67,6 +67,9 @@ static const OptionDef defs[OPT_COUNT] = {
     /* 0.7.0 slice 6 (Q38): the Network tab of the Options box sets it; the join check reads it (net_lobby.c). */
     [OPT_GAME_PASSWORD] = {"game_password", KIND_TEXT, "", NULL,
         "game_password = the password that a human manager types to join a network game that you host. Empty: no password."},
+    /* Read once a game day (manager_ability.c). */
+    [OPT_MANAGER_ABILITY_GROWS] = {"manager_ability_grows", KIND_SWITCH, "off", NULL,
+        "manager_ability_grows = on lets the ability of a human manager follow his reputation, one point a game day, up to 200. off keeps the ability the game drew for him at the start, as in the original."},
 };
 
 #define TEXT_MAX 1100
