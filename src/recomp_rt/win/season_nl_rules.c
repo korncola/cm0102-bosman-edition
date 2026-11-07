@@ -31,11 +31,14 @@ const SeasonNlEdition *season_nl_after(const SeasonNlEdition *e)
 }
 
 /* The overall ranking (season_nl.h). */
+/* A new nation (pos 0) ranks after the nations of its league. */
+static int place_key(const SeasonNlRow *r) { return r->pos > 0 ? r->pos : 1000; }
+
 static int rank_cmp(const void *a, const void *b)
 {
     const SeasonNlRow *x = a, *y = b;
     if (x->league != y->league) return x->league - y->league;
-    if (x->pos != y->pos) return x->pos - y->pos;
+    if (x->pos != y->pos) return place_key(x) - place_key(y);
     if (x->points != y->points) return y->points - x->points;
     if (x->gd != y->gd) return y->gd - x->gd;
     if (x->gf != y->gf) return y->gf - x->gf;
@@ -70,7 +73,7 @@ int season_nl_next_leagues(const SeasonNlEdition *from, const SeasonNlEdition *t
         const SeasonNlRow *r = &rows[i];
         int l = r->league;
         moved[i] = l;
-        if (l < 0 || l >= from->leagues) continue;
+        if (l < 0 || l >= from->leagues || r->pos <= 0) continue;     /* a new nation has no place to move by */
         if (from->up_winners && l > 0 && r->pos == 1) moved[i] = l - 1;
         else if (l + 1 < from->leagues && from->down_last[l] && r->pos > 1 &&
                  r->pos == group_size(rows, n, l, r->group)) moved[i] = l + 1;
@@ -97,20 +100,35 @@ int season_nl_next_leagues(const SeasonNlEdition *from, const SeasonNlEdition *t
     for (int l = 0; l <= NL_MAX_LEAGUES; l++)
         for (int pass = 0; pass < 3; pass++)
             for (int i = 0; i < n; i++) {
+                if (rows[i].pos <= 0) continue;
                 if (moved[i] != l && !(l == NL_MAX_LEAGUES && (moved[i] < 0 || moved[i] >= NL_MAX_LEAGUES)))
                     continue;
                 /* pass 0: came down, 1: stays, 2: came up */
                 int kind = rows[i].league < moved[i] ? 0 : rows[i].league == moved[i] ? 1 : 2;
                 if (kind == pass) order[k++] = i;
             }
-    int league = 0, used = 0;
+    int league = 0, used = 0, size[NL_MAX_LEAGUES] = {0};
     for (int j = 0; j < k; j++) {
         while (league < to->leagues - 1 && used >= to->size[league]) {
             league++;
             used = 0;
         }
         next[order[j]] = league;
+        size[league]++;
         used++;
+    }
+
+    /* 3. A nation new to the competition (pos 0, open item 183) takes the room that the nations of the edition
+     * before leave: in the league of its row if that league has room, else in the first league below with room,
+     * else in the last league. So it moves no nation of the edition before, and no league grows past its size
+     * while a league below has room (a league of 17 in four groups gave a group of five). */
+    for (int i = 0; i < n; i++) {
+        if (rows[i].pos > 0) continue;
+        int l = rows[i].league < 0 ? 0 : rows[i].league;
+        if (l > to->leagues - 1) l = to->leagues - 1;
+        while (l < to->leagues - 1 && size[l] >= to->size[l]) l++;
+        next[i] = l;
+        size[l]++;
     }
     return n;
 }

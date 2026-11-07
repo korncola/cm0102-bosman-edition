@@ -270,6 +270,54 @@ static void check_concacaf(void)
               size[1], size[2]);
         CHECK(p == 0 ? up == 8 && down == 0 : up == 8 && down == 8, "CONCACAF %s: %d up, %d down", pairs[p][1], up, down);
     }
+    /* Open item 183: a nation new to the competition (group place 0, its league from the table) joins the leagues
+     * through the same fill. The 2026-27 rules repeat after the table: leagues of 16, 16 and 9 in groups of 4, 4
+     * and 3, so no group holds more than four. Two new nations of real leagues A and B (Martinique and Guadeloupe,
+     * which a 0.6 save of 2035 holds with no continent until the load gives them one) find A and B full and play
+     * in C; the nations of the edition before keep their leagues. Before the fix the game put them into A and B
+     * on top (17 in four groups: a group of five, whose rounds after the sixth had no date). */
+    {
+        const SeasonNlEdition *e = edition("CONCACAF", "2026-27");
+        if (!e) {
+            CHECK(0, "no CONCACAF 2026-27");
+        } else {
+            SeasonNlRow rows[NL_MAX_NATIONS], ref[NL_MAX_NATIONS];
+            int next[NL_MAX_NATIONS], keep[NL_MAX_NATIONS], size[NL_MAX_LEAGUES] = {0};
+            int n = concacaf_rows(e, rows);
+            memcpy(ref, rows, sizeof ref);
+            CHECK(season_nl_next_leagues(e, e, ref, n, keep) == n, "2026-27 repeat: the leagues are made");
+            rows[n++] = (SeasonNlRow){900, 0, 0, 0, 0, 0, 0, 0, 0};
+            rows[n++] = (SeasonNlRow){901, 1, 0, 0, 0, 0, 0, 0, 0};
+            CHECK(season_nl_next_leagues(e, e, rows, n, next) == n, "2026-27 repeat with two new nations: made");
+            int same = 1;
+            for (int i = 0; i < n; i++) {
+                size[next[i]]++;
+                if (rows[i].nation == 900 || rows[i].nation == 901)
+                    CHECK(next[i] == 2, "new nation %d plays in league %c, not C", rows[i].nation, 'A' + next[i]);
+                for (int j = 0; j < n - 2; j++)
+                    if (ref[j].nation == rows[i].nation && keep[j] != next[i]) same = 0;
+            }
+            CHECK(same, "the new nations move no nation of the edition before");
+            CHECK(size[0] == 16 && size[1] == 16 && size[2] == 11, "sizes with two new nations %d %d %d", size[0],
+                  size[1], size[2]);
+            for (int l = 0; l < e->leagues; l++)
+                CHECK(size[l] <= 4 * e->groups[l], "league %c: %d nations in %d groups (a group of five)", 'A' + l,
+                      size[l], e->groups[l]);
+            /* A short competition: the room that the nations of the edition before leave is in B (no C nations,
+             * three of B gone). Both new nations take it, the one of A because A is full. */
+            n = concacaf_rows(e, rows) - 12;
+            rows[n++] = (SeasonNlRow){900, 0, 0, 0, 0, 0, 0, 0, 0};
+            rows[n++] = (SeasonNlRow){901, 1, 0, 0, 0, 0, 0, 0, 0};
+            memset(size, 0, sizeof size);
+            CHECK(season_nl_next_leagues(e, e, rows, n, next) == n, "new nations in a short competition: made");
+            for (int i = 0; i < n; i++) {
+                size[next[i]]++;
+                if (rows[i].nation >= 900) CHECK(next[i] == 1, "new nation %d plays in %c, not B", rows[i].nation,
+                                                 'A' + next[i]);
+            }
+            CHECK(size[0] == 16 && size[1] == 15 && size[2] == 0, "short sizes %d %d %d", size[0], size[1], size[2]);
+        }
+    }
     CHECK(season_nl_gold_cup_count == 12 && season_nl_gold_cups[0].year == 2005 && season_nl_gold_cups[0].teams == 12,
           "the Gold Cups from 2005 (12 teams)");
     for (int i = 0; i < season_nl_gold_cup_count; i++)
