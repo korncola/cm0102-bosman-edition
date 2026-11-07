@@ -106,7 +106,9 @@ import time
 # Positions for classic mode, 800x600. A "wait <state>" step holds the later steps until the game
 # reaches the state (src/recomp_rt/win/waits.c). The times count in ms from the window opening, and
 # after a wait from the moment the state was reached. A wait that does not end in 120 s ends the run
-# with code 3 and names the state the game was in.
+# with code 3 and names the state the game was in. Each click that opens a screen or a popup has a
+# wait for it before the next click (items 154 and 185), so a slow machine cannot put a click before the
+# screen that takes it: the manager's menu (popup) and Please Confirm of the holiday (0x6b2d80).
 STEPS = [
     "1000 click 400 300",                   # the intro: a click ends the logos and their sounds (INTRO_CLICK)
     "wait screen:0x823950",                 # the settings screen of a first start (SETTINGS_WAIT)
@@ -137,10 +139,12 @@ STEPS = [
     "wait first-news",
     "2000 dump {d}/4-news.bmp",
     "2500 click 45 165",                    # manager menu (the manager's name)
-    "4500 click 150 427 | 199 474",  # Go on Holiday (popup items keep their size in widescreen and HD)
-    "7000 click 705 572",                   # Please Confirm: Yes
-    "37000 dump {d}/5-holiday.bmp",
-    "38000 quit",
+    "wait popup",
+    "1000 click 150 427 | 199 474",  # Go on Holiday (popup items keep their size in widescreen and HD)
+    "wait screen:0x6b2d80",                 # Please Confirm
+    "1000 click 705 572",                   # Please Confirm: Yes
+    "31000 dump {d}/5-holiday.bmp",
+    "32000 quit",
 ]
 DATE_BOX = (0, 15, 90, 55)  # x0, y0, x1, y1 of the day and date in the left bar
 SCREENS = [("1-settings", 0.20), ("2-setup", 0.0), ("3-leagues", 0.0), ("4-news", 0.0), ("5-holiday", None)]
@@ -349,8 +353,10 @@ MATCH_STEPS = [
     "1000 click 705 573",                   # Proceed to the match? Yes
     "wait match",
     "1000 click 45 254",                    # Commentary Speed
-    "2500 click 120 255 | 192 344",  # Very Fast (widescreen and HD; the classic position is not checked)
-    "4000 click 45 120",                    # Kick Off Match
+    "wait popup",
+    "1000 click 120 255 | 192 344",  # Very Fast (widescreen and HD; the classic position is not checked)
+    "wait label:Kick Off",                  # the popup is closed: the left bar shows its buttons again
+    "1000 click 45 120",                    # Kick Off Match
     "wait label:Re-start 600000",           # half time
     "1000 click 45 120",                    # Re-start Match
     "wait label:Continue 600000",           # full time: Continue Game on the match screen
@@ -614,14 +620,25 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
                    RECOMP_FIXED_CLOCK="1", RECOMP_SAVE_AFTER_DAYS=str(days), RECOMP_IDLE_COUNT="1",
                    RECOMP_SCRIPT="; ".join(scaled_steps(mode, shots, steps_of_run)), **extra_env)
         start = time.time()
+        args = [run_program, "--game", game, "-seed", "1"]
+        proc = subprocess.Popen(args, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                errors="replace")
         try:
-            r = subprocess.run([run_program, "--game", game, "-seed", "1"], env=env, capture_output=True, text=True,
-                               errors="replace", timeout=timeout)
-        except subprocess.TimeoutExpired as e:
+            try:
+                out, err = proc.communicate(timeout=min(SAMPLE_AFTER, timeout))
+            except subprocess.TimeoutExpired:
+                if timeout <= SAMPLE_AFTER:
+                    raise
+                sample_run(name, proc.pid, run)
+                out, err = proc.communicate(timeout=timeout - SAMPLE_AFTER)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            out, err = proc.communicate()
             if KEEP_FAILED:
-                with open(os.path.join(run, "stderr.txt"), "wb") as f:
-                    f.write(e.stderr or b"")
-            raise
+                with open(os.path.join(run, "stderr.txt"), "w", encoding="latin-1", errors="replace") as f:
+                    f.write(err or "")
+            raise subprocess.TimeoutExpired(args, timeout, out, err)
+        r = subprocess.CompletedProcess(args, proc.returncode, out, err)
         if KEEP_FAILED:
             with open(os.path.join(run, "stderr.txt"), "w", encoding="latin-1", errors="replace") as f:
                 f.write(r.stderr)
@@ -650,16 +667,56 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
                 if name == "normal" and not sleeps:
                     print(f"FAIL  {name}: the idle sleep never ran (idle sleeps {sleeps})")
                     failed_runs += 1
-            if failed_runs:
-                print("FAIL")
-                return 1
+        # A run with no save fails the check, but the runs that saved are still compared (item 185): one run with no
+        # save must not hide a difference in the others.
+        first = runs[0][0]
+        if first not in saves:
+            print(f"FAIL  {first} has no save, so no run is compared")
+            result["failed"] = True
+            print("FAIL")
+            return 1
+        saved_runs, dropped = [runs[0]], 0
+        for name, options in runs[1:]:
+            base = against.get(name) or first
+            if name not in saves:
+                continue
+            if base not in saves:
+                print(f"FAIL  {name}: not compared, its reference {base} has no save")
+                dropped += 1
+                continue
+            saved_runs.append((name, options))
         season_want = None
         if CUSTOM_DB:
             season_want = season_of_save(save) if save else expected_season(CUSTOM_DB)
-        failed = compare_saves(runs, saves, against, allowed, required, rows, season_want)
+        failed = failed_runs + dropped
+        if len(saved_runs) > 1 or not failed:          # with every other run lost, there is nothing to compare
+            failed += compare_saves(saved_runs, saves, against, allowed, required, rows, season_want)
         result["failed"] = bool(failed)
     print("PASS" if not failed else "FAIL")
     return 1 if failed else 0
+
+
+# A run of a check that still plays after SAMPLE_AFTER s gets a stack sample (item 185). The runs save after 60 to
+# 100 s, under load in up to about 200 s. In round Z the silent run of two checks played its holiday days and then
+# ran for 390 s with no save and no idle sleep (a busy loop that still pumps the script) until its quit step. The
+# sample names the loop: the function names of the recompiled game (f_00xxxxxx, o_00xxxxxx) give the address of the
+# original's code. macOS only (the tool "sample"); elsewhere the line says so.
+SAMPLE_AFTER = 300
+
+
+def sample_run(name, pid, folder):
+    """Prints the heaviest stack of the game pid to the check log, and keeps the whole sample in folder."""
+    if not shutil.which("sample"):
+        print(f"slow  {name}: still playing after {SAMPLE_AFTER} s (no sample tool here)", flush=True)
+        return
+    path = os.path.join(folder, "sample.txt")
+    subprocess.run(["sample", str(pid), "5", "-file", path], capture_output=True)
+    lines = open(path, errors="replace").read().splitlines() if os.path.exists(path) else []
+    graph = [ln.rstrip() for ln in lines[next((i for i, ln in enumerate(lines) if ln.startswith("Call graph")), 0):]
+             if "Thread_" in ln or "o_00" in ln or "f_00" in ln][:60]
+    print(f"slow  {name}: still playing after {SAMPLE_AFTER} s, its stack (5 s sample, {path}):", flush=True)
+    for ln in graph:
+        print(f"      {ln}")
 
 
 def compare_saves(runs, saves, against, allowed=(), required=None, rows=None, season_want=None):
@@ -731,7 +788,8 @@ def compare_saves(runs, saves, against, allowed=(), required=None, rows=None, se
 # difference between them comes from the option alone (0.5.0 slice 5).
 SEARCH_STEPS = [
     "2500 click 45 165",                    # the manager's menu
-    "4000 click 190 302",                   # Player & Staff Search
+    "wait popup",
+    "1000 click 190 302",                   # Player & Staff Search
     "wait screen:0x808690",
     "3000 click 359 573",                   # Cancel
     "wait screen:0x7881e0",
@@ -909,6 +967,23 @@ def host_rows_ok(base, path):
 # yeovil.sav (a copy of Max's save, 20.8.02) opens on the squad screen: the load ends when Continue Game shows.
 LOAD_END = {"yeovil.sav": "wait continue"}
 
+# The Load Game screen (build 0x58f7c0, RECOMP_SCREEN_LOG=1).
+LOAD_SCREEN_WAIT = "wait screen:0x58f7c0"
+
+
+def load_steps(fixtures):
+    """fixtures.LOAD_STEPS with a wait before each click on a new screen (item 185): the settings screen of a first
+    start (SETTINGS_WAIT) and the Load Game screen. The list in fixtures.py stays as it is: other tests leave out its
+    settings clicks for a user folder that has game.cfg, where no settings screen shows. The checks play the intro
+    without a click (without_intro_click), 19 s with sound, so the settings wait has 600 s: on a slow machine
+    (slow_machine_run.py, a game stopped 9 tenths of the time) the intro takes more than the 120 s of a wait."""
+    steps = list(fixtures.LOAD_STEPS)
+    steps.insert(steps.index("8200 click 522 272"), SETTINGS_WAIT + " 600000")
+    at = steps.index("1000 click 277 242") + 1      # Load Game
+    steps[at:at + 2] = [LOAD_SCREEN_WAIT, "1000 click 445 257", "2000 click 705 573"]
+    assert steps[at + 1:at + 4] == ["1000 click 445 257", "2000 click 705 573", "wait first-news"], steps
+    return steps
+
 # The fixes of faults of the original that act in the 14 days of a saved test game, by decision (0.6.2 slice 11): its
 # run original-faults-keep keeps only the other groups (RECOMP_ORIGINAL_FAULTS=keep:<groups>, original_faults.c).
 # yeovil.sav (20.8.02) passes 1 September 2002: the month check opens a vacancy for each national team with no
@@ -952,13 +1027,13 @@ def same_save(program, game, mode, days, save_name=None, search=False, options=F
     holiday = STEPS[STEPS.index("wait first-news") + 1:]
     holiday = [s for s in holiday if "dump" not in s and "quit" not in s]
     if search:
-        steps = without_intro_click(fixtures.LOAD_STEPS) + SEARCH_STEPS + holiday + ["400000 quit"]
+        steps = without_intro_click(load_steps(fixtures)) + SEARCH_STEPS + holiday + ["400000 quit"]
         return compare_runs(program, game, mode, SEARCH_RUNS, steps, days, save)
     if options:
-        groups = options_runs(without_intro_click(fixtures.LOAD_STEPS), holiday + ["400000 quit"])
+        groups = options_runs(without_intro_click(load_steps(fixtures)), holiday + ["400000 quit"])
         codes = [compare_runs(program, game, mode, runs, runs[0][1]["_steps"], days, save) for runs in groups]
         return max(codes)
-    load = list(fixtures.LOAD_STEPS)
+    load = load_steps(fixtures)
     if save_name in LOAD_END:
         load[load.index("wait first-news")] = LOAD_END[save_name]
     steps = without_intro_click(load) + holiday + ["400000 quit"]
@@ -969,8 +1044,8 @@ def same_save(program, game, mode, days, save_name=None, search=False, options=F
 
 
 # --speed fastest: the Fastest item (#31, commentary.c), one row above Very Fast.
-SPEED_CLICKS = {"very-fast": "2500 click 120 255 | 192 344",
-                "fastest": "2500 click 120 242 | 192 323"}
+SPEED_CLICKS = {"very-fast": "1000 click 120 255 | 192 344",
+                "fastest": "1000 click 120 242 | 192 323"}
 
 
 def match(program, game, days, speed="very-fast", sleep_danger=False):
@@ -982,8 +1057,8 @@ def match(program, game, days, speed="very-fast", sleep_danger=False):
         return 1
     # No click ends the intro (without_intro_click): with the click, the runs on a busy machine played
     # different matches.
-    steps = without_intro_click(fixtures.LOAD_STEPS) + [
-        SPEED_CLICKS[speed] if s.startswith("2500 click 120 255") else s for s in MATCH_STEPS]
+    steps = without_intro_click(load_steps(fixtures)) + [
+        SPEED_CLICKS[speed] if s.startswith("1000 click 120 255") else s for s in MATCH_STEPS]
     runs = MATCH_RUNS + ([SLEEP_DANGER_RUN] if sleep_danger else [])
     return compare_runs(program, game, "widescreen", runs, steps, days, save, timeout=900)
 

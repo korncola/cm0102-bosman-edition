@@ -17,12 +17,14 @@ only slower. The defaults: --stop 600 --run 150 for the new game, --stop 1000 --
 a new day Continue Game comes 0.1 to 0.6 s after the date at the milder throttle, too close to the 500 ms).
 
 Each run must reach the end of its script:
-    newgame  smoke_run.STEPS up to the first news screen, with the manager named Test Smoke (no typed
-             letter lost; the left bar of the news screen names the manager)
-    match    smoke_run.MATCH_STEPS after the load of prematch.sav up to the match screen. The five Spaces
-             of the days 16.7.01 to 20.7.01 come before it. The test stops there: under this throttle the
-             match itself can play another way (one run of three on 6 November met the tactics screen
-             0x899ea0 in the second half), and that is not a lost key press.
+    newgame  smoke_run.STEPS up to the holiday, with the manager named Test Smoke (no typed letter lost;
+             the left bar of the news screen names the manager) and a save one game day later: the
+             holiday clicks took (item 185)
+    match    smoke_run.MATCH_STEPS after the load of prematch.sav up to the kick-off: the Pause button
+             shows. The five Spaces of the days 16.7.01 to 20.7.01 and the Commentary Speed popup come
+             before it. The test stops there: under this throttle the match itself can play another way
+             (one run of three on 6 November met the tactics screen 0x899ea0 in the second half), and that
+             is not a lost key press.
 A run that ends with code 3 fails, and the test prints the line of the wait that timed out. The stderr of
 each run is in --out (RECOMP_SCREEN_LOG=1 prints each change of the screen state).
 """
@@ -44,13 +46,16 @@ import fixtures  # noqa: E402
 
 
 def new_game_steps():
-    end = smoke_run.STEPS.index("wait first-news")
-    return smoke_run.STEPS[:end + 1] + ["1000 quit"]
+    """smoke_run.STEPS to the holiday: the run saves one game day after it (RECOMP_SAVE_AFTER_DAYS=1) and ends."""
+    return [s for s in smoke_run.STEPS if " dump " not in s and not s.endswith(" quit")] + ["300000 quit"]
 
 
 def match_steps():
-    end = smoke_run.MATCH_STEPS.index("wait match")
-    return smoke_run.without_intro_click(fixtures.LOAD_STEPS) + smoke_run.MATCH_STEPS[:end + 1] + ["1000 quit"]
+    """The load of the match check and its steps to the kick-off, then a wait for the Pause button: the kick-off
+    took."""
+    end = next(i for i, s in enumerate(smoke_run.MATCH_STEPS) if s.endswith("click 45 120"))
+    return smoke_run.without_intro_click(smoke_run.load_steps(fixtures)) + smoke_run.MATCH_STEPS[:end + 1] + \
+        ["wait label:Pause", "1000 quit"]
 
 
 def throttle(proc, run_ms, stop_ms, seed, done):
@@ -86,6 +91,8 @@ def play(program, game, part, index, run_ms, stop_ms, out):
         env = dict(os.environ, HOME=home, SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy", RECOMP_NO_BOX="1",
                    RECOMP_USER_DIR=user, RECOMP_FIXED_CLOCK="1", RECOMP_IDLE_COUNT="1", RECOMP_SCREEN_LOG="1",
                    RECOMP_SCRIPT="; ".join(smoke_run.scaled_steps(mode, shots, steps)))
+        if part == "newgame":
+            env["RECOMP_SAVE_AFTER_DAYS"] = "1"
         log = os.path.join(out, f"{part}-{index}.txt")
         start = time.time()
         with open(log, "w") as err:
@@ -104,8 +111,11 @@ def play(program, game, part, index, run_ms, stop_ms, out):
         took = time.time() - start
         text = open(log, encoding="latin-1").read()
         named = "|Test Smoke|" in text
-        ok = code == 0 and ("reached match" in text if part == "match" else "reached first-news" in text and named)
+        saved = os.path.exists(os.path.join(user, smoke_run.SAVE_NAME))
+        ok = code == 0 and ("reached label:Pause" in text if part == "match" else saved and named)
         why = next((ln for ln in text.splitlines() if "timed out" in ln), f"code {code}")
+        if code == 0 and part == "newgame" and not saved:
+            why = "no save: the holiday did not start"
         if code == 0 and part == "newgame" and not named:
             names = re.findall(r"\|Continue Game\|([^|]*)\|", text)
             why = f"the manager is {names[-1] if names else 'not named'}, not Test Smoke"
