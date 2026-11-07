@@ -67,6 +67,9 @@ static const OptionDef defs[OPT_COUNT] = {
     /* 0.7.0 slice 6 (Q38): the Network tab of the Options box sets it; the join check reads it (net_lobby.c). */
     [OPT_GAME_PASSWORD] = {"game_password", KIND_TEXT, "", NULL,
         "game_password = the password that a human manager types to join a network game that you host. Empty: no password."},
+    /* Issue 107: read at each check of a contract (protected_period.c). */
+    [OPT_UNPROTECTED_CONTRACTS] = {"unprotected_contracts", KIND_SWITCH, "on", NULL,
+        "unprotected_contracts = off keeps every contract protected, so that no player can leave in a transfer window three years (two from 28) after he signed. on is the rule of the original."},
 };
 
 #define TEXT_MAX 1100
