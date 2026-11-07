@@ -83,23 +83,25 @@ match_man_score_player_for_role 0x6e2f20 tests bit 1, the goalkeeper, first (0x6
 The new officials (officials_manager_add_random_officials 0x79c5c0). OfficialsManager::set_up_officials 0x79bf60 tops
 up each nation's officials with it (0x79c2d5, 0x79c328) when a game starts: in a 2001 base game the table grows from
 664 to 1246 officials. It grows the table (0x79c603) and fills each new record (loop 0x79c6aa..0x79c772, esi the
-record + 8): names, nation, birth date and ratings, from draws. It does not set the id +0 or the bytes +0x10..+0x15,
-so they hold what the heap block held before. Then it sorts the table (0x79c79b) with
+record + 8): names, nation, the day and year of the birth date and ratings, from draws. It does not set the id +0,
+the birth date's leap year flag +0x10 (Date::Date 0x549ef0 sets it, at +4 of the date) or the word +0x14, so they
+hold what the heap block held before. Then it sorts the table (0x79c79b) with
 officials_manager_compare_nation_then_quality_asc 0x79d480: by nation, by quality, and for equal quality by the id
 (0x79d4c2). So new officials of one nation with equal quality took their order from heap bytes, and set_up_officials
 then gave each official its place as its id (0x79c381). In a 2001 base game official 468 was another person with
 each Setup Game screen (born 1966 or 1960, current ability 59 or 72), and on 15 June 2002 MATCH_OFFICIAL::init
 0x6e9470 compared his ability with draws (0x6e94b3) and the games went apart. Here each new record is 0 before the
 loop fills it, and its id is its place in the table (0x79c6aa), as set_up_officials later gives every official.
+After the loop's last fill the leap year flag follows the year by the rule of Date::Date (0x79c76a).
 
-The missed training records (AWOL::miss_training 0x41a360). It builds the record (13 bytes) on its stack at
-[esp + 0x18] (at 0x41a56b, after the push at 0x41a4c2): the staff id +0 (0x41a57b), the date +4 (Date::Date 0x54a110
-at 0x41a381, 0x417c10 at 0x41a57f, 8 bytes) and a flag byte +0xc that nothing sets. It adds the 13 bytes to the
-missed training list (0x68d0d0 at 0x41a58e), and no other code adds to the list or writes the flag. A week later
-AWOL::daily_update 0x4190d0 tests the flag (0x4191d2): set, the player's own professionalism decides whether he
-misses training again (0x4191fc..); clear, his squad mates count as well (0x4192c1..). In a 2001 base game the flag
-differed with the two Setup Game screens on day 268
-(with the fix of the officials). Here the flag is 0 at 0x41a56b, as fresh memory is.
+The missed training records (AWOL::miss_training 0x41a360). It builds the record (13 bytes) on its stack at [esp + 0x18]
+(at 0x41a56b, after the pushes at 0x41a4c2 and 0x41a4c3): the staff id +0 (0x41a57b), the date +4 (Date::Date 0x54a110
+at 0x41a381, 0x417c10 at 0x41a57f, 8 bytes) and a flag byte +0xc that nothing sets. It adds the 13 bytes to the missed
+training list (0x68d0d0 at 0x41a58e). The only other code that adds to the list is AWOL::load (0x418892, the 13 bytes of
+a saved game), and no code writes the flag. A week later AWOL::daily_update 0x4190d0 tests the flag (0x4191d2): set, the
+player's own professionalism decides whether he misses training again (0x4191fc..); clear, his squad mates count as well
+(0x4192c1..). In a 2001 base game the flag differed with the two Setup Game screens on day 268 (with the fix of the
+officials). Here the flag is 0 at 0x41a56b, as fresh memory is.
 """
 
 # address: (the instruction in the original, C code)
@@ -118,5 +120,8 @@ INSNS = {
     0x79C6AA: ("push edi",
                "if (rt_layout_fix(6u)) { uint32_t r_ = esi - 8u; memset(M + r_, 0, 0x2bu); "
                "W32(r_, (r_ - R32(0xae23e8u)) / 0x2bu); } t0 = edi; esp -= 4; W32(esp, t0);"),
+    0x79C76A: ("mov word ptr [esi + 4], ax",
+               "W16(esi + 4u, (uint16_t)eax); if (rt_layout_fix(6u)) { uint32_t y_ = R16(esi + 6u); "
+               "W32(esi + 8u, y_ % 4u == 0u && (y_ % 100u != 0u || y_ % 400u == 0u) ? 1u : 0u); }"),
     0x41A56B: ("mov eax, dword ptr [esi]", "if (rt_layout_fix(7u)) W8(esp + 0x24u, 0u); eax = R32(esi);"),
 }

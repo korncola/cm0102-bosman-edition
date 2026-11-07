@@ -28,8 +28,9 @@ when one is not in its INSNS:
 - SimulatedStats: the push depth at 0x84c266 is 0 (0x84c271 writes the fixture's +0xc at [esp + 0x4c]), and
   VIRTUAL_STAFF::fill_fixture_squads 0x90d2f0, which gets the fixture, writes no +0x38 or +0x39 through a register.
 - officials_manager_add_random_officials 0x79c5c0 fills each new record in the loop 0x79c6aa..0x79c772 (esi the record
-  + 8, 0x79c6a7) and writes no byte of the id +0..+3 there, and the sort it calls (0x79c78c) breaks ties by the id
-  (0x79d4c2). The patch at 0x79c6aa must clear the record and set the id.
+  + 8, 0x79c6a7) and writes no byte of the id +0..+3 or the birth date's leap year flag +0x10..+0x13 there, and the
+  sort it calls (0x79c78c) breaks ties by the id (0x79d4c2). The patch at 0x79c6aa must clear the record and set the
+  id, and the patch at 0x79c76a must set the flag from the year as Date::Date 0x549ef0 does.
 - AWOL::miss_training 0x41a360 writes the stack only at 0x41a38a, 0x41a3e6 and 0x41a57b (the record's staff id), adds a
   13-byte record from [esp + 0x18] (0x41a587, 0x41a58b), and Date::Date 0x54a110 and 0x417c10 write 8 bytes from the
   date +4. So nothing writes the flag +0xc. The patch at 0x41a56b must clear it.
@@ -56,7 +57,7 @@ WRITES = ("mov", "and", "or", "xor", "add", "sub", "inc", "dec", "adc", "sbb", "
 SIZES = {"byte": 1, "word": 2, "dword": 4}
 FILL, FILL_END = 0x90D2F0, 0x90D4EC   # VIRTUAL_STAFF::fill_fixture_squads, which gets the fixture (0x84c2a9, 0x84c2b7)
 GROUP_OF = {0x6E19B9: "captain", 0x6EADA0: "players", 0x5CE311: "daily", 0x84C266: "stats", 0x8BF420: "loans",
-            0x76C939: "squads", 0x79C6AA: "officials", 0x41A56B: "training"}
+            0x76C939: "squads", 0x79C6AA: "officials", 0x79C76A: "officials", 0x41A56B: "training"}
 
 
 def disassemble(img):
@@ -131,11 +132,13 @@ def main():
                                + SIZES[w.group(1)])) & FLAGS for d in (0, 4, 8, 12)):
             fails.append(f"{a:#x}: the original may write the simulated fixture's flags ({m} {o}); read the case again")
     if at.get(0x84C271) != ("mov", "dword ptr [esp + 0x4c], eax"):
-        fails.append("0x84c266: the push depth is not 0 there (the fixture's +0xc at [esp + 0x4c]); read the case again")
+        fails.append("0x84c266: the push depth is not 0 there (the fixture's +0xc at [esp + 0x4c]); "
+                     "read the case again")
     for a, m, o in code:
         w = re.match(r"(byte|word|dword) ptr \[(e[a-z]{2}) \+ (0x[0-9a-f]+)\]", o) \
             if FILL <= a < FILL_END and m in WRITES else None
-        if w and w.group(2) != "esp" and set(range(int(w.group(3), 16), int(w.group(3), 16) + SIZES[w.group(1)])) & FLAGS:
+        at_off = int(w.group(3), 16) if w else 0
+        if w and w.group(2) != "esp" and set(range(at_off, at_off + SIZES[w.group(1)])) & FLAGS:
             fails.append(f"{a:#x}: fill_fixture_squads may write the fixture's flags ({m} {o}); read the case again")
     if "memset(M + esp + 0x40u, 0, 0x4fu)" not in layout_reads.INSNS.get(0x84C266, ("", ""))[1]:
         fails.append(f"{STATS:#x}: the simulated fixture's match flags +0x38 stay unset, and no patch clears them")
@@ -170,19 +173,27 @@ def main():
             at.get(0x79D4C2) != ("mov", "eax, dword ptr [edx]") or at.get(0x79D4C4) != ("mov", "ecx, dword ptr [esi]"):
         fails.append("0x79c5c0: not the new official loop and its sort by id; read the case again")
     for a, m, o in code:
-        w = re.match(r"(byte|word|dword) ptr \[esi( [+-] 0x[0-9a-f]+|)\]", o) if 0x79C6AA <= a < 0x79C772 and m in WRITES else None
-        if w and o.startswith(w.group(0)):
-            off = 8 + (int(w.group(2).replace(" ", ""), 16) if w.group(2) else 0)
-            if set(range(off, off + SIZES[w.group(1)])) & set(range(0, 4)):
-                fails.append(f"{a:#x}: the original may set the new official's id ({m} {o}); read the case again")
+        w = re.match(r"(byte|word|dword) ptr \[esi(?: ([+-]) (0x[0-9a-f]+|\d+))?\]", o) \
+            if 0x79C6AA <= a < 0x79C772 and m in WRITES else None
+        if w:
+            off = 8 + (int(w.group(3), 0) * (-1 if w.group(2) == "-" else 1) if w.group(3) else 0)
+            if set(range(off, off + SIZES[w.group(1)])) & (set(range(0, 4)) | set(range(0x10, 0x14))):
+                fails.append(f"{a:#x}: the original may set the new official's id or leap year flag ({m} {o}); "
+                             "read the case again")
+    if at.get(0x79C76A) != ("mov", "word ptr [esi + 4], ax") or at.get(0x79C75D) != ("mov", "word ptr [esi + 6], ax"):
+        fails.append("0x79c5c0: the loop's last fill is not the birth day after the year; read the case again")
+    if "W32(esi + 8u, y_ % 4u == 0u && (y_ % 100u != 0u || y_ % 400u == 0u) ? 1u : 0u)" not in \
+            layout_reads.INSNS.get(0x79C76A, ("", ""))[1]:
+        fails.append("0x79c5c0: a new official's leap year flag does not follow the year of his birth date")
     if "memset(M + r_, 0, 0x2bu); W32(r_, (r_ - R32(0xae23e8u)) / 0x2bu);" not in \
             layout_reads.INSNS.get(0x79C6AA, ("", ""))[1]:
         fails.append("0x79c5c0: a new official's id stays unset, and no patch sets it")
-    esp_writes = {a for a, m, o in code if 0x41A360 <= a < 0x41A62A and m in WRITES and o.startswith(("byte ptr [esp",
-                  "word ptr [esp", "dword ptr [esp"))}
+    esp_writes = {a for a, m, o in code if 0x41A360 <= a < 0x41A62A and m in WRITES
+                  and o.startswith(("byte ptr [esp", "word ptr [esp", "dword ptr [esp"))}
     if esp_writes != {0x41A38A, 0x41A3E6, 0x41A57B} or at.get(0x41A587) != ("lea", "edx, [esp + 0x18]") or \
             at.get(0x41A58B) != ("push", "0xd") or at.get(0x41A57B) != ("mov", "dword ptr [esp + 0x20], eax"):
-        fails.append(f"0x41a360: the missed training record's writes are {sorted(map(hex, esp_writes))}; read the case again")
+        fails.append(f"0x41a360: the missed training record's writes are {sorted(map(hex, esp_writes))}; "
+                     "read the case again")
     for lo, hi in ((0x54A110, 0x54A124), (0x417C10, 0x417C40)):
         for a, m, o in code:
             w = re.match(r"(byte|word|dword) ptr \[(eax|ecx)( \+ (0x[0-9a-f]+|[0-9]))?\]", o) \

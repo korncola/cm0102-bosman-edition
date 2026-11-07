@@ -1,8 +1,9 @@
 /* Reads of the original that depend on where memory lies (0.6.2 open item 138b, tools/recomp/layout_reads.py). The
  * fixes act in every game, the base game too. The test switch RECOMP_LAYOUT_FIXES turns them off: "keep" all of
  * them, "keep:" with a list of groups some of them ("keep:captain,daily"). The groups are captain, players,
- * daily, stats, loans, squads, officials and training. The ctests layout_reads, layout_reads_kept (the match player constructor) and
- * layout_reads_check (the original's code at each site) test them. A save is no test of them: the save holds heap
+ * daily, stats, loans, squads, officials and training. The ctests layout_reads, layout_reads_kept (the match player
+ * constructor), layout_reads_names (the group names) and layout_reads_check (the original's code at each site) test
+ * them. A save is no test of them: the save holds heap
  * addresses, so two layouts give different saves whatever the game decides. */
 #include "win.h"
 #include "../rt.h"
