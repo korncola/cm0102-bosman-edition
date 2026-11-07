@@ -5,7 +5,8 @@
  * (season_intl_table.c) gives the team count of each edition. The base game (season_intl_on() 0) and every
  * edition of 16 (ACN) or 12 (Asian Cup) teams take the original path: each site and wrap here gives the
  * original's value or calls the original then. The Asian Cup of 16 teams (2004 to 2015, 0.6.2 open item 44) has
- * 4 groups of 4 and quarter-finals of the top two (asian16 below).
+ * 4 groups of 4 and quarter-finals of the top two (asian16 below). The 2004 edition of a 2001 game gets its
+ * shape of 16 at its draw (the entrants wrap of 0x40fdf0, 0.6.2 item 180).
  *
  * The classes of the original (sweep-international section 2):
  * - african_nations: ctor 0x401000, vtable 0x967270. The League object is group A, stage[0..2] (+0xc, count
@@ -184,22 +185,29 @@ static int cup24(uint32_t self)
 
 /* 1 when the edition at +0x40 is an Asian Cup of 16 teams in a season game (2004 to 2015; 0.6.2 open item 44:
  * the original's 12 played there). Its shape is the ACN's of 16: group A, stage[0..2] groups B to D, stage[3] the
- * quarter-finals of the top two of each group. A game that starts in 2001/02 keeps the Asian Cup 2004 that it
- * builds at the new game with 12 teams (Q152: a 2001 game with changing rules on equals the base game at the
- * start, as the dates and round flags of season_intl_rules.c start_edition_2001); its later editions have 16. */
+ * quarter-finals of the top two of each group. */
 static int asian16_edition(uint32_t self)
 {
     if (!season_intl_on() || cup_of(self) != ASIAN) return 0;
     const SeasonIntlEdition *e = season_intl_rule_edition(cups[ASIAN].file, year_of(self));
-    if (!e || e->teams != TEAMS16) return 0;
-    const SeasonIntlEdition *first = season_intl_first(cups[ASIAN].file, SEASON_FIRST_YEAR);
-    return !(season_start_year() == SEASON_FIRST_YEAR && first && first->year == year_of(self));
+    return e && e->teams == TEAMS16;
 }
 
-/* An object of that edition with its array of 4 stages (+0x2c, made by the ctor or by rt_intl_cup_stages). A
- * save of 0.6.1 or older holds such an edition in the original's shape of 3 stages (the League load makes the
- * array from the saved count, 0x688e11, 0x688e53): it plays that edition with 12 teams, and the next edition gets
- * the new array at its start_new_season. */
+/* 1 for the edition that the ctor builds at the new game of a game that starts in 2001/02 (the table's first
+ * edition, 2004). The ctor keeps the original's array of 3 stages for it (Q152: a 2001 game with changing rules on
+ * equals the base game at the start, as the dates and round flags of season_intl_rules.c start_edition_2001). The
+ * entrants wrap below gives it the array of 4 at its draw in 2004 (0.6.2 item 180). */
+static int new_game_edition(uint32_t self)
+{
+    const SeasonIntlEdition *first = season_intl_first(cups[ASIAN].file, SEASON_FIRST_YEAR);
+    return season_start_year() == SEASON_FIRST_YEAR && first && first->year == year_of(self);
+}
+
+/* An object of that edition with its array of 4 stages (+0x2c, made by the ctor, by rt_intl_cup_stages at
+ * start_new_season or by the entrants wrap at the draw). Until the draw the 2004 edition of a 2001 game and an
+ * undrawn edition of a save of 0.6.1 or older have the original's 3 (the League load makes the array from the saved
+ * count, 0x688e11, 0x688e53), and the sites give the original's values. An edition drawn with 12 teams (a save of
+ * 0.6.1 or older) keeps 3 stages and plays with 12. */
 static int asian16(uint32_t self)
 {
     return asian16_edition(self) && rd32(g_mem, self + 0x2cu) == KO16 + 1u;
@@ -231,22 +239,25 @@ uint32_t rt_intl_cup_ko(uint32_t self, uint32_t original)
     return cup24(self) >= 0 ? (uint32_t)KO : original;
 }
 
-/* The Asian Cup ctor 0x40e860 (0x40E90A, 0x40E923): the stage array is made there, so the edition decides. */
+/* The Asian Cup ctor 0x40e860 (0x40E90A, 0x40E923): the stage array is made there, so the edition decides. The
+ * edition of the new game of a 2001 game keeps the original's 3 stages (new_game_edition). */
 uint32_t rt_intl_cup_ko_ctor(uint32_t self, uint32_t original)
 {
-    if (asian16_edition(self)) return KO16;
+    if (asian16_edition(self)) return new_game_edition(self) ? original : KO16;
     return rt_intl_cup_ko(self, original);
 }
 
 /* start_new_season (ACN 0x401d20, Asian Cup 0x40f720) keeps the stage array of the ctor. After the step of the
  * year (0x401d80, 0x40f780) an edition of another size gets a new array (0x401d85, 0x40f785). A save keeps
- * the count: the League load makes the array from it (0x688e11, 0x688e53). */
+ * the count: the League load makes the array from it (0x688e11, 0x688e53). The Asian Cup entrants wrap calls it
+ * too. Both callers come before any stage of the edition is built: start_new_season deletes stage[0..+0x30] first
+ * (0x40f75c..0x40f77c) and sets +0x30 to -1 (0x40f787), so the old slots are not copied. */
 void rt_intl_cup_stages(uint32_t self)
 {
     int c = cup_of(self);
     if (!season_intl_on() || c < 0) return;
-    uint32_t want = (c == ASIAN ? rt_intl_cup_ko_ctor(self, (uint32_t)cups[c].ko)
-                                : rt_intl_cup_ko(self, (uint32_t)cups[c].ko)) + 1u,
+    uint32_t want = (c == ASIAN && asian16_edition(self) ? (uint32_t)KO16
+                                                          : rt_intl_cup_ko(self, (uint32_t)cups[c].ko)) + 1u,
              have = rd32(g_mem, self + 0x2cu);
     if (have == want) return;
     uint32_t stages = game_malloc(4u * want);
@@ -256,6 +267,28 @@ void rt_intl_cup_stages(uint32_t self)
     wr32(g_mem, self + 0xcu, stages);
     wr32(g_mem, self + 0x2cu, want);
     if (logging()) fprintf(stderr, "recomp: season intl: %s %d has %u stages\n", cups[c].file, year_of(self), want);
+}
+
+/* Asian Cup entrants and draw 0x40fdf0, thiscall (), called only by update_for_date 0x410170 at 0x410246, when the
+ * draw date comes and +0x45 (drawn) is 0 (0x41023b). The ctor gives the 2004 edition of a 2001 game 3 stages
+ * (new_game_edition) and an undrawn edition of a save of 0.6.1 or older has 3 too. Here, before the original
+ * runs, such an edition of 16 gets its array of 4, so the sites of the entrants and the draw (0x40fdfe, 0x40fe02,
+ * 0x41001c, 0x41009b..0x410102), the group stages (0x410337, 0x410340), the template and the quarter-finals take
+ * the path of 16 (0.6.2 item 180: the 2004 Asian Cup in China had 16 teams, 17 July to 7 August 2004,
+ * https://en.wikipedia.org/wiki/2004_AFC_Asian_Cup). No stage is built yet: the ctor (0x40e91c) and
+ * start_new_season (0x40f787) set +0x30 to -1, and 0x40f8a0 builds groups B and C after the draw (0x410337,
+ * 0x410340) and sets +0x30 (0x40fa5d). An edition with a built stage is left as it is. */
+void o_0040fdf0(void);
+RT_WRAP(0040fdf0, asian_entrants)
+{
+    uint32_t self = cpu.ecx;
+    if (asian16_edition(self) && (int32_t)rd32(g_mem, self + 0x30u) < 0) {
+        Cpu entry = cpu;
+        rt_intl_cup_stages(self);
+        if (rt_unwinding) return;
+        cpu = entry;
+    }
+    o_0040fdf0();
 }
 
 /* ---- The hosts after the second (0.6.2 open items 44 and 46) ---- */

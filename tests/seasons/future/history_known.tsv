@@ -4,7 +4,6 @@ check	competition	year	note
 confederation	2020-21 Finals; 2022-23 UEFA Nations League (start	*	real history: a guest nation or club, or Australia in OFC before 2006
 duplicate	A-League	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	A-League Men	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
-missing	AFC Asian Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 gap	AFC Champions League	*	open items 2 and 19: editions not written
 missing	AFC Champions League	*	open items 1, 2, 19 and 20: editions stop or are not written
 missing	AFC Champions League Elite	*	open items 1, 2, 19 and 20: editions stop or are not written
@@ -88,10 +87,6 @@ missing	OFC Men's Nations Cup	2028	open items 2 and 19: editions not written
 same-final	CONCACAF Gold Cup	2009	real results: the same finalists count only in Tier B (spec, Decisions)
 same-final	CONCACAF Gold Cup	2023	real results: the same finalists count only in Tier B (spec, Decisions)
 entrant-route	*Finalissima	2022	open item 19: no Copa America after 2001 in a 2001 game, so no winner to enter
-entrant-count	AFC Asian Cup	2004	open item 44: the finals of 2004 to 2015 have 12 teams, the table 16
-entrant-count	AFC Asian Cup	2007	open item 44
-entrant-count	AFC Asian Cup	2011	open item 44
-entrant-count	AFC Asian Cup	2015	open item 44
 entrant-host	Africa*Cup of Nations	2002	open item 46: Mali 2002 does not play in a 2001 game (the original row names Egypt; a fix acts at the new game, against Q152: decision for Max)
 entrant-route	Intercontinental Cup	2002	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
 entrant-route	Intercontinental Cup	2003	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
