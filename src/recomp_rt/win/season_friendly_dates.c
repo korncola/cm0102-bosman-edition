@@ -251,8 +251,9 @@ static char busy_why[160];              /* what side_busy found last (for the st
  * national side (senior, B or Under 21, national_side) of the nation of a or b (club +0x53). The old test compared
  * the nation of every club, but a league club has its nation at +0x53 too (VIRTUAL_STAFF top-up reads it at
  * 0x90db33), so every league match of that nation took the day (open item 168). A league match does not stop a
- * national match: the call-up move moves the club's league and cup fixtures (0x7777e0 calls 0x5abb10 at 0x77795c
- * for marks 1 and 2, 0x7778b7..0x7778bd). */
+ * national match: the call-up move moves the league and cup fixtures of a club with more than 2 players called up
+ * (0x7777e0 calls 0x5abb10 at 0x77795c for marks 1 and 2, 0x7778b7..0x7778bd, the count at 0x77793d); with 2 or
+ * fewer away the club plays without them. */
 int season_fifa_fixture_takes_side(uint32_t h, uint32_t w, uint32_t a, uint32_t b)
 {
     if (h == a || h == b || w == a || w == b) return 1;

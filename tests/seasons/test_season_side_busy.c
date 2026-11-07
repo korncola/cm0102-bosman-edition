@@ -1,7 +1,7 @@
 /* Which fixtures take the day of a qualifier (open item 168, season_friendly_dates.c side_busy): the fixture of a
  * side of the qualifier, or of a national side of its nation, takes it. A league match of a club of that nation
  * does not: a league club has its nation at +0x53 too (0x90db33), and the call-up move moves its league fixtures
- * (0x7777e0 at 0x77795c). Before item 168 every club of the nation took the day. ctest season_side_busy. */
+ * when more than 2 of its players are called up (0x7777e0 at 0x77795c, the count at 0x77793d). Before item 168 every club of the nation took the day. ctest season_side_busy. */
 #include "win.h"
 #include "season.h"
 #include "season_uefa_days.h"
@@ -35,7 +35,8 @@ int season_fifa_fixture_takes_side(uint32_t h, uint32_t w, uint32_t a, uint32_t 
 #define NATION_COUNT 0xae2350u
 #define CLUB_SIZE 0x245u
 #define BASE 0x200000u                  /* the club table */
-#define N_CLUBS 10                      /* 0 to 3 league clubs, 4 to 9 national sides of 3 nations */
+#define N_CLUBS 10                      /* 0 to 3 league clubs, 4 to 9 national sides of 3 nations (the last
+                                         * 2 * nations rows, national_side) */
 #define N_NATIONS 3
 
 static int failures;
@@ -58,9 +59,9 @@ int main(void)
     put32(CLUB_COUNT, N_CLUBS);
     put32(NATION_COUNT, N_NATIONS);
     /* Nations 0x500000 (Argentina), 0x500100 (Paraguay), 0x500200 (Brazil). League clubs: 0 and 1 of Argentina,
-     * 2 of Paraguay, 3 of Brazil. National sides: 4 Argentina, 5 Paraguay, 6 Brazil, 7 Argentina Under 21,
+     * 2 of Paraguay, 3 of Argentina (the last league row, before the national sides). National sides: 4 Argentina, 5 Paraguay, 6 Brazil, 7 Argentina Under 21,
      * 8 Paraguay Under 21, 9 Brazil Under 21. */
-    static const uint32_t nation[N_CLUBS] = {0x500000, 0x500000, 0x500100, 0x500200, 0x500000,
+    static const uint32_t nation[N_CLUBS] = {0x500000, 0x500000, 0x500100, 0x500000, 0x500000,
                                              0x500100, 0x500200, 0x500000, 0x500100, 0x500200};
     for (int i = 0; i < N_CLUBS; i++) put32(club(i) + 0x53, nation[i]);
     uint32_t arg = club(4), par = club(5);           /* the qualifier Argentina v Paraguay */
@@ -72,7 +73,7 @@ int main(void)
     check(!season_fifa_fixture_takes_side(club(0), club(1), arg, par),
           "a league match of two Argentine clubs leaves the day free");
     check(!season_fifa_fixture_takes_side(club(3), club(2), arg, par),
-          "a match of a Brazilian club v a Paraguayan club leaves the day free");
+          "the last league row (Argentine) v a Paraguayan club leaves the day free");
     check(!season_fifa_fixture_takes_side(club(6), club(9), arg, par), "Brazil v Brazil Under 21 leaves it free");
     check(!season_fifa_fixture_takes_side(0, club(1), arg, par), "no home club and an Argentine club: free");
 
