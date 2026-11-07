@@ -395,10 +395,11 @@ def cycle_of(years, start):
 # label year)]} (open item 178). The Recopa Sudamericana of a year takes the winners of the Copa Libertadores and
 # the Copa Sudamericana of the year before. Mexican clubs played the Copa Libertadores from 1998 to 2016 ("In
 # 1998, Mexican teams were invited to compete and competed regularly from 2000 until 2016", en.wikipedia.org,
-# Copa Libertadores) and the Copa Sudamericana from 2005 to 2008, so a Mexican club can play the Recopa of 1999 to
-# 2017. Pachuca, winner of the 2006 Copa Sudamericana, played the 2007 Recopa against Internacional
-# (en.wikipedia.org, 2007 Recopa Sudamericana).
-GUESTS = {"recopa": [("Mexico", 1999, 2017)]}
+# Copa Libertadores) and the Copa Sudamericana from 2005 to 2008. The Recopa was not held from 1999 to 2002 and came
+# back in 2003 (en.wikipedia.org, Recopa Sudamericana), so a Mexican club can play the Recopa of 2003 to 2017.
+# Pachuca, winner of the 2006 Copa Sudamericana, played the 2007 Recopa against Internacional (en.wikipedia.org,
+# 2007 Recopa Sudamericana).
+GUESTS = {"recopa": [("Mexico", 2003, 2017)]}
 
 
 def guest(key, nation, year):
