@@ -53,6 +53,7 @@ void season_weekday_date(int y, int m, int d, int wd, int *oy, int *om, int *od)
 void season_intl_shift_more(int days) { (void)days; }
 int season_intl_shift_now(void) { return 0; }
 int season_intl_host_ids(uint32_t key, int year, int ids[6]) { (void)key, (void)year, (void)ids; return 0; }
+int season_intl_confed_june(void) { return 1; }    /* original-faults group confed acts (items 157 to 159) */
 
 /* The original functions that season_intl_cups.c wraps. o_0040fdf0 notes what its sites give. */
 static uint32_t seen_teams, seen_groups, seen_stages, entrants_calls;
