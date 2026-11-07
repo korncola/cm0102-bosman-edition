@@ -34247,6 +34247,11 @@ add	April 2011 SIM	2010	FIFA World Cup	2006		add	Italy		France		Germany		Germany
 add	April 2011 SIM	2010	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa	
 add	April 2011 SIM	2010	European Football Championship	2004		add	Greece		Portugal				Portugal	
 add	April 2011 SIM	2010	European Football Championship	2008		add	Spain		Germany				Austria	
+add	April 2011 SIM	2010	African Cup of Nations	2002		add	Cameroon		Senegal		Nigeria		Mali	
+add	April 2011 SIM	2010	African Cup of Nations	2004		add	Tunisia		Morocco		Nigeria		Tunisia	
+add	April 2011 SIM	2010	African Cup of Nations	2006		add	Egypt		Ivory Coast		Nigeria		Egypt	
+add	April 2011 SIM	2010	African Cup of Nations	2008		add	Egypt		Cameroon		Ghana		Ghana	
+add	April 2011 SIM	2010	African Cup of Nations	2010		add	Egypt		Ghana		Nigeria		Angola	
 add	December 2010 SIM	2010	US Open Cup	2002		add	Columbus Crew	United States	Los Angeles Galaxy	United States				
 add	December 2010 SIM	2010	US Open Cup	2003		add	Chicago Fire	United States	NY/NJ Metrostars	United States				
 add	December 2010 SIM	2010	US Open Cup	2004		add	Kansas City Wizards	United States	Chicago Fire	United States				
@@ -34257,6 +34262,7 @@ add	December 2010 SIM	2010	US Open Cup	2008		add	Washington DC United	United Sta
 add	December 2010 SIM	2010	US Open Cup	2009		add	Seattle Sounders	United States	Washington DC United	United States				
 add	December 2010 SIM	2010	US Open Cup	2010		add	Seattle Sounders	United States	Columbus Crew	United States				
 add	December 2010 SIM	2010	US Open Cup	2001		add	Los Angeles Galaxy	United States	New England Revolution	United States				
+add	February 2011 ODB	2010	African Cup of Nations	2010		add	Egypt		Ghana		Nigeria		Angola	
 add	September 2010 ODB	2010	US Open Cup	2002		add	Columbus Crew	United States	Los Angeles Galaxy	United States				
 add	September 2010 ODB	2010	US Open Cup	2003		add	Chicago Fire	United States	NY/NJ Metrostars	United States				
 add	September 2010 ODB	2010	US Open Cup	2004		add	Kansas City Wizards	United States	Chicago Fire	United States				
@@ -34269,6 +34275,7 @@ add	September 2010 ODB	2010	US Open Cup	2010		add	Seattle Sounders	United States
 add	September 2010 ODB	2010	US Open Cup	2001		add	Los Angeles Galaxy	United States	New England Revolution	United States				
 clear	September 2010 ODB	2010	FIFA World Cup	2007										
 add	September 2010 ODB	2010	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa	
+add	September 2010 ODB	2010	African Cup of Nations	2010		add	Egypt		Ghana		Nigeria		Angola	
 add	March 2012 SIM	2011	US Open Cup	2002		add	Columbus Crew	United States	Los Angeles Galaxy	United States				
 add	March 2012 SIM	2011	US Open Cup	2003		add	Chicago Fire	United States	NY/NJ Metrostars	United States				
 add	March 2012 SIM	2011	US Open Cup	2004		add	Kansas City Wizards	United States	Chicago Fire	United States				
@@ -34286,6 +34293,11 @@ add	March 2012 SIM	2011	FIFA World Cup	2010		add	Spain		Holland		Germany		South 
 add	March 2012 SIM	2011	European Football Championship	2004		add	Greece		Portugal				Portugal	
 add	March 2012 SIM	2011	European Football Championship	2008		add	Spain		Germany				Austria	
 clear	Autumn 2013	2013	French Champions Trophy	2011										
+add	March 2012 SIM	2011	African Cup of Nations	2002		add	Cameroon		Senegal		Nigeria		Mali	
+add	March 2012 SIM	2011	African Cup of Nations	2004		add	Tunisia		Morocco		Nigeria		Tunisia	
+add	March 2012 SIM	2011	African Cup of Nations	2006		add	Egypt		Ivory Coast		Nigeria		Egypt	
+add	March 2012 SIM	2011	African Cup of Nations	2008		add	Egypt		Cameroon		Ghana		Ghana	
+add	March 2012 SIM	2011	African Cup of Nations	2010		add	Egypt		Ghana		Nigeria		Angola	
 clear	Autumn 2013	2013	Croatian First Division	2012										
 add	Autumn 2013	2013	Croatian First Division	2013		differ	GNK Dinamo Zagreb	Croatia	NK Lokomotiva Zagreb	Croatia	HNK Rijeka	Croatia		
 add	Autumn 2013	2013	Croatian First Division	2012		differ	GNK Dinamo Zagreb	Croatia	HNK Hajduk Split	Croatia	NK Koprivnica	Croatia		
@@ -34307,23 +34319,40 @@ add	Autumn 2013	2013	English Southern League Premier Division	2012		differ	Wokin
 clear	Autumn 2013	2013	French Champions Trophy	2012										
 add	Autumn 2013	2013	French Champions Trophy	2011		differ	Olympique de Marseille	France	Lille Olympique SC	France				
 add	Autumn 2013	2013	French Champions Trophy	2012		differ	Olympique Lyonnais	France	Montpellier Hérault SC	France				
+add	Autumn 2013	2013	African Cup of Nations	2013		add	Nigeria		Burkina Faso		Mali		South Africa	
+add	March 2014	2013	African Cup of Nations	2013		add	Nigeria		Burkina Faso		Mali		South Africa	
+add	April 2015	2014	African Cup of Nations	2013		add	Nigeria		Burkina Faso		Mali		South Africa	
+add	October 2014	2014	African Cup of Nations	2013		add	Nigeria		Burkina Faso		Mali		South Africa	
+add	April 2017	2016	African Cup of Nations	2002		add	Cameroon		Senegal		Nigeria		Mali	
+add	October 2016	2016	African Cup of Nations	2002		add	Cameroon		Senegal		Nigeria		Mali	
+add	October 2017	2017	African Cup of Nations	2002		add	Cameroon		Senegal		Nigeria		Mali	
+add	October 2017	2017	African Cup of Nations	2017		add	Cameroon		Egypt		Burkina Faso		Gabon	
+add	March 2020	2019	African Cup of Nations	2019		add	Algeria		Senegal		Nigeria		Egypt	
+add	October 2019	2019	African Cup of Nations	2019		add	Algeria		Senegal		Nigeria		Egypt	
 clear	April 2021	2020	US Open Cup	2019										
 add	April 2021	2020	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
 clear	November 2020	2020	US Open Cup	2019										
 add	November 2020	2020	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
+add	November 2020	2020	African Cup of Nations	2019		add	Algeria		Senegal		Nigeria		Egypt	
 clear	April 2022	2021	US Open Cup	2019										
 add	April 2022	2021	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
+add	April 2022	2021	African Cup of Nations	2021		add	Senegal		Egypt		Cameroon		Cameroon	
 clear	October 2021	2021	US Open Cup	2019										
 add	October 2021	2021	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
+add	October 2021	2021	African Cup of Nations	2021		add	Senegal		Egypt		Cameroon		Cameroon	
 clear	April 2023	2022	US Open Cup	2019										
 add	April 2023	2022	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
+add	April 2023	2022	African Cup of Nations	2021		add	Senegal		Egypt		Cameroon		Cameroon	
 clear	October 2022	2022	US Open Cup	2019										
 add	October 2022	2022	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
+add	October 2022	2022	African Cup of Nations	2021		add	Senegal		Egypt		Cameroon		Cameroon	
 clear	April 2024	2023	US Open Cup	2019										
 add	April 2024	2023	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
 clear	October 2023	2023	US Open Cup	2019										
 add	October 2023	2023	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
 add	October 2023	2023	FIFA World Cup	2022		add	Argentina		France		Croatia		Qatar	
+add	October 2023	2023	African Cup of Nations	2021		add	Senegal		Egypt		Cameroon		Cameroon	
+add	October 2023	2023	African Cup of Nations	2023		add	Ivory Coast		Nigeria		South Africa		Ivory Coast	
 clear	October 2024	2024	US Open Cup	2019										
 add	October 2024	2024	US Open Cup	2019		differ	Atlanta United FC	United States	Minnesota United FC	United States				
 clear	December 2025	2025	US Open Cup	2019										

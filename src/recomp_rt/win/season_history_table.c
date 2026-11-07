@@ -34313,6 +34313,11 @@ static const SeasonHistRow rows_15[] = {
     {"FIFA World Cup", 2010, {"Spain", "Holland", "Germany", "South Africa"}, {"", "", "", ""}, 0, 0},
     {"European Football Championship", 2004, {"Greece", "Portugal", "", "Portugal"}, {"", "", "", ""}, 0, 0},
     {"European Football Championship", 2008, {"Spain", "Germany", "", "Austria"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2002, {"Cameroon", "Senegal", "Nigeria", "Mali"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2004, {"Tunisia", "Morocco", "Nigeria", "Tunisia"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2006, {"Egypt", "Ivory Coast", "Nigeria", "Egypt"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2008, {"Egypt", "Cameroon", "Ghana", "Ghana"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2010, {"Egypt", "Ghana", "Nigeria", "Angola"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_16[] = {
 };
@@ -34329,9 +34334,14 @@ static const SeasonHistRow rows_16[] = {
     {"US Open Cup", 2001, {"Los Angeles Galaxy", "New England Revolution", "", ""}, {"United States", "United States", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_17[] = {
-    {"FIFA World Cup", 2007, 0, 0},
 };
 static const SeasonHistRow rows_17[] = {
+    {"African Cup of Nations", 2010, {"Egypt", "Ghana", "Nigeria", "Angola"}, {"", "", "", ""}, 0, 0},
+};
+static const SeasonHistClear clears_18[] = {
+    {"FIFA World Cup", 2007, 0, 0},
+};
+static const SeasonHistRow rows_18[] = {
     {"US Open Cup", 2002, {"Columbus Crew", "Los Angeles Galaxy", "", ""}, {"United States", "United States", "", ""}, 0, 0},
     {"US Open Cup", 2003, {"Chicago Fire", "NY/NJ Metrostars", "", ""}, {"United States", "United States", "", ""}, 0, 0},
     {"US Open Cup", 2004, {"Kansas City Wizards", "Chicago Fire", "", ""}, {"United States", "United States", "", ""}, 0, 0},
@@ -34343,10 +34353,11 @@ static const SeasonHistRow rows_17[] = {
     {"US Open Cup", 2010, {"Seattle Sounders", "Columbus Crew", "", ""}, {"United States", "United States", "", ""}, 0, 0},
     {"US Open Cup", 2001, {"Los Angeles Galaxy", "New England Revolution", "", ""}, {"United States", "United States", "", ""}, 0, 0},
     {"FIFA World Cup", 2010, {"Spain", "Holland", "Germany", "South Africa"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2010, {"Egypt", "Ghana", "Nigeria", "Angola"}, {"", "", "", ""}, 0, 0},
 };
-static const SeasonHistClear clears_18[] = {
+static const SeasonHistClear clears_19[] = {
 };
-static const SeasonHistRow rows_18[] = {
+static const SeasonHistRow rows_19[] = {
     {"US Open Cup", 2002, {"Columbus Crew", "Los Angeles Galaxy", "", ""}, {"United States", "United States", "", ""}, 0, 0},
     {"US Open Cup", 2003, {"Chicago Fire", "NY/NJ Metrostars", "", ""}, {"United States", "United States", "", ""}, 0, 0},
     {"US Open Cup", 2004, {"Kansas City Wizards", "Chicago Fire", "", ""}, {"United States", "United States", "", ""}, 0, 0},
@@ -34363,8 +34374,13 @@ static const SeasonHistRow rows_18[] = {
     {"FIFA World Cup", 2010, {"Spain", "Holland", "Germany", "South Africa"}, {"", "", "", ""}, 0, 0},
     {"European Football Championship", 2004, {"Greece", "Portugal", "", "Portugal"}, {"", "", "", ""}, 0, 0},
     {"European Football Championship", 2008, {"Spain", "Germany", "", "Austria"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2002, {"Cameroon", "Senegal", "Nigeria", "Mali"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2004, {"Tunisia", "Morocco", "Nigeria", "Tunisia"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2006, {"Egypt", "Ivory Coast", "Nigeria", "Egypt"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2008, {"Egypt", "Cameroon", "Ghana", "Ghana"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2010, {"Egypt", "Ghana", "Nigeria", "Angola"}, {"", "", "", ""}, 0, 0},
 };
-static const SeasonHistClear clears_19[] = {
+static const SeasonHistClear clears_20[] = {
     {"French Champions Trophy", 2011, 0, 0},
     {"Croatian First Division", 2012, 0, 0},
     {"Greek National A Division", 2012, 0, 0},
@@ -34374,7 +34390,7 @@ static const SeasonHistClear clears_19[] = {
     {"English Southern League Premier Division", 2012, 0, 0},
     {"French Champions Trophy", 2012, 0, 0},
 };
-static const SeasonHistRow rows_19[] = {
+static const SeasonHistRow rows_20[] = {
     {"Croatian First Division", 2013, {"GNK Dinamo Zagreb", "NK Lokomotiva Zagreb", "HNK Rijeka", ""}, {"Croatia", "Croatia", "Croatia", ""}, 0, 0},
     {"Croatian First Division", 2012, {"GNK Dinamo Zagreb", "HNK Hajduk Split", "NK Koprivnica", ""}, {"Croatia", "Croatia", "Croatia", ""}, 0, 0},
     {"Greek National A Division", 2012, {"Olympiacos Piraeus", "Panathinaikos AO", "PAOK Salonika", ""}, {"Greece", "Greece", "Greece", ""}, 0, 0},
@@ -34389,61 +34405,48 @@ static const SeasonHistRow rows_19[] = {
     {"English Southern League Premier Division", 2012, {"Woking", "Dartford", "Welling United", ""}, {"England", "England", "England", ""}, 0, 0},
     {"French Champions Trophy", 2011, {"Olympique de Marseille", "Lille Olympique SC", "", ""}, {"France", "France", "", ""}, 0, 0},
     {"French Champions Trophy", 2012, {"Olympique Lyonnais", "Montpellier H\351rault SC", "", ""}, {"France", "France", "", ""}, 0, 0},
-};
-static const SeasonHistClear clears_20[] = {
-    {"US Open Cup", 2019, 0, 0},
-};
-static const SeasonHistRow rows_20[] = {
-    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2013, {"Nigeria", "Burkina Faso", "Mali", "South Africa"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_21[] = {
-    {"US Open Cup", 2019, 0, 0},
 };
 static const SeasonHistRow rows_21[] = {
-    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2013, {"Nigeria", "Burkina Faso", "Mali", "South Africa"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_22[] = {
-    {"US Open Cup", 2019, 0, 0},
 };
 static const SeasonHistRow rows_22[] = {
-    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2013, {"Nigeria", "Burkina Faso", "Mali", "South Africa"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_23[] = {
-    {"US Open Cup", 2019, 0, 0},
 };
 static const SeasonHistRow rows_23[] = {
-    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2013, {"Nigeria", "Burkina Faso", "Mali", "South Africa"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_24[] = {
-    {"US Open Cup", 2019, 0, 0},
 };
 static const SeasonHistRow rows_24[] = {
-    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2002, {"Cameroon", "Senegal", "Nigeria", "Mali"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_25[] = {
-    {"US Open Cup", 2019, 0, 0},
 };
 static const SeasonHistRow rows_25[] = {
-    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2002, {"Cameroon", "Senegal", "Nigeria", "Mali"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_26[] = {
-    {"US Open Cup", 2019, 0, 0},
 };
 static const SeasonHistRow rows_26[] = {
-    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2002, {"Cameroon", "Senegal", "Nigeria", "Mali"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2017, {"Cameroon", "Egypt", "Burkina Faso", "Gabon"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_27[] = {
-    {"US Open Cup", 2019, 0, 0},
 };
 static const SeasonHistRow rows_27[] = {
-    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
-    {"FIFA World Cup", 2022, {"Argentina", "France", "Croatia", "Qatar"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2019, {"Algeria", "Senegal", "Nigeria", "Egypt"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_28[] = {
-    {"US Open Cup", 2019, 0, 0},
 };
 static const SeasonHistRow rows_28[] = {
-    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2019, {"Algeria", "Senegal", "Nigeria", "Egypt"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_29[] = {
     {"US Open Cup", 2019, 0, 0},
@@ -34456,17 +34459,79 @@ static const SeasonHistClear clears_30[] = {
 };
 static const SeasonHistRow rows_30[] = {
     {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2019, {"Algeria", "Senegal", "Nigeria", "Egypt"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_31[] = {
     {"US Open Cup", 2019, 0, 0},
 };
 static const SeasonHistRow rows_31[] = {
     {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2021, {"Senegal", "Egypt", "Cameroon", "Cameroon"}, {"", "", "", ""}, 0, 0},
+};
+static const SeasonHistClear clears_32[] = {
+    {"US Open Cup", 2019, 0, 0},
+};
+static const SeasonHistRow rows_32[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2021, {"Senegal", "Egypt", "Cameroon", "Cameroon"}, {"", "", "", ""}, 0, 0},
+};
+static const SeasonHistClear clears_33[] = {
+    {"US Open Cup", 2019, 0, 0},
+};
+static const SeasonHistRow rows_33[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2021, {"Senegal", "Egypt", "Cameroon", "Cameroon"}, {"", "", "", ""}, 0, 0},
+};
+static const SeasonHistClear clears_34[] = {
+    {"US Open Cup", 2019, 0, 0},
+};
+static const SeasonHistRow rows_34[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"African Cup of Nations", 2021, {"Senegal", "Egypt", "Cameroon", "Cameroon"}, {"", "", "", ""}, 0, 0},
+};
+static const SeasonHistClear clears_35[] = {
+    {"US Open Cup", 2019, 0, 0},
+};
+static const SeasonHistRow rows_35[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+};
+static const SeasonHistClear clears_36[] = {
+    {"US Open Cup", 2019, 0, 0},
+};
+static const SeasonHistRow rows_36[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+    {"FIFA World Cup", 2022, {"Argentina", "France", "Croatia", "Qatar"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2021, {"Senegal", "Egypt", "Cameroon", "Cameroon"}, {"", "", "", ""}, 0, 0},
+    {"African Cup of Nations", 2023, {"Ivory Coast", "Nigeria", "South Africa", "Ivory Coast"}, {"", "", "", ""}, 0, 0},
+};
+static const SeasonHistClear clears_37[] = {
+    {"US Open Cup", 2019, 0, 0},
+};
+static const SeasonHistRow rows_37[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+};
+static const SeasonHistClear clears_38[] = {
+    {"US Open Cup", 2019, 0, 0},
+};
+static const SeasonHistRow rows_38[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+};
+static const SeasonHistClear clears_39[] = {
+    {"US Open Cup", 2019, 0, 0},
+};
+static const SeasonHistRow rows_39[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
+};
+static const SeasonHistClear clears_40[] = {
+    {"US Open Cup", 2019, 0, 0},
+};
+static const SeasonHistRow rows_40[] = {
+    {"US Open Cup", 2019, {"Atlanta United FC", "Minnesota United FC", "", ""}, {"United States", "United States", "", ""}, 0, 0},
     {"FIFA World Cup", 2026, {"Spain", "Argentina", "England", "Canada"}, {"", "", "", ""}, 0, 0},
     {"African Cup of Nations", 2025, {"Morocco", "Senegal", "Nigeria", "Morocco"}, {"", "", "", ""}, 0, 0},
     {"Argentine Premier Division", 2026, {"Belgrano de C\363rdoba", "River Plate", "", ""}, {"Argentina", "Argentina", "", ""}, 0, 0},
 };
-static const SeasonHistClear clears_32[] = {
+static const SeasonHistClear clears_41[] = {
     {"African CAF Cup", 2001, 2002, 65535},
     {"African CAF Cup", 2002, 2002, 65535},
     {"African Champions League", 2001, 2002, 65535},
@@ -36425,22 +36490,37 @@ static const SeasonHistClear clears_32[] = {
     {"Welsh League Cup", 2009, 2009, 65535},
     {"Welsh Premier Cup", 2009, 2009, 65535},
     {"Welsh Premier Division", 2009, 2009, 65535},
+    {"African Cup of Nations", 2010, 2010, 65535},
     {"FIFA World Cup", 2010, 2010, 65535},
     {"US Open Cup", 2010, 2010, 65535},
+    {"African Cup of Nations", 2011, 2011, 65535},
     {"US Open Cup", 2011, 2011, 65535},
+    {"African Cup of Nations", 2012, 2012, 65535},
     {"European Football Championship", 2012, 2012, 65535},
+    {"African Cup of Nations", 2013, 2013, 65535},
+    {"African Cup of Nations", 2014, 2014, 65535},
     {"FIFA World Cup", 2014, 2014, 65535},
+    {"African Cup of Nations", 2015, 2015, 65535},
+    {"African Cup of Nations", 2016, 2016, 65535},
     {"European Football Championship", 2016, 2016, 65535},
+    {"African Cup of Nations", 2017, 2017, 65535},
+    {"African Cup of Nations", 2018, 2018, 65535},
     {"FIFA World Cup", 2018, 2018, 65535},
+    {"African Cup of Nations", 2019, 2019, 65535},
     {"US Open Cup", 2019, 2019, 2019},
+    {"African Cup of Nations", 2020, 2020, 65535},
     {"European Football Championship", 2020, 2020, 65535},
+    {"African Cup of Nations", 2021, 2021, 65535},
+    {"African Cup of Nations", 2022, 2022, 65535},
     {"FIFA World Cup", 2022, 2022, 65535},
+    {"African Cup of Nations", 2023, 2023, 65535},
+    {"African Cup of Nations", 2024, 2024, 65535},
     {"European Football Championship", 2024, 2024, 65535},
     {"African Cup of Nations", 2025, 2025, 65535},
     {"Argentine Premier Division", 2026, 2026, 65535},
     {"FIFA World Cup", 2026, 2026, 65535},
 };
-static const SeasonHistRow rows_32[] = {
+static const SeasonHistRow rows_41[] = {
     {"American Major League", 2002, {"Los Angeles Galaxy", "New England Revolution", "", ""}, {"United States", "United States", "", ""}, 2002, 65535},
     {"US Open Cup", 2002, {"Columbus Crew", "Los Angeles Galaxy", "", ""}, {"United States", "United States", "", ""}, 2002, 65535},
     {"American A-League", 2002, {"Milwaukee Rampage", "Richmond Kickers", "", ""}, {"United States", "United States", "", ""}, 2002, 65535},
@@ -37985,21 +38065,29 @@ static const SeasonHistRow rows_32[] = {
     {"South American Copa Libertadores", 2009, {"Estudiantes de La Plata", "Cruzeiro Esporte Clube", "", ""}, {"Argentina", "Brazil", "", ""}, 2010, 65535},
     {"South American Copa Mercosur", 2009, {"Liga Universitaria de Quito", "Fluminense Football Club", "", ""}, {"Ecuador", "Brazil", "", ""}, 2010, 65535},
     {"Italian Super Cup", 2009, {"Lazio", "Internazionale", "", ""}, {"Italy", "Italy", "", ""}, 2010, 65535},
+    {"African Cup of Nations", 2010, {"Egypt", "Ghana", "Nigeria", "Angola"}, {"", "", "", ""}, 2010, 65535},
     {"FIFA World Cup", 2010, {"Spain", "Holland", "Germany", "South Africa"}, {"", "", "", ""}, 2010, 65535},
     {"Scottish League Challenge Cup", 2009, {"Dundee", "Inverness Caledonian Thistle", "", ""}, {"Scotland", "Scotland", "", ""}, 2010, 65535},
     {"US Open Cup", 2011, {"Seattle Sounders", "Chicago Fire", "", ""}, {"United States", "United States", "", ""}, 2011, 65535},
+    {"African Cup of Nations", 2012, {"Zambia", "Ivory Coast", "Mali", "Equatorial Guinea"}, {"", "", "", ""}, 2012, 65535},
     {"European Football Championship", 2012, {"Spain", "Italy", "", "Poland"}, {"", "", "", ""}, 2012, 65535},
+    {"African Cup of Nations", 2013, {"Nigeria", "Burkina Faso", "Mali", "South Africa"}, {"", "", "", ""}, 2013, 65535},
     {"FIFA World Cup", 2014, {"Germany", "Argentina", "Holland", "Brazil"}, {"", "", "", ""}, 2014, 65535},
+    {"African Cup of Nations", 2015, {"Ivory Coast", "Ghana", "Democratic Republic of Congo", "Equatorial Guinea"}, {"", "", "", ""}, 2015, 65535},
     {"European Football Championship", 2016, {"Portugal", "France", "", "France"}, {"", "", "", ""}, 2016, 65535},
+    {"African Cup of Nations", 2017, {"Cameroon", "Egypt", "Burkina Faso", "Gabon"}, {"", "", "", ""}, 2017, 65535},
     {"FIFA World Cup", 2018, {"France", "Croatia", "Belgium", "Russia"}, {"", "", "", ""}, 2018, 65535},
+    {"African Cup of Nations", 2019, {"Algeria", "Senegal", "Nigeria", "Egypt"}, {"", "", "", ""}, 2019, 65535},
+    {"African Cup of Nations", 2021, {"Senegal", "Egypt", "Cameroon", "Cameroon"}, {"", "", "", ""}, 2021, 65535},
     {"European Football Championship", 2020, {"Italy", "England", "", ""}, {"", "", "", ""}, 2021, 65535},
     {"FIFA World Cup", 2022, {"Argentina", "France", "Croatia", "Qatar"}, {"", "", "", ""}, 2022, 65535},
+    {"African Cup of Nations", 2023, {"Ivory Coast", "Nigeria", "South Africa", "Ivory Coast"}, {"", "", "", ""}, 2023, 65535},
     {"European Football Championship", 2024, {"Spain", "England", "", "Germany"}, {"", "", "", ""}, 2024, 65535},
     {"Argentine Premier Division", 2026, {"Belgrano de C\363rdoba", "River Plate", "", ""}, {"Argentina", "Argentina", "", ""}, 2026, 65535},
     {"African Cup of Nations", 2025, {"Morocco", "Senegal", "Nigeria", "Morocco"}, {"", "", "", ""}, 2026, 65535},
     {"FIFA World Cup", 2026, {"Spain", "Argentina", "England", "Canada"}, {"", "", "", ""}, 2026, 65535},
 };
-static const SeasonHistClear clears_33[] = {
+static const SeasonHistClear clears_42[] = {
     {"African CAF Cup", 2001, 2002, 65535},
     {"African CAF Cup", 2002, 2002, 65535},
     {"African Champions League", 2001, 2002, 65535},
@@ -40110,22 +40198,37 @@ static const SeasonHistClear clears_33[] = {
     {"Welsh League Cup", 2009, 2009, 65535},
     {"Welsh Premier Cup", 2009, 2009, 65535},
     {"Welsh Premier Division", 2009, 2009, 65535},
+    {"African Cup of Nations", 2010, 2010, 65535},
     {"FIFA World Cup", 2010, 2010, 65535},
     {"US Open Cup", 2010, 2010, 65535},
+    {"African Cup of Nations", 2011, 2011, 65535},
     {"US Open Cup", 2011, 2011, 65535},
+    {"African Cup of Nations", 2012, 2012, 65535},
     {"European Football Championship", 2012, 2012, 65535},
+    {"African Cup of Nations", 2013, 2013, 65535},
+    {"African Cup of Nations", 2014, 2014, 65535},
     {"FIFA World Cup", 2014, 2014, 65535},
+    {"African Cup of Nations", 2015, 2015, 65535},
+    {"African Cup of Nations", 2016, 2016, 65535},
     {"European Football Championship", 2016, 2016, 65535},
+    {"African Cup of Nations", 2017, 2017, 65535},
+    {"African Cup of Nations", 2018, 2018, 65535},
     {"FIFA World Cup", 2018, 2018, 65535},
+    {"African Cup of Nations", 2019, 2019, 65535},
     {"US Open Cup", 2019, 2019, 2019},
+    {"African Cup of Nations", 2020, 2020, 65535},
     {"European Football Championship", 2020, 2020, 65535},
+    {"African Cup of Nations", 2021, 2021, 65535},
+    {"African Cup of Nations", 2022, 2022, 65535},
     {"FIFA World Cup", 2022, 2022, 65535},
+    {"African Cup of Nations", 2023, 2023, 65535},
+    {"African Cup of Nations", 2024, 2024, 65535},
     {"European Football Championship", 2024, 2024, 65535},
     {"African Cup of Nations", 2025, 2025, 65535},
     {"Argentine Premier Division", 2026, 2026, 65535},
     {"FIFA World Cup", 2026, 2026, 65535},
 };
-static const SeasonHistRow rows_33[] = {
+static const SeasonHistRow rows_42[] = {
     {"American Major League", 2002, {"Los Angeles Galaxy", "New England Revolution", "", ""}, {"United States", "United States", "", ""}, 2002, 65535},
     {"US Open Cup", 2002, {"Columbus Crew", "Los Angeles Galaxy", "", ""}, {"United States", "United States", "", ""}, 2002, 65535},
     {"American A-League", 2002, {"Milwaukee Rampage", "Richmond Kickers", "", ""}, {"United States", "United States", "", ""}, 2002, 65535},
@@ -41792,21 +41895,29 @@ static const SeasonHistRow rows_33[] = {
     {"South American Copa Libertadores", 2009, {"Estudiantes de La Plata", "Cruzeiro Esporte Clube", "", ""}, {"Argentina", "Brazil", "", ""}, 2010, 65535},
     {"South American Copa Mercosur", 2009, {"Liga Universitaria de Quito", "Fluminense Football Club", "", ""}, {"Ecuador", "Brazil", "", ""}, 2010, 65535},
     {"Italian Super Cup", 2009, {"Lazio", "Internazionale", "", ""}, {"Italy", "Italy", "", ""}, 2010, 65535},
+    {"African Cup of Nations", 2010, {"Egypt", "Ghana", "Nigeria", "Angola"}, {"", "", "", ""}, 2010, 65535},
     {"FIFA World Cup", 2010, {"Spain", "Holland", "Germany", "South Africa"}, {"", "", "", ""}, 2010, 65535},
     {"Scottish League Challenge Cup", 2009, {"Dundee", "Inverness Caledonian Thistle", "", ""}, {"Scotland", "Scotland", "", ""}, 2010, 65535},
     {"US Open Cup", 2011, {"Seattle Sounders", "Chicago Fire", "", ""}, {"United States", "United States", "", ""}, 2011, 65535},
+    {"African Cup of Nations", 2012, {"Zambia", "Ivory Coast", "Mali", "Equatorial Guinea"}, {"", "", "", ""}, 2012, 65535},
     {"European Football Championship", 2012, {"Spain", "Italy", "", "Poland"}, {"", "", "", ""}, 2012, 65535},
+    {"African Cup of Nations", 2013, {"Nigeria", "Burkina Faso", "Mali", "South Africa"}, {"", "", "", ""}, 2013, 65535},
     {"FIFA World Cup", 2014, {"Germany", "Argentina", "Holland", "Brazil"}, {"", "", "", ""}, 2014, 65535},
+    {"African Cup of Nations", 2015, {"Ivory Coast", "Ghana", "Democratic Republic of Congo", "Equatorial Guinea"}, {"", "", "", ""}, 2015, 65535},
     {"European Football Championship", 2016, {"Portugal", "France", "", "France"}, {"", "", "", ""}, 2016, 65535},
+    {"African Cup of Nations", 2017, {"Cameroon", "Egypt", "Burkina Faso", "Gabon"}, {"", "", "", ""}, 2017, 65535},
     {"FIFA World Cup", 2018, {"France", "Croatia", "Belgium", "Russia"}, {"", "", "", ""}, 2018, 65535},
+    {"African Cup of Nations", 2019, {"Algeria", "Senegal", "Nigeria", "Egypt"}, {"", "", "", ""}, 2019, 65535},
+    {"African Cup of Nations", 2021, {"Senegal", "Egypt", "Cameroon", "Cameroon"}, {"", "", "", ""}, 2021, 65535},
     {"European Football Championship", 2020, {"Italy", "England", "", ""}, {"", "", "", ""}, 2021, 65535},
     {"FIFA World Cup", 2022, {"Argentina", "France", "Croatia", "Qatar"}, {"", "", "", ""}, 2022, 65535},
+    {"African Cup of Nations", 2023, {"Ivory Coast", "Nigeria", "South Africa", "Ivory Coast"}, {"", "", "", ""}, 2023, 65535},
     {"European Football Championship", 2024, {"Spain", "England", "", "Germany"}, {"", "", "", ""}, 2024, 65535},
     {"Argentine Premier Division", 2026, {"Belgrano de C\363rdoba", "River Plate", "", ""}, {"Argentina", "Argentina", "", ""}, 2026, 65535},
     {"African Cup of Nations", 2025, {"Morocco", "Senegal", "Nigeria", "Morocco"}, {"", "", "", ""}, 2026, 65535},
     {"FIFA World Cup", 2026, {"Spain", "Argentina", "England", "Canada"}, {"", "", "", ""}, 2026, 65535},
 };
-static const SeasonHistClear clears_34[] = {
+static const SeasonHistClear clears_43[] = {
     {"African CAF Cup", 2001, 2003, 65535},
     {"African CAF Cup", 2002, 2003, 65535},
     {"African CAF Cup", 2003, 2003, 65535},
@@ -44048,22 +44159,37 @@ static const SeasonHistClear clears_34[] = {
     {"Welsh League Cup", 2009, 2009, 65535},
     {"Welsh Premier Cup", 2009, 2009, 65535},
     {"Welsh Premier Division", 2009, 2009, 65535},
+    {"African Cup of Nations", 2010, 2010, 65535},
     {"FIFA World Cup", 2010, 2010, 65535},
     {"US Open Cup", 2010, 2010, 65535},
+    {"African Cup of Nations", 2011, 2011, 65535},
     {"US Open Cup", 2011, 2011, 65535},
+    {"African Cup of Nations", 2012, 2012, 65535},
     {"European Football Championship", 2012, 2012, 65535},
+    {"African Cup of Nations", 2013, 2013, 65535},
+    {"African Cup of Nations", 2014, 2014, 65535},
     {"FIFA World Cup", 2014, 2014, 65535},
+    {"African Cup of Nations", 2015, 2015, 65535},
+    {"African Cup of Nations", 2016, 2016, 65535},
     {"European Football Championship", 2016, 2016, 65535},
+    {"African Cup of Nations", 2017, 2017, 65535},
+    {"African Cup of Nations", 2018, 2018, 65535},
     {"FIFA World Cup", 2018, 2018, 65535},
+    {"African Cup of Nations", 2019, 2019, 65535},
     {"US Open Cup", 2019, 2019, 2019},
+    {"African Cup of Nations", 2020, 2020, 65535},
     {"European Football Championship", 2020, 2020, 65535},
+    {"African Cup of Nations", 2021, 2021, 65535},
+    {"African Cup of Nations", 2022, 2022, 65535},
     {"FIFA World Cup", 2022, 2022, 65535},
+    {"African Cup of Nations", 2023, 2023, 65535},
+    {"African Cup of Nations", 2024, 2024, 65535},
     {"European Football Championship", 2024, 2024, 65535},
     {"African Cup of Nations", 2025, 2025, 65535},
     {"Argentine Premier Division", 2026, 2026, 65535},
     {"FIFA World Cup", 2026, 2026, 65535},
 };
-static const SeasonHistRow rows_34[] = {
+static const SeasonHistRow rows_43[] = {
     {"Argentine Premier Division", 2002, {"Independiente", "Boca Juniors", "", ""}, {"Argentina", "Argentina", "", ""}, 2003, 65535},
     {"Argentine Premier Division", 2002, {"River Plate", "Boca Juniors", "", ""}, {"Argentina", "Argentina", "", ""}, 2003, 65535},
     {"Argentine Second Division", 2002, {"Atl\351tico Rafaela", "Argentinos Juniors", "", ""}, {"Argentina", "Argentina", "", ""}, 2003, 65535},
@@ -45851,15 +45977,23 @@ static const SeasonHistRow rows_34[] = {
     {"South American Copa Libertadores", 2009, {"Estudiantes de La Plata", "Cruzeiro Esporte Clube", "", ""}, {"Argentina", "Brazil", "", ""}, 2010, 65535},
     {"South American Copa Mercosur", 2009, {"Liga Universitaria de Quito", "Fluminense Football Club", "", ""}, {"Ecuador", "Brazil", "", ""}, 2010, 65535},
     {"Italian Super Cup", 2009, {"Lazio", "Internazionale", "", ""}, {"Italy", "Italy", "", ""}, 2010, 65535},
+    {"African Cup of Nations", 2010, {"Egypt", "Ghana", "Nigeria", "Angola"}, {"", "", "", ""}, 2010, 65535},
     {"FIFA World Cup", 2010, {"Spain", "Holland", "Germany", "South Africa"}, {"", "", "", ""}, 2010, 65535},
     {"Scottish League Challenge Cup", 2009, {"Dundee", "Inverness Caledonian Thistle", "", ""}, {"Scotland", "Scotland", "", ""}, 2010, 65535},
     {"US Open Cup", 2011, {"Seattle Sounders", "Chicago Fire", "", ""}, {"United States", "United States", "", ""}, 2011, 65535},
+    {"African Cup of Nations", 2012, {"Zambia", "Ivory Coast", "Mali", "Equatorial Guinea"}, {"", "", "", ""}, 2012, 65535},
     {"European Football Championship", 2012, {"Spain", "Italy", "", "Poland"}, {"", "", "", ""}, 2012, 65535},
+    {"African Cup of Nations", 2013, {"Nigeria", "Burkina Faso", "Mali", "South Africa"}, {"", "", "", ""}, 2013, 65535},
     {"FIFA World Cup", 2014, {"Germany", "Argentina", "Holland", "Brazil"}, {"", "", "", ""}, 2014, 65535},
+    {"African Cup of Nations", 2015, {"Ivory Coast", "Ghana", "Democratic Republic of Congo", "Equatorial Guinea"}, {"", "", "", ""}, 2015, 65535},
     {"European Football Championship", 2016, {"Portugal", "France", "", "France"}, {"", "", "", ""}, 2016, 65535},
+    {"African Cup of Nations", 2017, {"Cameroon", "Egypt", "Burkina Faso", "Gabon"}, {"", "", "", ""}, 2017, 65535},
     {"FIFA World Cup", 2018, {"France", "Croatia", "Belgium", "Russia"}, {"", "", "", ""}, 2018, 65535},
+    {"African Cup of Nations", 2019, {"Algeria", "Senegal", "Nigeria", "Egypt"}, {"", "", "", ""}, 2019, 65535},
+    {"African Cup of Nations", 2021, {"Senegal", "Egypt", "Cameroon", "Cameroon"}, {"", "", "", ""}, 2021, 65535},
     {"European Football Championship", 2020, {"Italy", "England", "", ""}, {"", "", "", ""}, 2021, 65535},
     {"FIFA World Cup", 2022, {"Argentina", "France", "Croatia", "Qatar"}, {"", "", "", ""}, 2022, 65535},
+    {"African Cup of Nations", 2023, {"Ivory Coast", "Nigeria", "South Africa", "Ivory Coast"}, {"", "", "", ""}, 2023, 65535},
     {"European Football Championship", 2024, {"Spain", "England", "", "Germany"}, {"", "", "", ""}, 2024, 65535},
     {"Argentine Premier Division", 2026, {"Belgrano de C\363rdoba", "River Plate", "", ""}, {"Argentina", "Argentina", "", ""}, 2026, 65535},
     {"African Cup of Nations", 2025, {"Morocco", "Senegal", "Nigeria", "Morocco"}, {"", "", "", ""}, 2026, 65535},
@@ -45881,25 +46015,34 @@ const SeasonHistDb season_history_dbs[] = {
     {"February 2010 ODB", 2009, 0, clears_12, 1575, rows_12, 1324},
     {"June 2010", 2009, 0, clears_13, 1573, rows_13, 1322},
     {"September 2009", 2009, 0, clears_14, 1456, rows_14, 1255},
-    {"April 2011 SIM", 2010, 0, clears_15, 0, rows_15, 15},
+    {"April 2011 SIM", 2010, 0, clears_15, 0, rows_15, 20},
     {"December 2010 SIM", 2010, 0, clears_16, 0, rows_16, 10},
-    {"September 2010 ODB", 2010, 0, clears_17, 1, rows_17, 11},
-    {"March 2012 SIM", 2011, 0, clears_18, 0, rows_18, 16},
-    {"Autumn 2013", 2013, 0, clears_19, 8, rows_19, 14},
-    {"April 2021", 2020, 0, clears_20, 1, rows_20, 1},
-    {"November 2020", 2020, 0, clears_21, 1, rows_21, 1},
-    {"April 2022", 2021, 0, clears_22, 1, rows_22, 1},
-    {"October 2021", 2021, 0, clears_23, 1, rows_23, 1},
-    {"April 2023", 2022, 0, clears_24, 1, rows_24, 1},
-    {"October 2022", 2022, 0, clears_25, 1, rows_25, 1},
-    {"April 2024", 2023, 0, clears_26, 1, rows_26, 1},
-    {"October 2023", 2023, 0, clears_27, 1, rows_27, 2},
-    {"October 2024", 2024, 0, clears_28, 1, rows_28, 1},
-    {"December 2025", 2025, 0, clears_29, 1, rows_29, 1},
-    {"May 2026", 2025, 0, clears_30, 1, rows_30, 1},
-    {"October 2026", 2026, 0, clears_31, 1, rows_31, 4},
-    {"3.9.60", 2002, 65535, clears_32, 1972, rows_32, 1557},
-    {"3.9.65", 2002, 65535, clears_33, 2124, rows_33, 1679},
-    {"3.9.68", 2003, 65535, clears_34, 2255, rows_34, 1800},
+    {"February 2011 ODB", 2010, 0, clears_17, 0, rows_17, 1},
+    {"September 2010 ODB", 2010, 0, clears_18, 1, rows_18, 12},
+    {"March 2012 SIM", 2011, 0, clears_19, 0, rows_19, 21},
+    {"Autumn 2013", 2013, 0, clears_20, 8, rows_20, 15},
+    {"March 2014", 2013, 0, clears_21, 0, rows_21, 1},
+    {"April 2015", 2014, 0, clears_22, 0, rows_22, 1},
+    {"October 2014", 2014, 0, clears_23, 0, rows_23, 1},
+    {"April 2017", 2016, 0, clears_24, 0, rows_24, 1},
+    {"October 2016", 2016, 0, clears_25, 0, rows_25, 1},
+    {"October 2017", 2017, 0, clears_26, 0, rows_26, 2},
+    {"March 2020", 2019, 0, clears_27, 0, rows_27, 1},
+    {"October 2019", 2019, 0, clears_28, 0, rows_28, 1},
+    {"April 2021", 2020, 0, clears_29, 1, rows_29, 1},
+    {"November 2020", 2020, 0, clears_30, 1, rows_30, 2},
+    {"April 2022", 2021, 0, clears_31, 1, rows_31, 2},
+    {"October 2021", 2021, 0, clears_32, 1, rows_32, 2},
+    {"April 2023", 2022, 0, clears_33, 1, rows_33, 2},
+    {"October 2022", 2022, 0, clears_34, 1, rows_34, 2},
+    {"April 2024", 2023, 0, clears_35, 1, rows_35, 1},
+    {"October 2023", 2023, 0, clears_36, 1, rows_36, 4},
+    {"October 2024", 2024, 0, clears_37, 1, rows_37, 1},
+    {"December 2025", 2025, 0, clears_38, 1, rows_38, 1},
+    {"May 2026", 2025, 0, clears_39, 1, rows_39, 1},
+    {"October 2026", 2026, 0, clears_40, 1, rows_40, 4},
+    {"3.9.60", 2002, 65535, clears_41, 1987, rows_41, 1565},
+    {"3.9.65", 2002, 65535, clears_42, 2139, rows_42, 1687},
+    {"3.9.68", 2003, 65535, clears_43, 2270, rows_43, 1808},
 };
-const int season_history_dbs_count = 35;
+const int season_history_dbs_count = 44;
