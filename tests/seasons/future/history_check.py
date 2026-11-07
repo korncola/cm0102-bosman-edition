@@ -396,7 +396,12 @@ SEVERAL_TITLES = ((re.compile(r"(UEFA )?Inter-?Toto Cup", re.I), 0, 3),         
 # Years of a competition with more titles than its format gives (competition, label year): rows. The AFA named Rosario
 # Central "Campeón de Liga 2025" for the annual table, beside the Apertura and Clausura winners (20 November 2025;
 # lacapital.com.ar/c10230859 and canal26.com, read 1 November 2026). The October 2026 database holds the three rows.
-TITLES_OF_YEAR = {("Argentine Premier Division", 2025): 3}
+# New South Wales played two top-tier seasons that started in 2000 (open item 177): the winter season 2000 (Super
+# League, Blacktown City won the grand final) and the first summer season 2000/01 (Premier League, Bonnyrigg White
+# Eagles won the grand final); rsssf.org tablesa/aus00.html and aus01.html, read 7 November 2026. The base data of
+# 2001 holds both at label 2000, the start year of a season (docs/research/history-0.6.0/aus-rsa.md).
+TITLES_OF_YEAR = {("Argentine Premier Division", 2025): 3,
+                  ("New South Wales Super League", 2000): 2}
 
 
 def titles_allowed(name, year, start, most, several):
