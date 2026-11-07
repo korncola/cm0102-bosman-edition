@@ -305,6 +305,50 @@ int season_intl_host_ids(uint32_t key, int year, int ids[6])
     return n;
 }
 
+/* 0.6.2 item 181: the edition of the table of a class and year that a 2001 game plays with the original's host row
+ * (its season 2001/02: the rows of the table come at the first season change, host_init), with changing rules on;
+ * else NULL. Its hosts that the data holds go to ids (at most 6), their count to *n. */
+static const SeasonIntlEdition *first_season_edition(const char *file, int year, int32_t ids[6], int *n)
+{
+    const SeasonIntlEdition *e = file ? season_intl_table_edition(file, year) : NULL;
+    *n = 0;
+    if (!e || e->season != SEASON_FIRST_YEAR || !season_intl_on() || season_start_year() != SEASON_FIRST_YEAR)
+        return NULL;
+    char one[128];
+    for (const char *p = e->hosts; *p && *n < 6;) {
+        size_t len = strcspn(p, ";");
+        snprintf(one, sizeof one, "%.*s", (int)len, p);
+        int id = nation_by_names(one);
+        if (id >= 0) ids[(*n)++] = id;
+        p += len;
+        if (*p == ';') p++;
+    }
+    return e;
+}
+
+/* 0.6.2 item 181: at the draw of an edition of 2001/02 in a 2001 game with changing rules on, its host row takes
+ * the hosts of the table when the original's row names others (season_intl_row_draw_hosts). Of the editions of
+ * 2001/02 only the Africa Cup of Nations 2002 differs: the original names Egypt (0x5f9f19), the table Mali. The
+ * World Cup 2002 row names South Korea and Japan (0x5f9a21, 0x5f9a2c, pair 1 chosen at 0x5f9a1b) and the Copa
+ * America 2001 row Colombia (0x5fa1d3), as the table does. The new game stays the base game (Q152); the row
+ * changes first at the draw, so the entrants, the venues (0x85c61c) and the history host (rt_intl_history_host)
+ * all take the table's host. */
+void season_intl_draw_hosts(const char *file, int year)
+{
+    int32_t ids[6];
+    int n, count;
+    if (!first_season_edition(file, year, ids, &n)) return;
+    uint32_t key = 0xffffffffu, obj = rd32(g_mem, HOSTS), rows = readable(obj) ? rd32(g_mem, obj) : 0;
+    for (int c = 0; c < HOST_COMPS; c++)
+        if (!strcmp(host_comps[c].file, file)) key = rd32(g_mem, host_comps[c].key);
+    count = readable(obj) ? (int16_t)rd16(g_mem, obj + 4) : 0;
+    if (key == 0xffffffffu || !readable(rows) || count <= 0 || count > 1000) return;
+    uint32_t row = row_find(rows, count, key, year);
+    if (!row || !season_intl_row_draw_hosts(g_mem + row, ids, n)) return;
+    if (logging()) fprintf(stderr, "recomp: season intl: host row %s %d at the draw: %s, the table's host\n", file, year,
+                           win_str(nation_at(ids[0]) + NATION_NAME));
+}
+
 /* ---- The host rows after the table (0.6.2 slice 5, decisions Q4, Q5, Q6, Q32) ---- */
 
 /* A nation that no longer exists has no continent (the data load links an id of -1 as null; the old record of a
@@ -514,6 +558,12 @@ static void hosts_apply(uint32_t self, int from_season, int sort)
             if (rd32(g_mem, row + ROW_COMP) != key || year <= 0 || k < 0 || have[c][k]) continue;
             memcpy(taken[c][k], g_mem + row, ROW_SIZE);
             have[c][k] = 1;
+            /* Item 181: a row that the draw of 2001/02 gave the table's host (season_intl_draw_hosts) is copied in
+             * the original's form, as a game that starts in 2002/03 copies it. The row itself keeps its host. */
+            int32_t ids[6];
+            int n;
+            if (from_season == SEASON_FIRST_YEAR + 1 && first_season_edition(host_comps[c].file, year, ids, &n))
+                season_intl_row_undo_draw_hosts(taken[c][k], ids, n);
         }
     }
     PlannedRow plan[MAX_PLANNED];

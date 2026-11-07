@@ -164,6 +164,17 @@ int season_intl_host_ids(uint32_t key, int year, int ids[6]);
  * more hosts. */
 int season_intl_rows_clean(uint8_t *rows, int count);
 
+/* 0.6.2 item 181: the draw of a finals edition of 2001/02 in a 2001 game (season_intl_rows.c). The original's
+ * fixed row of one or two hosts that differ from the n hosts of the table (ids) takes them in pair 2 with choice 1,
+ * and keeps the original's hosts in pair 1. Gives 1 when the row changed, 0 when it holds the table's hosts or has
+ * no room (a row that is not fixed, more than two hosts). season_intl_row_undo_draw_hosts gives a copy of such a
+ * row the original's form back (fixed, pair 1). Gives 1 when it changed. */
+int season_intl_row_draw_hosts(uint8_t *row, const int32_t *ids, int n);
+int season_intl_row_undo_draw_hosts(uint8_t *row, const int32_t *ids, int n);
+/* The host row of an edition of 2001/02 at its draw, in a 2001 game with changing rules on (season_intl.c): the
+ * table's hosts when the original's row names others. Nothing in other games. */
+void season_intl_draw_hosts(const char *file, int year);
+
 /* ---- Hosts after the table (0.6.2 slice 5, decisions Q4, Q5, Q6, Q32; season_intl_rules.c) ---- */
 
 /* The hosts announced for an edition after the table (Q5), or NULL: the World Cup of 2034, the Euro of 2032, the
