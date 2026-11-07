@@ -70,6 +70,11 @@ void o_004029c0(void) {}
 void o_00410560(void) {}
 void o_00402090(void) {}
 void o_0040fa90(void) {}
+/* Item 181 wraps the ACN draw 0x4022c0 in season_intl_cups.c too; these stubs let this test link with or
+ * without that branch. */
+void o_004022c0(void) {}
+void season_intl_draw_hosts(const char *file, int year);
+void season_intl_draw_hosts(const char *file, int year) { (void)file, (void)year; }
 
 /* Up to item 180 the runtime had no wrap of 0x40fdf0: this stands in, so the test builds and fails on that code. */
 __attribute__((weak)) void f_0040fdf0(void) { o_0040fdf0(); }
