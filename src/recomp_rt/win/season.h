@@ -57,6 +57,9 @@ void season_init(void);
 
 /* The start year of the game that runs, or of the next new game on the start screen. */
 int season_start_year(void);
+/* 1 while today's season keeps the original's international calendar (the start season of a 2001 start, O405;
+ * season_friendly_dates.c keeps_original). */
+int season_friendly_keeps_original_now(void);
 
 /* 1 when the season rules of the game that runs change each July (option changing_rules of that game). */
 int season_changing_rules(void);

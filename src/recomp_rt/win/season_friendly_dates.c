@@ -47,6 +47,7 @@
 #include "win.h"
 #include "season.h"
 #include "season_uefa_days.h"
+#include "season_conmebol_days.h"
 #include "season_names.h"
 #include "season_intl.h"
 #include "season_change.h"
@@ -113,6 +114,8 @@ static int keeps_original(int s)
 {
     return s < season_start_year() || (s == season_start_year() && season_start_year() == SEASON_FIRST_YEAR);
 }
+
+int season_friendly_keeps_original_now(void) { return keeps_original(season_now()); }
 
 /* Running seasons only (O405, the maintainer, 26 October 2026; keeps_original): in the start season of a 2001 start the
  * table stays the original's, as
@@ -244,9 +247,23 @@ static int national_side(uint32_t club)
  * 6 September 2008, match_eng.cpp 652). The day lists of all types (count: the s8 at 0xb64738, key nation entries). */
 static char busy_why[160];              /* what side_busy found last (for the stay line) */
 
+/* 1 when the fixture of club h v club w takes a national side of club a or club b: one of them is a or b, or a
+ * national side (senior, B or Under 21, national_side) of the nation of a or b (club +0x53). The old test compared
+ * the nation of every club, but a league club has its nation at +0x53 too (VIRTUAL_STAFF top-up reads it at
+ * 0x90db33), so every league match of that nation took the day (open item 168). A league match does not stop a
+ * national match: the call-up move moves the league and cup fixtures of a club with more than 2 players called up
+ * (0x7777e0 calls 0x5abb10 at 0x77795c for marks 1 and 2, 0x7778b7..0x7778bd, the count at 0x77793d); with 2 or
+ * fewer away the club plays without them. */
+int season_fifa_fixture_takes_side(uint32_t h, uint32_t w, uint32_t a, uint32_t b)
+{
+    if (h == a || h == b || w == a || w == b) return 1;
+    uint32_t na = rd32(g_mem, a + 0x53), nb = rd32(g_mem, b + 0x53);
+    uint32_t nh = national_side(h) ? rd32(g_mem, h + 0x53) : 0, nw = national_side(w) ? rd32(g_mem, w + 0x53) : 0;
+    return (nh && (nh == na || nh == nb)) || (nw && (nw == na || nw == nb));
+}
+
 static int side_busy(uint32_t a, uint32_t b, int y, int doy)
 {
-    uint32_t na = rd32(g_mem, a + 0x53), nb = rd32(g_mem, b + 0x53);
     int busy = 0, types = (int8_t)g_mem[TYPE_COUNT];
     if (types < 2 || types > 40) types = 2;
     for (int slice = 0; slice < 3 && !busy && !rt_unwinding; slice++)
@@ -258,10 +275,8 @@ static int side_busy(uint32_t a, uint32_t b, int y, int doy)
                 uint32_t f = rd32(g_mem, node);
                 if (!readable(f)) continue;
                 uint32_t h = rd32(g_mem, f + 0x1c), w = rd32(g_mem, f + 0x20);
-                uint32_t nh = readable(h) ? rd32(g_mem, h + 0x53) : 0, nw = readable(w) ? rd32(g_mem, w + 0x53) : 0;
                 uint32_t rec = rd32(g_mem, f + 0x14);
-                int nat = h == a || h == b || w == a || w == b || (nh && (nh == na || nh == nb)) ||
-                          (nw && (nw == na || nw == nb));
+                int nat = season_fifa_fixture_takes_side(h, w, a, b);
                 int cont = !nat && readable(rec) && !rd32(g_mem, rec + 0x5d) && g_mem[f + 0x3a] >= 2 &&
                            !national_side(h) && !national_side(w);    /* a continental club match */
                 if (nat || cont) {
@@ -361,6 +376,19 @@ static int window_from(const int *doys, int n, int d, int c)
 
 static int duty_ties(uint32_t n, uint32_t m, int y, int d);
 
+/* 1 when club a and club b are sides of South American nations (nation +0x71, the continent's id at +0, against the
+ * key continent id of confederation SEASON_CONF_SOUTH_AMERICA, as finals_busy reads them). */
+static int south_american(uint32_t a, uint32_t b)
+{
+    uint32_t sides[2] = {a, b}, want = rd32(g_mem, KEY_CONTINENTS + 4u * SEASON_CONF_SOUTH_AMERICA);
+    for (int s = 0; s < 2; s++) {
+        uint32_t nation = readable(sides[s]) ? rd32(g_mem, sides[s] + 0x53) : 0;
+        uint32_t cont = readable(nation) ? rd32(g_mem, nation + NATION_CONTINENT) : 0;
+        if (!readable(cont) || rd32(g_mem, cont) != want) return 0;
+    }
+    return 1;
+}
+
 /* The day a qualifier of club home v club away on day d of year y moves to: the nearest free FIFA day of the same
  * year, 2 or more days after today, with no other match of the two sides within CLASH_DAYS of it (side_near; self:
  * the fixture that moves, when it is stored) and no continental club tie within a day of it whose club holds more
@@ -372,8 +400,11 @@ static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, in
 {
     int doys[FIFA_DOYS_MAX], n = fifa_doys(y, doys, FIFA_DOYS_MAX);
     uint32_t na = rd32(g_mem, home + 0x53), nb = rd32(g_mem, away + 0x53);
-    for (int k = 0; k < n; k++)                                           /* on a free FIFA day already */
-        if (doys[k] == d && !finals_busy(home, away, y, d) && !side_near(home, away, y, d, self) &&
+    /* On a free FIFA day already, or on a real South American matchday that the FIFA list lacks (open item 163:
+     * 9 June 2012 in Euro 2012, season_conmebol_real_day). */
+    int real = south_american(home, away) && season_conmebol_real_day(season_abs_day(y, 1, 1) + d);
+    for (int k = 0; k <= n; k++)
+        if ((k < n ? doys[k] == d : real) && !finals_busy(home, away, y, d) && !side_near(home, away, y, d, self) &&
             !duty_ties(na, nb, y, d))
             return rt_unwinding ? -1 : d;
     int today_year = (int16_t)rd16(g_mem, GAME_DATE + 2), today = (int16_t)rd16(g_mem, GAME_DATE);

@@ -63,6 +63,8 @@
 #include "season_intl.h"
 #include "season_wcq26.h"
 #include "season_uefa_days.h"
+#include "season_conmebol_days.h"
+#include "season.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,6 +74,7 @@
 #define KEY_CONCACAF 0x9cf770u
 #define KEY_ASIA 0x9cf774u
 #define KEY_SOUTH_AMERICA 0x9cf778u
+#define GAME_DATE 0xae2c90u             /* s16 day of the year, s16 year */
 #define STAGES 0xcu                     /* stage array of a competition, count at +0x2c */
 #define STAGE_COUNT 0x2cu
 #define TEAM_COUNT 0x3eu                /* word: teams of a League table or a Cup round */
@@ -507,6 +510,78 @@ static void end_by_october(uint32_t self, uint32_t tpl, int rounds, const char *
 void o_00920590(void);
 void o_00914de0(void);
 
+static int conmebol_busy(long z)
+{
+    int y, m, d;
+    season_from_abs_day(z, &y, &m, &d);
+    return season_intl_finals_busy(SEASON_CONF_SOUTH_AMERICA, y, season_day_of_year(y, m, d));
+}
+
+static int by_round_day(const void *a, const void *b)
+{
+    long x = ((const long *)a)[0], y = ((const long *)b)[0];
+    return x < y ? -1 : x > y;
+}
+
+/* Open item 163: the rounds of the South American section on the FIFA windows of the real cycle
+ * (season_conmebol_days.c says why). A season game, every cycle from 2006, made in a running season: the start
+ * season of a 2001 start keeps the original's international calendar (O405), so there end_by_october acts and the
+ * fixtures move at the first running day (season_friendly_dates.c, route M), as before. The template's rounds take
+ * the new days in the order of their own days; season_conmebol_round_fields gives the fields of each round record
+ * (league_round_set_date 0x68a160), and the make day moves before the first round (season_conmebol_make_day).
+ * Returns 1 when it placed them. */
+static int conmebol_windows(uint32_t self, uint32_t tpl, int rounds)
+{
+    if (!season_intl_on() || !readable(self) || !readable(tpl) || rounds <= 0 || rounds > 64 ||
+        season_friendly_keeps_original_now())
+        return 0;
+    int base = (int16_t)rd16(g_mem, self + 0x40u), y = base + 2;
+    if (y < FIRST_YEAR) return 0;
+    int ty = (int16_t)rd16(g_mem, GAME_DATE + 2), tm, td;
+    season_from_day_of_year(ty, (int16_t)rd16(g_mem, GAME_DATE), &tm, &td);
+    long days[64], order[64][2];
+    if (season_conmebol_days(y, rounds, season_abs_day(ty, tm, td) + 2, conmebol_busy, days) != rounds) {
+        if (logging())
+            fprintf(stderr, "recomp: season intl: wc qualifying %d: CONMEBOL keeps the template (too few FIFA days "
+                            "for %d rounds)\n", y, rounds);
+        return 0;
+    }
+    for (int r = 0; r < rounds; r++) {
+        uint32_t rec = tpl + (uint32_t)r * 0x41u;
+        order[r][0] = day_number(base + (int16_t)rd16(g_mem, rec + 2u), (int16_t)rd16(g_mem, rec)) * 64 + r;
+        order[r][1] = r;
+    }
+    qsort(order, (size_t)rounds, sizeof order[0], by_round_day);
+    for (int k = 0; k < rounds; k++) {
+        uint32_t rec = tpl + (uint32_t)order[k][1] * 0x41u;
+        int doy, year_off, flag;
+        season_conmebol_round_fields(days[k], base, &doy, &year_off, &flag);
+        wr16(g_mem, rec, (uint16_t)doy);
+        wr16(g_mem, rec + 2u, (uint16_t)year_off);
+        wr8(g_mem, rec + 4u, (uint8_t)flag);
+    }
+    /* The make day (+0xb6 day, +0xb8 year offset, set just before this call at 0x921118 and 0x921133; +0x45 is 1
+     * once made, 0x9212ee): before the first round, so the real rounds of the year before the campaign year keep
+     * their days (season_conmebol_make_day). */
+    long today = season_abs_day(ty, tm, td);
+    long made = day_number(base + (int16_t)rd16(g_mem, self + 0xb8u), (int16_t)rd16(g_mem, self + 0xb6u));
+    if (!rd32(g_mem, self + 0x45u) && made > today) {
+        long mk = season_conmebol_make_day(days[0], made, today);
+        int doy, year_off, flag;
+        season_conmebol_round_fields(mk, base, &doy, &year_off, &flag);
+        wr16(g_mem, self + 0xb6u, (uint16_t)doy);
+        wr16(g_mem, self + 0xb8u, (uint16_t)year_off);
+    }
+    if (logging()) {
+        int y0, m0, d0, y1, m1, d1;
+        season_from_abs_day(days[0], &y0, &m0, &d0);
+        season_from_abs_day(days[rounds - 1], &y1, &m1, &d1);
+        fprintf(stderr, "recomp: season intl: wc qualifying %d: CONMEBOL plays its %d rounds on FIFA days, "
+                        "%04d-%02d-%02d to %04d-%02d-%02d\n", y, rounds, y0, m0, d0, y1, m1, d1);
+    }
+    return 1;
+}
+
 /* WcSouthAmericanLeague::create_schedule, thiscall (stage, short *round_count, short *, int *) ret 0x10, returns
  * the template. */
 RT_WRAP(00920590, wcq_conmebol_schedule)
@@ -515,7 +590,8 @@ RT_WRAP(00920590, wcq_conmebol_schedule)
     o_00920590();
     if (rt_unwinding || !readable(count)) return;
     uint32_t eax = cpu.eax;
-    end_by_october(self, eax, (int16_t)rd16(g_mem, count), "CONMEBOL");
+    if (!conmebol_windows(self, eax, (int16_t)rd16(g_mem, count)))
+        end_by_october(self, eax, (int16_t)rd16(g_mem, count), "CONMEBOL");
     cpu.eax = eax;
 }
 

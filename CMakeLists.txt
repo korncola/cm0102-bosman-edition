@@ -318,6 +318,12 @@ if(NOT WIN32)
         src/recomp_rt/win/season_fifa_days_table.c)
     target_include_directories(season_fifa_days_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_fifa_days COMMAND season_fifa_days_test)
+    # Open item 163: the South American qualifying rounds on the FIFA windows of each cycle, 2006 to 2302.
+    add_executable(season_conmebol_days_test tests/seasons/test_season_conmebol_days.c
+        src/recomp_rt/win/season_conmebol_days.c src/recomp_rt/win/season_uefa_days.c
+        src/recomp_rt/win/season_fifa_days_table.c)
+    target_include_directories(season_conmebol_days_test PRIVATE src/recomp_rt/win)
+    add_test(NAME season_conmebol_days COMMAND season_conmebol_days_test)
     add_executable(youth_pool_test tests/seasons/test_youth_pool.c src/recomp_rt/win/youth_pool_rule.c)
     target_include_directories(youth_pool_test PRIVATE src/recomp_rt/win)
     add_test(NAME youth_pool COMMAND youth_pool_test)
@@ -384,6 +390,11 @@ if(NOT WIN32)
         src/recomp_rt/win/season_friendly_dates.c)
     target_include_directories(season_friendly_part_test PRIVATE src/recomp_rt/win src/recomp_rt)
     add_test(NAME season_friendly_part COMMAND season_friendly_part_test)
+    # The days a qualifier may take (0.6.2 item 168): only a national side of its nation takes the day.
+    add_executable(season_side_busy_test tests/seasons/test_season_side_busy.c
+        src/recomp_rt/win/season_friendly_dates.c)
+    target_include_directories(season_side_busy_test PRIVATE src/recomp_rt/win src/recomp_rt)
+    add_test(NAME season_side_busy COMMAND season_side_busy_test)
     add_test(NAME season_encode_rules COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/test_encode_rules.py")
     # The league rules (0.6.0 slice 19): play-off places, splits and calendars. The outputs are committed.
     add_test(NAME season_encode_leagues COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/test_encode_leagues.py")
