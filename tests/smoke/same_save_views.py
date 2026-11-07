@@ -35,10 +35,7 @@ sys.path.insert(0, HERE)
 import fixtures  # noqa: E402
 import smoke_run  # noqa: E402
 
-# The parts of a saved game that depend on where the game's memory blocks sit (Q152): any change of memory
-# layout, even opening one of the original's own screens, changes them after a few days. Research of slices 3
-# and 7 (docs/research/2026-10-15-attribute-groups.md) found these five and no others.
-LAYOUT_PARTS = ("fifa_rankings.dat", "general.dat", "national_teams.dat", "staff history.tmp", "transfer.dat")
+LAYOUT_PARTS = smoke_run.LAYOUT_PARTS
 
 # Positions for 800x600; "| x y" gives the widescreen position where the game does not scale. The holiday is the one
 # of smoke_run.STEPS, with a wait for the manager's menu and for Please Confirm (item 185).
@@ -208,8 +205,9 @@ def run_match_tactics(program, game, days, folder, modes=("classic", "widescreen
                 out = os.path.join(os.path.abspath(shots), f"{mode}-{name.replace(' ', '-')}")
                 os.makedirs(out, exist_ok=True)
                 tactics = [t.replace("{d}", out) for t in tactics]
-            steps = smoke_run.without_intro_click(smoke_run.load_steps(fixtures)) + smoke_run.MATCH_STEPS[:half] + tactics + \
-                smoke_run.MATCH_STEPS[half:]
+            # The substitution changes the second half, which then has no MATCH_EVENT (item 155).
+            steps = smoke_run.without_intro_click(smoke_run.load_steps(fixtures)) + smoke_run.MATCH_STEPS[:half] + \
+                tactics + smoke_run.MATCH_STEPS_ORIGINAL[half:]
             runs.append((name, {"match_columns": value, "_steps": steps}))
         failed += smoke_run.compare_runs(program, game, mode, runs, [], days,
                                          os.path.join(folder, smoke_run.MATCH_SAVE), timeout=900,

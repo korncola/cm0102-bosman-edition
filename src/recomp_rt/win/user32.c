@@ -1074,10 +1074,14 @@ static uint64_t next_repeat_at;
  * The game work rule keeps match results. While a commentary line waits, each pass runs one step of
  * a background match (0x6b5ce0 from the commentary step 0x6b55c0), and that step draws from the
  * game's random function 0x90cfc0 (docs/research/2026-10-15-commentary-speed-inventory.md, section
- * 3). The human match takes its numbers from the same table. So a call of the commentary step or of
- * the random function counts as game work, and no pass sleeps until WORK_HOLD ms after the last poll
- * that saw one. Evidence: with RECOMP_IDLE_SLEEP=force (no IDLE_AFTER and no WORK_HOLD rule) the
- * match check fails (tests/smoke/smoke_run.py --match --sleep-danger). An idle screen draws no number
+ * 3). In the original the human match takes its numbers from the same table, so the count of passes
+ * changes the match. Since item 155 the background matches of each match day take numbers from a
+ * second stream (match_numbers.c), and the count of passes no longer changes the watched match. The
+ * work rule stays for the test switch RECOMP_ORIGINAL_FAULTS=keep:match_numbers: a call of the
+ * commentary step or of the random function counts as game work, and no pass sleeps until WORK_HOLD
+ * ms after the last poll that saw one. Evidence: with RECOMP_IDLE_SLEEP=force (no IDLE_AFTER and no
+ * WORK_HOLD rule) and keep:match_numbers the match check fails (tests/smoke/smoke_run.py --match
+ * --sleep-danger). An idle screen draws no number
  * (docs/research/2026-10-14-assistant-and-days-inventory.md: no draw under the screen loop in a 10 s
  * sample).
  *

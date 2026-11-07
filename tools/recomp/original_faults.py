@@ -1,8 +1,8 @@
 """Faults of the original that long games reach (0.6.2 slice 11, Q23, Q24, Q27, open item 102;
 src/recomp_rt/win/original_faults.c). The fixes act in every game, the base game too. The test switch
 RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age", "keep:olympics",
-"keep:ire_super", "keep:nsl", "keep:holiday", "keep:callups", "keep:wc_pots", "keep:confed" or "keep:club_regulars"
-(or a list: "keep:money,age") turns off one group or more.
+"keep:ire_super", "keep:nsl", "keep:holiday", "keep:callups", "keep:wc_pots", "keep:confed", "keep:club_regulars" or
+"keep:match_numbers" (or a list: "keep:money,age") turns off one group or more.
 
 National managers (fault 26, Q23). `club_can_be_managed` 0x544820 takes a senior national team (club id from club
 count - 2 x nation count to club count - nation count, 0x544835..0x544857) only when its nation had more than 150
@@ -129,6 +129,15 @@ offers" an offer for the club can reach them only when a release clause or the r
 Every player of a game has an asking price: none of 6,860 at the start, 6,842 a year later and 10,679 in a game of
 2026 has 0 (tests/seasons/holiday_offers_run.py, RECOMP_TEST_LIST=census), so listed and unlisted players meet the
 same rule.
+
+Background match numbers (open item 155). The group match_numbers has no site here: it is the RT_WRAP code of
+src/recomp_rt/win/match_numbers.c. The background matches of a match day play in steps of real time: between clicks
+(the day loop's hook 0x5d61b0 calls MATCH_DAY::step_live_match 0x6b55c0 with no human match) and while a watched
+match waits for a commentary line's delay on the millisecond clock. Each step (0x6b5ce0, 0x6b5a70) takes numbers
+from the one random pool of 0x90cfc0, as do the human match and the screens. So the speed of the machine changes the
+game. With the fix, the background matches of each match day take numbers from a second pointer and offset into the
+pool, which starts when MATCH_DAY::MATCH_DAY 0x6b3c10 builds the day, and the main stream is the same on every
+machine.
 
 Senior call-ups (open item 143). `NationalTeams::select_squad` 0x76c120 picks a squad from the nation's pool. For a
 candidate at a club whose nation is on another continent than his own (club +0x53, nation +0x71; 0x76cc3d..0x76cc59
