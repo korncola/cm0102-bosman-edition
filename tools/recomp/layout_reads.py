@@ -8,7 +8,7 @@ on). So each read takes a defined value in its place: the record's id for the ad
 unset bytes, 0x240, the mask of the original's last places, for the place masks of a national squad, and its place
 in the table for the id of a new official. The fixes act in every game, the base game too. The test switch
 RECOMP_LAYOUT_FIXES=keep, or keep:captain, keep:players, keep:daily, keep:stats, keep:loans, keep:squads,
-keep:officials, keep:training, keep:contracts, keep:schedules, turns them off (layout_reads.c).
+keep:officials, keep:training, keep:contracts, keep:schedules, keep:fitness, turns them off (layout_reads.c).
 
 The captain (MATCH_MAN::choose_captain 0x6e1940). For each player of the list it takes the captain score
 (match_man_get_captain_score 0x6e1cf0). When the manager's rating (non_player_attribute_rating 0x544410 with the
@@ -140,6 +140,14 @@ entry names slot 0 (0x8b3b46), and the weekly training (0x8b1d90, get_category_l
 with the other on 19 August 2004, and a draw range at 0x8b1f43 was 60 or 134. Here each schedule is 0 before its
 constructor (0x8b4e13), as fresh memory is: the levels of that slot are 0 until the manager sets them. A loaded game
 reads its schedules from training.dat.
+
+The fitness incident records (AWOL::report_poor_fitness 0x41add0). It builds the record (0x11 bytes) on its stack at
+[esp + 0xc] (at 0x41ae41): the staff id +0 (0x41ae38), the club id +4 (0x41ae2a), the date +8 (Date::Date 0x54a110 at
+0x41adf4, 0x417c10 at 0x41ae3c, 8 bytes) and a flag byte +0x10 ([esp + 0x1c]) that nothing sets, and adds the 0x11 bytes
+to the fitness incident list (0x68d0d0 at 0x41ae4b). When an incident expires, AWOL::daily_update 0x4190d0 tests the
+flag (0x41958b): set, two draws against the player's +0x5b and +0x5d (0x4195b0..); clear, a draw against +0x5b and one
+of 5 (0x4195d4..). In a 2001 base game (with the fixes above) the flag differed with the two Setup Game screens on 24
+June 2012. Here the flag is 0 at 0x41ae41, as fresh memory is, as for the missed training records.
 """
 
 # address: (the instruction in the original, C code)
@@ -169,5 +177,6 @@ INSNS = {
                "W32(esi, eax);"),
     0x8B4E13: ("lea ecx, [esi + 0x18]",
                "if (rt_layout_fix(9u)) memset(M + esi, 0, 0x9bu); ecx = (uint32_t)(esi + 0x18u);"),
+    0x41AE41: ("mov ecx, dword ptr [edi + 8]", "if (rt_layout_fix(10u)) W8(esp + 0x1cu, 0u); ecx = R32(edi + 8u);"),
     0x41A56B: ("mov eax, dword ptr [esi]", "if (rt_layout_fix(7u)) W8(esp + 0x24u, 0u); eax = R32(esi);"),
 }
