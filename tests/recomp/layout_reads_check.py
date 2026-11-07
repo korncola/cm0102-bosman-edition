@@ -39,6 +39,8 @@ when one is not in its INSNS:
   slots (0x4c79dd) with realloc 0x945667 or malloc 0x944e46, which both come to 0x4c7a0a, and stores it at 0x4c7a0c.
   Neither writes the new slots, and STAFF_CONTRACT::generate_initial_contract 0x85e960 writes no morale +0x3d. The
   patches at 0x4c75ae and 0x4c7a0c must clear the new slots.
+- STAFF_CONTRACT::STAFF_CONTRACT 0x85e410 writes the word +0x3b at 0x85e454 and no byte +0x3d. The patch at 0x85e454
+  must clear the morale.
 - Each patch calls rt_layout_fix with the index of its group in names[] of layout_reads.c.
 Each INSNS row must name the instruction that the original has at its address.
 Exit code 0 when every case passes.
@@ -63,7 +65,8 @@ SIZES = {"byte": 1, "word": 2, "dword": 4}
 FILL, FILL_END = 0x90D2F0, 0x90D4EC   # VIRTUAL_STAFF::fill_fixture_squads, which gets the fixture (0x84c2a9, 0x84c2b7)
 GROUP_OF = {0x6E19B9: "captain", 0x6EADA0: "players", 0x5CE311: "daily", 0x84C266: "stats", 0x8BF420: "loans",
             0x76C939: "squads", 0x79C6AA: "officials", 0x79C76A: "officials", 0x41A56B: "training",
-            0x4C7A0C: "contracts", 0x4C75AE: "contracts"}
+            0x4C7A0C: "contracts", 0x4C75AE: "contracts",
+            0x85E454: "contracts"}
 
 
 def disassemble(img):
@@ -224,6 +227,14 @@ def main():
             layout_reads.INSNS.get(0x4C7A0C, ("", ""))[1] or "memset(M + eax, 0, R32(ebx + 4u) * 0x50u)" not in \
             layout_reads.INSNS.get(0x4C75AE, ("", ""))[1]:
         fails.append("0x4c79a0: the new slots of the contract table stay unset, and no patch clears them")
+    if at.get(0x85E454) != ("mov", "word ptr [esi + 0x3b], bx") or any(
+            m in WRITES and o.startswith(("byte ptr [esi + 0x3d]", "word ptr [esi + 0x3c]", "dword ptr [esi + 0x3a]",
+                                          "dword ptr [esi + 0x3b]", "dword ptr [esi + 0x3c]", "dword ptr [esi + 0x3d]",
+                                          "word ptr [esi + 0x3d]"))
+            for a, m, o in code if 0x85E410 <= a < 0x85E473):
+        fails.append("0x85e410: the contract constructor's writes near the morale +0x3d differ; read the case again")
+    if "W8(esi + 0x3du, 0u)" not in layout_reads.INSNS.get(0x85E454, ("", ""))[1]:
+        fails.append("0x85e410: the contract constructor leaves the morale +0x3d unset, and no patch sets it")
     # Each patch asks the switch for its own group: the index of its name in names[] of layout_reads.c.
     src = open(os.path.join(HERE, "..", "..", "src", "recomp_rt", "win", "layout_reads.c")).read()
     names = re.findall(r'"([a-z]+)"', re.search(r"names\[GROUPS\] = \{([^}]*)\}", src).group(1))

@@ -115,6 +115,15 @@ had morale 0 with one Setup Game screen and 0x5e with the other, and on 6 Januar
 compared it with a draw (0x5d00ad..0x5d00c2). Here the first table is 0 when it is made (0x4c75ae) and the new slots are
 0 when it grows (0x4c7a0c), as fresh memory is. A table loaded from a saved game has one slot per saved contract
 (load_from_disk 0x4db5c0, the count at 0x4db7e2 and malloc at 0x4db7f2), each read from the save.
+
+The staff contract constructor (STAFF_CONTRACT::STAFF_CONTRACT 0x85e410). It sets the dates, the club, the flag fields
+and the values, among them the word +0x3b (0x85e454), but not the morale +0x3d. 39 sites build a contract with it, many
+on their stack, and pass it on, for example to CONTRACT_MANAGER::sign_loan_contract 0x4d01e0 (0x8bf5b4, 0x8c2684). In a
+2001 base game (with the fixes above) staff 6037 had a second contract, at club 1505, while his own contract stayed at
+his club; its morale was 0x5c with one Setup Game screen and 0x3f with the other on 23 October 2002, and in April 2003
+the games went apart in MATCH_PLAYER code that reads that contract (0x6ebaf6..). With the morale defined they ran equal
+to August 2004. Here the constructor also sets the morale to 0 (0x85e454), as it sets the word before it: a contract
+starts at morale 0 until the sign-contract code gives it one (0x4cfadf..0x4cfaf1).
 """
 
 # address: (the instruction in the original, C code)
@@ -136,6 +145,8 @@ INSNS = {
     0x79C76A: ("mov word ptr [esi + 4], ax",
                "W16(esi + 4u, (uint16_t)eax); if (rt_layout_fix(6u)) { uint32_t y_ = R16(esi + 6u); "
                "W32(esi + 8u, y_ % 4u == 0u && (y_ % 100u != 0u || y_ % 400u == 0u) ? 1u : 0u); }"),
+    0x85E454: ("mov word ptr [esi + 0x3b], bx",
+               "W16(esi + 0x3bu, (uint16_t)ebx); if (rt_layout_fix(8u)) W8(esi + 0x3du, 0u);"),
     0x4C75AE: ("mov dword ptr [ebx], eax",
                "if (rt_layout_fix(8u) && eax) memset(M + eax, 0, R32(ebx + 4u) * 0x50u); W32(ebx, eax);"),
     0x4C7A0C: ("mov dword ptr [esi], eax",
