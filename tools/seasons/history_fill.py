@@ -11,7 +11,8 @@ each database, decides which researched rows the game adds at a new game in the 
 - the row is `held = yes`, its label year is 2002 or later, and the database has the competition;
 - the edition ended before the start (ended before July of the start year), or it is a calendar-year edition
   whose label is the start year and whose last match is in September or later (the 3.9.68 data holds the 2001
-  season of the calendar-year leagues in the same way; see the slice doc).
+  season of the calendar-year leagues in the same way; see the slice doc). A row with a game_season (Q277: an
+  edition that the game plays in another season than in real life) ends at the end of that season (ended_of).
 
 Each kept row is compared with the rows that the database holds for that competition and label year after the
 year shift of slice 11b (tools/seasons/history_gaps.py): `add` (the database has no row), `agree` (the same first
@@ -95,7 +96,15 @@ def research_rows():
 
 
 def ended_of(r):
-    """(year, month) of the end of an edition, or a fallback from real_season when `ended` is unknown."""
+    """(year, month) of the end of an edition, or a fallback from real_season when `ended` is unknown.
+
+    game_season (Q277, 0.6.2 open item 170): a late edition plays at its normal time in the season it belongs to, so
+    the game plays it in the season Y/Y+1 of the rules table (docs/research/rules-0.6.0/int-continental.tsv), not at
+    its real end. Such an edition ends before the start in July Y+1: a game of Y+1 never plays it (season_intl_first,
+    season_intl_rules.c, takes the first edition of the start season or later)."""
+    g = re.fullmatch(r"(\d{4})/(\d{2})", (r.get("game_season") or "").strip())
+    if g:
+        return int(g.group(1)[:2] + g.group(2)), START_MONTH - 1
     m = re.fullmatch(r"(\d{4})-(\d{2})", (r.get("ended") or "").strip())
     if m:
         return int(m.group(1)), int(m.group(2))
@@ -271,14 +280,15 @@ LAST_ROW_MOVES = (("Autumn 2013", "Croatian First Division", 2012, "NK Lokomotiv
 # start year counts: the game plays no finals in the July of its start (no game row of the 2010 World Cup in the
 # 2010 gate saves of 0.6.0). October 2023 holds no World Cup 2022 row, April 2011 SIM and March 2012 SIM no World
 # Cup or Euro row after 2000. October 2026 holds no World Cup 2026 row.
-GAP_FINALS = ("FIFA World Cup", "European Football Championship")
-# The same for one database only (0.6.2 slice 21): October 2026 holds no Africa Cup of Nations 2025 row. The research
-# of this competition ends in 2006 with one row of 2025, so the rule is not opened to the other databases, whose rows
-# of 2008 to 2023 the research does not hold.
-# October 2026 holds no row of the Argentine Apertura 2026 either (Belgrano, 24 May 2026, before the start). This is
-# open item 98. The years of a club competition get the club shift (comp_history), the years of a nation competition
-# the nation shift.
-GAP_FINALS_OF = {"October 2026": ("African Cup of Nations", "Argentine Premier Division")}
+# The Africa Cup of Nations (0.6.2 slice 21, open item 170): every database of 2010/11 or later names it "African Cup
+# of Nations", and many lack an edition before their start: October 2026 the 2025 row, October 2021 the 2021 row
+# (played in 2020/21 under Q277, in January 2022 in real life), October 2023 the 2021 and 2023 rows. The research
+# holds every edition from 2002 to 2025 (nations.tsv), so the rule holds for every database.
+GAP_FINALS = ("FIFA World Cup", "European Football Championship", "African Cup of Nations")
+# The same for one database only: October 2026 holds no row of the Argentine Apertura 2026 (Belgrano, 24 May 2026,
+# before the start). This is open item 98. The years of a club competition get the club shift (comp_history), the
+# years of a nation competition the nation shift.
+GAP_FINALS_OF = {"October 2026": ("Argentine Premier Division",)}
 
 
 def gap_databases(dbroot):

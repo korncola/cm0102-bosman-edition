@@ -3501,26 +3501,49 @@ add	3.9.60	2010	FIFA Club World Championship	2009		add	F.C. Barcelona	Spain	Estu
 add	3.9.60	2010	South American Copa Libertadores	2009		add	Estudiantes de La Plata	Argentina	Cruzeiro Esporte Clube	Brazil					
 add	3.9.60	2010	South American Copa Mercosur	2009		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
 add	3.9.60	2010	Italian Super Cup	2009		add	Lazio	Italy	Internazionale	Italy					
+add	3.9.60	2010	African Cup of Nations	2010		add	Egypt		Ghana		Nigeria		Angola		
 add	3.9.60	2010	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa		
 add	3.9.60	2010	Scottish League Challenge Cup	2009		add	Dundee	Scotland	Inverness Caledonian Thistle	Scotland					
+clear	3.9.60	2010	African Cup of Nations	2010											
 clear	3.9.60	2010	FIFA World Cup	2010											
 clear	3.9.60	2010	US Open Cup	2010											
 add	3.9.60	2011	US Open Cup	2011		add	Seattle Sounders	United States	Chicago Fire	United States					
+clear	3.9.60	2011	African Cup of Nations	2011											
 clear	3.9.60	2011	US Open Cup	2011											
+add	3.9.60	2012	African Cup of Nations	2012		add	Zambia		Ivory Coast		Mali		Equatorial Guinea		
 add	3.9.60	2012	European Football Championship	2012		add	Spain		Italy				Poland		
+clear	3.9.60	2012	African Cup of Nations	2012											
 clear	3.9.60	2012	European Football Championship	2012											
+add	3.9.60	2013	African Cup of Nations	2013		add	Nigeria		Burkina Faso		Mali		South Africa		
+clear	3.9.60	2013	African Cup of Nations	2013											
 add	3.9.60	2014	FIFA World Cup	2014		add	Germany		Argentina		Holland		Brazil		
+clear	3.9.60	2014	African Cup of Nations	2014											
 clear	3.9.60	2014	FIFA World Cup	2014											
+add	3.9.60	2015	African Cup of Nations	2015		add	Ivory Coast		Ghana		Democratic Republic of Congo		Equatorial Guinea		
+clear	3.9.60	2015	African Cup of Nations	2015											
 add	3.9.60	2016	European Football Championship	2016		add	Portugal		France				France		
+clear	3.9.60	2016	African Cup of Nations	2016											
 clear	3.9.60	2016	European Football Championship	2016											
+add	3.9.60	2017	African Cup of Nations	2017		add	Cameroon		Egypt		Burkina Faso		Gabon		
+clear	3.9.60	2017	African Cup of Nations	2017											
 add	3.9.60	2018	FIFA World Cup	2018		add	France		Croatia		Belgium		Russia		
+clear	3.9.60	2018	African Cup of Nations	2018											
 clear	3.9.60	2018	FIFA World Cup	2018											
+add	3.9.60	2019	African Cup of Nations	2019		add	Algeria		Senegal		Nigeria		Egypt		
+clear	3.9.60	2019	African Cup of Nations	2019											
 clear	3.9.60	2019	US Open Cup	2019											2019
+clear	3.9.60	2020	African Cup of Nations	2020											
 clear	3.9.60	2020	European Football Championship	2020											
+add	3.9.60	2021	African Cup of Nations	2021		add	Senegal		Egypt		Cameroon		Cameroon		
 add	3.9.60	2021	European Football Championship	2020		add	Italy		England						
+clear	3.9.60	2021	African Cup of Nations	2021											
 add	3.9.60	2022	FIFA World Cup	2022		add	Argentina		France		Croatia		Qatar		
+clear	3.9.60	2022	African Cup of Nations	2022											
 clear	3.9.60	2022	FIFA World Cup	2022											
+add	3.9.60	2023	African Cup of Nations	2023		add	Ivory Coast		Nigeria		South Africa		Ivory Coast		
+clear	3.9.60	2023	African Cup of Nations	2023											
 add	3.9.60	2024	European Football Championship	2024		add	Spain		England				Germany		
+clear	3.9.60	2024	African Cup of Nations	2024											
 clear	3.9.60	2024	European Football Championship	2024											
 clear	3.9.60	2025	African Cup of Nations	2025											
 add	3.9.60	2026	Argentine Premier Division	2026	Apertura	add	Belgrano de Córdoba	Argentina	River Plate	Argentina					
@@ -7304,26 +7327,49 @@ add	3.9.65	2010	FIFA Club World Championship	2009		add	F.C. Barcelona	Spain	Estu
 add	3.9.65	2010	South American Copa Libertadores	2009		add	Estudiantes de La Plata	Argentina	Cruzeiro Esporte Clube	Brazil					
 add	3.9.65	2010	South American Copa Mercosur	2009		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
 add	3.9.65	2010	Italian Super Cup	2009		add	Lazio	Italy	Internazionale	Italy					
+add	3.9.65	2010	African Cup of Nations	2010		add	Egypt		Ghana		Nigeria		Angola		
 add	3.9.65	2010	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa		
 add	3.9.65	2010	Scottish League Challenge Cup	2009		add	Dundee	Scotland	Inverness Caledonian Thistle	Scotland					
+clear	3.9.65	2010	African Cup of Nations	2010											
 clear	3.9.65	2010	FIFA World Cup	2010											
 clear	3.9.65	2010	US Open Cup	2010											
 add	3.9.65	2011	US Open Cup	2011		add	Seattle Sounders	United States	Chicago Fire	United States					
+clear	3.9.65	2011	African Cup of Nations	2011											
 clear	3.9.65	2011	US Open Cup	2011											
+add	3.9.65	2012	African Cup of Nations	2012		add	Zambia		Ivory Coast		Mali		Equatorial Guinea		
 add	3.9.65	2012	European Football Championship	2012		add	Spain		Italy				Poland		
+clear	3.9.65	2012	African Cup of Nations	2012											
 clear	3.9.65	2012	European Football Championship	2012											
+add	3.9.65	2013	African Cup of Nations	2013		add	Nigeria		Burkina Faso		Mali		South Africa		
+clear	3.9.65	2013	African Cup of Nations	2013											
 add	3.9.65	2014	FIFA World Cup	2014		add	Germany		Argentina		Holland		Brazil		
+clear	3.9.65	2014	African Cup of Nations	2014											
 clear	3.9.65	2014	FIFA World Cup	2014											
+add	3.9.65	2015	African Cup of Nations	2015		add	Ivory Coast		Ghana		Democratic Republic of Congo		Equatorial Guinea		
+clear	3.9.65	2015	African Cup of Nations	2015											
 add	3.9.65	2016	European Football Championship	2016		add	Portugal		France				France		
+clear	3.9.65	2016	African Cup of Nations	2016											
 clear	3.9.65	2016	European Football Championship	2016											
+add	3.9.65	2017	African Cup of Nations	2017		add	Cameroon		Egypt		Burkina Faso		Gabon		
+clear	3.9.65	2017	African Cup of Nations	2017											
 add	3.9.65	2018	FIFA World Cup	2018		add	France		Croatia		Belgium		Russia		
+clear	3.9.65	2018	African Cup of Nations	2018											
 clear	3.9.65	2018	FIFA World Cup	2018											
+add	3.9.65	2019	African Cup of Nations	2019		add	Algeria		Senegal		Nigeria		Egypt		
+clear	3.9.65	2019	African Cup of Nations	2019											
 clear	3.9.65	2019	US Open Cup	2019											2019
+clear	3.9.65	2020	African Cup of Nations	2020											
 clear	3.9.65	2020	European Football Championship	2020											
+add	3.9.65	2021	African Cup of Nations	2021		add	Senegal		Egypt		Cameroon		Cameroon		
 add	3.9.65	2021	European Football Championship	2020		add	Italy		England						
+clear	3.9.65	2021	African Cup of Nations	2021											
 add	3.9.65	2022	FIFA World Cup	2022		add	Argentina		France		Croatia		Qatar		
+clear	3.9.65	2022	African Cup of Nations	2022											
 clear	3.9.65	2022	FIFA World Cup	2022											
+add	3.9.65	2023	African Cup of Nations	2023		add	Ivory Coast		Nigeria		South Africa		Ivory Coast		
+clear	3.9.65	2023	African Cup of Nations	2023											
 add	3.9.65	2024	European Football Championship	2024		add	Spain		England				Germany		
+clear	3.9.65	2024	African Cup of Nations	2024											
 clear	3.9.65	2024	European Football Championship	2024											
 clear	3.9.65	2025	African Cup of Nations	2025											
 add	3.9.65	2026	Argentine Premier Division	2026	Apertura	add	Belgrano de Córdoba	Argentina	River Plate	Argentina					
@@ -11359,26 +11405,49 @@ add	3.9.68	2010	FIFA Club World Championship	2009		add	F.C. Barcelona	Spain	Estu
 add	3.9.68	2010	South American Copa Libertadores	2009		add	Estudiantes de La Plata	Argentina	Cruzeiro Esporte Clube	Brazil					
 add	3.9.68	2010	South American Copa Mercosur	2009		add	Liga Universitaria de Quito	Ecuador	Fluminense Football Club	Brazil					
 add	3.9.68	2010	Italian Super Cup	2009		add	Lazio	Italy	Internazionale	Italy					
+add	3.9.68	2010	African Cup of Nations	2010		add	Egypt		Ghana		Nigeria		Angola		
 add	3.9.68	2010	FIFA World Cup	2010		add	Spain		Holland		Germany		South Africa		
 add	3.9.68	2010	Scottish League Challenge Cup	2009		add	Dundee	Scotland	Inverness Caledonian Thistle	Scotland					
+clear	3.9.68	2010	African Cup of Nations	2010											
 clear	3.9.68	2010	FIFA World Cup	2010											
 clear	3.9.68	2010	US Open Cup	2010											
 add	3.9.68	2011	US Open Cup	2011		add	Seattle Sounders	United States	Chicago Fire	United States					
+clear	3.9.68	2011	African Cup of Nations	2011											
 clear	3.9.68	2011	US Open Cup	2011											
+add	3.9.68	2012	African Cup of Nations	2012		add	Zambia		Ivory Coast		Mali		Equatorial Guinea		
 add	3.9.68	2012	European Football Championship	2012		add	Spain		Italy				Poland		
+clear	3.9.68	2012	African Cup of Nations	2012											
 clear	3.9.68	2012	European Football Championship	2012											
+add	3.9.68	2013	African Cup of Nations	2013		add	Nigeria		Burkina Faso		Mali		South Africa		
+clear	3.9.68	2013	African Cup of Nations	2013											
 add	3.9.68	2014	FIFA World Cup	2014		add	Germany		Argentina		Holland		Brazil		
+clear	3.9.68	2014	African Cup of Nations	2014											
 clear	3.9.68	2014	FIFA World Cup	2014											
+add	3.9.68	2015	African Cup of Nations	2015		add	Ivory Coast		Ghana		Democratic Republic of Congo		Equatorial Guinea		
+clear	3.9.68	2015	African Cup of Nations	2015											
 add	3.9.68	2016	European Football Championship	2016		add	Portugal		France				France		
+clear	3.9.68	2016	African Cup of Nations	2016											
 clear	3.9.68	2016	European Football Championship	2016											
+add	3.9.68	2017	African Cup of Nations	2017		add	Cameroon		Egypt		Burkina Faso		Gabon		
+clear	3.9.68	2017	African Cup of Nations	2017											
 add	3.9.68	2018	FIFA World Cup	2018		add	France		Croatia		Belgium		Russia		
+clear	3.9.68	2018	African Cup of Nations	2018											
 clear	3.9.68	2018	FIFA World Cup	2018											
+add	3.9.68	2019	African Cup of Nations	2019		add	Algeria		Senegal		Nigeria		Egypt		
+clear	3.9.68	2019	African Cup of Nations	2019											
 clear	3.9.68	2019	US Open Cup	2019											2019
+clear	3.9.68	2020	African Cup of Nations	2020											
 clear	3.9.68	2020	European Football Championship	2020											
+add	3.9.68	2021	African Cup of Nations	2021		add	Senegal		Egypt		Cameroon		Cameroon		
 add	3.9.68	2021	European Football Championship	2020		add	Italy		England						
+clear	3.9.68	2021	African Cup of Nations	2021											
 add	3.9.68	2022	FIFA World Cup	2022		add	Argentina		France		Croatia		Qatar		
+clear	3.9.68	2022	African Cup of Nations	2022											
 clear	3.9.68	2022	FIFA World Cup	2022											
+add	3.9.68	2023	African Cup of Nations	2023		add	Ivory Coast		Nigeria		South Africa		Ivory Coast		
+clear	3.9.68	2023	African Cup of Nations	2023											
 add	3.9.68	2024	European Football Championship	2024		add	Spain		England				Germany		
+clear	3.9.68	2024	African Cup of Nations	2024											
 clear	3.9.68	2024	European Football Championship	2024											
 clear	3.9.68	2025	African Cup of Nations	2025											
 add	3.9.68	2026	Argentine Premier Division	2026	Apertura	add	Belgrano de Córdoba	Argentina	River Plate	Argentina					
