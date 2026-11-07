@@ -65,6 +65,52 @@ int main(void)
     CHECK(season_intl_rows_clean(rows, 4) == 0, "a second clean changes nothing");
     CHECK(season_intl_rows_clean(rows, 0) == 0, "no rows");
 
+    /* 0.6.2 item 181: the draw of the 2002 Africa Cup of Nations in a 2001 game. The original's row (Egypt 59,
+     * fixed, day 169, move 16, cleaned) takes the table's host, Mali (118), in pair 2 with choice 1: find_hosts
+     * 0x5fa730 then gives Mali (0x5fa788), and pair 1 keeps Egypt for the copy at the first season change. */
+    uint8_t acn[ROW], orig[ROW];
+    row(acn, 0x1c3, 2002, (const int32_t[6]){59, -1, -1, -1, -1, -1}, FIXED, 169, 0x10);
+    memcpy(orig, acn, ROW);
+    const int32_t mali[1] = {118}, egypt[1] = {59};
+    CHECK(season_intl_row_draw_hosts(acn, egypt, 1) == 0, "a row of the table's host stays");
+    CHECK(!memcmp(acn, orig, ROW), "a row of the table's host: no byte changes");
+    CHECK(season_intl_row_draw_hosts(acn, mali, 1) == 1, "the row of another host takes the table's host");
+    CHECK(acn[CHOICE] == 1, "choice %d, want pair 2 (1)", acn[CHOICE]);
+    CHECK(get32(acn + 6) == 59 && get32(acn + 10) == -1, "pair 1 keeps the original's host");
+    CHECK(get32(acn + 14) == 118 && get32(acn + 18) == -1, "pair 2 holds the table's host");
+    CHECK(get32(acn + 22) == -1 && get32(acn + 26) == -1, "pair 3 holds none");
+    CHECK(!memcmp(acn, orig, 6) && !memcmp(acn + 0x1f, orig + 0x1f, ROW - 0x1f), "key, year, day and move stay");
+    CHECK(season_intl_row_draw_hosts(acn, mali, 1) == 0, "a second draw changes nothing");
+    CHECK(season_intl_rows_clean(acn, 1) == 0, "the clean of open item 103 leaves the drawn row");
+    /* The copy at the first season change (hosts_apply) takes the original's row back. */
+    uint8_t copy[ROW];
+    memcpy(copy, acn, ROW);
+    CHECK(season_intl_row_undo_draw_hosts(copy, mali, 1) == 1, "the copy takes the original's row");
+    CHECK(!memcmp(copy, orig, ROW), "the copy equals the original's row");
+    CHECK(season_intl_row_undo_draw_hosts(copy, mali, 1) == 0, "a second undo changes nothing");
+    CHECK(season_intl_row_undo_draw_hosts(orig, mali, 1) == 0, "the original's row stays");
+
+    /* The World Cup 2002 row (0x5f9a1f..0x5f9a55): South Korea 70 and Japan 74 drawn as pair 1 (choice 0); the table
+     * names both, in another order. */
+    uint8_t wc[ROW], wc0[ROW];
+    row(wc, 0x1c1, 2002, (const int32_t[6]){70, 74, 12, -1, 192, -1}, 0, 200, 0x20);
+    memcpy(wc0, wc, ROW);
+    const int32_t korea_japan[2] = {74, 70};
+    CHECK(season_intl_row_draw_hosts(wc, korea_japan, 2) == 0, "the World Cup 2002 row stays");
+    CHECK(season_intl_row_undo_draw_hosts(wc, korea_japan, 2) == 0, "the World Cup 2002 row is no drawn row");
+    CHECK(!memcmp(wc, wc0, ROW), "the World Cup 2002 row: no byte changes");
+    /* A drawn row whose pair 2 is chosen (choice 1) by the original's draw, not by the table, stays at the copy. */
+    row(wc, 0x1c1, 2006, (const int32_t[6]){70, -1, 74, -1, 192, -1}, 1, 200, 0x20);
+    memcpy(wc0, wc, ROW);
+    CHECK(season_intl_row_undo_draw_hosts(wc, (const int32_t[1]){74}, 1) == 0, "a row of three pairs stays");
+    CHECK(!memcmp(wc, wc0, ROW), "a row of three pairs: no byte changes");
+    /* No room: a fixed row with more hosts, or a table edition of more than two hosts, stays. */
+    row(wc, 0x1c3, 2002, (const int32_t[6]){59, 60, 61, -1, -1, -1}, FIXED, 169, 0x10);
+    CHECK(season_intl_row_draw_hosts(wc, mali, 1) == 0, "a fixed row of three hosts stays");
+    row(wc, 0x1c3, 2002, (const int32_t[6]){59, -1, -1, -1, -1, -1}, FIXED, 169, 0x10);
+    CHECK(season_intl_row_draw_hosts(wc, (const int32_t[3]){1, 2, 3}, 3) == 0, "three table hosts: no room");
+    CHECK(season_intl_row_draw_hosts(wc, mali, 0) == 0, "no table host: the row stays");
+
     if (failures) fprintf(stderr, "season_intl_rows: %d failures\n", failures);
     else printf("season_intl_rows: ok\n");
     return failures ? 1 : 0;

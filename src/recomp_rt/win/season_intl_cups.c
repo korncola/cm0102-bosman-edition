@@ -328,6 +328,21 @@ static uint32_t national_team(uint32_t nation)
     return !rt_unwinding && readable(t) && rd32(g_mem, t + TEAM_NATION) == nation ? t : 0;
 }
 
+void o_004022c0(void);
+
+/* AfricanNations::draw_finalists 0x4022c0, thiscall (): called from update_for_date 0x4025a0 on the draw date
+ * (0x402679). It takes the hosts from find_hosts 0x5fa730 (key [0x9cf7ac], year +0x40, 0x40232f..0x40233e). Item
+ * 181: before that, the row of an edition of 2001/02 in a 2001 game takes the table's host (Mali 2002, not the
+ * original's Egypt). */
+RT_WRAP(004022c0, acn_draw)
+{
+    uint32_t self = cpu.ecx;
+    season_intl_draw_hosts(cups[ACN].file, year_of(self));
+    if (rt_unwinding) return;
+    cpu.ecx = self;
+    o_004022c0();
+}
+
 /* ACN entrants 0x4022c0 at 0x40242f: +0xee holds the hosts of find_hosts (dl of them, 0x402343) and then the
  * other African nations in nation order (count edi). The sort (0x402446) and the draw (0x4024c6) take the hosts
  * first and the best of the others. Each host after the second moves to the end of the hosts (added when it is

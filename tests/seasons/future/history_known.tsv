@@ -87,7 +87,7 @@ missing	OFC Men's Nations Cup	2028	open items 2 and 19: editions not written
 same-final	CONCACAF Gold Cup	2009	real results: the same finalists count only in Tier B (spec, Decisions)
 same-final	CONCACAF Gold Cup	2023	real results: the same finalists count only in Tier B (spec, Decisions)
 entrant-route	*Finalissima	2022	open item 19: no Copa America after 2001 in a 2001 game, so no winner to enter
-entrant-host	Africa*Cup of Nations	2002	open item 46: Mali 2002 does not play in a 2001 game (the original row names Egypt; a fix acts at the new game, against Q152: decision for Max)
+entrant-host	Africa*Cup of Nations	2002	original design, changing rules off only: the original's host row of 2002 names Egypt (HostCountry::init_default_table 0x5f9970, Egypt written at 0x5f9f19, fixed at 0x5f9f2f). With changing rules on the row takes Mali at the draw (item 181; a 2001 Tier A game to 2005 shows Mali as host and entrant)
 entrant-route	Intercontinental Cup	2002	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
 entrant-route	Intercontinental Cup	2003	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
 no-host	OFC*Nations Cup	2008	not a fault: the 2008 OFC Nations Cup was played home and away with no host (int-continental-87)
