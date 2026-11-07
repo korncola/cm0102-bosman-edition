@@ -193,6 +193,10 @@ if(NOT WIN32)
     target_link_libraries(link_pass_test PRIVATE Threads::Threads)
     add_test(NAME link_pass COMMAND link_pass_test)
     # The zone of the heap for the player search (0.6.1, playersearch.c).
+    add_executable(heap_big_test tests/recomp/test_heap_big.c src/recomp_rt/heap.c)
+    target_include_directories(heap_big_test PRIVATE src/recomp_rt)
+    add_test(NAME heap_big COMMAND heap_big_test)
+
     add_executable(heap_zone_test tests/recomp/test_heap_zone.c src/recomp_rt/heap.c)
     target_include_directories(heap_zone_test PRIVATE src/recomp_rt)
     add_test(NAME heap_zone COMMAND heap_zone_test)

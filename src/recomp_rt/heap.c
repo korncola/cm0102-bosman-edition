@@ -501,6 +501,13 @@ int rt_is_block(uint32_t addr)
     return addr >= RT_HEAP_BASE + HDR && addr < heap_top && h_state(addr) == MAGIC_USED;
 }
 
+/* A block of this size or more that grows by realloc gets half its size again as room also before the join (open item
+ * 182). The staff contract array of the game (0x4c79a0) grows by 16000 bytes at a time and reaches 118 MB in 2221. With
+ * small blocks of the game between the copies no old copy joined its neighbours, each stayed as a hole one step too
+ * small for the next request, and the arena (2032 MB) was full of 118 MB holes with 1700 MB free ("heap full" in 2222).
+ * Below this size the blocks and addresses stay as they were (Q152): a game before about 2030 holds no such array. */
+#define GROW_FROM (16u << 20)
+
 uint32_t rt_realloc(uint32_t addr, uint32_t size, int in_place_only)
 {
     if (!addr) return in_place_only ? 0 : rt_alloc(size);
@@ -519,8 +526,8 @@ uint32_t rt_realloc(uint32_t addr, uint32_t size, int in_place_only)
     if (in_place_only) return 0;
     /* After the limit a large block that grows gets half its size again as room, so that its next growth stays in
      * place: an array that grows by a little at each call otherwise needs a new hole each time. */
-    uint32_t n = rt_heap_bump || !joined || size <= SMALL_MAX || size > 0x40000000u ? rt_alloc(size)
-                                                                                    : list_alloc(size, size + size / 2);
+    uint32_t n = rt_heap_bump || !(joined || size >= GROW_FROM) || size <= SMALL_MAX || size > 0x40000000u
+                     ? rt_alloc(size) : list_alloc(size, size + size / 2);
     memcpy(g_mem + n, g_mem + addr, old < size ? old : size);
     rt_free(addr);
     return n;
