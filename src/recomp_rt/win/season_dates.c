@@ -17,7 +17,8 @@
  * - a known Update Team database in its own season (N = D): the measured shifts of the table;
  * - a known Update Team database in another season: the whole database moves by N - D on top, so every person
  *   keeps the age that the database gives him and no history row lies after the start (a 2019/20 squad in a
- *   2010/11 game is not made of children, and its 2019 champions do not appear in 2010);
+ *   2010/11 game is not made of children, and its 2019 champions do not appear in 2010); the nation
+ *   competition rows move by whole 4-year steps of that only (whole_cycles, open item 169);
  * - the official data sets (3.9.60, 3.9.65, 3.9.68; D = 2001): real dates of birth, careers and history stay,
  *   and the contract ends move by N - 2001 (the 2002/03 tile: +1);
  * - a Custom database: the dates of birth are measured against the game's own data (3.9.68), shift d, so
@@ -155,8 +156,23 @@ typedef struct {
     const char *name;
     int D, N;                       /* data season, start year */
     int birth, joined, officials, careers, kept, history, nation_history, last_rows, contract_old, contract_real;
+    int nation_kept;                /* the part of kept that the nation competition rows take: whole cycles */
     const SeasonDateShifts *row;    /* careers kept and last rows; NULL for none */
 } Plan;
+
+/* Open item 169: the nation competitions (the international finals and their qualifiers) are held every 1, 2
+ * or 4 years in fixed years (class_cycles, season_intl_rules.c: a World Cup in a year after a multiple of 4
+ * from 2002, a Euro after one from 2000). A database that moves by N - D years in a game of another season
+ * moves its nation rows by whole 4-year steps only, the most that is not more than N - D, so each final stays
+ * in a year of its own cycle and no row lies after the start. A shift of 73 (December 2025 in 2098) put the
+ * World Cup of 2022 at 2095 and the next editions of the class at 2102, 2106 (in phase with the table). */
+#define NATION_CYCLE 4
+
+static int whole_cycles(int e)
+{
+    int r = e % NATION_CYCLE;
+    return e - (r < 0 ? r + NATION_CYCLE : r);
+}
 
 /* A date: adds s to its year when it is set, keeps a 29 February valid and the year at 1901 or later. */
 static void shift_date(uint32_t a, int s)
@@ -234,7 +250,7 @@ int season_dates_career_kept(const SeasonDateShifts *s, uint32_t i) { return car
 static int nation_shift(const Plan *p, uint32_t id)
 {
     for (uint32_t i = 0; p->row && i < p->row->nation_count; i++)
-        if ((uint32_t)p->row->nation_comps[2 * i] == id) return p->row->nation_comps[2 * i + 1] + p->kept;
+        if ((uint32_t)p->row->nation_comps[2 * i] == id) return p->row->nation_comps[2 * i + 1] + p->nation_kept;
     return p->nation_history;
 }
 
@@ -483,8 +499,9 @@ static int plan_for_folder(const char *dir, int N, Plan *p)
         p->officials = row->officials + e;
         p->careers = row->staff_history + e;
         p->kept = e;
+        p->nation_kept = whole_cycles(e);
         p->history = row->comp_history + e;
-        p->nation_history = row->nation_history + e;
+        p->nation_history = row->nation_history + p->nation_kept;
         p->last_rows = row->last_rows ? row->last_rows + e : 0;
         p->contract_old = row->contract + e;
         p->contract_real = e;
@@ -501,8 +518,10 @@ static int plan_for_folder(const char *dir, int N, Plan *p)
     p->D = D;
     p->birth = p->joined = p->careers = d + e;
     p->kept = e;
+    p->nation_kept = whole_cycles(e);
     p->officials = (D >= 2020) + e;
-    p->history = p->nation_history = (D >= 2010 ? d : 0) + e;
+    p->history = (D >= 2010 ? d : 0) + e;
+    p->nation_history = (D >= 2010 ? d : 0) + p->nation_kept;
     p->contract_old = d + e;
     p->contract_real = e;
     return 1;

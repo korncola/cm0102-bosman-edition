@@ -351,7 +351,8 @@ class Rules:
         cycle = number(r.get("cycle"))
         return {"key": key, "kind": r.get("kind", ""), "has_host": number(r.get("has_host")),
                 "confs": set(confed.split("|")) if confed and set(confed.split("|")) <= set(CONF_IDS) else None,
-                "cycle": cycle or None, "end": number(r.get("end_year")), "ended": cycle == 0}
+                "cycle": cycle or None, "end": number(r.get("end_year")), "ended": cycle == 0,
+                "years": sorted(int(y) for y in re.findall(r"\d{4}", r.get("table_years", "")))}
 
 
 def read_known(path):
@@ -511,6 +512,8 @@ def check(game, rules=None, changes=()):
         if FRIENDLY.match(name):
             continue
         rule = rules.get(name)
+        if rule and not game.changing:
+            rule = dict(rule, years=[])               # the table's years are those of changing rules (not_held)
         sides = sum(1 for a in raw[cid] if a in game.sides)
         teams = "nation" if sides * 2 > len(raw[cid]) else "club"
         international = comp["nation"] < 0
@@ -591,11 +594,14 @@ def check(game, rules=None, changes=()):
             continue                                  # ended by the rules: no later edition is expected
         if cyc and ys and cid in game.parts and ys[-1] >= start - 2 * cyc:
             for a, b in zip(ys, ys[1:]):
-                if b >= start and a >= start - cyc and b - a > cyc + 1 and not (end and a >= end):
+                due = [y for y in range(a + cyc, b, cyc)
+                       if not not_held(rule, a, y, cyc) and not before_start(rule.get("key"), [y], start)]
+                if b >= start and a >= start - cyc and b - a > cyc + 1 and due and not (end and a >= end):
                     faults.append(("gap", name, b, f"no edition between {a} and {b} (cycle {cyc})"))
             ended = edition == ENDED_YEAR or (end is not None and end < save_year)
-            if not ended and ys[-1] + cyc + 1 < save_year:
-                faults.append(("missing", name, ys[-1] + cyc,
+            due = due_edition(rule, ys[-1], cyc, start)
+            if not ended and due + 1 < save_year:
+                faults.append(("missing", name, due,
                                f"last edition {ys[-1]}, cycle {cyc}, the save is in {save_year}"))
         # the next draw or start more than one cycle after the save date
         if edition in IDLE_YEARS and not idle_is_next(edition, save_year, cyc):
@@ -801,6 +807,73 @@ def finals_table(path=None):
     if os.path.exists(path) and not out:
         raise ValueError(f"{path}: no row of the finals table read (has its struct changed?)")
     return out
+
+
+_SEASONS = {}
+
+
+def finals_seasons(path=None):
+    """{class: {year: season}} of the finals table of the season code (season_intl_table.c): the season of each
+    edition (2025 for the World Cup of 2026, whose finals end the 2025/26 season; 2022 for that of 2022)."""
+    path = path or os.path.join(ROOT, "src", "recomp_rt", "win", "season_intl_table.c")
+    if path not in _SEASONS:
+        out = collections.defaultdict(dict)
+        if os.path.exists(path):
+            for cls, season, year in re.findall(r'\{"(\w+)", (\d+), (\d+), \d+, \d+, \d+, \d+, \d+, "',
+                                                open(path, encoding="latin-1").read()):
+                out[cls][int(year)] = int(season)
+        _SEASONS[path] = out
+    return _SEASONS[path]
+
+
+def edition_season(key, year):
+    """The season of a finals class's edition of a year, or None for a competition outside the finals table or a
+    year of the table without an edition: the table's season, and after the table the season of the last table edition moved on by the same years
+    (season_intl_rules.c season_intl_first: the class continues on its cycle)."""
+    rows = finals_seasons().get(key) if key else None
+    if not rows:
+        return None
+    if year in rows:
+        return rows[year]
+    last = max(rows)
+    return year - (last - rows[last]) if year > last else None       # None: no edition of the table
+
+
+NEWEST_DATA = 2026     # the season of the newest season database (October 2026, rules_report_check.SEASON_DATABASES)
+
+
+def before_start(key, years, start):
+    """1 when every edition of years is of a season before the start season, in a game that starts after the newest
+    database (open item 169). Such an edition is history that only the database can hold: the game plays a finals
+    class from the first edition of its start season (rt_intl_first_year, the class constructor's year from
+    season_intl_first), and no database holds an edition after its own season (December 2025 in a 2098 date jump).
+    A start up to NEWEST_DATA plays the database of its own season, which must hold them (with the history fill:
+    the Africa Cup of Nations 2021 in a 2021/22 start, open item 170)."""
+    if start <= NEWEST_DATA:
+        return False
+    seasons = [edition_season(key, y) for y in years]
+    return bool(seasons) and all(s is not None and s < start for s in seasons)
+
+
+def not_held(rule, after, year, cyc):
+    """1 when the cycle's year after a row of `after` is a year without an edition by the rules table (open item
+    173): inside the table's years, not one of them, and no table year lies between `after` and the next year on
+    the cycle. The OFC Nations Cup of 2020 was cancelled (OFC, 21 April 2020): the table holds 2016 and 2024, so
+    2020 is not held. A table year near the cycle's year is held: the Asian Cup of 2007 for the cycle's 2008 after
+    2004, the Africa Cup of Nations of 2026 (its final in January 2026, the history label 2025) for 2025 after 2023.
+    The table holds the years of changing rules: a game with changing rules off has rule["years"] empty."""
+    table = rule.get("years") or []
+    return bool(table) and table[0] < year < table[-1] and year not in table and \
+        not any(after < t < year + cyc for t in table)
+
+
+def due_edition(rule, last, cyc, start):
+    """The first edition after the last row that the game must write: the next one on the cycle that is held
+    (not_held) and not of a season before the start season (before_start)."""
+    due = last + cyc
+    while not_held(rule, last, due, cyc) or before_start(rule.get("key"), [due], start):
+        due += cyc
+    return due
 
 
 def read_access(path):

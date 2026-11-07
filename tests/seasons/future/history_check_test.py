@@ -507,6 +507,58 @@ def guest_rule():
     return bad
 
 
+def start_season_rule():
+    """missing and gap (open item 169): an edition of a season before the start season is history of the database.
+    The World Cup of 2098 ends the 2097/98 season, so a 2098 game (a date jump with December 2025 data, whose last
+    World Cup row is 2094) next plays 2102, and the Euro of 2096 (season 2095/96) is history there too. A start up to
+    the newest database (2026) plays the database of its own season, which must hold such editions (the World Cup
+    of 2026 in a 2026 start, the Africa Cup of Nations of 2021 in a 2021 start). A year of the table without an
+    edition is no history, nor a competition outside the table."""
+    sys.path.insert(0, HERE)
+    import history_check as hc
+    bad = []
+    for key, last, cyc, start, want in (("world_cup", 2094, 4, 2098, 2102), ("world_cup", 2095, 4, 2098, 2099),
+                                        ("world_cup", 2018, 4, 2022, 2022), ("world_cup", 2022, 4, 2026, 2026),
+                                        ("african_nations", 2019, 2, 2021, 2021), ("world_cup", 2094, 4, 2026, 2098),
+                                        ("world_cup", 2018, 4, 2021, 2022), ("african_nations", 2018, 2, 2099, 2020),
+                                        ("euro_champ", 2092, 4, 2098, 2100), ("", 2094, 4, 2098, 2098)):
+        got = hc.due_edition({"key": key}, last, cyc, start)
+        if got != want:
+            bad.append(f"due_edition {key or 'a competition outside the table'} after {last} in a {start} start: "
+                       f"{got}, not {want}")
+    for key, years, start, want in (("world_cup", [2098], 2098, True), ("world_cup", [2098, 2102], 2098, False),
+                                    ("african_nations", [2020], 2099, False), ("world_cup", [2026], 2026, False),
+                                    ("world_cup", [], 2098, False)):
+        if hc.before_start(key, years, start) != want:
+            bad.append(f"before_start {key} {years} in a {start} start: not {want}")
+    return bad
+
+
+def not_held_rule():
+    """missing and gap (open item 173): a year of the cycle that the rules table has no edition near is not held.
+    The OFC Nations Cup of 2020 was cancelled (OFC, 21 April 2020): the table holds 2016 and 2024, so after 2016
+    the next edition due is 2024. The Asian Cup table holds 2004, 2007 and 2011: after 2004 the cycle's 2008 stays
+    due (2007 is near it), so a game with 2004 and then 2011 has a gap. The Africa Cup of Nations table holds 2023,
+    2026 and 2027: 2025 after 2023 stays due (2026 is near it)."""
+    sys.path.insert(0, HERE)
+    import history_check as hc
+    ofc = {"key": "oceania_nations", "years": [2002, 2004, 2008, 2012, 2016, 2024]}
+    asia = {"key": "asia_nations", "years": [2004, 2007, 2011, 2015, 2019, 2023, 2027]}
+    acn = {"key": "african_nations", "years": [2019, 2021, 2023, 2026, 2027]}
+    bad = []
+    for rule, last, cyc, want in ((ofc, 2016, 4, 2024), (ofc, 2012, 4, 2016), (ofc, 2024, 4, 2028),
+                                  ({"key": "oceania_nations"}, 2016, 4, 2020), (asia, 2004, 4, 2008),
+                                  (acn, 2023, 2, 2025), (dict(ofc, years=[]), 2016, 4, 2020)):
+        got = hc.due_edition(rule, last, cyc, 2002)
+        if got != want:
+            bad.append(f"due_edition {rule.get('key')} after {last}: {got}, not {want}")
+    for rule, a, y, cyc, want in ((ofc, 2016, 2020, 4, True), (asia, 2004, 2008, 4, False), (acn, 2023, 2025, 2, False),
+                                  ({}, 2016, 2020, 4, False)):
+        if bool(hc.not_held(rule, a, y, cyc)) != want:
+            bad.append(f"not_held {rule.get('key')} {y} after {a}: not {want}")
+    return bad
+
+
 def olympics_rule():
     """duty-clash and the Olympics (open item 107): an Olympic match of the under-21 sides is a fault only when a club
     with a player in it keeps fewer than 11 players it can field (not on duty, at the club, not injured), counted
@@ -927,6 +979,8 @@ def main():
     bad += olympics_rule()
     bad += guest_rule()
     bad += duty_dates_rule()
+    bad += start_season_rule()
+    bad += not_held_rule()
 
     for b in bad:
         print("FAIL  " + b)
