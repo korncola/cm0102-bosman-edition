@@ -247,9 +247,22 @@ static int national_side(uint32_t club)
  * 6 September 2008, match_eng.cpp 652). The day lists of all types (count: the s8 at 0xb64738, key nation entries). */
 static char busy_why[160];              /* what side_busy found last (for the stay line) */
 
+/* 1 when the fixture of club h v club w takes a national side of club a or club b: one of them is a or b, or a
+ * national side (senior, B or Under 21, national_side) of the nation of a or b (club +0x53). The old test compared
+ * the nation of every club, but a league club has its nation at +0x53 too (VIRTUAL_STAFF top-up reads it at
+ * 0x90db33), so every league match of that nation took the day (open item 168). A league match does not stop a
+ * national match: the call-up move moves the club's league and cup fixtures (0x7777e0 calls 0x5abb10 at 0x77795c
+ * for marks 1 and 2, 0x7778b7..0x7778bd). */
+int season_fifa_fixture_takes_side(uint32_t h, uint32_t w, uint32_t a, uint32_t b)
+{
+    if (h == a || h == b || w == a || w == b) return 1;
+    uint32_t na = rd32(g_mem, a + 0x53), nb = rd32(g_mem, b + 0x53);
+    uint32_t nh = national_side(h) ? rd32(g_mem, h + 0x53) : 0, nw = national_side(w) ? rd32(g_mem, w + 0x53) : 0;
+    return (nh && (nh == na || nh == nb)) || (nw && (nw == na || nw == nb));
+}
+
 static int side_busy(uint32_t a, uint32_t b, int y, int doy)
 {
-    uint32_t na = rd32(g_mem, a + 0x53), nb = rd32(g_mem, b + 0x53);
     int busy = 0, types = (int8_t)g_mem[TYPE_COUNT];
     if (types < 2 || types > 40) types = 2;
     for (int slice = 0; slice < 3 && !busy && !rt_unwinding; slice++)
@@ -261,10 +274,8 @@ static int side_busy(uint32_t a, uint32_t b, int y, int doy)
                 uint32_t f = rd32(g_mem, node);
                 if (!readable(f)) continue;
                 uint32_t h = rd32(g_mem, f + 0x1c), w = rd32(g_mem, f + 0x20);
-                uint32_t nh = readable(h) ? rd32(g_mem, h + 0x53) : 0, nw = readable(w) ? rd32(g_mem, w + 0x53) : 0;
                 uint32_t rec = rd32(g_mem, f + 0x14);
-                int nat = h == a || h == b || w == a || w == b || (nh && (nh == na || nh == nb)) ||
-                          (nw && (nw == na || nw == nb));
+                int nat = season_fifa_fixture_takes_side(h, w, a, b);
                 int cont = !nat && readable(rec) && !rd32(g_mem, rec + 0x5d) && g_mem[f + 0x3a] >= 2 &&
                            !national_side(h) && !national_side(w);    /* a continental club match */
                 if (nat || cont) {
