@@ -98,8 +98,9 @@ A confederation check for every edition:
     duty-clash    a continental club match within one day of a match of a national side that holds 3 or more
                   players of one of the clubs (they are on duty, 0x7757d0; open item 93). For an Olympic match of the
                   under-21 sides the fault is only a club that keeps fewer than 11 players it can field: not on duty,
-                  at the club, not injured (open item 107). Fixtures still to be played; not in a 2001 game with
-                  changing rules off
+                  at the club, not injured (open item 107), with the virtual players of its free squad slots for a
+                  club with a nation (open item 164). Fixtures still to be played; not in a 2001 game with changing
+                  rules off
     entrant-holder the title holder is not an entrant (access.tsv "holder": the Champions League from 2006, the
                   Libertadores), when the edition before is at most one cycle and one year before; not for an
                   edition of the start year or before (it began before the game, the holder may be out)
@@ -961,6 +962,7 @@ def entrants(game, rules, access, changes=()):
 
 DUTY_MIN = 3                                  # players of one club in the squad of a side that plays a day apart
 SIDE_MIN = 11                                 # players a club needs to field a side (box match_eng.cpp 612 or 652)
+TOP_UP_MOST = 25                              # virtual players the top-up 0x90dae0 adds at most (0x90ddbc, 0x90dde0)
 OLYMPIC_NAMES = ("football tournament of the olympic games", "olympic games")   # set the key 0x9cf7a0
 FITNESS = 0x1F                                # injury.dat: a fitness record per staff id (Injury::load 0x62ab00)
 
@@ -993,9 +995,23 @@ def duty_clashes(game):
     players it can field, as VIRTUAL_STAFF::count_available_players 0x90d8f0 counts them: in its squad slots, not on
     duty for any side that plays within a day (0x7757d0), at the club (staff +0x39, the test after it) and with no
     injury (the fitness record's injury +0xe is -1, 0x62c49c; a player who recovers, status 1 of 0x62c400, counts
-    as injured here, so the count errs toward a fault). Not counted: bans (0x55d270, the ruling bodies' tables of
-    discipline.dat, not read) and the European squad list (EUROPE_RULES::get_ineligibility_code 0x5832e0: staff
-    +0x6d 2 for a player aged 20 or more in the original's four cups, except some rounds; a July save holds almost
+    as injured here, so the count errs toward a fault), plus the virtual players of the top-up (open item 164).
+    VIRTUAL_STAFF::fill_fixture_squads 0x90d2f0 tops up both clubs of each fixture before the match
+    (VIRTUAL_STAFF::top_up 0x90dae0 at 0x90d3bd and 0x90d3f4). The top-up counts the available players by position
+    with 0x90d8f0 (a player on duty is not available, 0x90d9c3), and for a club with a nation (+0x53, 0x90db33) that
+    is not an MLS All-Stars side (0x9d00a8, 0x9d00a4; they play no continental match) it adds virtual players to
+    each of the 8 positions below its target, at most TOP_UP_MOST in all (0x90ddbc, 0x90dde0). The club targets are
+    fixed, 4, 4, 4, 8, 4, 8, 4, 8 (row 0 set by the constructor 0x90d140 at 0x90d255..0x90d2b5, 44 players), so a
+    club that keeps fewer than 11 is short by more than TOP_UP_MOST. Each virtual player (0x90e0a0) goes into the
+    first empty squad slot (0x90e714..0x90e729), so the club gets one per free slot, at most TOP_UP_MOST. The cap
+    only changes the number in the text: a club with TOP_UP_MOST free slots always reaches SIDE_MIN. Wasquehal (Tier
+    A game a2006s1, UEFA Super Cup on 9 August 2016) kept 10 of 15 with 5 in the French Olympic side, had 25 virtual
+    players at its team pick (0x6db500 at 0x6b8866) and picked 18. Not modelled: a club with a human manager whose
+    count of +0x5e players is 20 or more can count an add that places no player (0x90df68, when 0x600a50 skips
+    0x90dd92); it then also needs 10 or more players injured or banned. Not counted: bans (0x55d270, the ruling
+    bodies' tables of discipline.dat, not read) and the European squad list
+    (EUROPE_RULES::get_ineligibility_code 0x5832e0: staff +0x6d 2 for a player aged 20 or more in the original's
+    four cups, except some rounds; a July save holds almost
     no registration yet). So the count can be above the match's: item 93's club keeps 12 registered players at the
     October 2029 save and fielded 9 on 22 November. Squads: club.dat +0xd7, SLOTS staff ids (-1 for none); the
     national side of a player's squad staff.dat +0x24 (the squads of the save date). Only fixtures still to be
@@ -1013,9 +1029,12 @@ def duty_clashes(game):
     clubs = sav.read("club.dat")
     called = {}                                   # club id: Counter of national side ids of its squad
     able = {}                                     # club id: [the national side id, or -1, of each player it can field]
+    virtual = {}                                  # club id: the virtual players the top-up adds (None: no nation)
     for o in range(0, len(clubs) - CLUB + 1, CLUB):
         cid = s32(clubs, o)
-        ids = [x for x in struct.unpack_from(f"<{SLOTS}i", clubs, o + 0xD7) if x >= 0 and x in people]
+        slots = struct.unpack_from(f"<{SLOTS}i", clubs, o + 0xD7)
+        virtual[cid] = min(sum(1 for x in slots if x < 0), TOP_UP_MOST) if s32(clubs, o + 0x53) >= 0 else None
+        ids = [x for x in slots if x >= 0 and x in people]
         called[cid] = collections.Counter(s32(staff, people[x] + 0x24) for x in ids)
         able[cid] = [s32(staff, people[x] + 0x24) for x in ids
                      if s32(staff, people[x] + 0x39) == cid and not hurt(x)]
@@ -1058,11 +1077,13 @@ def duty_clashes(game):
         for c in (home, away):
             away_now = sorted(s for s in games_near if called[c][s])
             keeps = sum(1 for s in able[c] if s not in busy)
-            if away_now and keeps < SIDE_MIN:
+            if away_now and keeps + (virtual[c] or 0) < SIDE_MIN:
                 seen.add((name, year))
                 squads = ", ".join(f"{called[c][s]} of {game.club(s)[0]}" for s in away_now)
+                more = virtual[c] or 0
                 faults.append(("duty-clash", name, year, f"{game.club(c)[0]} on {when} keeps {keeps} players it can "
-                                                         f"field, with players in the Olympic squads ({squads})"))
+                                                         f"field and {more} virtual player{'' if more == 1 else 's'}, "
+                                                         f"with players in the Olympic squads ({squads})"))
                 break
     return faults
 

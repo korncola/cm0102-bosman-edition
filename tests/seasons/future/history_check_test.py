@@ -467,10 +467,11 @@ def titles_rule():
 
 def olympics_rule():
     """duty-clash and the Olympics (open item 107): an Olympic match of the under-21 sides is a fault only when a club
-    with a player in it keeps fewer than 11 players it can field (not on duty, at the club, not injured). The save
-    is built in memory: clubs 1 to 5, senior sides 100 and 101, under-21 sides 110 and 111, and a match day
-    2040-08-01 after the save date. The Olympics are found by the name in the data (bosman_season.dat), so the
-    renamed record 30 is the Olympics and record 31, "Olympic Qualifying", is not."""
+    with a player in it keeps fewer than 11 players it can field (not on duty, at the club, not injured), counted
+    with the virtual players that the top-up 0x90dae0 can put in its free squad slots (open item 164: a club with a
+    nation only). The save is built in memory: clubs 1 to 9, senior sides 100 and 101, under-21 sides 110 and 111,
+    and a match day 2040-08-01 after the save date. The Olympics are found by the name in the data
+    (bosman_season.dat), so the renamed record 30 is the Olympics and record 31, "Olympic Qualifying", is not."""
     sys.path.insert(0, HERE)
     import history_check as hc
     day = datetime.date(2040, 8, 1).toordinal()
@@ -484,11 +485,17 @@ def olympics_rule():
     # 1: item 93's West Bromwich: 20 of 50 on duty, 11 injured and 10 on loan at club 9, so it fields 9 of 50.
     add(1, 20, side=110), add(1, 11, hurt=True), add(1, 10, at=9), add(1, 9)
     add(2, 2, side=110), add(2, 2, side=111), add(2, 1, side=100), add(2, 5)   # 2: two players in each of two
-    # Olympic sides and one in a side that plays Olympic qualifying that day: keeps 5
+    # Olympic sides and one in a side that plays Olympic qualifying that day: keeps 5, and 40 on loan at club 9
+    # fill its 50 squad slots, so the top-up adds no virtual player
+    add(2, 40, at=9)
     add(3, 3, side=110), add(3, 11)                           # 3: three in an Olympic side, keeps 11: no fault
     add(4, 3, side=101), add(4, 11)                           # 4: three in a senior side that plays the Olympics
     add(5, 3, side=100), add(5, 20)                           # 5: three in a side that plays Olympic qualifying
     add(6, 15)                                                # 6: no player in a national side
+    add(7, 5, side=110), add(7, 10)          # 7: item 164's Wasquehal: 15 slots, 5 in an Olympic side, keeps 10, and
+    # the top-up fills its 35 free slots with virtual players: no fault
+    add(8, 5, side=110), add(8, 9), add(8, 35, at=9)   # 8: keeps 9 with 1 free slot: 10, a fault
+    add(9, 5, side=110), add(9, 10)          # 9: as club 7, but with no nation: the top-up gives it none (0x90db33)
     staff = bytearray()
     for sid, side, club, _ in people:
         r = bytearray(0x6E)
@@ -501,9 +508,10 @@ def olympics_rule():
     for sid, _, _, hurt in people:
         struct.pack_into("<i", injury, fitness * sid + 0xE, 0 if hurt else -1)
     clubs = bytearray()
-    for cid in range(1, 7):
+    for cid in range(1, 10):
         r = bytearray(hc.CLUB)
         struct.pack_into("<i", r, 0, cid)
+        struct.pack_into("<i", r, 0x53, -1 if cid == 9 else 7)        # the nation (club 9 has none)
         ids = squads[cid] + [-1] * (hc.SLOTS - len(squads[cid]))
         struct.pack_into(f"<{hc.SLOTS}i", r, 0xD7, *ids)
         clubs += r
@@ -535,19 +543,22 @@ def olympics_rule():
     g.sav, g.start, g.date = Sav(), 2025, (2040, 189)
     g.data_names = hc.data_names(g.sav, season) if hasattr(hc, "data_names") else {}
     names = {20: "Club Plate", 21: "Club Bowl", 22: "Club Vase", 23: "Club Cup", 24: "Friendly", 25: "Club Shield",
-             30: "Summer Games", 31: "Olympic Qualifying"}
+             26: "Club Trophy", 27: "Club Medal", 28: "Club Salver", 30: "Summer Games", 31: "Olympic Qualifying"}
     g.comps = {cid: {"name": n, "nation": -1} for cid, n in names.items()}
     g.sides = {100, 101, 110, 111}
     g.club = lambda cid: (f"club {cid}", "", "")
     g.fixture_list = {30: [(day, 110, 111), (day, 101, 111)], 24: [(day, 101, 111)], 31: [(day, 100, 111)],
                       20: [(day, 1, 3)], 21: [(day + 1, 2, 3)], 22: [(day, 4, 3)], 23: [(day, 5, 3)],
-                      25: [(day, 6, 3)]}                  # club 3 alone: it keeps 11, no fault
+                      25: [(day, 6, 3)],                  # club 3 alone: it keeps 11, no fault
+                      26: [(day, 7, 6)], 27: [(day, 8, 6)], 28: [(day, 9, 6)]}
     bad = []
     if not hasattr(hc, "olympics") or hc.olympics(g) != {30}:
         bad.append("olympics: the renamed record 30 is not found by its name in the data")
     got = {f[1]: f[3] for f in hc.duty_clashes(g)}
-    want = {"Club Plate": "club 1 on 2040-08-01 keeps 9 players",
+    want = {"Club Plate": "club 1 on 2040-08-01 keeps 9 players it can field and 0 virtual players",
             "Club Bowl": "club 2 on 2040-08-02 keeps 5 players",
+            "Club Medal": "club 8 on 2040-08-01 keeps 9 players it can field and 1 virtual player,",
+            "Club Salver": "club 9 on 2040-08-01 keeps 10 players it can field and 0 virtual players",
             "Club Vase": "club 4 on 2040-08-01 has 3 players in the squad of club 101",
             "Club Cup": "club 5 on 2040-08-01 has 3 players in the squad of club 100"}
     if set(got) != set(want) or any(not got[k].startswith(v) for k, v in want.items()):
