@@ -208,6 +208,12 @@ if(NOT WIN32)
     target_include_directories(season_intl_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_intl COMMAND season_intl_test)
     # 0.6.2 open item 103: the host fields that the original's fixed host rows leave unset read as no host.
+    # The Asian Cup of 16 (0.6.2 item 180): the 2004 edition of a 2001 game keeps 3 stages at the new game and has 16
+    # teams from its draw.
+    add_executable(season_asian16_test tests/seasons/test_season_asian16.c src/recomp_rt/win/season_intl_cups.c
+        src/recomp_rt/win/season_intl_rules.c src/recomp_rt/win/season_intl_table.c src/recomp_rt/win/season_nl_table.c)
+    target_include_directories(season_asian16_test PRIVATE src/recomp_rt/win src/recomp_rt include)
+    add_test(NAME season_asian16 COMMAND season_asian16_test)
     add_executable(season_intl_rows_test tests/seasons/test_season_intl_rows.c src/recomp_rt/win/season_intl_rows.c)
     target_include_directories(season_intl_rows_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_intl_rows COMMAND season_intl_rows_test)
