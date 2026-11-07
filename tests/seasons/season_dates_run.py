@@ -107,6 +107,13 @@ LAST_ROWS = {
         ("Northern Irish League Premier Division", [(2012, "Linfield", "Portadown"), (2013, "Cliftonville", "Crusaders")]),
         ("Northern Irish League First Division", [(2012, "Ballinamallard United", "Newry City"), (2013, "Ards", "")]),
         ("Northern Irish League Cup", [(2012, "Crusaders", "Coleraine"), (2013, "Cliftonville", "Crusaders")]),
+        # open item 176: the database's own 2012 row stays, 2012/13 moves to 2013; the Trophee des Champions 2011
+        # was Marseille against Lille, 2012 Lyon against Montpellier
+        ("English Southern League Premier Division", [(2012, "Woking", "Dartford"),
+                                                      (2013, "Leamington", "Gosport Borough")]),
+        ("French Champions Trophy", [(2010, "Olympique de Marseille", "Paris Saint-Germain"),
+                                     (2011, "Olympique de Marseille", "Lille Olympique SC"),
+                                     (2012, "Olympique Lyonnais", "Montpellier Hérault SC")]),
     ],
 }
 

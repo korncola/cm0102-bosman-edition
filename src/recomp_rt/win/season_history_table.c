@@ -34365,11 +34365,14 @@ static const SeasonHistRow rows_18[] = {
     {"European Football Championship", 2008, {"Spain", "Germany", "", "Austria"}, {"", "", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_19[] = {
+    {"French Champions Trophy", 2011, 0, 0},
     {"Croatian First Division", 2012, 0, 0},
     {"Greek National A Division", 2012, 0, 0},
     {"Northern Irish League Premier Division", 2012, 0, 0},
     {"Northern Irish League First Division", 2012, 0, 0},
     {"Northern Irish League Cup", 2012, 0, 0},
+    {"English Southern League Premier Division", 2012, 0, 0},
+    {"French Champions Trophy", 2012, 0, 0},
 };
 static const SeasonHistRow rows_19[] = {
     {"Croatian First Division", 2013, {"GNK Dinamo Zagreb", "NK Lokomotiva Zagreb", "HNK Rijeka", ""}, {"Croatia", "Croatia", "Croatia", ""}, 0, 0},
@@ -34382,6 +34385,10 @@ static const SeasonHistRow rows_19[] = {
     {"Northern Irish League First Division", 2013, {"Ards", "", "", ""}, {"Northern Ireland", "", "", ""}, 0, 0},
     {"Northern Irish League Cup", 2013, {"Cliftonville", "Crusaders", "", ""}, {"Northern Ireland", "Northern Ireland", "", ""}, 0, 0},
     {"Northern Irish League Cup", 2012, {"Crusaders", "Coleraine", "", ""}, {"Northern Ireland", "Northern Ireland", "", ""}, 0, 0},
+    {"English Southern League Premier Division", 2013, {"Leamington", "Gosport Borough", "Hemel Hempstead Town", ""}, {"England", "England", "England", ""}, 0, 0},
+    {"English Southern League Premier Division", 2012, {"Woking", "Dartford", "Welling United", ""}, {"England", "England", "England", ""}, 0, 0},
+    {"French Champions Trophy", 2011, {"Olympique de Marseille", "Lille Olympique SC", "", ""}, {"France", "France", "", ""}, 0, 0},
+    {"French Champions Trophy", 2012, {"Olympique Lyonnais", "Montpellier H\351rault SC", "", ""}, {"France", "France", "", ""}, 0, 0},
 };
 static const SeasonHistClear clears_20[] = {
     {"US Open Cup", 2019, 0, 0},
@@ -45878,7 +45885,7 @@ const SeasonHistDb season_history_dbs[] = {
     {"December 2010 SIM", 2010, 0, clears_16, 0, rows_16, 10},
     {"September 2010 ODB", 2010, 0, clears_17, 1, rows_17, 11},
     {"March 2012 SIM", 2011, 0, clears_18, 0, rows_18, 16},
-    {"Autumn 2013", 2013, 0, clears_19, 5, rows_19, 10},
+    {"Autumn 2013", 2013, 0, clears_19, 8, rows_19, 14},
     {"April 2021", 2020, 0, clears_20, 1, rows_20, 1},
     {"November 2020", 2020, 0, clears_21, 1, rows_21, 1},
     {"April 2022", 2021, 0, clears_22, 1, rows_22, 1},
