@@ -117,25 +117,29 @@ compared it with a draw (0x5d00ad..0x5d00c2). Here the first table is 0 when it 
 (load_from_disk 0x4db5c0, the count at 0x4db7e2 and malloc at 0x4db7f2), each read from the save.
 
 The staff contract constructor (STAFF_CONTRACT::STAFF_CONTRACT 0x85e410). It sets the dates, the club, the flag fields
-and the values, among them the word +0x3b (0x85e454), but not the morale +0x3d. 39 sites build a contract with it, many
-on their stack, and pass it on, for example to CONTRACT_MANAGER::sign_loan_contract 0x4d01e0 (0x8bf5b4, 0x8c2684). In a
-2001 base game (with the fixes above) staff 6037 had a second contract, at club 1505, while his own contract stayed at
-his club; its morale was 0x5c with one Setup Game screen and 0x3f with the other on 23 October 2002, and in April 2003
-the games went apart in MATCH_PLAYER code that reads that contract (0x6ebaf6..). With the morale defined they ran equal
-to August 2004. Here the constructor also sets the morale to 0 (0x85e454), as it sets the word before it: a contract
-starts at morale 0 until the sign-contract code gives it one (0x4cfadf..0x4cfaf1).
+and the values, among them the word +0x3b (0x85e454), but not the morale +0x3d or the bytes +0x00..+0x03, +0x0c..+0x24,
++0x35..+0x3a, +0x3e, +0x3f, +0x44 and +0x4f. 39 sites build a contract with it, on their stack or in memory fresh from
+new, and pass it on, for example to CONTRACT_MANAGER::sign_loan_contract 0x4d01e0 (0x8bf5b4, 0x8c2684), which sets no
+morale. In a 2001 base game (with the fixes above) staff 6037 had a second contract, at club 1505, while his own
+contract stayed at his club; its morale was 0x5c with one Setup Game screen and 0x3f with the other on 23 October 2002,
+and in April 2003 the games went apart in MATCH_PLAYER code that reads that contract (0x6ebaf6..). Here the contract is
+0 before the constructor (0x85e428), as fresh memory is. The sign-contract code then sets the morale by the contract
+type for some types (0x4cfad8..0x4cfaf1) or copies it from the existing contract (0x4cf99f); other contracts, loans
+among them, keep morale 0.
 
 The training schedules (TRAINING_SCHEDULE::TRAINING_SCHEDULE 0x8b4e10). The training manager holds 167 schedules of 0x9b
-bytes, built with this constructor (TRAINING_MANAGER::TRAINING_MANAGER 0x8b0ec0, 0x8b0ef8), which sets the header, the
-version and the flags but not the five category levels +4..+8. TRAINING_MANAGER::set_default_schedules 0x8b3d40 gives
-the seven default schedules and each human manager's slots a type with TRAINING_SCHEDULE::set_type 0x8b4e50, which fills
-the levels for the types 0 to 7. Slot 0 of each human manager gets the type -1 (0x8b3e63), and set_type then fills
-nothing (0x8b4e64), so its levels held what the heap block held before. TRAINING_MANAGER::get_player_schedule 0x8b39f0
-gives that slot to a player at a human manager's club whose training entry names slot 0 (0x8b3b46), and the weekly
-training (0x8b1d90, get_category_level 0x8b4f50) reads the level. In a 2001 base game (with the fixes above) the first
-human slot (+0x43d) had the level -84 with one Setup Game screen and 7 with the other on 19 August 2004, and a draw
-range at 0x8b1f43 was 60 or 134. Here each schedule is 0 before its constructor (0x8b4e13), as fresh memory is: the
-levels of that slot are 0 until the manager sets them. A loaded game reads its schedules from training.dat.
+bytes, built with this constructor (TRAINING_MANAGER::TRAINING_MANAGER 0x8b0ec0, 0x8b0ef8; the training edit session
+builds 11 more at 0x8b0a3a and the schedule editor one at 0x8b989b, all in memory fresh from new), which sets the
+header, the version and the flags but not the five category levels +4..+8. TRAINING_MANAGER::set_default_schedules
+0x8b3d40 gives the seven default schedules and each human manager's slots a type with TRAINING_SCHEDULE::set_type
+0x8b4e50, which fills the levels for the types 0 to 7. Slot 0 of each human manager gets the type -1 (0x8b3e63), and
+set_type then fills nothing (0x8b4e64), so its levels held what the heap block held before.
+TRAINING_MANAGER::get_player_schedule 0x8b39f0 gives that slot to a player at a human manager's club whose training
+entry names slot 0 (0x8b3b46), and the weekly training (0x8b1d90, get_category_level 0x8b4f50) reads the level. In a
+2001 base game (with the fixes above) the first human slot (+0x43d) had the level -84 with one Setup Game screen and 7
+with the other on 19 August 2004, and a draw range at 0x8b1f43 was 60 or 134. Here each schedule is 0 before its
+constructor (0x8b4e13), as fresh memory is: the levels of that slot are 0 until the manager sets them. A loaded game
+reads its schedules from training.dat.
 """
 
 # address: (the instruction in the original, C code)
@@ -157,8 +161,7 @@ INSNS = {
     0x79C76A: ("mov word ptr [esi + 4], ax",
                "W16(esi + 4u, (uint16_t)eax); if (rt_layout_fix(6u)) { uint32_t y_ = R16(esi + 6u); "
                "W32(esi + 8u, y_ % 4u == 0u && (y_ % 100u != 0u || y_ % 400u == 0u) ? 1u : 0u); }"),
-    0x85E454: ("mov word ptr [esi + 0x3b], bx",
-               "W16(esi + 0x3bu, (uint16_t)ebx); if (rt_layout_fix(8u)) W8(esi + 0x3du, 0u);"),
+    0x85E428: ("mov esi, ecx", "if (rt_layout_fix(8u)) memset(M + ecx, 0, 0x50u); esi = ecx;"),
     0x4C75AE: ("mov dword ptr [ebx], eax",
                "if (rt_layout_fix(8u) && eax) memset(M + eax, 0, R32(ebx + 4u) * 0x50u); W32(ebx, eax);"),
     0x4C7A0C: ("mov dword ptr [esi], eax",
