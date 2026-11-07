@@ -347,7 +347,8 @@ class Rules:
         cycle = number(r.get("cycle"))
         return {"key": key, "kind": r.get("kind", ""), "has_host": number(r.get("has_host")),
                 "confs": set(confed.split("|")) if confed and set(confed.split("|")) <= set(CONF_IDS) else None,
-                "cycle": cycle or None, "end": number(r.get("end_year")), "ended": cycle == 0}
+                "cycle": cycle or None, "end": number(r.get("end_year")), "ended": cycle == 0,
+                "years": sorted(int(y) for y in re.findall(r"\d{4}", r.get("table_years", "")))}
 
 
 def read_known(path):
@@ -530,13 +531,12 @@ def check(game, rules=None, changes=()):
         if rule.get("ended"):
             continue                                  # ended by the rules: no later edition is expected
         if cyc and ys and cid in game.parts and ys[-1] >= start - 2 * cyc:
-            key = rule.get("key")
             for a, b in zip(ys, ys[1:]):
                 if b >= start and a >= start - cyc and b - a > cyc + 1 and not (end and a >= end) and \
-                        not before_start(key, range(a + cyc, b, cyc), start):
+                        not not_due(rule, range(a + cyc, b, cyc), start):
                     faults.append(("gap", name, b, f"no edition between {a} and {b} (cycle {cyc})"))
             ended = edition == ENDED_YEAR or (end is not None and end < save_year)
-            due = due_edition(key, ys[-1], cyc, start)
+            due = due_edition(rule, ys[-1], cyc, start)
             if not ended and due + 1 < save_year:
                 faults.append(("missing", name, due,
                                f"last edition {ys[-1]}, cycle {cyc}, the save is in {save_year}"))
@@ -785,11 +785,25 @@ def before_start(key, years, start):
     return bool(seasons) and all(s is not None and s < start for s in seasons)
 
 
-def due_edition(key, last, cyc, start):
-    """The first edition after the last row that the game must write: the next one on the cycle that is not of a
-    season before the start season (before_start)."""
+def not_held(rule, year):
+    """1 for a year inside the editions of the rules table that is not one of them (open item 173: the OFC Nations
+    Cup of 2020 was cancelled, the table holds 2016 and 2024)."""
+    years = rule.get("years") or []
+    return bool(years) and years[0] < year < years[-1] and year not in years
+
+
+def not_due(rule, years, start):
+    """1 when no edition of years is one the game must write: each is not held (not_held) or of a season before
+    the start season (before_start)."""
+    years = list(years)
+    return bool(years) and all(not_held(rule, y) or before_start(rule.get("key"), [y], start) for y in years)
+
+
+def due_edition(rule, last, cyc, start):
+    """The first edition after the last row that the game must write: the next one on the cycle that is not due
+    (not_due)."""
     due = last + cyc
-    while before_start(key, [due], start):
+    while not_due(rule, [due], start):
         due += cyc
     return due
 

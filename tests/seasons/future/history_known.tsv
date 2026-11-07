@@ -64,7 +64,6 @@ confederation	OFC Club Championship	*	real history: a guest nation or club, or A
 gap	OFC Club Championship	*	open items 2 and 19: editions not written
 next-edition	OFC Men's Nations Cup	*	open item 1: the class waits for 2200
 confederation	OFC Nations Cup	*	real history: a guest nation or club, or Australia in OFC before 2006
-missing	OFC Nations Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 next-edition	OFC Nations Cup	*	open item 1: the class waits for 2200
 same-final	OFC Nations Cup	*	real history before the start (2000 to 2002, 2015 to 2017)
 confederation	Oceania Champions Cup	*	real history: a guest nation or club, or Australia in OFC before 2006
@@ -93,7 +92,6 @@ missing	UEFA European Championship	*	open items 1, 2, 19 and 20: editions stop o
 next-edition	UEFA European Championship	*	open item 1: the class waits for 2200
 duplicate	UEFA Intertoto Cup	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 gap	Welsh Cup	*	open items 2 and 19: editions not written
-gap	OFC Men's Nations Cup	2024	open items 2 and 19: editions not written
 missing	OFC Men's Nations Cup	2028	open items 2 and 19: editions not written
 same-final	CONCACAF Gold Cup	2009	real results: the same finalists count only in Tier B (spec, Decisions)
 same-final	CONCACAF Gold Cup	2023	real results: the same finalists count only in Tier B (spec, Decisions)
@@ -118,4 +116,3 @@ no-host	FIFA Club World Championship	*	open item 18: the game writes no host for
 missing	Korean Super Cup	2007	real calendar: the K League Super Cup was not held from 2007 to 2025 (aus-jap-kor-402); the table holds it again from 2025/26
 missing	K League Super Cup	2007	real calendar: not held from 2007 to 2025 (aus-jap-kor-402); the table holds it again from 2025/26
 duplicate	Liga Profesional de Fútbol	2025	data: three titles in 2025 (Apertura Platense, Clausura Estudiantes, the annual table Rosario Central)
-gap	OFC*Nations Cup*	2024	real calendar: the OFC Nations Cup of 2020 was cancelled; editions 2016 and 2024

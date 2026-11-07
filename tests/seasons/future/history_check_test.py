@@ -478,7 +478,7 @@ def start_season_rule():
                                         ("world_cup", 2018, 4, 2022, 2022), ("world_cup", 2022, 4, 2026, 2030),
                                         ("world_cup", 2018, 4, 2021, 2022), ("african_nations", 2018, 2, 2025, 2020),
                                         ("euro_champ", 2092, 4, 2098, 2100), ("", 2094, 4, 2098, 2098)):
-        got = hc.due_edition(key, last, cyc, start)
+        got = hc.due_edition({"key": key}, last, cyc, start)
         if got != want:
             bad.append(f"due_edition {key or 'a competition outside the table'} after {last} in a {start} start: "
                        f"{got}, not {want}")
@@ -487,6 +487,23 @@ def start_season_rule():
                                     ("world_cup", [], 2098, False)):
         if hc.before_start(key, years, start) != want:
             bad.append(f"before_start {key} {years} in a {start} start: not {want}")
+    return bad
+
+
+def not_held_rule():
+    """missing and gap (open item 173): the OFC Nations Cup of 2020 was cancelled (OFC, 21 April 2020); the rules
+    table holds 2016 and 2024, so after 2016 the next edition due is 2024, and a gap from 2016 to 2024 is none."""
+    sys.path.insert(0, HERE)
+    import history_check as hc
+    ofc = {"key": "oceania_nations", "years": [2002, 2004, 2008, 2012, 2016, 2024]}
+    bad = []
+    for rule, last, start, want in ((ofc, 2016, 2002, 2024), (ofc, 2012, 2002, 2016), (ofc, 2024, 2002, 2028),
+                                    ({"key": "oceania_nations"}, 2016, 2002, 2020)):
+        got = hc.due_edition(rule, last, 4, start)
+        if got != want:
+            bad.append(f"due_edition {rule} after {last}: {got}, not {want}")
+    if not hc.not_due(ofc, [2020], 2002) or hc.not_due(ofc, [2020, 2024], 2002) or hc.not_due(ofc, [2028], 2002):
+        bad.append("not_due of the OFC Nations Cup: 2020 must be not due, 2024 and 2028 due")
     return bad
 
 
@@ -821,6 +838,7 @@ def main():
     bad += titles_rule()
     bad += olympics_rule()
     bad += start_season_rule()
+    bad += not_held_rule()
 
     for b in bad:
         print("FAIL  " + b)
