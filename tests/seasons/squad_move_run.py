@@ -13,8 +13,8 @@ a player of the senior club with one contract and the placement 4 (at the senior
 CONTRACT_MANAGER::move_to_reserves 0x4cc0f0 twice, as the squad assessment does, and prints the placement before and
 after the first move and how many squad slots of each side hold him.
 
-The checks: the run ends with code 0; the test line is there; the placement after the first move is 3 (on the B side);
-the B side holds the player in one slot and the senior club in none. --keep-faults runs with
+The checks: the run ends with code 0, the test line is there, the placement after the first move is 3 (on the B side),
+and the B side holds the player in one slot and the senior club in none. --keep-faults runs with
 RECOMP_ORIGINAL_FAULTS=keep:squad_moves: it passes only when the line shows the fault (placement 4 after the move and
 two slots on the B side).
 """

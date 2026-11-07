@@ -136,8 +136,10 @@ and calls CONTRACT_MANAGER::move_to_reserves 0x4cc0f0 or move_to_first_team 0x4c
 CONTRACT_MANAGER::get_squad_placement 0x4cbb60 gives the other place (0x4cc104..0x4cc10a) and then call
 CONTRACT_MANAGER::toggle_squad_placement 0x4cbd20. For a player whose own club (staff +0x39) is the B side and whose
 contract is with the senior side, get_squad_placement answers from bit 0x40 of the contract's +0x35
-(0x4cbcb8..0x4cbd07): set, 3 (on the B side); clear, 4 (at the senior club). toggle_squad_placement flips that bit on
-its paths for a player with a second contract (0x4cbf26.., 0x4cbffe..0x4cc016), but its path for a player with one
+(0x4cbcb8..0x4cbd07). Set gives 3 (on the B side), clear gives 4 (at the senior club). This holds only when the B side
+does not link back to the senior side. Where it links back, the player's club gives 3 (0x4cbbfd) and the bit is not
+read. toggle_squad_placement sets or clears that bit on its other paths (0x4cbdb6, 0x4cbe6a, and 0x4cbffe..0x4cc016 for
+a player with a second contract), but its path for a player with one
 contract (0x4cc03d..0x4cc091) only removes him from one side (database_remove_staff_from_club 0x53c190) and adds him to
 the other (database_add_staff_to_club 0x53bd10). So after a move to the B side the placement still says 4, the next
 assessment moves him again, and each move puts him in another squad slot of the B side. In a 2001 base game (with the
@@ -148,9 +150,11 @@ The original read an unset byte here: STAFF_CONTRACT::STAFF_CONTRACT 0x85e410 do
 built with it, and STAFF_CONTRACT::operator= 0x4cc810 copies +0x35 into the contract table (0x4cc88a..0x4cc8b9), whose
 new slots were not cleared either. So in the original bit 0x40 of a new contract was whatever the stack or the heap
 held, and the repeat happened or not by chance, in real life too. Open item 138b gives those bytes 0 (layout_reads.py),
-so the bit starts clear and the repeat always happens. Here the path for a player with one contract flips the bit as the
-other paths do (0x4cc03d), so the placement follows each move. A player with no contract (index below 0) has no bit to
-flip.
+so the bit starts clear and the repeat always happens. Here the path for a player with one contract sets the bit for a move
+to the B side and clears it for a move back (0x4cc03d), so the placement follows each move. The direction comes from
+the registers: at placement 4 the path leaves from the club asked about (edi = ebx, 0x4cbede), at placement 3 it goes
+to it (ebp = ebx, 0x4cbed5). A bit that holds junk from an old save is then right after one move. A player with no
+contract (index below 0) has no bit to set.
 """
 
 # address: (the instruction in the original, C code)
@@ -202,5 +206,5 @@ INSNS = {
     0x84AF77: ("jne 0x84b174", "if (!cc_e(F)) goto L_84b174; SYNC(); t0 = rt_holiday_refuses_loan(ebx); RT_AFTER_CALL(); "
                                "if (t0) goto L_84b162;"),
     0x8C8264: ("jne 0x8c8277", "if (!cc_e(F) && !rt_holiday_below_asking(eax, esi)) goto L_8c8277;"),
-    0x4CC03D: ("mov ecx, dword ptr [0xb74350]", "rt_squad_move_flip(R32(esp + 0x10u), esi); ecx = R32(0xb74350u);"),
+    0x4CC03D: ("mov ecx, dword ptr [0xb74350]", "rt_squad_move_set(R32(esp + 0x10u), esi, edi == ebx); ecx = R32(0xb74350u);"),
 }

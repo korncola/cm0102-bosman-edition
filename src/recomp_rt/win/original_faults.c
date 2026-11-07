@@ -527,14 +527,17 @@ uint32_t rt_holiday_below_asking(uint32_t option, uint32_t slot)
 }
 
 /* The move of a one-contract player to or from the linked side (open item 187, tools/recomp/original_faults.py at
- * 0x4cc03d): CONTRACT_MANAGER::toggle_squad_placement 0x4cbd20 flips bit 0x40 of the player's contract +0x35 on its
- * paths for a player with a second contract (0x4cbffe..0x4cc016), and CONTRACT_MANAGER::get_squad_placement 0x4cbb60
- * reads that bit (0x4cbcb8). Its path for a player with one contract (0x4cc03d..0x4cc091) moves him and leaves the
- * bit. Here that path flips it too. manager: the CONTRACT_MANAGER ([esp + 0x10] of 0x4cbd20); staff: esi. */
+ * 0x4cc03d). CONTRACT_MANAGER::get_squad_placement 0x4cbb60 reads bit 0x40 of the player's contract +0x35 (0x4cbcb8):
+ * set gives 3 (on the B side), clear gives 4 (at the senior club). CONTRACT_MANAGER::toggle_squad_placement 0x4cbd20
+ * sets or clears it on its other paths (0x4cbdb6, 0x4cbe6a, 0x4cbffe..0x4cc016). Its path for a player with one
+ * contract (0x4cc03d..0x4cc091) moves him and leaves the bit. Here that path sets the bit for a move to the B side and
+ * clears it for a move back. The direction: at placement 4 the path leaves from the club asked about (edi = ebx,
+ * 0x4cbede), at placement 3 it goes to it (ebp = ebx, 0x4cbed5). The manager is [esp + 0x10] of 0x4cbd20, the staff
+ * is esi. */
 #define CONTRACT_INDEX 0xae2d0cu  /* per staff id, 0x4f bytes: +0 the contract index, +4 the second contract index */
 #define STAFF_COUNT 0xae2364u
 
-void rt_squad_move_flip(uint32_t manager, uint32_t staff)
+void rt_squad_move_set(uint32_t manager, uint32_t staff, int down)
 {
     if (!fixes_on_group(SQUAD_MOVES) || !manager || !staff) return;
     uint32_t id = rd32(g_mem, staff);
@@ -542,14 +545,15 @@ void rt_squad_move_flip(uint32_t manager, uint32_t staff)
     int32_t index = (int32_t)rd32(g_mem, rd32(g_mem, CONTRACT_INDEX) + id * 0x4fu);
     if (index < 0) return;
     uint32_t contract = rd32(g_mem, manager) + (uint32_t)index * 0x50u;
-    g_mem[contract + 0x35u] ^= 0x40u;
+    if (down) g_mem[contract + 0x35u] |= 0x40u;
+    else g_mem[contract + 0x35u] &= 0xbfu;
 }
 
 /* RECOMP_SQUAD_MOVE_TEST=1 (tests/seasons/squad_move_run.py): at the first start report (season_report.c) the game
  * data is loaded. The test takes the first senior club with a linked B side (club_get_linked_b_team 0x540a50 gives the
  * B side and sets the flag) and a player of it with one contract and the placement 4 (get_squad_placement), moves him
  * to the reserves twice (CONTRACT_MANAGER::move_to_reserves 0x4cc0f0, as Shortlist_Manager::assess_club_squad 0x83cb40
- * does) and prints how many of the B side's 50 squad slots (club +0xd7) hold him. One is right; with the fault kept
+ * does) and prints how many of the B side's 50 squad slots (club +0xd7) hold him. One is right. With the fault kept
  * the second move adds him again and gives two. */
 #define CLUBS 0xae23b4u
 #define CLUB_SIZE 0x245u
@@ -560,7 +564,7 @@ static uint32_t call_this(uint32_t self, uint32_t target, int n, const uint32_t 
     Cpu saved = cpu;
     cpu.ecx = self;
     uint32_t r = rt_callback(target, n, args);
-    cpu = saved;
+    if (!rt_unwinding) cpu = saved;   /* an unwind leaves cpu as it is (rt.c) */
     return r;
 }
 
@@ -601,9 +605,12 @@ void rt_squad_move_test(void)
                 continue;
             uint32_t pa[2] = {p, club};
             uint32_t before = call_this(manager, 0x4cbb60u, 2, pa) & 0xffu;
+            if (rt_unwinding) return;
             if (before != 4u) continue;              /* 4: at the senior club of a linked side (0x4cbbf6) */
             call_this(manager, 0x4cc0f0u, 2, pa);
+            if (rt_unwinding) return;
             uint32_t after = call_this(manager, 0x4cbb60u, 2, pa) & 0xffu;
+            if (rt_unwinding) return;
             call_this(manager, 0x4cc0f0u, 2, pa);
             if (rt_unwinding) return;
             fprintf(stderr, "recomp: squad move test: club %u B side %u staff %u placement %u then %u, "

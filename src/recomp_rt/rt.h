@@ -329,9 +329,9 @@ uint32_t rt_holiday_predict(uint32_t club, uint32_t contract, uint32_t player);
 uint32_t rt_holiday_refuses_loan(uint32_t club);
 uint32_t rt_holiday_below_asking(uint32_t option, uint32_t slot);
 /* Open item 187 (win/original_faults.c, tools/recomp/original_faults.py at 0x4cc03d): the move of a one-contract
- * player to or from the linked side flips his contract's placement bit, as the move of a two-contract player does.
+ * player to the linked side sets his contract's placement bit and the move back clears it, as the other moves do.
  * rt_squad_move_test: RECOMP_SQUAD_MOVE_TEST=1 at the first start report (season_report.c). */
-void rt_squad_move_flip(uint32_t manager, uint32_t staff);
+void rt_squad_move_set(uint32_t manager, uint32_t staff, int down);
 void rt_squad_move_test(void);
 /* Money above 2,147,483,647 (0.6.2 slice 11, Q24; win/original_faults.c, tools/recomp/original_faults.py). */
 uint32_t rt_budget_hi(uint32_t lo, uint32_t hi);          /* get_transfer_budget: the high word in place of cdq */
