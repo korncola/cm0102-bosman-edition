@@ -490,7 +490,8 @@ def olympics_rule():
     with a player in it keeps fewer than 11 players it can field (not on duty, at the club, not injured), counted
     with the virtual players that the top-up 0x90dae0 can put in its free squad slots (open item 164: a club with a
     nation only). The save is built in memory: clubs 1 to 9, senior sides 100 and 101, under-21 sides 110 and 111,
-    and a match day 2040-08-01 after the save date. The Olympics are found by the name in the data
+    and a match day 2040-08-01 after the save date (24 July, within the 14 days of the squads picked, PICK_AHEAD).
+    The Olympics are found by the name in the data
     (bosman_season.dat), so the renamed record 30 is the Olympics and record 31, "Olympic Qualifying", is not."""
     sys.path.insert(0, HERE)
     import history_check as hc
@@ -560,7 +561,7 @@ def olympics_rule():
         pass
 
     g = Game()
-    g.sav, g.start, g.date = Sav(), 2025, (2040, 189)
+    g.sav, g.start, g.date = Sav(), 2025, (2040, 205)
     g.data_names = hc.data_names(g.sav, season) if hasattr(hc, "data_names") else {}
     names = {20: "Club Plate", 21: "Club Bowl", 22: "Club Vase", 23: "Club Cup", 24: "Friendly", 25: "Club Shield",
              26: "Club Trophy", 27: "Club Medal", 28: "Club Salver", 30: "Summer Games", 31: "Olympic Qualifying"}
@@ -584,6 +585,75 @@ def olympics_rule():
     if set(got) != set(want) or any(not got[k].startswith(v) for k, v in want.items()):
         bad.append(f"duty-clash Olympics: {got}, want {want}")
     return bad
+
+
+def duty_dates_rule():
+    """duty-clash judges only national matches up to PICK_AHEAD days after the save (open items 157 to 162): the squads
+    of the save are not a later match's (the game picks them two weeks ahead), and a club match on its nation's match
+    day is no fault in itself. Clubs 1 (nation 7) and 2 (nation 8) and 3 (nation 7, 5 players in side 100's squad) and
+    4 (nation 8, 3 players in side 100's squad); senior sides 100 (nation 7) and 101 (nation 8), under-21 sides 110 and
+    111 after them. The save is on 2040-07-01 (day 182 from 0), so the squad count holds to 15 July (day + 14) and not
+    from 16 July."""
+    sys.path.insert(0, HERE)
+    import history_check as hc
+
+    def rec(cid, nation, squad=()):
+        r = bytearray(hc.CLUB)
+        struct.pack_into("<i", r, 0, cid)
+        struct.pack_into("<i", r, 0x53, nation)
+        ids = list(squad) + [-1] * (hc.SLOTS - len(squad))
+        struct.pack_into(f"<{hc.SLOTS}i", r, 0xD7, *ids)
+        return bytes(r)
+
+    staff = bytearray()
+    for sid in range(8):
+        r = bytearray(0x6E)
+        struct.pack_into("<i", r, 0, sid)
+        struct.pack_into("<i", r, 0x24, 100)
+        struct.pack_into("<i", r, 0x39, 3 if sid < 5 else 4)
+        staff += r
+
+    class Sav:
+        parts = {"staff.dat": bytes(staff), "injury.dat": b"", "club.dat": rec(1, 7) + rec(2, 8) + rec(3, 7, range(5)) +
+                 rec(4, 8, range(5, 8)),
+                 "nat_club.dat": rec(100, 7) + rec(101, 8) + rec(110, 7) + rec(111, 8)}
+
+        def has(self, name):
+            return name in self.parts
+
+        def read(self, name):
+            return self.parts[name]
+
+    class Game:
+        pass
+
+    def day(m, d):
+        return datetime.date(2040, m, d).toordinal()
+
+    g = Game()
+    g.sav, g.start, g.date, g.data_names = Sav(), 2025, (2040, 182), {}
+    names = {20: "Club Plate", 21: "Club Bowl", 22: "Club Vase", 23: "Club Cup", 24: "Club Shield", 25: "Club Medal",
+             26: "Club Salver", 40: "International", 41: "Under 21 International"}
+    g.comps = {cid: {"name": n, "nation": -1} for cid, n in names.items()}
+    g.comps[40]["nation"] = g.comps[41]["nation"] = 7
+    g.sides = {100, 101, 110, 111}
+    g.club = lambda cid: (f"club {cid}", "", "")
+    g.fixture_list = {40: [(day(8, 31), 100, 101), (day(7, 10), 100, 101), (day(7, 15), 100, 101),
+                           (day(7, 16), 100, 110)],
+                      41: [(day(9, 20), 110, 111)],
+                      24: [(day(7, 15), 4, 2)],   # day + 14: the count, 3 of club 4 in side 100: a fault
+                      25: [(day(7, 17), 4, 2)],   # side 100 on day + 15: no count
+                      26: [(day(9, 21), 1, 4)],   # the under-21 sides the day before: no fault
+                      20: [(day(9, 1), 1, 2)],    # club 1 the day after its side 100, 61 days ahead: no fault
+                      21: [(day(8, 31), 2, 2)],   # club 2's side 101 plays that day too: no fault
+                      22: [(day(9, 5), 1, 2)],    # no national match near: no fault
+                      23: [(day(7, 11), 3, 2)]}   # 9 days ahead: the squad count, 5 of club 3 in side 100: a fault
+    got = {f[1]: f[3] for f in hc.duty_clashes(g)}
+    want = {"Club Cup": "club 3 on 2040-07-11 has 5 players in the squad of club 100",
+            "Club Shield": "club 4 on 2040-07-15 has 3 players in the squad of club 100"}
+    if set(got) != set(want) or any(not got[k].startswith(v) for k, v in want.items()):
+        return [f"duty-clash dates: {got}, want {want}"]
+    return []
 
 
 def main():
@@ -834,6 +904,7 @@ def main():
     bad += titles_rule()
     bad += olympics_rule()
     bad += guest_rule()
+    bad += duty_dates_rule()
 
     for b in bad:
         print("FAIL  " + b)

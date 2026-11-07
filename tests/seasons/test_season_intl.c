@@ -27,6 +27,9 @@ int season_start_year(void) { return start_year; }
 int season_changing_rules(void) { return changing; }
 static int creating;
 int season_change_is_creating(void) { return creating; }
+/* The fix of original-faults group confed (original_faults.c): on unless a test turns it off. */
+static int confed_june = 1;
+int season_intl_confed_june(void) { return confed_june; }
 
 static void game(int on, int year, int rules)
 {
@@ -322,6 +325,32 @@ int main(void)
     /* Finals dates. */
     game(1, 2001, 0);
     CHECK(season_intl_date_shift(INTL_ACN, 2019) == 0, "base game: no date shift");
+    /* 0.6.2 open items 157 to 159: the original's Confederations Cup plays from 29 July (0x58b601) to 9 August
+     * (0x58b984) of every odd year, in the European club qualifiers and its own Club World Championship. The real
+     * editions played in June (2003: 18 to 29 June). With the fix of group confed every edition of the base game
+     * starts on the Saturday on or before 18 June, by a whole shift that Date::Date's weekday move keeps, and its
+     * last match (9 August, code 2: 0x58b984) is in June too. */
+    {
+        int bad = 0, bad_year = 0;
+        for (int y = 2003; y <= 2301; y += 2) {
+            int s = season_intl_date_shift(INTL_CONFED, y);
+            long first = snapped(y, 29, 6, s, 5), last = snapped(y, 9, 7, s, 2);
+            if (first < days_from_civil(y, 6, 12) || first > days_from_civil(y, 6, 18) ||
+                first != days_from_civil(y, 7, 29) + s || last > days_from_civil(y, 6, 30)) {
+                if (!bad++) bad_year = y;
+            }
+        }
+        CHECK(bad == 0, "base game: %d Confederations Cups not from 12 to 18 June to the end of June (first %d)", bad,
+              bad_year);
+        confed_june = 0;
+        CHECK(season_intl_date_shift(INTL_CONFED, 2011) == 0, "base game, keep:confed: the original's dates");
+        confed_june = 1;
+        CHECK(season_intl_date_shift(INTL_ACN, 2011) == 0, "base game: the fix moves only the Confederations Cup");
+        game(0, 2010, 1);       /* an original-faults fix acts with the season code off too */
+        CHECK(snapped(2011, 29, 6, season_intl_date_shift(INTL_CONFED, 2011), 5) <= days_from_civil(2011, 6, 21),
+              "season code off: the Confederations Cup 2011 in June");
+        game(1, 2001, 0);
+    }
     game(1, 2010, 1);
     CHECK(season_intl_date_shift(INTL_ACN, 2019) == 133, "ACN 2019: 8 February to 21 June");
     CHECK(season_intl_date_shift(INTL_ACN, 2026) == -49, "ACN 2025/26: 8 February 2026 to 21 December 2025");
@@ -335,7 +364,13 @@ int main(void)
     CHECK(season_intl_date_shift(INTL_WORLD_CUP, 2002) == 0, "2001 on: the 2002 World Cup keeps its dates");
     CHECK(season_intl_date_shift(INTL_ACN, 2002) == 0, "2001 on: the ACN 2002 keeps its dates");
     CHECK(season_intl_date_shift(INTL_ACN, 2004) != 0, "2001 on: the ACN 2004 moves to the table's dates");
-    CHECK(season_intl_date_shift(INTL_CONFED, 2003) == 0, "2001 on: the Confederations Cup 2003 keeps its dates");
+    /* The Confederations Cup 2003 of a 2001 game plays as in the base game: from 14 June (group confed). */
+    CHECK(snapped(2003, 29, 6, season_intl_date_shift(INTL_CONFED, 2003), 5) == days_from_civil(2003, 6, 14),
+          "2001 on: the Confederations Cup 2003 from Saturday 14 June, as the base game");
+    confed_june = 0;
+    CHECK(season_intl_date_shift(INTL_CONFED, 2003) == 0, "2001 on, keep:confed: the Confederations Cup 2003 keeps "
+                                                          "its dates");
+    confed_june = 1;
     CHECK(rt_intl_round_flags(INTL_EURO, 2004, 0x383) == 0x383, "2001 on: Euro 2004, built at the new game, keeps its flags");
     creating = 1;
     CHECK(rt_intl_wc_holder(0x1234) == 0x1234, "2001 on: the sections made at the new game keep the holder");

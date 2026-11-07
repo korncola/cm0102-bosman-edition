@@ -100,7 +100,9 @@ A confederation check for every edition:
                   players of one of the clubs (they are on duty, 0x7757d0; open item 93). For an Olympic match of the
                   under-21 sides the fault is only a club that keeps fewer than 11 players it can field: not on duty,
                   at the club, not injured (open item 107), with the virtual players of its free squad slots for a
-                  club with a nation (open item 164). Fixtures still to be played; not in a 2001 game with changing
+                  club with a nation (open item 164). The squad count of a senior or 'B' side applies only to its
+                  matches up to 14 days after the save, the squads already picked (open items 157 to 162). The
+                  Olympic count has no such limit. Fixtures still to be played; not in a 2001 game with changing
                   rules off
     entrant-holder the title holder is not an entrant (access.tsv "holder": the Champions League from 2006, the
                   Libertadores), when the edition before is at most one cycle and one year before; not for an
@@ -993,6 +995,7 @@ def entrants(game, rules, access, changes=()):
 DUTY_MIN = 3                                  # players of one club in the squad of a side that plays a day apart
 SIDE_MIN = 11                                 # players a club needs to field a side (box match_eng.cpp 612 or 652)
 TOP_UP_MOST = 25                              # virtual players the top-up 0x90dae0 adds at most (0x90ddbc, 0x90dde0)
+PICK_AHEAD = 14                               # days: NationalTeams::daily_update picks the squads of this day ahead
 OLYMPIC_NAMES = ("football tournament of the olympic games", "olympic games")   # set the key 0x9cf7a0
 FITNESS = 0x1F                                # injury.dat: a fitness record per staff id (Injury::load 0x62ab00)
 
@@ -1046,7 +1049,16 @@ def duty_clashes(game):
     October 2029 save and fielded 9 on 22 November. Squads: club.dat +0xd7, SLOTS staff ids (-1 for none); the
     national side of a player's squad staff.dat +0x24 (the squads of the save date). Only fixtures still to be
     played, and none in the start season of a 2001 game, which keeps the original's dates (season_friendly_dates.c
-    keeps_original). One fault per competition and year, with its first case."""
+    keeps_original). The squads of the save are those of the matches up to PICK_AHEAD days after it:
+    NationalTeams::daily_update 0x76b100 picks the squads of the day two weeks ahead (0x54c770 with 2 at 0x76b126; in a
+    replay of a2001offs2, the pick of day 213 of 2041 is for Japan's match of day 227), and the original's call-up move
+    0x7777e0 acts on them that day. A later match is not judged: its squad is not picked yet, and the pick leaves out
+    the regulars of a club with a match within a day (NationalTeams::select_squad 0x76c120, 0x76cd44..0x76cd73). In
+    run set pass 3 (a2001offs1) Argentina's under-21 side held 3 San Lorenzo players in the July 2041 save for its
+    match of 3 September; its own pick held 2, and the senior side's for 4 September none. A club match on its
+    nation's match day is no fault in itself: clubs play on international match days, and a clash is a fault only
+    when a picked player is due in two places. The Olympic count above has no PICK_AHEAD limit: Olympic squads are not
+    read from these picks. One fault per competition and year, with its first case."""
     sav = game.sav
     staff = sav.read("staff.dat") if sav.has("staff.dat") else b""
     injury = sav.read("injury.dat") if sav.has("injury.dat") else b""
@@ -1092,7 +1104,7 @@ def duty_clashes(game):
         if (name, year) in seen:
             continue
         near = (day - 1, day, day + 1)
-        hit = next(((c, side, d) for d in near for side in sorted(national.get(d, ()))
+        hit = next(((c, side, d) for d in near if d <= today + PICK_AHEAD for side in sorted(national.get(d, ()))
                     for c in (home, away) if called[c][side] >= DUTY_MIN), None)
         when = datetime.date.fromordinal(day)
         if hit:

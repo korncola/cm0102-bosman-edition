@@ -81,6 +81,7 @@
 #include "season_change.h"
 #include "season_names.h"
 #include "fixture_season_end.h"
+#include "duty_log.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -487,6 +488,11 @@ RT_WRAP(005abc30, fixture_remove)
 {
     uint32_t ret = rd32(g_mem, cpu.esp), old = rt_arg(0);
     if (ret != 0x005aedcdu || !season_game_changes() || !readable(old)) {
+        if (ret == 0x005abbcbu && duty_log_on()) {      /* the call-up move 0x5abb10 (0x5abbc6) */
+            o_005abc30();
+            if (!rt_unwinding) duty_log_remove(old, (int)cpu.eax);
+            return;
+        }
         o_005abc30();
         return;
     }
@@ -565,6 +571,7 @@ void o_005aac70(void);
 
 RT_WRAP(005aac70, fixture_moved_news)
 {
+    if (rd32(g_mem, cpu.esp) == 0x005abbf0u) duty_log_moved(rt_arg(0), rt_arg(2));     /* the call-up move 0x5abbeb */
     if (kept && rt_arg(0) == kept && rd32(g_mem, cpu.esp) == SITES[kept_site].news) {
         kept = 0;
         rt_ret_stdcall(0, 3);

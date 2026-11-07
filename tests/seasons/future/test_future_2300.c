@@ -28,6 +28,7 @@ int season_code_on(void) { return code_on; }
 int season_start_year(void) { return start_year; }
 int season_changing_rules(void) { return changing; }
 int season_change_is_creating(void) { return 0; }
+int season_intl_confed_june(void) { return 1; }    /* original-faults group confed acts (original_faults.c) */
 int g_left_held;                                       /* scrman_input.c: date.c clears it on a bad date */
 
 static void game(int year, int rules)
