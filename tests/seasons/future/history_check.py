@@ -776,11 +776,18 @@ def edition_season(key, year):
     return year - (last - rows[last]) if year > last else None       # None: no edition of the table
 
 
+NEWEST_DATA = 2026     # the season of the newest season database (October 2026, rules_report_check.SEASON_DATABASES)
+
+
 def before_start(key, years, start):
-    """1 when every edition of years is of a season before the start season (open item 169). Such an edition is
-    history that only the database can hold: the game plays a finals class from the first edition of its start
-    season (rt_intl_first_year, the class constructor's year from season_intl_first). A database of an earlier
-    season (December 2025 in a 2098 date jump) holds none of them."""
+    """1 when every edition of years is of a season before the start season, in a game that starts after the newest
+    database (open item 169). Such an edition is history that only the database can hold: the game plays a finals
+    class from the first edition of its start season (rt_intl_first_year, the class constructor's year from
+    season_intl_first), and no database holds an edition after its own season (December 2025 in a 2098 date jump).
+    A start up to NEWEST_DATA plays the database of its own season, which must hold them (with the history fill:
+    the Africa Cup of Nations 2021 in a 2021/22 start, open item 170)."""
+    if start <= NEWEST_DATA:
+        return False
     seasons = [edition_season(key, y) for y in years]
     return bool(seasons) and all(s is not None and s < start for s in seasons)
 
