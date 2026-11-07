@@ -70,12 +70,11 @@ next-edition	OFC Nations Cup	*	open item 1: the class waits for 2200
 same-final	OFC Nations Cup	*	real history before the start (2000 to 2002, 2015 to 2017)
 confederation	Oceania Champions Cup	*	real history: a guest nation or club, or Australia in OFC before 2006
 same-final	Oceania Champions Cup	*	real history before the start (2000 to 2002, 2015 to 2017)
-gap	Polish Super Cup	*	open items 2 and 19: editions not written
-missing	Polish Super Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
+gap	Polish Super Cup	2004	real calendar: no Super Cup in 2002 (cancelled for financial reasons) and 2003 (rules rows gre-pol-cro-272 and -273 not held; en.wikipedia.org "Polish Super Cup", read 7 November 2026)
 duplicate	Portuguese Second Division B Central	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	Portuguese Second Division B North	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	Portuguese Second Division B South	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
-missing	President's Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
+missing	President's Cup	2003	real history: the LFA President's Cup was last played in 2002/03; the FAI cup of the record starts in 2014 as the President of Ireland's Cup (rules rows wal-nir-irl-73 to -298 not held; en.wikipedia.org "LFA President's Cup", read 7 November 2026: played between 1930 and 2002)
 duplicate	Primera B Nacional	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	Primera División	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 same-final	Russian Super Cup	*	a game result: check by hand
