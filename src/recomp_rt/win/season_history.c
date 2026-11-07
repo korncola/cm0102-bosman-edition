@@ -18,6 +18,7 @@
 #include "season_change.h"
 #include "season_comps.h"
 #include "season_titles.h"
+#include "season_bra_states.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -525,6 +526,16 @@ void season_history_drop_after_start(int S, int official)
 
 void o_004afce0(void);
 
+/* 1 when history row r of record comp is the championship of another state than the one the game plays on that
+ * record (open item 176, season_bra_states_other_state): its winner's state, else its runner-up's. Such a row is no
+ * edition of the game's championship, so the clear of the start year passes it and does not count it. */
+static int other_state_row(uint32_t comp, uint32_t r)
+{
+    int k = season_bra_states_other_state(comp, rd32(g_mem, r + 0xa));
+    if (k < 0) k = season_bra_states_other_state(comp, rd32(g_mem, r + 0xe));
+    return k == 1;
+}
+
 /* comp_util_add_history_record, cdecl (Comp *comp, Club *first, Club *second, Club *third, Club *host): the row of
  * an edition that the game has played. It reuses a free row at the end of the table or grows it (0x527f60), and
  * writes the competition record [comp + 4] (0x4afd51), the game year [0xae2c92] as the label (0x4afd57,
@@ -550,13 +561,14 @@ RT_WRAP(004afce0, comp_util_add_history_record)
         int same = 0;
         for (uint32_t i = 0; year == S && i < count; i++) {
             uint32_t r = hist + i * HISTORY_SIZE;
-            same += rd32(g_mem, r + 4) == comp && (int)rd16(g_mem, r + 8) == year && !own_row(r, NULL);
+            same += rd32(g_mem, r + 4) == comp && (int)rd16(g_mem, r + 8) == year && !own_row(r, NULL) &&
+                    !other_state_row(comp, r);
         }
         for (uint32_t i = 0; i < count; i++) {
             uint32_t r = hist + i * HISTORY_SIZE;
             int label = (int)rd16(g_mem, r + 8);
-            if (rd32(g_mem, r + 4) != comp || label < year || (label == year && (year != S || same >= 2)) ||
-                own_row(r, NULL))
+            if (rd32(g_mem, r + 4) != comp || label < year ||
+                (label == year && (year != S || same >= 2 || other_state_row(comp, r))) || own_row(r, NULL))
                 continue;
             wr32(g_mem, r + 4, 0);
             n++;

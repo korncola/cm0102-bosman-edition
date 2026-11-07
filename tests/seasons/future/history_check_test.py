@@ -462,6 +462,28 @@ def titles_rule():
         got = history_check.titles_allowed(name, year, start, most, (1, 0))
         if got != want:
             bad.append(f"titles_allowed {name} {year} (start {start}): {got}, not {want}")
+    # Open item 176: the two groups of the Belgian Third Division (2011/12, label 2012) before a 2013 start; the four
+    # CFA groups of 2012/13 (label 2013) in a 2013 start, which counts because the game does not play the CFA.
+    for name, year, start, played, want in (("Belgian National Division 1", 2012, 2013, True, 2),
+                                            ("Belgian Division 1", 2012, 2013, True, 2),
+                                            ("French CFA", 2013, 2013, False, 4),
+                                            ("French CFA", 2013, 2013, True, 1),
+                                            ("French CFA", 2014, 2013, False, 1)):
+        got = history_check.titles_allowed(name, year, start, 1, (1, 0), played)
+        if got != want:
+            bad.append(f"titles_allowed {name} {year} (start {start}, played {played}): {got}, not {want}")
+    # Open item 176: a record that holds the championships of several states a year in the data (Autumn 2013, the
+    # Brazilian Northeast record: 4 rows a year, 3 in 2011 and 2012). Before the start it may hold that count; in the
+    # start year at most the count of the year before (the game's own row takes the place of its state's data row);
+    # after the start the game writes one row a year.
+    per_year = {y: 4 for y in range(2003, 2011)}
+    per_year.update({2011: 3, 2012: 3})
+    for year, want in ((2012, 4), (2013, 3), (2014, 1)):
+        got = history_check.filed_titles(per_year, year, 2013)
+        if got != want:
+            bad.append(f"filed_titles {year} (start 2013): {got}, not {want}")
+    if history_check.filed_titles({y: 1 for y in range(2003, 2013)}, 2012, 2013) != 1:
+        bad.append("filed_titles: a record of one row a year allows more than 1")
     return bad
 
 
