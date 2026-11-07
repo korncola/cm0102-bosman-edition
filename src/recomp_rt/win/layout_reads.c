@@ -1,10 +1,10 @@
 /* Reads of the original that depend on where memory lies (0.6.2 open item 138b, tools/recomp/layout_reads.py). The
- * fixes act in every game, the base game too. The test switch RECOMP_LAYOUT_FIXES turns them off: "keep" all of
- * them, "keep:" with a list of groups some of them ("keep:captain,daily"). The groups are captain, players,
- * daily, stats, loans, squads, officials, training and contracts. The ctests layout_reads, layout_reads_kept (the
- * match player constructor), layout_reads_names (the group names) and layout_reads_check (the original's code at
- * each site) test them. A save is no test of them: the save holds heap
- * addresses, so two layouts give different saves whatever the game decides. */
+ * fixes act in every game, the base game too. The test switch RECOMP_LAYOUT_FIXES turns them off: "keep" all of them,
+ * "keep:" with a list of groups some of them ("keep:captain,daily"). The groups are captain, players, daily, stats,
+ * loans, squads, officials, training, contracts and schedules. The ctests layout_reads, layout_reads_kept (the match
+ * player constructor), layout_reads_names (the group names) and layout_reads_check (the original's code at each site)
+ * test them. A save is no test of them: the save holds heap addresses, so two layouts give different saves whatever
+ * the game decides. */
 #include "win.h"
 #include "../rt.h"
 
@@ -12,10 +12,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum { CAPTAIN, PLAYERS, DAILY, STATS, LOANS, SQUADS, OFFICIALS, TRAINING, CONTRACTS, GROUPS };
+enum { CAPTAIN, PLAYERS, DAILY, STATS, LOANS, SQUADS, OFFICIALS, TRAINING, CONTRACTS, SCHEDULES, GROUPS };
 
 static const char *const names[GROUPS] = {"captain", "players", "daily", "stats", "loans", "squads", "officials",
-                                           "training", "contracts"};
+                                           "training", "contracts", "schedules"};
 
 uint32_t rt_layout_fix(uint32_t group)
 {
@@ -29,7 +29,7 @@ uint32_t rt_layout_fix(uint32_t group)
         if (v && !strcmp(v, "keep:"))
             fprintf(stderr, "recomp: RECOMP_LAYOUT_FIXES=keep: names no group "
                             "(captain, players, daily, stats, loans, squads, officials, training, "
-                            "contracts)\n");
+                            "contracts, schedules)\n");
         if (v && !strncmp(v, "keep:", 5)) {
             for (const char *p = v + 5; *p; p += strcspn(p, ",") + (p[strcspn(p, ",")] == ',')) {
                 size_t n = strcspn(p, ",");
@@ -39,7 +39,7 @@ uint32_t rt_layout_fix(uint32_t group)
                 if (n && !known)        /* a typo would leave its fix on, and the check would still pass */
                     fprintf(stderr, "recomp: RECOMP_LAYOUT_FIXES: unknown group %.*s "
                                     "(captain, players, daily, stats, loans, squads, officials, training, "
-                                    "contracts)\n",
+                                    "contracts, schedules)\n",
                             (int)n, p);
             }
         }

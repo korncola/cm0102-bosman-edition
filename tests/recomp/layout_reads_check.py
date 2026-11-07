@@ -41,6 +41,8 @@ when one is not in its INSNS:
   patches at 0x4c75ae and 0x4c7a0c must clear the new slots.
 - STAFF_CONTRACT::STAFF_CONTRACT 0x85e410 writes the word +0x3b at 0x85e454 and no byte +0x3d. The patch at 0x85e454
   must clear the morale.
+- TRAINING_SCHEDULE::TRAINING_SCHEDULE 0x8b4e10 writes no category level +4..+8, set_type 0x8b4e50 skips a type above
+  7 (0x8b4e64), and set_default_schedules gives the type -1 (0x8b3e63). The patch at 0x8b4e13 must clear the schedule.
 - Each patch calls rt_layout_fix with the index of its group in names[] of layout_reads.c.
 Each INSNS row must name the instruction that the original has at its address.
 Exit code 0 when every case passes.
@@ -66,7 +68,7 @@ FILL, FILL_END = 0x90D2F0, 0x90D4EC   # VIRTUAL_STAFF::fill_fixture_squads, whic
 GROUP_OF = {0x6E19B9: "captain", 0x6EADA0: "players", 0x5CE311: "daily", 0x84C266: "stats", 0x8BF420: "loans",
             0x76C939: "squads", 0x79C6AA: "officials", 0x79C76A: "officials", 0x41A56B: "training",
             0x4C7A0C: "contracts", 0x4C75AE: "contracts",
-            0x85E454: "contracts"}
+            0x85E454: "contracts", 0x8B4E13: "schedules"}
 
 
 def disassemble(img):
@@ -235,6 +237,14 @@ def main():
         fails.append("0x85e410: the contract constructor's writes near the morale +0x3d differ; read the case again")
     if "W8(esi + 0x3du, 0u)" not in layout_reads.INSNS.get(0x85E454, ("", ""))[1]:
         fails.append("0x85e410: the contract constructor leaves the morale +0x3d unset, and no patch sets it")
+    sched = [a for a, m, o in code if 0x8B4E10 <= a < 0x8B4E43 and m in WRITES
+             for w in [re.match(r"(byte|word|dword) ptr \[esi \+ (0x[0-9a-f]+|\d+)\]", o)] if w
+             and set(range(int(w.group(2), 0), int(w.group(2), 0) + SIZES[w.group(1)])) & set(range(4, 9))]
+    if sched or at.get(0x8B4E64) != ("ja", "0x8b4f05") or at.get(0x8B4E61) != ("cmp", "eax, 7") \
+            or at.get(0x8B3E63) != ("push", "-1"):
+        fails.append("0x8b4e10: the schedule constructor or set_type differ at the levels; read the case again")
+    if "memset(M + esi, 0, 0x9bu)" not in layout_reads.INSNS.get(0x8B4E13, ("", ""))[1]:
+        fails.append("0x8b4e10: the training schedule levels stay unset, and no patch clears them")
     # Each patch asks the switch for its own group: the index of its name in names[] of layout_reads.c.
     src = open(os.path.join(HERE, "..", "..", "src", "recomp_rt", "win", "layout_reads.c")).read()
     names = re.findall(r'"([a-z]+)"', re.search(r"names\[GROUPS\] = \{([^}]*)\}", src).group(1))

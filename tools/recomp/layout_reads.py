@@ -8,7 +8,7 @@ on). So each read takes a defined value in its place: the record's id for the ad
 unset bytes, 0x240, the mask of the original's last places, for the place masks of a national squad, and its place
 in the table for the id of a new official. The fixes act in every game, the base game too. The test switch
 RECOMP_LAYOUT_FIXES=keep, or keep:captain, keep:players, keep:daily, keep:stats, keep:loans, keep:squads,
-keep:officials, keep:training, keep:contracts, turns them off (layout_reads.c).
+keep:officials, keep:training, keep:contracts, keep:schedules, turns them off (layout_reads.c).
 
 The captain (MATCH_MAN::choose_captain 0x6e1940). For each player of the list it takes the captain score
 (match_man_get_captain_score 0x6e1cf0). When the manager's rating (non_player_attribute_rating 0x544410 with the
@@ -124,6 +124,18 @@ his club; its morale was 0x5c with one Setup Game screen and 0x3f with the other
 the games went apart in MATCH_PLAYER code that reads that contract (0x6ebaf6..). With the morale defined they ran equal
 to August 2004. Here the constructor also sets the morale to 0 (0x85e454), as it sets the word before it: a contract
 starts at morale 0 until the sign-contract code gives it one (0x4cfadf..0x4cfaf1).
+
+The training schedules (TRAINING_SCHEDULE::TRAINING_SCHEDULE 0x8b4e10). The training manager holds 167 schedules of 0x9b
+bytes, built with this constructor (TRAINING_MANAGER::TRAINING_MANAGER 0x8b0ec0, 0x8b0ef8), which sets the header, the
+version and the flags but not the five category levels +4..+8. TRAINING_MANAGER::set_default_schedules 0x8b3d40 gives
+the seven default schedules and each human manager's slots a type with TRAINING_SCHEDULE::set_type 0x8b4e50, which fills
+the levels for the types 0 to 7. Slot 0 of each human manager gets the type -1 (0x8b3e63), and set_type then fills
+nothing (0x8b4e64), so its levels held what the heap block held before. TRAINING_MANAGER::get_player_schedule 0x8b39f0
+gives that slot to a player at a human manager's club whose training entry names slot 0 (0x8b3b46), and the weekly
+training (0x8b1d90, get_category_level 0x8b4f50) reads the level. In a 2001 base game (with the fixes above) the first
+human slot (+0x43d) had the level -84 with one Setup Game screen and 7 with the other on 19 August 2004, and a draw
+range at 0x8b1f43 was 60 or 134. Here each schedule is 0 before its constructor (0x8b4e13), as fresh memory is: the
+levels of that slot are 0 until the manager sets them. A loaded game reads its schedules from training.dat.
 """
 
 # address: (the instruction in the original, C code)
@@ -152,5 +164,7 @@ INSNS = {
     0x4C7A0C: ("mov dword ptr [esi], eax",
                "if (rt_layout_fix(8u) && eax) memset(M + eax + (R32(esi + 4u) - 200u) * 0x50u, 0, 200u * 0x50u); "
                "W32(esi, eax);"),
+    0x8B4E13: ("lea ecx, [esi + 0x18]",
+               "if (rt_layout_fix(9u)) memset(M + esi, 0, 0x9bu); ecx = (uint32_t)(esi + 0x18u);"),
     0x41A56B: ("mov eax, dword ptr [esi]", "if (rt_layout_fix(7u)) W8(esp + 0x24u, 0u); eax = R32(esi);"),
 }
