@@ -306,8 +306,8 @@ uint32_t rt_league_row_read_failed(uint32_t league);
  * of the staff id under any nation, 0 for none, or 1 when the fix is off (the original's box). */
 uint32_t rt_discipline_ban_entry(uint32_t discipline, uint32_t staff);
 /* 1 when the fix of group 0 (captain), 1 (players), 2 (daily), 3 (stats), 4 (loans), 5 (squads), 6 (officials), 7
- * (training), 8 (contracts) or 9 (schedules) of the reads that depend on where memory lies acts (open item 138b;
- * win/layout_reads.c, tools/recomp/layout_reads.py). RECOMP_LAYOUT_FIXES=keep... turns it off. */
+ * (training), 8 (contracts), 9 (schedules) or 10 (fitness) of the reads that depend on where memory lies acts (open
+ * item 138b; win/layout_reads.c, tools/recomp/layout_reads.py). RECOMP_LAYOUT_FIXES=keep... turns it off. */
 uint32_t rt_layout_fix(uint32_t group);
 /* 1 when a senior national team gets a manager vacancy that the original refuses (0.6.2 slice 11, Q23; win/original_faults.c,
  * tools/recomp/original_faults.py at 0x69bb02, 0x7ab158, 0x68fe65, 0x69d0a5, 0x69b6d8: site 0 to 4). */
@@ -336,6 +336,11 @@ uint32_t rt_callup_released(uint32_t slot);
  * kept squad at 0x76bba8 and 0x76be1b. keep:club_regulars turns off both. */
 uint32_t rt_callup_mark_all(void);
 uint32_t rt_squad_kept(uint32_t nt, uint32_t side, uint32_t record, uint32_t fixture);
+/* Open item 187 (win/original_faults.c, tools/recomp/original_faults.py at 0x4cc03d): the move of a one-contract
+ * player to the linked side sets his contract's placement bit and the move back clears it, as the other moves do.
+ * rt_squad_move_test: RECOMP_SQUAD_MOVE_TEST=1 at the first start report (season_report.c). */
+void rt_squad_move_set(uint32_t manager, uint32_t staff, int down);
+void rt_squad_move_test(void);
 /* Money above 2,147,483,647 (0.6.2 slice 11, Q24; win/original_faults.c, tools/recomp/original_faults.py). */
 uint32_t rt_budget_hi(uint32_t lo, uint32_t hi);          /* get_transfer_budget: the high word in place of cdq */
 uint32_t rt_budget_floor(uint32_t finance, uint32_t less); /* the balance less 10m or 15m (0x599135, 0x599185) */

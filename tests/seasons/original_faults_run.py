@@ -25,9 +25,9 @@ both saves (nat_club.dat: the first nation-count rows; the manager at club +0xcf
     - a national manager left in the run and his team got a new manager (a retirement or a move to a club)
     - no message box, and the program ends with code 0
 --keep-faults runs with RECOMP_ORIGINAL_FAULTS=keep:managers (the original's rule for this group only; money, age,
-olympics, ire_super, nsl, holiday, callups, wc_pots, confed, club_regulars and match_numbers keep theirs: keep:money,
-keep:age, keep:olympics, keep:ire_super, keep:nsl, keep:holiday, keep:callups, keep:wc_pots, keep:confed,
-keep:club_regulars, keep:match_numbers). The checks must then fail: this is the proof that they find the fault (the
+olympics, ire_super, nsl, holiday, callups, wc_pots, confed, club_regulars, match_numbers and squad_moves keep theirs:
+keep:money, keep:age, keep:olympics, keep:ire_super, keep:nsl, keep:holiday, keep:callups, keep:wc_pots, keep:confed,
+keep:club_regulars, keep:match_numbers, keep:squad_moves). The checks must then fail: this is the proof that they find the fault (the
 same holds for money). The suggested save: the 2011 leg of the 0.6.0 soak seed 6
 (run-logs/release-test-0.6.0/long-games/soak-seed6/leg09/user/samesave.sav), where 161 of 213 teams have no manager.
 The group nsl (open item 128) has its own test: tests/seasons/aus_nsl_stages_run.py. The group holiday (open item 132)
@@ -35,7 +35,8 @@ has its own test: tests/seasons/holiday_offers_run.py. The group callups (open i
 tests/seasons/callups_run.py. The group wc_pots (open item 166) has its own test:
 tests/seasons/wc2002_draw_run.py. The group confed (open items 157 to 159) has the ctest season_intl and
 tests/seasons/confed_dates_run.py. The group club_regulars (open item 160) has tests/seasons/club_regulars_run.py.
-The group match_numbers (open item 155) has its own test: tests/smoke/match_timing_run.py.
+The group match_numbers (open item 155) has its own test: tests/smoke/match_timing_run.py. The group squad_moves
+(open item 187) has its own test: tests/seasons/squad_move_run.py.
 
 money: for each balance, sets the balance of Arsenal (the human's club) and of Liverpool (an AI club whose budget follows its balance: club +0x82 is 0, see
 docs/research/2026-10-30-money-64bit.md) in start.sav of the

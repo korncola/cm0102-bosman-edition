@@ -1,7 +1,7 @@
 /* Faults of the original that long games reach (0.6.2 slice 11, tools/recomp/original_faults.py). The fixes act in
  * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS turns them off: "keep" all
  * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age,
- * olympics, ire_super, nsl, holiday, callups, wc_pots, confed, club_regulars and match_numbers. */
+ * olympics, ire_super, nsl, holiday, callups, wc_pots, confed, club_regulars, match_numbers and squad_moves. */
 #include "win.h"
 #include "season_intl.h"
 #include "../rt.h"
@@ -10,11 +10,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../rt_host.h"
+
 #define CLUB_COUNT 0xae235cu     /* clubs, national teams and under-21 teams */
 #define NATION_COUNT 0xae2350u
 
 enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, NSL, HOLIDAY, CALLUPS, WC_POTS, CONFED, CLUB_REGULARS, MATCH_NUMBERS,
-       GROUPS };
+       SQUAD_MOVES, GROUPS };
 
 static int fixes_on_group(int group)
 {
@@ -22,7 +24,7 @@ static int fixes_on_group(int group)
     if (on[0] < 0) {
         static const char *const names[GROUPS] = {"managers", "money", "age", "olympics", "ire_super", "nsl",
                                                    "holiday", "callups", "wc_pots", "confed", "club_regulars",
-                                                   "match_numbers"};
+                                                   "match_numbers", "squad_moves"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
         if (v && strcmp(v, "keep") && strncmp(v, "keep:", 5))
             fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS=%s is not keep or keep:<groups>: every fix acts\n", v);
@@ -34,7 +36,8 @@ static int fixes_on_group(int group)
             if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
                 fprintf(stderr,
                         "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics, "
-                        "ire_super, nsl, holiday, callups, wc_pots, confed, club_regulars, match_numbers)\n",
+                        "ire_super, nsl, holiday, callups, wc_pots, confed, club_regulars, match_numbers, "
+                        "squad_moves)\n",
                         (int)n, p);
         }
         for (int g = 0; g < GROUPS; g++) {
@@ -667,4 +670,100 @@ uint32_t rt_squad_kept(uint32_t nt, uint32_t side, uint32_t record, uint32_t fix
         }
     }
     return 1;
+}
+
+/* The move of a one-contract player to or from the linked side (open item 187, tools/recomp/original_faults.py at
+ * 0x4cc03d). CONTRACT_MANAGER::get_squad_placement 0x4cbb60 reads bit 0x40 of the player's contract +0x35 (0x4cbcb8):
+ * set gives 3 (on the B side), clear gives 4 (at the senior club). CONTRACT_MANAGER::toggle_squad_placement 0x4cbd20
+ * sets or clears it on its other paths (0x4cbdb6, 0x4cbe6a, 0x4cbffe..0x4cc016). Its path for a player with one
+ * contract (0x4cc03d..0x4cc091) moves him and leaves the bit. Here that path sets the bit for a move to the B side and
+ * clears it for a move back. The direction: at placement 4 the path leaves from the club asked about (edi = ebx,
+ * 0x4cbede), at placement 3 it goes to it (ebp = ebx, 0x4cbed5). The manager is [esp + 0x10] of 0x4cbd20, the staff
+ * is esi. */
+#define CONTRACT_INDEX 0xae2d0cu  /* per staff id, 0x4f bytes: +0 the contract index, +4 the second contract index */
+#define STAFF_COUNT 0xae2364u
+
+void rt_squad_move_set(uint32_t manager, uint32_t staff, int down)
+{
+    if (!fixes_on_group(SQUAD_MOVES) || !manager || !staff) return;
+    uint32_t id = rd32(g_mem, staff);
+    if (id >= rd32(g_mem, STAFF_COUNT)) return;
+    int32_t index = (int32_t)rd32(g_mem, rd32(g_mem, CONTRACT_INDEX) + id * 0x4fu);
+    if (index < 0) return;
+    uint32_t contract = rd32(g_mem, manager) + (uint32_t)index * 0x50u;
+    if (down) g_mem[contract + 0x35u] |= 0x40u;
+    else g_mem[contract + 0x35u] &= 0xbfu;
+}
+
+/* RECOMP_SQUAD_MOVE_TEST=1 (tests/seasons/squad_move_run.py): at the first start report (season_report.c) the game
+ * data is loaded. The test takes the first senior club with a linked B side (club_get_linked_b_team 0x540a50 gives the
+ * B side and sets the flag) and a player of it with one contract and the placement 4 (get_squad_placement), moves him
+ * to the reserves twice (CONTRACT_MANAGER::move_to_reserves 0x4cc0f0, as Shortlist_Manager::assess_club_squad 0x83cb40
+ * does) and prints how many of the B side's 50 squad slots (club +0xd7) hold him. One is right. With the fault kept
+ * the second move adds him again and gives two. */
+#define CLUBS 0xae23b4u
+#define CLUB_SIZE 0x245u
+#define CONTRACTS 0xae1050u      /* the CONTRACT_MANAGER */
+
+static uint32_t call_this(uint32_t self, uint32_t target, int n, const uint32_t *args)
+{
+    Cpu saved = cpu;
+    cpu.ecx = self;
+    uint32_t r = rt_callback(target, n, args);
+    if (!rt_unwinding) cpu = saved;   /* an unwind leaves cpu as it is (rt.c) */
+    return r;
+}
+
+static int squad_slots(uint32_t club, uint32_t staff)
+{
+    int n = 0;
+    for (uint32_t k = 0; k < 50u; k++) n += rd32(g_mem, club + 0xd7u + 4u * k) == staff;
+    return n;
+}
+
+void rt_squad_move_test(void)
+{
+    static int done;
+    if (done || !getenv("RECOMP_SQUAD_MOVE_TEST")) return;
+    done = 1;
+    uint32_t manager = rd32(g_mem, CONTRACTS), clubs = rd32(g_mem, CLUBS), flag = rt_alloc(4);
+    uint32_t count = rd32(g_mem, CLUB_COUNT), index = rd32(g_mem, CONTRACT_INDEX);
+    for (uint32_t c = 0; manager && clubs && c < count; c++) {
+        uint32_t club = clubs + c * CLUB_SIZE;
+        wr32(g_mem, flag, 0);
+        uint32_t args[3] = {club, flag, 1};
+        uint32_t b = rt_callback(0x540a50u, 3, args);
+        if (rt_unwinding) return;
+        if (!b || !rd32(g_mem, flag)) continue;          /* the flag: this club is the senior side (0x4cbbe6) */
+        /* The B side must not lead back to the club (as Hertha BSC Amateure in item 187): then get_squad_placement
+           0x4cbb60 of a player at the B side with his contract at the club answers from bit 0x40 (0x4cbcff), not
+           from his club +0x39 (0x4cbbfd). */
+        uint32_t bargs[3] = {b, flag, 1};
+        uint32_t back = rt_callback(0x540a50u, 3, bargs);
+        if (rt_unwinding) return;
+        if (back == club) continue;
+        for (uint32_t k = 0; k < 50u; k++) {
+            uint32_t p = rd32(g_mem, club + 0xd7u + 4u * k);
+            if (!p || rd32(g_mem, p + 0x39u) != club || !rd32(g_mem, p + 0x61u)) continue;
+            uint32_t id = rd32(g_mem, p);
+            if (id >= rd32(g_mem, STAFF_COUNT) || (int32_t)rd32(g_mem, index + id * 0x4fu) < 0 ||
+                (int32_t)rd32(g_mem, index + id * 0x4fu + 4u) >= 0)
+                continue;
+            uint32_t pa[2] = {p, club};
+            uint32_t before = call_this(manager, 0x4cbb60u, 2, pa) & 0xffu;
+            if (rt_unwinding) return;
+            if (before != 4u) continue;              /* 4: at the senior club of a linked side (0x4cbbf6) */
+            call_this(manager, 0x4cc0f0u, 2, pa);
+            if (rt_unwinding) return;
+            uint32_t after = call_this(manager, 0x4cbb60u, 2, pa) & 0xffu;
+            if (rt_unwinding) return;
+            call_this(manager, 0x4cc0f0u, 2, pa);
+            if (rt_unwinding) return;
+            fprintf(stderr, "recomp: squad move test: club %u B side %u staff %u placement %u then %u, "
+                    "B side slots %d, club slots %d\n", rd32(g_mem, club), rd32(g_mem, b), id, before, after,
+                    squad_slots(b, p), squad_slots(club, p));
+            return;
+        }
+    }
+    fprintf(stderr, "recomp: squad move test: no senior club with a one-way B side and a one-contract player at placement 4\n");
 }

@@ -43,6 +43,9 @@ when one is not in its INSNS:
   The patch at 0x85e428 must clear the 0x50-byte contract.
 - TRAINING_SCHEDULE::TRAINING_SCHEDULE 0x8b4e10 writes no category level +4..+8, set_type 0x8b4e50 skips a type above
   7 (0x8b4e64), and set_default_schedules gives the type -1 (0x8b3e63). The patch at 0x8b4e13 must clear the schedule.
+- AWOL::report_poor_fitness 0x41add0 writes the stack only at 0x41ae00, 0x41ae2a, 0x41ae38 and 0x41ae9d before its
+  return 0x41b01f, adds an 0x11-byte record from [esp + 0xc] (0x41ae44, 0x41ae48), and its date fills +8..+0xf. So
+  nothing writes the flag +0x10. The patch at 0x41ae41 must clear it.
 - Each patch calls rt_layout_fix with the index of its group in names[] of layout_reads.c.
 Each INSNS row must name the instruction that the original has at its address.
 Exit code 0 when every case passes.
@@ -68,7 +71,8 @@ FILL, FILL_END = 0x90D2F0, 0x90D4EC   # VIRTUAL_STAFF::fill_fixture_squads, whic
 GROUP_OF = {0x6E19B9: "captain", 0x6EADA0: "players", 0x5CE311: "daily", 0x84C266: "stats", 0x8BF420: "loans",
             0x76C939: "squads", 0x79C6AA: "officials", 0x79C76A: "officials", 0x41A56B: "training",
             0x4C7A0C: "contracts", 0x4C75AE: "contracts",
-            0x85E428: "contracts", 0x8B4E13: "schedules"}
+            0x85E428: "contracts", 0x8B4E13: "schedules",
+            0x41AE41: "fitness"}
 
 
 def disassemble(img):
@@ -246,6 +250,13 @@ def main():
         fails.append("0x8b4e10: the schedule constructor or set_type differ at the levels; read the case again")
     if "memset(M + esi, 0, 0x9bu)" not in layout_reads.INSNS.get(0x8B4E13, ("", ""))[1]:
         fails.append("0x8b4e10: the training schedule levels stay unset, and no patch clears them")
+    fit = {a for a, m, o in code if 0x41ADD0 <= a < 0x41B01F and m in WRITES
+           and o.startswith(("byte ptr [esp", "word ptr [esp", "dword ptr [esp"))}
+    if fit != {0x41AE00, 0x41AE2A, 0x41AE38, 0x41AE9D} or at.get(0x41AE44) != ("lea", "eax, [esp + 0xc]") or \
+            at.get(0x41AE48) != ("push", "0x11") or at.get(0x41AE34) != ("lea", "ecx, [esp + 0x1c]"):
+        fails.append(f"0x41add0: the fitness incident record's writes are {sorted(map(hex, fit))}; read the case again")
+    if "W8(esp + 0x1cu, 0u)" not in layout_reads.INSNS.get(0x41AE41, ("", ""))[1]:
+        fails.append("0x41add0: the fitness incident record's flag +0x10 stays unset, and no patch clears it")
     # Each patch asks the switch for its own group: the index of its name in names[] of layout_reads.c.
     src = open(os.path.join(HERE, "..", "..", "src", "recomp_rt", "win", "layout_reads.c")).read()
     names = re.findall(r'"([a-z]+)"', re.search(r"names\[GROUPS\] = \{([^}]*)\}", src).group(1))

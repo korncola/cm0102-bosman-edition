@@ -521,7 +521,7 @@
 2011	clubs	european_cup (European Champions Cup), row uefa-82: game 55, table 76 (76 (32 in the group stage))
 2011	clubs	goldcup (Copa America), row int-continental-121: game 0/4, table 12 (12)
 2011	clubs	oceania_nations (Oceania Nations Cup), row int-continental-120: game 3, table 8 (8)
-2011	clubs	uefa_cup (UEFA Cup), row uefa-85: game 145, table 194 (194 (161 entered + 33 from the Champions League); 48 in the group stage (+8 Cham)
+2011	clubs	uefa_cup (UEFA Cup), row uefa-85: game 146, table 194 (194 (161 entered + 33 from the Champions League); 48 in the group stage (+8 Cham)
 2011	clubs	wc_african_cup (World Cup African Qualifying Section), row int-world-126: game 50, table 52 (52 entrants)
 2011	clubs	wc_asia_league (World Cup Asian Qualifying Section), row int-world-127: game 0, table 20 (20, then 10)
 2011	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-125: game 24, table 30 (30, then 12)
@@ -1595,7 +1595,7 @@
 2027	clubs	euro_champ (European Football Championship), row int-continental-287: game 0/4, table 24 (24)
 2027	clubs	euro_champ_qual (European Championship Qualifying), row int-continental-288: game 5, table 54 (54 (scheduled))
 2027	clubs	european_cup (European Champions Cup), row uefa-210: game 55, table 83 (83 (36 in the league phase))
-2027	clubs	uefa_cup (UEFA Cup), row uefa-213: game 145, table 36 (36 in the league phase; total unknown)
+2027	clubs	uefa_cup (UEFA Cup), row uefa-213: game 146, table 36 (36 in the league phase; total unknown)
 2027	clubs	wc_concacaf_cup (World Cup CONCACAF Qualifying Section), row int-world-317: game 24, table 35 (35 (22 in round 1))
 2027	down	eng_third (English Third Division), row eng-291: game 1 (+0 play-off places), table 2 (2)
 2027	format	european_cup, row uefa-210: game 16 and 8 clubs in the league phase and its knockout stage, table 0 and 24

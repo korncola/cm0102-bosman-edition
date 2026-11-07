@@ -1,8 +1,8 @@
 """Faults of the original that long games reach (0.6.2 slice 11, Q23, Q24, Q27, open item 102;
 src/recomp_rt/win/original_faults.c). The fixes act in every game, the base game too. The test switch
 RECOMP_ORIGINAL_FAULTS=keep turns them all off. "keep:managers", "keep:money", "keep:age", "keep:olympics",
-"keep:ire_super", "keep:nsl", "keep:holiday", "keep:callups", "keep:wc_pots", "keep:confed", "keep:club_regulars" or
-"keep:match_numbers" (or a list: "keep:money,age") turns off one group or more.
+"keep:ire_super", "keep:nsl", "keep:holiday", "keep:callups", "keep:wc_pots", "keep:confed", "keep:club_regulars",
+"keep:match_numbers" or "keep:squad_moves" (or a list: "keep:money,age") turns off one group or more.
 
 National managers (fault 26, Q23). `club_can_be_managed` 0x544820 takes a senior national team (club id from club
 count - 2 x nation count to club count - nation count, 0x544835..0x544857) only when its nation had more than 150
@@ -200,6 +200,32 @@ minus that day) and the fixture is the one of the day two weeks ahead, the day o
 builds them for that day, 0x76b257..0x76b2bf; 0x76bab0 also runs for a new fixture, from 0x5aab15).
 The marks and the new pick are one group: one rule of real life, and the reported case needs both. Test:
 tests/seasons/club_regulars_run.py.
+
+Moves to a linked side (open item 187, group squad_moves). A Spanish, German or Portuguese club can have a linked B side
+(club_get_linked_b_team 0x540a50). Shortlist_Manager::assess_club_squad 0x83cb40 reassesses each squad every few weeks
+and calls CONTRACT_MANAGER::move_to_reserves 0x4cc0f0 or move_to_first_team 0x4cc0b0, which act only when
+CONTRACT_MANAGER::get_squad_placement 0x4cbb60 gives the other place (0x4cc104..0x4cc10a) and then call
+CONTRACT_MANAGER::toggle_squad_placement 0x4cbd20. For a player whose own club (staff +0x39) is the B side and whose
+contract is with the senior side, get_squad_placement answers from bit 0x40 of the contract's +0x35
+(0x4cbcb8..0x4cbd07). Set gives 3 (on the B side), clear gives 4 (at the senior club). This holds only when the B side
+does not link back to the senior side. Where it links back, the player's club gives 3 (0x4cbbfd) and the bit is not
+read. toggle_squad_placement sets or clears that bit on its other paths (0x4cbdb6, 0x4cbe6a, and 0x4cbffe..0x4cc016 for
+a player with a second contract), but its path for a player with one
+contract (0x4cc03d..0x4cc091) only removes him from one side (database_remove_staff_from_club 0x53c190) and adds him to
+the other (database_add_staff_to_club 0x53bd10). So after a move to the B side the placement still says 4, the next
+assessment moves him again, and each move puts him in another squad slot of the B side. In a 2001 base game (with the
+fixes of open item 138b) Hertha BSC Amateure held staff 1222 in 11 of its 50 slots by May 2011, and on 28 September 2020
+MATCH_MAN::pick_team 0x6dbc50 picked him three times and stopped at its duplicate test (match_man..cpp 1225, 0x6dd3c1).
+
+The original read an unset byte here: STAFF_CONTRACT::STAFF_CONTRACT 0x85e410 does not set +0x35, the contract terms are
+built with it, and STAFF_CONTRACT::operator= 0x4cc810 copies +0x35 into the contract table (0x4cc88a..0x4cc8b9), whose
+new slots were not cleared either. So in the original bit 0x40 of a new contract was whatever the stack or the heap
+held, and the repeat happened or not by chance, in real life too. Open item 138b gives those bytes 0 (layout_reads.py),
+so the bit starts clear and the repeat always happens. Here the path for a player with one contract sets the bit for a move
+to the B side and clears it for a move back (0x4cc03d), so the placement follows each move. The direction comes from
+the registers: at placement 4 the path leaves from the club asked about (edi = ebx, 0x4cbede), at placement 3 it goes
+to it (ebp = ebx, 0x4cbed5). A bit that holds junk from an old save is then right after one move. A player with no
+contract (index below 0) has no bit to set.
 """
 
 # address: (the instruction in the original, C code)
@@ -258,4 +284,5 @@ INSNS = {
     0x777729: ("je 0x77778f", "if (cc_e(F) && !rt_callup_mark_all()) goto L_77778f;"),
     0x76BBA8: ("je 0x76bc10", "if (cc_e(F) || !rt_squad_kept(ebp, R32(esi + 0x1cu), edi, esi)) goto L_76bc10;"),
     0x76BE1B: ("je 0x76be83", "if (cc_e(F) || !rt_squad_kept(ebp, R32(esi + 0x20u), edi, esi)) goto L_76be83;"),
+    0x4CC03D: ("mov ecx, dword ptr [0xb74350]", "rt_squad_move_set(R32(esp + 0x10u), esi, edi == ebx); ecx = R32(0xb74350u);"),
 }
