@@ -34,6 +34,9 @@ when one is not in its INSNS:
 - AWOL::miss_training 0x41a360 writes the stack only at 0x41a38a, 0x41a3e6 and 0x41a57b (the record's staff id), adds a
   13-byte record from [esp + 0x18] (0x41a587, 0x41a58b), and Date::Date 0x54a110 and 0x417c10 write 8 bytes from the
   date +4. So nothing writes the flag +0xc. The patch at 0x41a56b must clear it.
+- CONTRACT_MANAGER::get_free_staff_contract_space 0x4c79a0 grows the contract table by 200 slots (0x4c79dd) with
+  realloc 0x945667 or malloc 0x944e46, which both come to 0x4c7a0a, and stores the table at 0x4c7a0c with no write of
+  the new slots. The patch at 0x4c7a0c must clear them.
 - Each patch calls rt_layout_fix with the index of its group in names[] of layout_reads.c.
 Each INSNS row must name the instruction that the original has at its address.
 Exit code 0 when every case passes.
@@ -57,7 +60,8 @@ WRITES = ("mov", "and", "or", "xor", "add", "sub", "inc", "dec", "adc", "sbb", "
 SIZES = {"byte": 1, "word": 2, "dword": 4}
 FILL, FILL_END = 0x90D2F0, 0x90D4EC   # VIRTUAL_STAFF::fill_fixture_squads, which gets the fixture (0x84c2a9, 0x84c2b7)
 GROUP_OF = {0x6E19B9: "captain", 0x6EADA0: "players", 0x5CE311: "daily", 0x84C266: "stats", 0x8BF420: "loans",
-            0x76C939: "squads", 0x79C6AA: "officials", 0x79C76A: "officials", 0x41A56B: "training"}
+            0x76C939: "squads", 0x79C6AA: "officials", 0x79C76A: "officials", 0x41A56B: "training",
+            0x4C7A0C: "contracts"}
 
 
 def disassemble(img):
@@ -202,6 +206,14 @@ def main():
                 fails.append(f"{a:#x}: the date writes past its 8 bytes ({m} {o}); read the case again")
     if "W8(esp + 0x24u, 0u)" not in layout_reads.INSNS.get(0x41A56B, ("", ""))[1]:
         fails.append("0x41a360: the missed training record's flag +0xc stays unset, and no patch clears it")
+    grow = [(0x4C79DD, "add", "eax, 0xc8"), (0x4C79E4, "mov", "dword ptr [esi + 4], eax"),
+            (0x4C79F1, "call", "0x945667"), (0x4C79F9, "jmp", "0x4c7a0a"), (0x4C7A02, "call", "0x944e46"),
+            (0x4C7A0A, "test", "eax, eax")]
+    if any(at.get(a) != (m, o) for a, m, o in grow):
+        fails.append("0x4c79a0: not the growth of the contract table by 200 slots; read the case again")
+    if "memset(M + eax + (R32(esi + 4u) - 200u) * 0x50u, 0, 200u * 0x50u)" not in \
+            layout_reads.INSNS.get(0x4C7A0C, ("", ""))[1]:
+        fails.append("0x4c79a0: the new slots of the contract table stay unset, and no patch clears them")
     # Each patch asks the switch for its own group: the index of its name in names[] of layout_reads.c.
     src = open(os.path.join(HERE, "..", "..", "src", "recomp_rt", "win", "layout_reads.c")).read()
     names = re.findall(r'"([a-z]+)"', re.search(r"names\[GROUPS\] = \{([^}]*)\}", src).group(1))

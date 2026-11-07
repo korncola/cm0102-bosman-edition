@@ -8,7 +8,7 @@ on). So each read takes a defined value in its place: the record's id for the ad
 unset bytes, 0x240, the mask of the original's last places, for the place masks of a national squad, and its place
 in the table for the id of a new official. The fixes act in every game, the base game too. The test switch
 RECOMP_LAYOUT_FIXES=keep, or keep:captain, keep:players, keep:daily, keep:stats, keep:loans, keep:squads,
-keep:officials, keep:training, turns them off (layout_reads.c).
+keep:officials, keep:training, keep:contracts, turns them off (layout_reads.c).
 
 The captain (MATCH_MAN::choose_captain 0x6e1940). For each player of the list it takes the captain score
 (match_man_get_captain_score 0x6e1cf0). When the manager's rating (non_player_attribute_rating 0x544410 with the
@@ -102,6 +102,17 @@ a saved game), and no code writes the flag. A week later AWOL::daily_update 0x41
 player's own professionalism decides whether he misses training again (0x4191fc..); clear, his squad mates count as well
 (0x4192c1..). In a 2001 base game the flag differed with the two Setup Game screens on day 268 (with the fix of the
 officials). Here the flag is 0 at 0x41a56b, as fresh memory is.
+
+The staff contract table (CONTRACT_MANAGER::get_free_staff_contract_space 0x4c79a0). A new contract takes a free slot:
+an empty slot (id -1, 0x4c79bc) keeps the bytes of the contract it held, and when none is left the table grows by 200
+slots (0x4c79dd) with realloc 0x945667 (0x4c79f1), or malloc 0x944e46 (0x4c7a02) for the first table, and the new slots
+hold what the heap held before. CONTRACT_MANAGER::add_staff_contract 0x4c7950 then has
+STAFF_CONTRACT::generate_initial_contract 0x85e960 fill the slot (0x4c798d), and it does not set the morale +0x3d. So a
+contract in a new slot started with heap bytes as its morale. In a 2001 base game the contract of the regen staff 4346
+at club 1483 (player_regen_sign_for_club 0x7a6f10, 4 January 2007) had morale 0 with one Setup Game screen and 0x5e with
+the other, and on 6 January 2007 game_daily_staff_update 0x5ce2d0 compared it with a draw (0x5d00ad..0x5d00c2). Here the
+new slots are 0 when the table grows (0x4c7a0c), as fresh memory is. A reused slot keeps its old contract's bytes: those
+are values of the game, the same with any layout.
 """
 
 # address: (the instruction in the original, C code)
@@ -123,5 +134,8 @@ INSNS = {
     0x79C76A: ("mov word ptr [esi + 4], ax",
                "W16(esi + 4u, (uint16_t)eax); if (rt_layout_fix(6u)) { uint32_t y_ = R16(esi + 6u); "
                "W32(esi + 8u, y_ % 4u == 0u && (y_ % 100u != 0u || y_ % 400u == 0u) ? 1u : 0u); }"),
+    0x4C7A0C: ("mov dword ptr [esi], eax",
+               "if (rt_layout_fix(8u) && eax) memset(M + eax + (R32(esi + 4u) - 200u) * 0x50u, 0, 200u * 0x50u); "
+               "W32(esi, eax);"),
     0x41A56B: ("mov eax, dword ptr [esi]", "if (rt_layout_fix(7u)) W8(esp + 0x24u, 0u); eax = R32(esi);"),
 }
