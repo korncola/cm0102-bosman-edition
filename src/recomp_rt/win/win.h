@@ -133,6 +133,8 @@ void win_game_work(void);              /* user32.c: game work ran in this pass, 
  * the call (the return address is at [esp]), the caller's edi and the result, returns the result to use. NULL
  * when no code asks for it (season_uefa_qual.c, the Champions League group draw). */
 extern uint32_t (*win_random_hook)(uint32_t esp, uint32_t edi, uint32_t result);
+/* Item 155 (match_numbers.c): 1 unless RECOMP_ORIGINAL_FAULTS keeps the group match_numbers (original_faults.c). */
+int win_match_numbers_fix_on(void);
 uint32_t win_back_buffer(void);        /* flat address of the RGB565 back buffer, or 0 */
 void win_dump_screen(const char *path);
 extern uint32_t win_wndproc;

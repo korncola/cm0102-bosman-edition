@@ -215,7 +215,7 @@ def run(program, game, folder, mode, out):
     if LANGUAGE:
         if not lng_fit_run.language_cfg(program, game, user, LANGUAGE):
             return 1, "no game.cfg"
-        load = [s for s in load if s not in lng_fit_run.SETTINGS]
+        load = [s for s in load if s not in lng_fit_run.SETTINGS + [smoke_run.SETTINGS_WAIT]]
     tour = TOUR + (HIDDEN_CLASSIC if mode == "classic" else []) + WORST
     steps = smoke_run.scaled_steps(mode, out, load) + smoke_run.scaled_steps(mode, out, tour)
     steps.append("20000 quit" if mode == "classic" else "13000 quit")

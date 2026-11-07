@@ -202,10 +202,13 @@ def differing_share(a, b, box=None, tol=0):
 
 
 # The runs of the same-save check: a name and the option lines of settings.txt (after the mode).
-# The groups of original_faults.c. The group callups can act in the first days of a game (open item 143), so the
-# runs original-faults-keep keep only the others.
-ORIGINAL_FAULT_GROUPS = ["managers", "money", "age", "olympics", "ire_super", "nsl", "holiday", "callups"]
-KEEP_IN_RUNS = "keep:" + ",".join(g for g in ORIGINAL_FAULT_GROUPS if g != "callups")
+# The groups of original_faults.c. The group callups can act in the first days of a game (open item 143), and the
+# group match_numbers acts on each match day (open item 155, match_numbers.c), so the runs
+# original-faults-keep keep only the others.
+ORIGINAL_FAULT_GROUPS = ["managers", "money", "age", "olympics", "ire_super", "nsl", "holiday", "callups",
+                         "match_numbers"]
+ACTING_GROUPS = ("callups", "match_numbers")
+KEEP_IN_RUNS = "keep:" + ",".join(g for g in ORIGINAL_FAULT_GROUPS if g not in ACTING_GROUPS)
 
 
 def with_set_keep(env):
@@ -286,7 +289,9 @@ SAME_SAVE_RUNS = [
     # that meets a player abroad, which can come in the first days of a game (in a game with every league,
     # Argentina's pick on 14.7.01 refuses 60 players with the original's rule), so this run keeps every other group
     # (KEEP_IN_RUNS). Its proof is a set with RECOMP_ORIGINAL_FAULTS=keep:callups for every run against --ref-build
-    # (with_set_keep), and tests/seasons/callups_run.py.
+    # (with_set_keep), and tests/seasons/callups_run.py. The background match numbers (group match_numbers, open item
+    # 155) act on every match day, so this run keeps them too. Their proof is the match set with
+    # RECOMP_ORIGINAL_FAULTS=keep:match_numbers against --ref-build, and tests/smoke/match_timing_run.py.
     ("original-faults-keep", {"faster_days": "off", "_env": {"RECOMP_ORIGINAL_FAULTS": KEEP_IN_RUNS}}),
     # The merged parts of a save (0.6.2 slice 13, save_parts.c) change only how the temporary files go into the
     # save: with their test switch off the save holds the same files as normal.
@@ -305,13 +310,25 @@ REF_SETUP = None
 TEXT_050_RUN = ("text-0.5.0", {"faster_days": "off", "_against": "ref-0.5.0",
                                "_env": {"RECOMP_SETUP_TEXT": "0.5.0", "RECOMP_SEASON_CODE": "off"}})
 
+# The parts of a saved game that depend on where the game's memory blocks sit (Q152): any change of memory
+# layout, even opening one of the original's own screens, changes them after a few days. Research of slices 3
+# and 7 (docs/research/2026-10-15-attribute-groups.md) found these five and no others.
+LAYOUT_PARTS = ("fifa_rankings.dat", "general.dat", "national_teams.dat", "staff history.tmp", "transfer.dat")
+
 # The match check (--match): the steps after the load of prematch.sav (fixtures.LOAD_STEPS), positions
 # for 800x600 as in STEPS. The times after a wait count from the moment it was reached. Each Space has
 # a wait after it, so a busy machine does not lose one. Screens: news 0x7881e0, bid negotiation
 # 0x8e9760, reject confirm 0x8efda0, fixtures and results 0x717db0, squad 0x454900, "Proceed to the
 # match?" 0x7260f0, match 0x718e90 (RECOMP_SCREEN_LOG=1 prints them). A match event that stops the
 # match, for example a red card that opens the tactics screen 0x899ea0, needs more steps: Ok, then
-# Resume (label:Resume) at the same place as Kick Off.
+# Resume (label:Resume) at the same place as Kick Off. Since item 155 the background matches take their own
+# numbers, and the Basel friendly has such an event early in the second half on every machine: MATCH_EVENT.
+MATCH_EVENT = [
+    "wait screen:0x899ea0",                 # the event opens the tactics screen
+    "1000 click 705 573",                   # Ok
+    "wait label:Resume",
+    "1000 click 45 120",                    # Resume Match
+]
 MATCH_SAVE = "prematch.sav"
 MATCH_STEPS = [
     "1500 press space",                     # news of 16.7.01: the next item
@@ -340,12 +357,16 @@ MATCH_STEPS = [
     "4000 click 45 120",                    # Kick Off Match
     "wait label:Re-start 600000",           # half time
     "1000 click 45 120",                    # Re-start Match
+] + MATCH_EVENT + [
     "wait label:Continue 600000",           # full time: Continue Game on the match screen
     "1000 click 45 120",                    # Continue Game: results of 20.7.01
     "wait continue",
     "500 press space",                      # the day goes on to 21.7.01, where the runtime saves
     "600000 quit",
 ]
+# The match check of a run that keeps the group match_numbers: the original's matches have no MATCH_EVENT.
+_EVENT_AT = MATCH_STEPS.index(MATCH_EVENT[0])
+MATCH_STEPS_ORIGINAL = MATCH_STEPS[:_EVENT_AT] + MATCH_STEPS[_EVENT_AT + len(MATCH_EVENT):]
 # The runs of the match check, as SAME_SAVE_RUNS. Each pair of an option must give the save of normal.
 MATCH_RUNS = [
     ("normal", {}),
@@ -375,9 +396,11 @@ MATCH_RUNS = [
 ]
 MATCH_DAYS = 5      # 16.7.01 to 21.7.01
 # --match --sleep-danger adds this run: the idle sleep without its time rules (RECOMP_IDLE_SLEEP=force), so
-# it also sleeps while background matches play. It must FAIL: it shows that the match check catches a sleep
-# that changes the match. Not in MATCH_RUNS, because it fails.
-SLEEP_DANGER_RUN = ("sleep-force", {"_env": {"RECOMP_IDLE_SLEEP": "force"}})
+# it also sleeps while background matches play. It keeps the original's shared random stream (group match_numbers,
+# item 155): with the fix, the count of background steps no longer changes the watched match. It must FAIL: it
+# shows that the match check catches a sleep that changes the match. Not in MATCH_RUNS, because it fails.
+SLEEP_DANGER_RUN = ("sleep-force", {"_env": {"RECOMP_IDLE_SLEEP": "force",
+                                             "RECOMP_ORIGINAL_FAULTS": "keep:match_numbers"}})
 
 SAVE_NAME = "samesave.sav"
 INTRO_CLICK = "1000 click 400 300"
@@ -822,10 +845,23 @@ def match(program, game, days, speed="very-fast", sleep_danger=False):
         return 1
     # No click ends the intro (without_intro_click): with the click, the runs on a busy machine played
     # different matches.
-    steps = without_intro_click(fixtures.LOAD_STEPS) + [
-        SPEED_CLICKS[speed] if s.startswith("2500 click 120 255") else s for s in MATCH_STEPS]
-    runs = MATCH_RUNS + ([SLEEP_DANGER_RUN] if sleep_danger else [])
-    return compare_runs(program, game, "widescreen", runs, steps, days, save, timeout=900)
+    def steps_of(event):
+        return without_intro_click(fixtures.LOAD_STEPS) + [
+            SPEED_CLICKS[speed] if s.startswith("2500 click 120 255") else s
+            for s in (MATCH_STEPS if event else MATCH_STEPS_ORIGINAL)]
+    if keeps_match_numbers(os.environ.get("RECOMP_ORIGINAL_FAULTS", "")):
+        return compare_runs(program, game, "widescreen", MATCH_RUNS, steps_of(False), days, save, timeout=900)
+    runs = MATCH_RUNS + ([(SLEEP_DANGER_RUN[0], dict(SLEEP_DANGER_RUN[1], _steps=steps_of(False)))]
+                         if sleep_danger else [])
+    # MATCH_EVENT opens the tactics screen, whose rows match_columns changes: off moves the memory blocks, so
+    # LAYOUT_PARTS may differ (as same_save_views.py match-tactics).
+    return compare_runs(program, game, "widescreen", runs, steps_of(True), days, save, timeout=900,
+                        allowed={"columns-off": LAYOUT_PARTS})
+
+
+def keeps_match_numbers(value):
+    """True if RECOMP_ORIGINAL_FAULTS=value keeps the group match_numbers (original_faults.c)."""
+    return value == "keep" or (value.startswith("keep:") and "match_numbers" in value[5:].split(","))
 
 
 def main(argv):

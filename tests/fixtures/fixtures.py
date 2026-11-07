@@ -49,6 +49,7 @@ DEFAULT_DIR = os.environ.get("FIXTURES_DIR", "/Users/max/Projects/cm0102/test-fi
 # the saves of the user folder in name order. With one save, it is the first row.
 LOAD_STEPS = [
     "1000 click 400 300",                   # the intro: a click ends the logos
+    smoke_run.SETTINGS_WAIT,                # the settings screen: the clicks count from it (item 155)
     "8200 click 522 272",                   # settings: Background Changes Off
     "8500 click 662 524",                   # settings: Ok
     "wait setup",

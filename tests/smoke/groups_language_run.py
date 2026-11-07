@@ -95,7 +95,7 @@ def run(program, game, case, language, work, database):
     if case == "base":
         shutil.copyfile(os.path.join(fixtures.DEFAULT_DIR, "start.sav"), os.path.join(user, "start.sav"))
         options.append(("changing_rules", "off"))
-        steps = [s for s in fixtures.LOAD_STEPS if s not in lng_fit_run.SETTINGS]
+        steps = [s for s in fixtures.LOAD_STEPS if s not in lng_fit_run.SETTINGS + [smoke_run.SETTINGS_WAIT]]
     else:
         shutil.copytree(database, os.path.join(user, "Databases", SEASON_DB))
         options += [("database", "folder:" + SEASON_DB), ("changing_rules", "on")]

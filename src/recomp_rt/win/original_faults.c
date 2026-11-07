@@ -1,7 +1,7 @@
 /* Faults of the original that long games reach (0.6.2 slice 11, tools/recomp/original_faults.py). The fixes act in
  * every game, the base game too (Q23, Q24, Q27). The test switch RECOMP_ORIGINAL_FAULTS turns them off: "keep" all
  * of them, "keep:" with a list of groups some of them ("keep:money,age"). The groups are managers, money, age,
- * olympics, ire_super, nsl, holiday and callups. */
+ * olympics, ire_super, nsl, holiday, callups and match_numbers. */
 #include "win.h"
 #include "../rt.h"
 
@@ -12,14 +12,14 @@
 #define CLUB_COUNT 0xae235cu     /* clubs, national teams and under-21 teams */
 #define NATION_COUNT 0xae2350u
 
-enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, NSL, HOLIDAY, CALLUPS, GROUPS };
+enum { MANAGERS, MONEY, AGE, OLYMPICS, IRE_SUPER, NSL, HOLIDAY, CALLUPS, MATCH_NUMBERS, GROUPS };
 
 static int fixes_on_group(int group)
 {
     static int on[GROUPS] = {-1};
     if (on[0] < 0) {
         static const char *const names[GROUPS] = {"managers", "money", "age", "olympics", "ire_super", "nsl",
-                                                   "holiday", "callups"};
+                                                   "holiday", "callups", "match_numbers"};
         const char *v = getenv("RECOMP_ORIGINAL_FAULTS");
         if (v && strcmp(v, "keep") && strncmp(v, "keep:", 5))
             fprintf(stderr, "recomp: RECOMP_ORIGINAL_FAULTS=%s is not keep or keep:<groups>: every fix acts\n", v);
@@ -31,7 +31,7 @@ static int fixes_on_group(int group)
             if (n && !known)        /* a typo would leave its fixes on, and a same-save run would still pass */
                 fprintf(stderr,
                         "recomp: RECOMP_ORIGINAL_FAULTS: unknown group %.*s (managers, money, age, olympics, "
-                        "ire_super, nsl, holiday, callups)\n",
+                        "ire_super, nsl, holiday, callups, match_numbers)\n",
                         (int)n, p);
         }
         for (int g = 0; g < GROUPS; g++) {
@@ -46,6 +46,12 @@ static int fixes_on_group(int group)
         }
     }
     return on[group];
+}
+
+/* The background matches' own numbers (item 155, match_numbers.c). */
+int win_match_numbers_fix_on(void)
+{
+    return fixes_on_group(MATCH_NUMBERS);
 }
 
 static int money_fixes_on(void)    /* the fixes of money above 2,147,483,647 (faults 27 and 28) */
