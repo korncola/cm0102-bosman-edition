@@ -40,6 +40,8 @@ int season_start_year(void) { return 2025; }
 int season_game_changes(void) { return 1; }
 int season_intl_finals_busy(int conf, int y, int doy) { (void)conf, (void)y, (void)doy; return 0; }
 int season_gold_cup_busy(int y, int doy) { (void)y, (void)doy; return 0; }
+long season_abs_day(int y, int m, int d) { return (long)y * 372 + m * 31 + d; }
+int season_conmebol_real_day(long z) { (void)z; return 0; }
 
 static const int month_days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};   /* 2045, not a leap year */
 
