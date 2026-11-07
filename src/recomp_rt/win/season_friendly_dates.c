@@ -241,10 +241,11 @@ static int national_side(uint32_t club)
  * comp_active_key_nation_of_fixture 0x48dd70 reads it) and two club sides; the friendlies (priority 1) aside. A
  * qualifier (fixture priority +0x3a: 10) does not move such a tie (Champions League 8, Europa League 7) when
  * add_fixture 0x5aa680 stores it, and the tie then loses its internationals (Liverpool fielded 7 at Bordeaux on
- * 6 September 2008, match_eng.cpp 652). The day lists of all types (count: the s8 at 0xb64738, key nation entries). */
+ * 6 September 2008, match_eng.cpp 652). The day lists of all types (count: the s8 at 0xb64738, key nation entries).
+ * self: the fixture that moves, when it is stored on that day (it is not a match beside itself). */
 static char busy_why[160];              /* what side_busy found last (for the stay line) */
 
-static int side_busy(uint32_t a, uint32_t b, int y, int doy)
+static int side_busy(uint32_t a, uint32_t b, int y, int doy, uint32_t self)
 {
     uint32_t na = rd32(g_mem, a + 0x53), nb = rd32(g_mem, b + 0x53);
     int busy = 0, types = (int8_t)g_mem[TYPE_COUNT];
@@ -256,7 +257,7 @@ static int side_busy(uint32_t a, uint32_t b, int y, int doy)
             for (uint32_t node = readable(list) ? rd32(g_mem, list + 2) : 0, k = 0; readable(node) && k < 4000;
                  node = rd32(g_mem, node + 6), k++) {
                 uint32_t f = rd32(g_mem, node);
-                if (!readable(f)) continue;
+                if (!readable(f) || f == self) continue;
                 uint32_t h = rd32(g_mem, f + 0x1c), w = rd32(g_mem, f + 0x20);
                 uint32_t nh = readable(h) ? rd32(g_mem, h + 0x53) : 0, nw = readable(w) ? rd32(g_mem, w + 0x53) : 0;
                 uint32_t rec = rd32(g_mem, f + 0x14);
@@ -366,15 +367,17 @@ static int duty_ties(uint32_t n, uint32_t m, int y, int d);
  * the fixture that moves, when it is stored) and no continental club tie within a day of it whose club holds more
  * than two of the nations' players (duty_ties: the duty of 0x7757d0 reaches the day before and after), not after
  * day ey/ed (its stage's last match day; ey 0: none) unless in the FIFA window of that day (window_from), and not
- * in the days of a final of either side's confederation; d when it is on such a day already. With no such FIFA
+ * in the days of a final of either side's confederation; d when it is on such a day already, free on the day itself
+ * too (side_busy: open item 79, a matchday that the snap of the matchday before had moved onto its FIFA day stayed
+ * there, and the store moved it off the window, to the day before a Europa League Thursday). With no such FIFA
  * day, and d in a final's days: the nearest such day that is not a FIFA day (open item 55). -1 when none is free. */
 static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, int ed, uint32_t self)
 {
     int doys[FIFA_DOYS_MAX], n = fifa_doys(y, doys, FIFA_DOYS_MAX);
     uint32_t na = rd32(g_mem, home + 0x53), nb = rd32(g_mem, away + 0x53);
     for (int k = 0; k < n; k++)                                           /* on a free FIFA day already */
-        if (doys[k] == d && !finals_busy(home, away, y, d) && !side_near(home, away, y, d, self) &&
-            !duty_ties(na, nb, y, d))
+        if (doys[k] == d && !finals_busy(home, away, y, d) && !side_busy(home, away, y, d, self) &&
+            !side_near(home, away, y, d, self) && !duty_ties(na, nb, y, d))
             return rt_unwinding ? -1 : d;
     int today_year = (int16_t)rd16(g_mem, GAME_DATE + 2), today = (int16_t)rd16(g_mem, GAME_DATE);
     for (int dist = 1; dist <= SNAP_DAYS && !rt_unwinding; dist++)
@@ -384,7 +387,7 @@ static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, in
             /* past its stage's last day: only within the FIFA window that holds that day or starts the day after */
             if (ey && (y > ey || (y == ey && c > ed)) && c > d && !(y == ey && window_from(doys, n, ed, c))) continue;
             for (int k = 0; k < n; k++) ok |= doys[k] == c;
-            if (!ok || finals_busy(home, away, y, c) || side_busy(home, away, y, c) ||
+            if (!ok || finals_busy(home, away, y, c) || side_busy(home, away, y, c, self) ||
                 side_near(home, away, y, c, self) || duty_ties(na, nb, y, c))
                 continue;
             return rt_unwinding ? -1 : c;
@@ -400,8 +403,9 @@ static int fifa_target_by(uint32_t home, uint32_t away, int y, int d, int ey, in
             int c = d + sign * dist;
             if (c < 0 || c >= days_in(y) || (y == today_year && c < today + 2) || y < today_year) continue;
             if (ey && (y > ey || (y == ey && c > ed)) && c > d) continue;
-            if (finals_busy(home, away, y, c) || side_busy(home, away, y, c) ||
-                (c > 0 && side_busy(home, away, y, c - 1)) || (c + 1 < days_in(y) && side_busy(home, away, y, c + 1)))
+            if (finals_busy(home, away, y, c) || side_busy(home, away, y, c, self) ||
+                (c > 0 && side_busy(home, away, y, c - 1, self)) ||
+                (c + 1 < days_in(y) && side_busy(home, away, y, c + 1, self)))
                 continue;
             return rt_unwinding ? -1 : c;
         }
@@ -474,7 +478,7 @@ static void stay_info(uint32_t rec, uint32_t home, uint32_t away, int d, int y, 
         busy_why[0] = 0;
         if (side_near(home, away, y, c, 0)) snprintf(busy_why, sizeof busy_why, "a match of a side within %d days",
                                                      CLASH_DAYS);
-        else if (!side_busy(home, away, y, c)) snprintf(busy_why, sizeof busy_why, "free");
+        else if (!side_busy(home, away, y, c, 0)) snprintf(busy_why, sizeof busy_why, "free");
         if (at < sizeof held - 1)
             at += (size_t)snprintf(held + at, sizeof held - at, "%sday %d: %s", reach > 1 ? "; " : "", c, busy_why);
     }

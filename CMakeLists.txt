@@ -373,6 +373,10 @@ if(NOT WIN32)
         src/recomp_rt/win/season_friendly_dates.c)
     target_include_directories(season_friendly_part_test PRIVATE src/recomp_rt/win src/recomp_rt)
     add_test(NAME season_friendly_part COMMAND season_friendly_part_test)
+    # The snap of a qualifier to a FIFA day (open item 79): no two matches of a side on one day.
+    add_executable(season_fifa_snap_test tests/seasons/test_season_fifa_snap.c src/recomp_rt/win/season_friendly_dates.c)
+    target_include_directories(season_fifa_snap_test PRIVATE src/recomp_rt/win src/recomp_rt)
+    add_test(NAME season_fifa_snap COMMAND season_fifa_snap_test)
     add_test(NAME season_encode_rules COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/test_encode_rules.py")
     # The league rules (0.6.0 slice 19): play-off places, splits and calendars. The outputs are committed.
     add_test(NAME season_encode_leagues COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/seasons/test_encode_leagues.py")
