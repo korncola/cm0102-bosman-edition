@@ -657,24 +657,32 @@ static int entrants(uint32_t self, const SeasonNlEdition *e, Entrant *out)
     int n = old ? read_results(self, &from, rows) : 0;
     if (rt_unwinding) return 0;
     if (n < 4) return real_entrants(e, out);
+    /* A nation of the real leagues that did not play the edition before (a nation new in the data, or one that
+     * a load of an older save gives a continent: Martinique and Guadeloupe in a 0.6 save of 2035). It joins the
+     * rows with no place (pos 0), so the fill puts it where room is left (season_nl_next_leagues). Open item 183:
+     * it was added to its real league after the fill, which gave League A 17 nations in four groups; the group of
+     * five had more rounds than the six match dates (round_template), its later rounds had day 0 and the edition
+     * never ended. */
+    Entrant real[NL_MAX_NATIONS];
+    int m = real_entrants(e, real), played = n;
+    for (int j = 0; j < m && n < NL_MAX_NATIONS; j++) {
+        int have = 0;
+        for (int i = 0; i < played; i++) have |= rows[i].nation == real[j].nation;
+        if (!have) rows[n++] = (SeasonNlRow){real[j].nation, real[j].league, 0, 0, 0, 0, 0, 0, 0};
+    }
     int next[NL_MAX_NATIONS], k = 0;
     if (!season_nl_next_leagues(&from, e, rows, n, next)) return real_entrants(e, out);
     for (int i = 0; i < n; i++) {
         if (left_out(e, rows[i].nation) || !season_nl_nation_can_play(rows[i].nation)) continue;
         out[k++] = (Entrant){rows[i].nation, next[i], 0, 0};
-        if (logging() && next[i] != rows[i].league)
+        if (logging() && rows[i].pos <= 0)
+            fprintf(stderr, "recomp: season nl: %s: %s joins in league %c (its table league %c)\n", label(e),
+                    win_str(nation_at(rows[i].nation) + NATION_NAME), 'A' + next[i], 'A' + rows[i].league);
+        else if (logging() && next[i] != rows[i].league)
             fprintf(stderr, strcmp(e->confed, "UEFA") ? "recomp: season nl: %s: %s moves from league %c to %c\n"
                                                       : "recomp: season nl: %s%s goes from league %c to %c\n",
                     strcmp(e->confed, "UEFA") ? e->confed : "", win_str(nation_at(rows[i].nation) + NATION_NAME),
                     'A' + rows[i].league, 'A' + next[i]);
-    }
-    /* A nation of the real leagues that did not play the edition before (a nation new in the data). */
-    Entrant real[NL_MAX_NATIONS];
-    int m = real_entrants(e, real);
-    for (int j = 0; j < m && k < NL_MAX_NATIONS; j++) {
-        int have = 0;
-        for (int i = 0; i < k; i++) have |= out[i].nation == real[j].nation;
-        if (!have) out[k++] = (Entrant){real[j].nation, real[j].league, 0, 0};
     }
     return k;
 }

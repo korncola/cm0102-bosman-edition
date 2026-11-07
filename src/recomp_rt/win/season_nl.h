@@ -98,7 +98,8 @@ typedef struct {
     int nation;                 /* the game's nation id (or a test id) */
     int league;                 /* 0 = A */
     int group;                  /* 1 to 4 */
-    int pos;                    /* final place in the group, 1 = winner */
+    int pos;                    /* final place in the group, 1 = winner; 0 = a nation new to the competition
+                                 * (league: its league in the table), which season_nl_next_leagues places last */
     int played, points, gd, gf;
     int qualified;              /* 1: qualified for the finals of the cycle by the qualifying groups */
 } SeasonNlRow;
@@ -112,7 +113,9 @@ void season_nl_rank(SeasonNlRow *rows, int n);
  * league of each row of the sorted rows into next[]. The group winners go up and the last go down as the
  * edition says, then the leagues are filled to the sizes of `to` from the overall ranking: a league with room
  * takes the best of the leagues below it, a full league passes its lowest down, and the last league takes all
- * that are left (Russia in a game where it still plays). Returns 0 for bad arguments, else the row count. */
+ * that are left (Russia in a game where it still plays). A row of pos 0 (a nation new to the competition) comes
+ * after the nations of its league, so it takes room that is left there or goes down to the first league with
+ * room (open item 183). Returns 0 for bad arguments, else the row count. */
 int season_nl_next_leagues(const SeasonNlEdition *from, const SeasonNlEdition *to, SeasonNlRow *rows, int n,
                            int *next);
 
