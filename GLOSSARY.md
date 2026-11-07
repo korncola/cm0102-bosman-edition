@@ -260,6 +260,10 @@ _Avoid_: changes, swaps
 The days of a year on which a club may sign players, kept by nation in the game's transfer rules.
 _Avoid_: registration period (a research text uses it for the same thing)
 
+**Unprotected contract**:
+A contract past its protected period under the FIFA transfer rules of 2001: three years, two from the age of 28. The player may then leave in a transfer window without his club's consent, and the buying club pays compensation. The option `unprotected_contracts` turns it off.
+_Avoid_: buy-out clause (a clause of the contract, not this rule)
+
 **Nation rules**:
 The windows, foreign player limits and work permit rule of one nation in one season, as the encoder `tools/seasons/encode_rules.py` writes them.
 _Avoid_: transfer rules (that is the game's own object)
