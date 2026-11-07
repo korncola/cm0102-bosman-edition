@@ -264,6 +264,11 @@ if(NOT WIN32)
     target_include_directories(season_cup_breaks_test PRIVATE src/recomp_rt/win)
     add_test(NAME season_cup_breaks COMMAND season_cup_breaks_test "${CMAKE_BINARY_DIR}/seasons/rules-test.tsv")
     set_tests_properties(season_cup_breaks PROPERTIES FIXTURES_REQUIRED rules_table)
+    # Level clubs under head-to-head (0.6.2 open item 167): the order of two finished level clubs stays open while a
+    # club with matches left can still end on their points.
+    add_executable(season_level_ties_test tests/seasons/test_season_level_ties.c src/recomp_rt/win/season_level_ties.c)
+    target_include_directories(season_level_ties_test PRIVATE src/recomp_rt/win)
+    add_test(NAME season_level_ties COMMAND season_level_ties_test)
     # The rest of the domestic cups (0.6.0 slice 21c): four-club super cups, group stages and new cups.
     add_executable(season_cups_more_test tests/seasons/test_season_cups_more.c
         src/recomp_rt/win/season_cups_more.c src/recomp_rt/win/season_rules.c src/recomp_rt/host/posix.c)

@@ -11,6 +11,7 @@
  * status 0 or 5 of the lower table up and the rows of status 3 of the upper table down. */
 #include "win.h"
 #include "season_second_teams.h"
+#include "season_level_ties.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -153,7 +154,9 @@ RT_WRAP(00684cd0, second_teams_status)
     uint32_t self = cpu.ecx;
     for (int i = 0; self && i < nhooks; i++)
         if (hooks[i]->before_status) hooks[i]->before_status(self);
+    uint32_t level = season_level_ties_before(self);   /* open item 167, season_level_ties_game.c */
     o_00684cd0();
+    season_level_ties_after(self, level);
 }
 
 /* The promotion chain 0x689c20 (vtable +0xb0), thiscall (pairwise) ret 4. */
