@@ -465,6 +465,21 @@ def titles_rule():
     return bad
 
 
+def guest_rule():
+    """confederation (open item 178): a Mexican club may play the Recopa Sudamericana of 1999 to 2017 (Mexican clubs
+    in the Copa Libertadores 1998 to 2016), not later, and no other CONCACAF club may."""
+    sys.path.insert(0, HERE)
+    import history_check as hc
+    bad = []
+    for key, nation, year, want in (("recopa", "Mexico", 2013, True), ("recopa", "Mexico", 1999, True),
+                                    ("recopa", "Mexico", 2017, True), ("recopa", "Mexico", 2018, False),
+                                    ("recopa", "Mexico", 1998, False), ("recopa", "United States", 2013, False),
+                                    ("sudamericana", "Mexico", 2013, False)):
+        if bool(hc.guest(key, nation, year)) != want:
+            bad.append(f"guest {key} {nation} {year}: not {want}")
+    return bad
+
+
 def olympics_rule():
     """duty-clash and the Olympics (open item 107): an Olympic match of the under-21 sides is a fault only when a club
     with a player in it keeps fewer than 11 players it can field (not on duty, at the club, not injured). The save
@@ -795,6 +810,7 @@ def main():
     bad += uefa_missing_rule()
     bad += titles_rule()
     bad += olympics_rule()
+    bad += guest_rule()
 
     for b in bad:
         print("FAIL  " + b)

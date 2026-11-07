@@ -391,6 +391,21 @@ def cycle_of(years, start):
 
 # Competitions with several rows of one label by their format (docs/research/2026-10-17-competition-history-fill.md,
 # "Two rows per label year"): (name pattern, first label year, rows a year).
+# Guest clubs of another confederation that real rules let into a competition: {key: [(nation, first, last
+# label year)]} (open item 178). The Recopa Sudamericana of a year takes the winners of the Copa Libertadores and
+# the Copa Sudamericana of the year before. Mexican clubs played the Copa Libertadores from 1998 to 2016 ("In
+# 1998, Mexican teams were invited to compete and competed regularly from 2000 until 2016", en.wikipedia.org,
+# Copa Libertadores) and the Copa Sudamericana from 2005 to 2008, so a Mexican club can play the Recopa of 1999 to
+# 2017. Pachuca, winner of the 2006 Copa Sudamericana, played the 2007 Recopa against Internacional
+# (en.wikipedia.org, 2007 Recopa Sudamericana).
+GUESTS = {"recopa": [("Mexico", 1999, 2017)]}
+
+
+def guest(key, nation, year):
+    """1 when real rules let a club of nation into the competition of key in year (GUESTS)."""
+    return any(n == nation and a <= year <= b for n, a, b in GUESTS.get(key, ()))
+
+
 SEVERAL_TITLES = ((re.compile(r"(UEFA )?Inter-?Toto Cup", re.I), 0, 3),               # one row per joint winner
                   (re.compile(r"Danish (2nd|Second) Divisions?", re.I), 2006, 2))       # East and West from 2006
 # Years of a competition with more titles than its format gives (competition, label year): rows. The AFA named Rosario
@@ -508,7 +523,7 @@ def check(game, rules=None, changes=()):
             for r in game_rows:
                 for role, p in (("winner", r[4]), ("runner-up", r[5])):
                     if p[0] and p[2] and p[2] not in conf.split("|") and \
-                            not any(r[3] < y for y in moved.get(p[1], ())):
+                            not any(r[3] < y for y in moved.get(p[1], ())) and not guest(rule.get("key"), p[1], r[3]):
                         faults.append(("confederation", shown, r[3], f"{role} {p[0]} ({p[1]}, {p[2]}), "
                                                                      f"the competition is {conf}"))
         # the same two finalists more than 2 editions in a row
