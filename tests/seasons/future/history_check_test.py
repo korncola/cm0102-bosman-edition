@@ -789,6 +789,13 @@ def main():
         if lim(season, nations) != want_:
             bad.append(f"association limit {season}, {len(nations)} clubs: {lim(season, nations)}, not {want_}")
 
+    # Open item 179: the year 2200 is the real next edition of a four-year cup in a save of 2199, not an idle year.
+    for edition, save_year, cyc, want_ in ((2200, 2199, 4, True), (2200, 2196, 4, True), (2200, 2194, 4, False),
+                                           (2200, 2040, 4, False), (2199, 2198, 2, True), (2200, 2199, 0, False),
+                                           (2200, 2199, None, False)):
+        if history_check.idle_is_next(edition, save_year, cyc) != want_:
+            bad.append(f"idle_is_next({edition}, {save_year}, {cyc}) is not {want_}")
+
     # nations.tsv holds the renames of the season code.
     bad += renames_match()
     bad += uefa_moves_match()

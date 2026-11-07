@@ -50,7 +50,8 @@ Checks (one row of <label>.faults.tsv each, check names in the first column):
                   year), for a competition with rows from the start year on or an international one; not for a
                   competition whose class waits on 2999 (ended) or whose rules end year has passed
     next-edition  the class waits for the year 2199 or 2200 (the idle year of rt_intl_next_year), or for a
-                  year more than one cycle and one year after the save date
+                  year more than one cycle and one year after the save date. Not when 2199 or 2200 is within
+                  one cycle and one year of the save date: a save in 2199 of a four-year cup is then due in 2200
 Checks of the competition record (with --rules):
     comp-continent the record's continent is not a confederation of its rules (open item 21)
     comp-name     the short name (+0x38, 26 bytes, the name of the history screen) is another competition than the
@@ -379,6 +380,14 @@ def table(game):
     return sorted(out, key=lambda r: (r[2], r[0], r[3]))
 
 
+def idle_is_next(edition, save_year, cyc):
+    """True when the year 2199 or 2200 is the real next edition of a class with a cycle, not its idle year: the
+    save is in the year before it or in the same year (a save in 2199 of a four-year cup with editions in 2196 and
+    2200). The idle year of rt_intl_next_year is a fault only when the edition is more than one cycle and one year
+    after the save date (open item 179)."""
+    return bool(cyc) and edition <= save_year + cyc + 1
+
+
 def cycle_of(years, start):
     """The most common step of the last 6 editions before the start year, or None."""
     before = sorted(y for y in set(years) if y < start)[-7:]
@@ -538,7 +547,7 @@ def check(game, rules=None, changes=()):
                 faults.append(("missing", name, ys[-1] + cyc,
                                f"last edition {ys[-1]}, cycle {cyc}, the save is in {save_year}"))
         # the next draw or start more than one cycle after the save date
-        if edition in IDLE_YEARS:
+        if edition in IDLE_YEARS and not idle_is_next(edition, save_year, cyc):
             faults.append(("next-edition", name, edition, f"the class waits for {edition} (save in {save_year})"))
         elif edition and edition != ENDED_YEAR and cyc and edition > save_year + cyc + 1:
             faults.append(("next-edition", name, edition, f"next edition {edition}, the save is in {save_year}, "
