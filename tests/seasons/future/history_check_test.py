@@ -493,19 +493,27 @@ def start_season_rule():
 
 
 def not_held_rule():
-    """missing and gap (open item 173): the OFC Nations Cup of 2020 was cancelled (OFC, 21 April 2020); the rules
-    table holds 2016 and 2024, so after 2016 the next edition due is 2024, and a gap from 2016 to 2024 is none."""
+    """missing and gap (open item 173): a year of the cycle that the rules table has no edition near is not held.
+    The OFC Nations Cup of 2020 was cancelled (OFC, 21 April 2020): the table holds 2016 and 2024, so after 2016
+    the next edition due is 2024. The Asian Cup table holds 2004, 2007 and 2011: after 2004 the cycle's 2008 stays
+    due (2007 is near it), so a game with 2004 and then 2011 has a gap. The Africa Cup of Nations table holds 2023,
+    2026 and 2027: 2025 after 2023 stays due (2026 is near it)."""
     sys.path.insert(0, HERE)
     import history_check as hc
     ofc = {"key": "oceania_nations", "years": [2002, 2004, 2008, 2012, 2016, 2024]}
+    asia = {"key": "asia_nations", "years": [2004, 2007, 2011, 2015, 2019, 2023, 2027]}
+    acn = {"key": "african_nations", "years": [2019, 2021, 2023, 2026, 2027]}
     bad = []
-    for rule, last, start, want in ((ofc, 2016, 2002, 2024), (ofc, 2012, 2002, 2016), (ofc, 2024, 2002, 2028),
-                                    ({"key": "oceania_nations"}, 2016, 2002, 2020)):
-        got = hc.due_edition(rule, last, 4, start)
+    for rule, last, cyc, want in ((ofc, 2016, 4, 2024), (ofc, 2012, 4, 2016), (ofc, 2024, 4, 2028),
+                                  ({"key": "oceania_nations"}, 2016, 4, 2020), (asia, 2004, 4, 2008),
+                                  (acn, 2023, 2, 2025), (dict(ofc, years=[]), 2016, 4, 2020)):
+        got = hc.due_edition(rule, last, cyc, 2002)
         if got != want:
-            bad.append(f"due_edition {rule} after {last}: {got}, not {want}")
-    if not hc.not_due(ofc, [2020], 2002) or hc.not_due(ofc, [2020, 2024], 2002) or hc.not_due(ofc, [2028], 2002):
-        bad.append("not_due of the OFC Nations Cup: 2020 must be not due, 2024 and 2028 due")
+            bad.append(f"due_edition {rule.get('key')} after {last}: {got}, not {want}")
+    for rule, a, y, cyc, want in ((ofc, 2016, 2020, 4, True), (asia, 2004, 2008, 4, False), (acn, 2023, 2025, 2, False),
+                                  ({}, 2016, 2020, 4, False)):
+        if bool(hc.not_held(rule, a, y, cyc)) != want:
+            bad.append(f"not_held {rule.get('key')} {y} after {a}: not {want}")
     return bad
 
 

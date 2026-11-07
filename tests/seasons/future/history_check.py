@@ -453,6 +453,8 @@ def check(game, rules=None, changes=()):
         if FRIENDLY.match(name):
             continue
         rule = rules.get(name)
+        if rule and not game.changing:
+            rule = dict(rule, years=[])               # the table's years are those of changing rules (not_held)
         sides = sum(1 for a in raw[cid] if a in game.sides)
         teams = "nation" if sides * 2 > len(raw[cid]) else "club"
         international = comp["nation"] < 0
@@ -532,8 +534,9 @@ def check(game, rules=None, changes=()):
             continue                                  # ended by the rules: no later edition is expected
         if cyc and ys and cid in game.parts and ys[-1] >= start - 2 * cyc:
             for a, b in zip(ys, ys[1:]):
-                if b >= start and a >= start - cyc and b - a > cyc + 1 and not (end and a >= end) and \
-                        not not_due(rule, range(a + cyc, b, cyc), start):
+                due = [y for y in range(a + cyc, b, cyc)
+                       if not not_held(rule, a, y, cyc) and not before_start(rule.get("key"), [y], start)]
+                if b >= start and a >= start - cyc and b - a > cyc + 1 and due and not (end and a >= end):
                     faults.append(("gap", name, b, f"no edition between {a} and {b} (cycle {cyc})"))
             ended = edition == ENDED_YEAR or (end is not None and end < save_year)
             due = due_edition(rule, ys[-1], cyc, start)
@@ -792,25 +795,23 @@ def before_start(key, years, start):
     return bool(seasons) and all(s is not None and s < start for s in seasons)
 
 
-def not_held(rule, year):
-    """1 for a year inside the editions of the rules table that is not one of them (open item 173: the OFC Nations
-    Cup of 2020 was cancelled, the table holds 2016 and 2024)."""
-    years = rule.get("years") or []
-    return bool(years) and years[0] < year < years[-1] and year not in years
-
-
-def not_due(rule, years, start):
-    """1 when no edition of years is one the game must write: each is not held (not_held) or of a season before
-    the start season (before_start)."""
-    years = list(years)
-    return bool(years) and all(not_held(rule, y) or before_start(rule.get("key"), [y], start) for y in years)
+def not_held(rule, after, year, cyc):
+    """1 when the cycle's year after a row of `after` is a year without an edition by the rules table (open item
+    173): inside the table's years, not one of them, and no table year lies between `after` and the next year on
+    the cycle. The OFC Nations Cup of 2020 was cancelled (OFC, 21 April 2020): the table holds 2016 and 2024, so
+    2020 is not held. A table year near the cycle's year is held: the Asian Cup of 2007 for the cycle's 2008 after
+    2004, the Africa Cup of Nations of 2026 (its final in January 2026, the history label 2025) for 2025 after 2023.
+    The table holds the years of changing rules: a game with changing rules off has rule["years"] empty."""
+    table = rule.get("years") or []
+    return bool(table) and table[0] < year < table[-1] and year not in table and \
+        not any(after < t < year + cyc for t in table)
 
 
 def due_edition(rule, last, cyc, start):
-    """The first edition after the last row that the game must write: the next one on the cycle that is not due
-    (not_due)."""
+    """The first edition after the last row that the game must write: the next one on the cycle that is held
+    (not_held) and not of a season before the start season (before_start)."""
     due = last + cyc
-    while not_due(rule, [due], start):
+    while not_held(rule, last, due, cyc) or before_start(rule.get("key"), [due], start):
         due += cyc
     return due
 
