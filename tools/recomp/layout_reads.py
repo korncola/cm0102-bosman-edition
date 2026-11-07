@@ -145,9 +145,10 @@ The fitness incident records (AWOL::report_poor_fitness 0x41add0). It builds the
 [esp + 0xc] (at 0x41ae41): the staff id +0 (0x41ae38), the club id +4 (0x41ae2a), the date +8 (Date::Date 0x54a110 at
 0x41adf4, 0x417c10 at 0x41ae3c, 8 bytes) and a flag byte +0x10 ([esp + 0x1c]) that nothing sets, and adds the 0x11 bytes
 to the fitness incident list (0x68d0d0 at 0x41ae4b). When an incident expires, AWOL::daily_update 0x4190d0 tests the
-flag (0x41958b): set, two draws against the player's +0x5b and +0x5d (0x4195b0..); clear, a draw against +0x5b and one
-of 5 (0x4195d4..). In a 2001 base game (with the fixes above) the flag differed with the two Setup Game screens on 24
-June 2012. Here the flag is 0 at 0x41ae41, as fresh memory is, as for the missed training records.
+flag (0x41958b): set, when the staff record's +0x61 is set (0x4195a5) a draw against his +0x5b and, when that gives 0,
+one against +0x5d (0x4195b0..0x4195d0); clear, a draw against +0x5b and one of 5 (0x4195d4..). In a 2001 base game (with
+the fixes above) the flag differed with the two Setup Game screens on 24 June 2012. Here the flag is 0 at 0x41ae41, as
+fresh memory is, as for the missed training records.
 """
 
 # address: (the instruction in the original, C code)
