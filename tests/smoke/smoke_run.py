@@ -586,7 +586,7 @@ def work_folder(prefix, result):
 
 
 def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600, allowed=(), required=None,
-                 text_050=False, rows=None):
+                 text_050=False, rows=None, ref_steps=None):
     """Plays the runs at the same time, each with its option lines, and compares each saved game with
     the save of the first run. save: a saved game to copy into each user folder first. allowed: names of
     parts that may differ (an accepted difference, for example the parts that depend on the memory layout of
@@ -604,7 +604,9 @@ def compare_runs(program, game, mode, runs, steps, days, save=None, timeout=600,
         if len(runs) + bool(REF_BUILD) + bool(REF_050 and text_050) < 2:
             raise SystemExit("--runs: fewer than two runs are left, so nothing is compared")
     if REF_BUILD:
-        runs = list(runs) + [("ref-build", dict(runs[0][1], _program=REF_BUILD))]
+        # ref_steps: the steps of the reference build when they differ from this build's (the match check, item 155)
+        runs = list(runs) + [("ref-build", dict(runs[0][1], _program=REF_BUILD, **({"_steps": ref_steps} if ref_steps
+                                                                                   else {})))]
         if REF_SETUP:
             # This build with the Setup Game of the reference build (test variable RECOMP_SETUP_TEXT): its save
             # must equal the save of ref-build, so Setup Game is the only thing that moves memory.
@@ -1086,14 +1088,44 @@ def match(program, game, days, speed="very-fast", sleep_danger=False):
         return without_intro_click(load_steps(fixtures)) + [
             SPEED_CLICKS[speed] if s.startswith("1000 click 120 255") else s
             for s in (MATCH_STEPS if event else MATCH_STEPS_ORIGINAL)]
-    if keeps_match_numbers(os.environ.get("RECOMP_ORIGINAL_FAULTS", "")):
-        return compare_runs(program, game, "widescreen", MATCH_RUNS, steps_of(False), days, save, timeout=900)
+    ref_steps = steps_of(match_event(program_keep(), REF_BUILD)) if REF_BUILD else None
+    if not match_event(program_keep(), program):
+        return compare_runs(program, game, "widescreen", MATCH_RUNS, steps_of(False), days, save, timeout=900,
+                            ref_steps=ref_steps)
     runs = MATCH_RUNS + ([(SLEEP_DANGER_RUN[0], dict(SLEEP_DANGER_RUN[1], _steps=steps_of(False)))]
                          if sleep_danger else [])
+    # A run whose own keep list keeps match_numbers plays the original's match (no MATCH_EVENT).
+    runs = [(name, dict(o, _steps=steps_of(False)) if not match_event(program_keep(o.get("_env", {})), program)
+             else o) for name, o in runs]
     # MATCH_EVENT opens the tactics screen, whose rows match_columns changes: off moves the memory blocks, so
     # LAYOUT_PARTS may differ (as same_save_views.py match-tactics).
     return compare_runs(program, game, "widescreen", runs, steps_of(True), days, save, timeout=900,
-                        allowed={"columns-off": LAYOUT_PARTS})
+                        allowed={"columns-off": LAYOUT_PARTS}, ref_steps=ref_steps)
+
+
+def program_keep(env=None):
+    """The RECOMP_ORIGINAL_FAULTS value that a run with its own environment env plays with (with_set_keep)."""
+    env = with_set_keep(env or {})
+    return env.get("RECOMP_ORIGINAL_FAULTS", os.environ.get("RECOMP_ORIGINAL_FAULTS", ""))
+
+
+_GROUPS_OF = {}
+
+
+def has_fault_group(program, group):
+    """True if the build program knows the original-faults group (its name is in the binary, original_faults.c).
+    A reference build from before item 155 has no match_numbers, so its matches have no MATCH_EVENT."""
+    key = (os.path.abspath(program), group)
+    if key not in _GROUPS_OF:
+        with open(program, "rb") as f:
+            _GROUPS_OF[key] = b"\0" + group.encode() + b"\0" in f.read()
+    return _GROUPS_OF[key]
+
+
+def match_event(keep_value, program):
+    """True if a run plays the match check with MATCH_EVENT: its build has the group match_numbers (item 155) and
+    the run does not keep it (keep_value: its RECOMP_ORIGINAL_FAULTS)."""
+    return has_fault_group(program, "match_numbers") and not keeps_match_numbers(keep_value)
 
 
 def keeps_match_numbers(value):

@@ -298,6 +298,8 @@ if(NOT WIN32)
     target_include_directories(season_names_test PRIVATE src/recomp_rt/win src/recomp_rt include)
     add_test(NAME season_names COMMAND season_names_test "${CMAKE_BINARY_DIR}/seasons/names.tsv" "${CMAKE_BINARY_DIR}/seasons")
     # Future testing step 2: the history checker finds each planted fault of a small fixture save that it writes.
+    # The steps of the match check (round AA, item 155): MATCH_EVENT only for a build with match_numbers.
+    add_test(NAME smoke_match_steps COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tests/smoke/match_steps_test.py")
     add_test(NAME season_future_history_check COMMAND python3 -I
         "${CMAKE_SOURCE_DIR}/tests/seasons/future/history_check_test.py")
     add_test(NAME season_clubs_table COMMAND python3 -I "${CMAKE_SOURCE_DIR}/tools/seasons/make_clubs.py" --check)
