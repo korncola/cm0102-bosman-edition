@@ -27,6 +27,12 @@ CALL_SITES = {
     "tactics_area": (0x89C93C, 0x55FBA0),          # without a heading row
     # Match columns (#23): the status text of a row in the Condition and Match Rating views.
     "tactics_status": (0x89E01A, 0x8AADB0),
+    # Goal difference (#105): the league table tab 0x491380, its table area of 11 columns, the Ag heading,
+    # and the For and Ag labels of each row (columns.c).
+    "table_area": (0x491C27, 0x55FBA0),
+    "table_against_heading": (0x491DFE, 0x804100),
+    "table_for": (0x4922AB, 0x804100),
+    "table_against": (0x4922E5, 0x804100),
     # Match columns (#23): the Player Ratings area of the match screen 0x722ed0, 16 columns.
     "ratings_area": (0x722FA3, 0x55FBA0),
     # Data set choice (#39): the menu builder call of the Setup Game build 0x81bab0, with 9 items.

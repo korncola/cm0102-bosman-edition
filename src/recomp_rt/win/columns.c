@@ -46,6 +46,10 @@ extern const uint32_t rt_site_tactics_area;
 extern const uint32_t rt_site_tactics_area_heading;
 extern const uint32_t rt_site_tactics_status;
 extern const uint32_t rt_site_ratings_area;
+extern const uint32_t rt_site_table_area;
+extern const uint32_t rt_site_table_against_heading;
+extern const uint32_t rt_site_table_for;
+extern const uint32_t rt_site_table_against;
 
 /* The colours of the bands, RGB565, light enough for the dark backgrounds of the game. */
 #define COLOUR_LOW 0xFA8Au       /* 1 to 5: red (255, 80, 80) */
@@ -190,14 +194,100 @@ static const uint8_t ratings_move[16] = {0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 
 static const uint8_t ratings_weights[18] = {14, 1, 5, 1, 60, 21, 12, 7, 7, 14, 1, 5, 1, 60, 21, 12, 7, 7};
 enum { RATINGS_CONDITION = 6 };
 
+/* Goal difference (#105): the league table tab, comp_screens_draw_league_table_tab 0x491380. Its table area
+ * (area create 0x491c27) has 11 columns with the weights at esp+0x20 (0x4913ae..0x4913df): the colour box (4),
+ * the place (2), the club (16), a column whose weight depends on the competition (bl), then Pld, Won, Drn,
+ * Lst, For, Ag and Pts (4 each). The headings are labels in row 0, Ag in column 9 (0x491dfe). Each row has
+ * labels in columns 1 to 10 (0x4920ae..0x492325), For in column 8 (0x4922ab, the s16 at row +0x15) and Ag
+ * in column 9 (0x4922e5, row +0x17), as the number text that 0x944c9f wrote. The Overall, Home and Away
+ * views take the same code with other row offsets, so the runtime reads the two numbers from the label
+ * texts and works in every view. New: GD in column 10, so Pts moves to 11. */
+static void columns_off(void);
+
+static const uint8_t table_move[11] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11};
+enum { TABLE_GD = 10, TABLE_ROWS = 64 };
+static uint8_t table_weights[12];
+static struct {
+    int building, heading_set, count;
+    uint32_t heading[9];                       /* the arguments of the Ag heading */
+    struct { uint32_t args[9]; int goals_for, goals_against; } row[TABLE_ROWS];
+} table;
+
+static void table_weights_from(uint32_t original)
+{
+    for (int i = 0; i < 10; i++) table_weights[i] = rd8(g_mem, original + (uint32_t)i);
+    table_weights[TABLE_GD] = 4;
+    table_weights[11] = rd8(g_mem, original + 10);
+}
+
+/* Called by the wrap of 0x491380 (season_round_names_game.c) before and after the original. */
+void columns_table_before(void)
+{
+    table.building = 0;
+    table.heading_set = 0;
+    table.count = 0;
+    if (!options_bool(OPT_GOAL_DIFFERENCE)) return;
+    columns_off();
+    cols.pending = 1;
+    cols.columns = 11;
+    cols.move = table_move;
+    cols.weights = table_weights;
+    cols.new_columns = 12;
+    table.building = 1;
+}
+
+static void table_label_seen(uint32_t ret)
+{
+    if (!table.building || cols.area < 0 || (int16_t)rt_arg(0) != cols.area) return;
+    if (ret == rt_site_table_against_heading) {
+        for (int i = 0; i < 9; i++) table.heading[i] = rt_arg(i);
+        table.heading_set = 1;
+    } else if (ret == rt_site_table_for && table.count < TABLE_ROWS) {
+        table.row[table.count].goals_for = atoi(win_str(rt_arg(8)));
+    } else if (ret == rt_site_table_against && table.count < TABLE_ROWS) {
+        for (int i = 0; i < 9; i++) table.row[table.count].args[i] = rt_arg(i);
+        table.row[table.count].goals_against = atoi(win_str(rt_arg(8)));
+        table.count++;
+    }
+}
+
+static int table_label(const uint32_t *args, const char *text)
+{
+    uint32_t a[9];
+    memcpy(a, args, sizeof a);
+    a[1] = TABLE_GD;
+    win_put_str(SCRATCH, text, SCRATCH_SIZE);
+    a[8] = SCRATCH;
+    return (int16_t)call_this(LABEL_CREATE, SCREENS, 9, a);
+}
+
+void columns_table_after(void)
+{
+    int area = cols.area, building = table.building;
+    table.building = 0;
+    if (!building) return;
+    columns_off();
+    if (rt_unwinding || area < 0 || !table.heading_set) return;
+    scratch_keep();
+    table_label(table.heading, "GD");
+    for (int i = 0; i < table.count; i++) {
+        char text[16];
+        int gd = table.row[i].goals_for - table.row[i].goals_against;
+        snprintf(text, sizeof text, gd > 0 ? "+%d" : "%d", gd);
+        table_label(table.row[i].args, text);
+    }
+    scratch_restore();
+}
+
 /* Called by the area create wrap (display.c) before the original: the call sites of the two lists get
  * the new column count and weights. */
 void columns_area_before(void)
 {
     uint32_t ret = rd32(g_mem, cpu.esp);
     if (!cols.pending || (ret != rt_site_tactics_area && ret != rt_site_tactics_area_heading &&
-                          ret != rt_site_ratings_area)) return;
+                          ret != rt_site_ratings_area && ret != rt_site_table_area)) return;
     if ((int)rt_arg(4) != cols.columns) { cols.pending = 0; return; }
+    if (ret == rt_site_table_area) table_weights_from(rt_arg(5));
     scratch_keep();
     for (int i = 0; i < cols.new_columns; i++) wr8(g_mem, SCRATCH + (uint32_t)i, cols.weights[i]);
     wr32(g_mem, cpu.esp + 4 + 4 * 4, (uint32_t)cols.new_columns);
@@ -477,5 +567,6 @@ RT_WRAP(00804100, label_create)
      * each attribute colour matches its value (tests/smoke/attribute_groups_run.py). */
     if (ret == rt_site_profile_value && getenv("RECOMP_COLOUR_LOG") && rt_arg(8))
         fprintf(stderr, "recomp: profile value \"%s\" colour %#x\n", win_str(rt_arg(8)), rt_arg(7) & 0xffff);
+    table_label_seen(ret);
     o_00804100();
 }

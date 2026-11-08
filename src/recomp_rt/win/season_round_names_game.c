@@ -99,6 +99,8 @@ static void with_comp(uint32_t comp, void (*original)(void))
 
 void o_004bfa30(void);
 void o_00491380(void);
+void columns_table_before(void);    /* the goal difference column (columns.c) */
+void columns_table_after(void);
 void o_00492980(void);
 void o_00493ee0(void);
 void o_004947a0(void);
@@ -110,7 +112,12 @@ void o_00586fa0(void);
 /* comp_util_format_comp_stage_round_label, cdecl (record, stage, round, style, out, size) */
 RT_WRAP(004bfa30, label_round_name) { with_comp(rt_arg(0), o_004bfa30); }
 /* comp_screens_draw_league_table_tab, cdecl (comp, top, bottom) */
-RT_WRAP(00491380, table_tab_round_name) { with_comp(rt_arg(0), o_00491380); }
+RT_WRAP(00491380, table_tab_round_name)
+{
+    columns_table_before();
+    with_comp(rt_arg(0), o_00491380);
+    columns_table_after();
+}
 /* comp_screens_draw_cup_rounds_tab, cdecl (comp, top, bottom) */
 RT_WRAP(00492980, rounds_tab_round_name) { with_comp(rt_arg(0), o_00492980); }
 /* comp_screens_draw_fixtures_tab, cdecl (comp, top, bottom): calls 0x4bffc0 */
