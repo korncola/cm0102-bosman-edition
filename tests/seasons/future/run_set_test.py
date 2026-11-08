@@ -144,7 +144,7 @@ def main():
 
     # The release check on made-up runs. Each game passes with one leg and no kept save, unless a case says else.
     head = run_set.git("rev-parse", "HEAD")
-    runs = [r for r in release if r["status"] == "run"]      # the rows a run can pass; the waiting row comes below
+    runs = [r for r in release if r["status"] == "run"]      # the rows a run can pass
 
     def result(r, **change):
         values = {"name": r["name"], "tier": r["tier"], "set": r["set"], "result": "pass", "reason": "",
@@ -198,9 +198,34 @@ def main():
     lines = make("faults-a", [result(r) for r in runs], checkpoint="a2006s1", save=members)
     if not finds(lines, "samesave.sav: duplicate Euro Finals 2028") or finds(lines, "same-final"):
         bad.append("verify: a Tier A save does not skip same-final (a check of real results) or skips more")
-    waiting = run_set.verify(os.path.join(work, "ok"))                 # the real set: a2001nation waits
+    # A row that waits has no result, and it blocks a release (a2001nation waited until Q15 was built).
+    make("waits", [result(r) for r in runs if r["name"] != "a2001nation"])
+    waiting = run_set.verify(os.path.join(work, "waits"), rows=[dict(r, status="waits") if r["name"] == "a2001nation"
+                                                               else r for r in rows])
     if not finds(waiting, "a2001nation: not in the run"):
-        bad.append("verify: the waiting row a2001nation does not block a release")
+        bad.append("verify: a waiting row does not block a release")
+
+    # Q15: leg 0 of a NATION_JOB row passes only with the appointment and the lines after the team's next match.
+    if run_set.NATION_JOB.get("a2001nation") != "England" or \
+            [r for r in run_set.read_set() if r["name"] == "a2001nation"][0]["status"] != "run":
+        bad.append("nation job: a2001nation is not a NATION_JOB row with status run")
+    made = "recomp: nation job test: the human manages Wales from day 182 of 2001 (appointed)\n"
+    still = "recomp: nation job test: on day 245 of 2001 (after the match of day 244) the human still manages Wales\n"
+    lost = still.replace("still manages", "no longer manages")
+    match = "recomp: nation job test: Wales played the match of day 244 of 2001 against Spain\n"
+    none = "recomp: nation job test: Wales did not play the match of day 244 of 2001\n"
+    for text, want in ((made + still + match, ""), (made + lost + match, "no line that the human still manages Wales"),
+                       (made + still, "no line that Wales played its next match"),
+                       (made + still + none, "no line that Wales played its next match"),
+                       (made + still + match.replace("Wales", "Scotland"), "no line that Wales played"),
+                       (made, "no line that the human still manages Wales"), ("", "no appointment"),
+                       (made + still.replace("Wales", "Scotland") + match, "no line that the human still manages Wales"),
+                       ("recomp: nation job test: no national team without a manager and a value over 150\n",
+                        "no appointment (no national team"),
+                       (made.replace("(appointed)", "(the call did not appoint him)") + still + match, "no appointment")):
+        got = run_set.nation_job_check(text)
+        if (want == "" and got) or (want and want not in got):
+            bad.append(f"nation_job_check: {got!r} for {text!r}, wanted {want!r}")
     code = subprocess.run([sys.executable, "-I", os.path.join(HERE, "run_set.py"), "--verify",
                            os.path.join(work, "fail")], capture_output=True).returncode
     if code != 1:

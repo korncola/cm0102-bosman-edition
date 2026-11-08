@@ -93,7 +93,14 @@ GAME_CODE = ["src", "tools/recomp", "tools/seasons", "docs/research/rules-0.6.0"
 FOUR_GB = 4 << 30
 DAYS = 365.25
 SAVE_NAME = "samesave.sav"                    # the save of a leg (smoke_run.SAVE_NAME)
-SWITCHES = ("RECOMP_TIER_A", "RECOMP_DATE_JUMP", "RECOMP_TEST_EXTRA")
+SWITCHES = ("RECOMP_TIER_A", "RECOMP_DATE_JUMP", "RECOMP_TEST_EXTRA", "RECOMP_TEST_NATION_JOB")
+# Q15: the rows whose human manager also manages a national team. Leg 0 sets RECOMP_TEST_NATION_JOB (nation_job.c): at
+# the first human turn the runtime appoints him through the original's appoint_manager_to_club 0x69ebc0, to this
+# nation or, when it has a manager, to the first senior national team with none and a nation value over 150. The
+# leg must log the appointment and, after the team's next match, that he still manages the team and that the match
+# was played (nation_job_check).
+NATION_JOB = {"a2001nation": "England"}
+NATION_JOB_LINE = "recomp: nation job test: "
 SAVE_ON = 200                                 # every leg saves on day 200 (from 0, about 20 July) after its last season
 SCRIPT_TIMEOUT = "recomp: script: wait"       # a step of the new game script that timed out (testrun.c)
 
@@ -320,6 +327,22 @@ def tidy(work, keep_save):
                 shutil.rmtree(p) if os.path.isdir(p) and not os.path.islink(p) else os.remove(p)
 
 
+def nation_job_check(text):
+    """The reason a leg 0 of a NATION_JOB row fails, from its stderr text, or "" when it passes: the runtime
+    appointed the human, he managed the team at every human turn to the team's next match, and the team played that
+    match."""
+    lines = [ln[len(NATION_JOB_LINE):] for ln in text.splitlines() if ln.startswith(NATION_JOB_LINE)]
+    made = [ln for ln in lines if ln.startswith("the human manages ") and ln.endswith("(appointed)")]
+    if not made:
+        return "nation job: no appointment" + (f" ({lines[-1]})" if lines else "")
+    team = made[0][len("the human manages "):].split(" from day ")[0]
+    if not [ln for ln in lines if ln.startswith("on day ") and ln.endswith(f"the human still manages {team}")]:
+        return f"nation job: no line that the human still manages {team} after its next match"
+    if not [ln for ln in lines if ln.startswith(f"{team} played the match of day ")]:
+        return f"nation job: no line that {team} played its next match"
+    return ""
+
+
 def grade(checker, faults, game):
     """([the kind of each fault: "new", "known" or "accepted"], the number of accepted ones). An accepted fault cites
     a source that shows the game matches the original or real life; it is no fault for Q12 and is counted apart."""
@@ -361,6 +384,8 @@ def play_game(row, o):
         so["timeout"] = 14400 * (s1 - s0 + 1)
         wait_room(o, log)
         if k == 0:
+            if row["name"] in NATION_JOB:
+                os.environ["RECOMP_TEST_NATION_JOB"] = NATION_JOB[row["name"]]     # leg 0 only: a loaded game keeps it
             code, took, box = soak_run.new_game_leg(so, work, days)
             err = os.path.join(work, "stderr.txt")
             if code == 3 and not box and os.path.exists(err) and SCRIPT_TIMEOUT in open(err, errors="replace").read():
@@ -371,6 +396,7 @@ def play_game(row, o):
                 log("leg 0: the new game script timed out; making the game again")
                 wait_room(o, log)
                 code, took, box = soak_run.new_game_leg(so, work, days)
+            os.environ.pop("RECOMP_TEST_NATION_JOB", None)
         else:
             code, took, box = soak_run.load_leg(so, work, save, days)
         saved = os.path.join(work, "user", SAVE_NAME)
@@ -383,6 +409,11 @@ def play_game(row, o):
                     LEG_HEAD)
             return finish(folder, row, "fail", f"leg {k} ({seasons}): {result} {box or net or ''}".strip(), "", k,
                           new_faults, began, o)
+        job = nation_job_check(open(os.path.join(work, "stderr.txt"), errors="replace").read()) \
+            if k == 0 and row["name"] in NATION_JOB else ""
+        if job:
+            tsv_row(os.path.join(folder, "legs.tsv"), [k, seasons, "nation job", f"{took:.0f}", "", "", "", job], LEG_HEAD)
+            return finish(folder, row, "fail", f"leg {k} ({seasons}): {job}", "", k, new_faults, began, o)
         loaded = os.path.join(work, "user", "soak.sav")         # load_leg's copy of the save it loaded
         if os.path.exists(loaded):
             os.remove(loaded)
