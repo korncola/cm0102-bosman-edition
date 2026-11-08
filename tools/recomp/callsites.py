@@ -33,6 +33,9 @@ CALL_SITES = {
     "table_against_heading": (0x491DFE, 0x804100),
     "table_for": (0x4922AB, 0x804100),
     "table_against": (0x4922E5, 0x804100),
+    # Table zones: the place label of each row, a cell button when the league has +0x3c, else a label (table_zones.c).
+    "table_place_button": (0x491FD5, 0x8040A0),
+    "table_place_label": (0x49200B, 0x804100),
     # Match columns (#23): the Player Ratings area of the match screen 0x722ed0, 16 columns.
     "ratings_area": (0x722FA3, 0x55FBA0),
     # Data set choice (#39): the menu builder call of the Setup Game build 0x81bab0, with 9 items.

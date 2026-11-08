@@ -50,6 +50,8 @@ extern const uint32_t rt_site_table_area;
 extern const uint32_t rt_site_table_against_heading;
 extern const uint32_t rt_site_table_for;
 extern const uint32_t rt_site_table_against;
+extern const uint32_t rt_site_table_place_label;
+uint32_t table_zones_place_colour(void);    /* table_zones.c */
 
 /* The colours of the bands, RGB565, light enough for the dark backgrounds of the game. */
 #define COLOUR_LOW 0xFA8Au       /* 1 to 5: red (255, 80, 80) */
@@ -568,5 +570,9 @@ RT_WRAP(00804100, label_create)
     if (ret == rt_site_profile_value && getenv("RECOMP_COLOUR_LOG") && rt_arg(8))
         fprintf(stderr, "recomp: profile value \"%s\" colour %#x\n", win_str(rt_arg(8)), rt_arg(7) & 0xffff);
     table_label_seen(ret);
+    if (ret == rt_site_table_place_label) {
+        uint32_t colour = table_zones_place_colour();
+        if (colour) wr32(g_mem, cpu.esp + 4 + 4 * 4, colour);
+    }
     o_00804100();
 }

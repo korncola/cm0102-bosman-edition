@@ -20,6 +20,8 @@
 #include <stdio.h>
 
 extern const uint32_t rt_site_squad_clear, rt_site_squad_filter;
+extern const uint32_t rt_site_table_place_button;
+uint32_t table_zones_place_colour(void);    /* table_zones.c */
 
 #define SCREENS 0xb74450u        /* the screen stack: this of 0x8040a0 and 0x7ff010 */
 #define NODE_SLOT 0x7ff010u      /* thiscall (slot): the value of a slot of the current screen node */
@@ -105,6 +107,12 @@ RT_WRAP(008040a0, cell_button)
 {
     foreign_cell_button();      /* the squad list's names (foreign.c) */
     uint32_t site = rd32(g_mem, cpu.esp);
+    if (site == rt_site_table_place_button) {
+        uint32_t colour = table_zones_place_colour();
+        if (colour) wr32(g_mem, cpu.esp + 4 + 4 * 4, colour);
+        o_008040a0();
+        return;
+    }
     if (site == rt_site_squad_filter) {
         int other = !clear_made;
         clear_made = 0;

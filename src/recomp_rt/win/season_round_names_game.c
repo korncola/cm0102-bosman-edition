@@ -101,6 +101,8 @@ void o_004bfa30(void);
 void o_00491380(void);
 void columns_table_before(void);    /* the goal difference column (columns.c) */
 void columns_table_after(void);
+void table_zones_before(uint32_t league);  /* the coloured places (table_zones.c) */
+void table_zones_after(void);
 void o_00492980(void);
 void o_00493ee0(void);
 void o_004947a0(void);
@@ -115,7 +117,9 @@ RT_WRAP(004bfa30, label_round_name) { with_comp(rt_arg(0), o_004bfa30); }
 RT_WRAP(00491380, table_tab_round_name)
 {
     columns_table_before();
+    table_zones_before(rt_arg(0));
     with_comp(rt_arg(0), o_00491380);
+    table_zones_after();
     columns_table_after();
 }
 /* comp_screens_draw_cup_rounds_tab, cdecl (comp, top, bottom) */
