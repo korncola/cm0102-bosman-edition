@@ -72,6 +72,7 @@ RT_WRAP(005cde40, human_turn)
     season_history_log_turn();
     season_report_turn();
     screen_sweep_turn();           /* RECOMP_SCREEN_SWEEP (screen_sweep.c, slice 30a) */
+    nation_job_turn();             /* RECOMP_TEST_NATION_JOB (nation_job.c, Q15) */
     if (picker_check_turn()) {     /* RECOMP_PICK_CHECK: the dump is written */
         if (rt_on_fatal) rt_on_fatal();
         SDL_Quit();

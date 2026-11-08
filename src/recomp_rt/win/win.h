@@ -152,6 +152,7 @@ extern uint32_t win_hwnd;
 int holiday_widget_before(void);               /* at each widget create: 1 for the Go on Holiday item */
 void holiday_widget_after(void);               /* after that create: adds the new item */
 void screen_sweep_turn(void);                  /* RECOMP_SCREEN_SWEEP, at each human turn (screen_sweep.c) */
+void nation_job_turn(void);                    /* RECOMP_TEST_NATION_JOB, at each human turn (nation_job.c, Q15) */
 void holiday_next_turn(void);                  /* at each human turn, before the original */
 /* The Bosman Edition Options box (options_screen.c). */
 uint32_t options_screen_build_fn(void);        /* the build function of the box, for the wait state "options" */

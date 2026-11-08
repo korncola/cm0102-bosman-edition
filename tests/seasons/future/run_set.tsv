@@ -33,7 +33,7 @@ a2001offs1	A	2001	off	all	1	2100	10	release	run	Q11: changing rules off
 a2001offs2	A	2001	off	all	2	2100	10	release	run	Q11: changing rules off
 a2001offs3	A	2001	off	all	3	2100	10	release	run	Q11: changing rules off
 a2001esb	A	2001	on	England,Spain,Brazil	1	2100	10	release	run	Q14: three nations loaded
-a2001nation	A	2001	on	all	1	2100	10	release	waits	Q15: the manager runs a national team; no test step takes a national team job yet
+a2001nation	A	2001	on	all	1	2100	10	release	run	Q15: the manager also runs a national team (RECOMP_TEST_NATION_JOB in leg 0, run_set.py NATION_JOB)
 a2001to2300	A	2001	on	all	1	2300	10	nightly	run	Q22: one Tier A run to 2300 each night
 jump2098	jump	2098	on	all	1	2100	1	release	run	Q21: a date jump through the season change of 2100/01
 jump2198	jump	2198	on	all	1	2200	1	release	run	Q21: through 2200/01
