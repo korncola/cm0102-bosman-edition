@@ -149,7 +149,7 @@ def main():
     def result(r, **change):
         values = {"name": r["name"], "tier": r["tier"], "set": r["set"], "result": "pass", "reason": "",
                   "reached": "2101", "legs": "1", "faults": "0", "seconds": "1", "commit": head, "code": "clean",
-                  "program": "sha-x", "row": run_set.row_key(r)}
+                  "program": "sha-x", "row": run_set.row_key(r), "accepted": "0"}
         values.update(change)
         return [str(values[c]) for c in run_set.RESULT_HEAD]
 
@@ -205,6 +205,38 @@ def main():
                            os.path.join(work, "fail")], capture_output=True).returncode
     if code != 1:
         bad.append(f"verify: exit code {code} for a failed run, not 1")
+
+    # Accepted rows (Q12): a known row that cites a source is no fault and is counted apart; a rules condition holds.
+    class FakeGame:
+        def __init__(self, changing):
+            self.changing = changing
+    checker = run_set.Checker.__new__(run_set.Checker)
+    checker.known = [{"check": "gap", "competition": "A Cup", "year": "2022", "note": "source", "rules": "",
+                      "accepted": "real"},
+                     {"check": "gap", "competition": "B Cup", "year": "*", "note": "no source", "rules": "",
+                      "accepted": ""},
+                     {"check": "entrant-host", "competition": "C Cup", "year": "2002", "note": "design 0x5f9970",
+                      "rules": "off", "accepted": "design"}]
+    faults = [("gap", "A Cup", 2022, "d"), ("gap", "B Cup", 2001, "d"), ("gap", "D Cup", 2001, "d"),
+              ("entrant-host", "C Cup", 2002, "d")]
+    for changing, want_kinds in ((0, ["accepted", "known", "new", "accepted"]), (1, ["accepted", "known", "new", "new"])):
+        kinds, n = run_set.grade(checker, faults, FakeGame(changing))
+        if kinds != want_kinds or n != want_kinds.count("accepted"):
+            bad.append(f"grade (changing rules {changing}): {kinds} and {n}, not {want_kinds}")
+    old_read = run_set.hc.read_known
+    run_set.hc.read_known = lambda path: [{"check": "duplicate", "competition": "Euro Finals", "year": "2028",
+                                           "note": "source", "rules": "", "accepted": "real"}]
+    try:
+        lines = make("accepted", [result(r) for r in runs], checkpoint="b2001", save=members)
+    finally:
+        run_set.hc.read_known = old_read
+    if finds(lines, "duplicate Euro Finals 2028") or not finds(lines, "no-host World Finals 2034"):
+        bad.append("verify: an accepted fault still fails the release check, or an unknown one passes")
+    os.makedirs(os.path.join(work, "fin"), exist_ok=True)
+    row_ = run_set.finish(os.path.join(work, "fin"), runs[0], "pass", "3 accepted", "2101", 1, 0, 0.0,
+                          {"commit": "c", "code": "clean", "sha": "s"}, 3)
+    if row_[-1] != 3 or len(row_) != len(run_set.RESULT_HEAD):
+        bad.append(f"finish: the result row {row_} has no accepted count at the end")
 
     for b in bad:
         print("FAIL  " + b)

@@ -23,8 +23,10 @@ tests/seasons/gate_run.py; the runner unpacks the own databases once, before the
 After each leg: the leg's own checks (soak_run: no box, no line of the season change net, exit code 0, a save), then
 the history checker on the save (history_check.py with its rules, names, nations and access files; with --health for
 Tier B; a Tier A game skips same-final, a check of real results). Every fault fails the game, a fault of the known
-list too: 0.6.2 ships only when the checker finds no fault in
-the run set (Q12); faults.tsv marks the known ones. The game plays on, so one run lists the faults of every decade. A
+list too, except an accepted row of history_known.tsv: its note cites a source that shows the game matches the
+original or real life (column accepted: design or real). 0.6.2 ships only when the checker finds no fault that we
+cannot explain in the run set (Q12); faults.tsv marks each fault new, known or accepted, and the result row counts
+the accepted ones apart (column accepted). A known row with a rules condition matches only a game with that setting. The game plays on, so one run lists the faults of every decade. A
 leg that is not ok fails the game and ends it. At the end, every division and domestic cup must move on from each
 season to the next over the reports of all legs (league-stall: rules_report_check.league_stalls, as soak_run.py),
 and with changing rules on the Greek Super League 2 plays one group from 2026/27 (greek-second, open item 68).
@@ -51,7 +53,7 @@ of this checkout with no change in GAME_CODE), "changes" or "outside" (a program
 program's sha256 and the row of run_set.tsv it was played for.
 
 Files in --out: results.tsv (a head line, then one row per game: name, tier, set, result, reason, reached, legs,
-faults, seconds, commit, code, program, row), and per game <name>/legs.tsv (one row per leg), <name>/faults.tsv,
+faults, seconds, commit, code, program, row, accepted), and per game <name>/legs.tsv (one row per leg), <name>/faults.tsv,
 <name>/result.tsv, run.log and the leg folders. A game whose runner stops with no result gets the result fail.
 
 --verify <folder>: exit 1 unless every row of the set (a row that waits too) has the result pass, played for the same
@@ -176,13 +178,16 @@ class Checker:
         self.nations = hc.read_nations(os.path.join(HERE, "nations.tsv"))
         self.access = hc.Access(hc.finals_table(), hc.read_access(os.path.join(HERE, "access.tsv")))
 
-    def is_known(self, fault):
-        return hc.is_known(self.known, fault[0], fault[1], fault[2])
+    def is_known(self, fault, rules=None):
+        return hc.is_known(self.known, fault[0], fault[1], fault[2], rules)
+
+    def status(self, fault, game):
+        """"accepted", "known" or "new" for a fault of this game (the changing-rules setting of the save counts)."""
+        return hc.known_status(self.known, fault[0], fault[1], fault[2], hc.rules_of(game)) or "new"
 
     def run(self, save, health, tier=None):
         """(game, faults [(check, competition, year, detail)], health summary, health rows). Every fault counts, a
-        known one too: 0.6.2 ships only when the checker finds no fault in the run set (Q12). is_known marks the
-        faults of history_known.tsv in the lists."""
+        known one too, except an accepted one (Q12). status marks the faults of history_known.tsv in the lists."""
         game = hc.Game(save)
         faults = hc.check(game, self.rules, self.nations) + hc.check_nations(game, self.nations)
         faults += sorted(set(hc.entrants(game, self.rules, self.access, self.nations)[1]))
@@ -315,6 +320,13 @@ def tidy(work, keep_save):
                 shutil.rmtree(p) if os.path.isdir(p) and not os.path.islink(p) else os.remove(p)
 
 
+def grade(checker, faults, game):
+    """([the kind of each fault: "new", "known" or "accepted"], the number of accepted ones). An accepted fault cites
+    a source that shows the game matches the original or real life; it is no fault for Q12 and is counted apart."""
+    kinds = [checker.status((c, comp, y), game) for c, comp, y, detail in faults]
+    return kinds, kinds.count("accepted")
+
+
 def play_game(row, o):
     """Plays one row; writes <out>/<name>/legs.tsv, faults.tsv and result.tsv. Returns the result row."""
     import soak_run
@@ -335,7 +347,7 @@ def play_game(row, o):
           "rules": row["changing"], "extra": []}
     checker = Checker()
     health = row["tier"] == "B"
-    legs, kept_decades, save, previous_work, new_faults = [], set(), None, None, 0
+    legs, kept_decades, save, previous_work, new_faults, accepted = [], set(), None, None, 0, 0
     plan = legs_of(row)
     since = game_days(row["start"], 181)              # the first day of a new game: about 1 July of the start year
     for k, (s0, s1) in enumerate(plan):
@@ -382,11 +394,12 @@ def play_game(row, o):
             return finish(folder, row, "fail", f"leg {k} ({seasons}): the save is of day {game.date[1] + 1} of {year}, "
                                                f"before July {s1 + 1}", "", k, new_faults, began, o)
         since = game_days(year, game.date[1])
-        for c, comp, y, detail in faults:
-            tsv_row(os.path.join(folder, "faults.tsv"), [c, comp, y, "known" if checker.is_known((c, comp, y)) else "new",
-                                                         detail, os.path.relpath(saved, folder)],
+        kinds, here = grade(checker, faults, game)
+        for (c, comp, y, detail), kind in zip(faults, kinds):
+            tsv_row(os.path.join(folder, "faults.tsv"), [c, comp, y, kind, detail, os.path.relpath(saved, folder)],
                     ["check", "competition", "year", "known", "detail", "save"])
-        new_faults += len(faults)
+        accepted += here                                # an accepted row is no fault (Q12); it is counted apart
+        new_faults += len(faults) - here
         no_manager = None
         if health:
             no_manager = {r[0] for r in rows if r[7] == 0}
@@ -397,9 +410,10 @@ def play_game(row, o):
         if keep:
             kept_decades.add(year // 10)
         tsv_row(os.path.join(folder, "legs.tsv"),
-                [k, seasons, "ok", f"{took:.0f}", f"{year}-{game.date[1] + 1:03d}", f"{size / 1e6:.0f}", len(faults),
-                 "checkpoint" if keep else ""], LEG_HEAD)
-        log(f"leg {k} ({seasons}) ok in {took:.0f} s, save of {year} ({size / 1e6:.0f} MB), {len(faults)} faults")
+                [k, seasons, "ok", f"{took:.0f}", f"{year}-{game.date[1] + 1:03d}", f"{size / 1e6:.0f}",
+                 len(faults) - here, "checkpoint" if keep else ""], LEG_HEAD)
+        log(f"leg {k} ({seasons}) ok in {took:.0f} s, save of {year} ({size / 1e6:.0f} MB), {len(faults) - here} faults, "
+            f"{here} accepted")
         if previous_work:
             tidy(previous_work[0], previous_work[1])
         previous_work, save = (work, keep), saved
@@ -420,9 +434,11 @@ def play_game(row, o):
                 ["check", "competition", "year", "known", "detail", "save"])
     reached = f"{legs[-1]['year']}" if legs else ""
     if new_faults or limits:
-        return finish(folder, row, "fail", f"{new_faults} checker faults, {len(limits)} other (faults.tsv)",
-                      reached, len(plan), new_faults + len(limits), began, o)
-    return finish(folder, row, "pass", "", reached, len(plan), 0, began, o)
+        return finish(folder, row, "fail", f"{new_faults} checker faults, {len(limits)} other, {accepted} accepted "
+                                           f"(faults.tsv)", reached, len(plan), new_faults + len(limits), began, o,
+                      accepted)
+    return finish(folder, row, "pass", f"{accepted} accepted" if accepted else "", reached, len(plan), 0, began, o,
+                  accepted)
 
 
 def row_key(row):
@@ -430,9 +446,9 @@ def row_key(row):
     return "|".join(str(row[c]) for c in COLUMNS if c != "note")
 
 
-def finish(folder, row, result, reason, reached, legs, faults, began, o):
+def finish(folder, row, result, reason, reached, legs, faults, began, o, accepted=0):
     values = [row["name"], row["tier"], row["set"], result, reason, reached, legs, faults, f"{time.time() - began:.0f}",
-              o["commit"], o["code"], o["sha"], row_key(row)]
+              o["commit"], o["code"], o["sha"], row_key(row), accepted]
     with open(os.path.join(folder, "result.tsv"), "w", encoding="utf-8", newline="") as f:
         csv.writer(f, delimiter="\t", lineterminator="\n").writerow(values)
     print(f"{row['name']}: {result.upper()} {reason}".rstrip(), flush=True)
@@ -442,7 +458,7 @@ def finish(folder, row, result, reason, reached, legs, faults, began, o):
 # ---- The run ----
 
 RESULT_HEAD = ["name", "tier", "set", "result", "reason", "reached", "legs", "faults", "seconds", "commit", "code",
-               "program", "row"]
+               "program", "row", "accepted"]
 
 
 def git(*args):
@@ -589,7 +605,8 @@ def verify(folder, which="release", rows=None):
             if SAVE_NAME in files:
                 save = os.path.join(dirpath, SAVE_NAME)
                 try:
-                    _, faults, _, _ = checker.run(save, row["tier"] == "B", row["tier"])
+                    game, faults, _, _ = checker.run(save, row["tier"] == "B", row["tier"])
+                    faults = [f for f in faults if checker.status(f, game) != "accepted"]
                 except Exception as e:          # a save the checker cannot read is a fault of the run
                     out.append(f"{row['name']}: {os.path.relpath(save, folder)}: not read ({e})")
                     continue

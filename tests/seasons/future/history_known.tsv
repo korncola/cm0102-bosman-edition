@@ -1,6 +1,9 @@
 # Known faults of history_check.py on the saves of run-logs/release-test-0.6.0 (0.6.0, 30 October 2026).
 # Each row matches one check of one competition in every year (*). Remove a row when its fix lands.
-check	competition	year	note
+# Columns rules and accepted (optional): rules "on" or "off" limits the row to a game with that changing-rules setting.
+# accepted "design" or "real" marks a row whose note cites a source (an address of the original, a rules row, a web page)
+# that shows the game matches the original or real life: it is no fault for Q12 and the run set counts it apart.
+check	competition	year	note	rules	accepted
 confederation	2020-21 Finals; 2022-23 UEFA Nations League (start	*	real history: a guest nation or club, or Australia in OFC before 2006
 duplicate	A-League	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	A-League Men	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
@@ -38,16 +41,16 @@ missing	EFL Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 duplicate	English Isthmian League Premier Division	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 missing	FA Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
 duplicate	FAI Cup	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
-no-host	FIFA Club World Cup	*	not a fault: the original writes no host for the Club World Cup (slot +0x88 0x5dce00); its row of every year holds a random nation (0.6.2 slice 5)
+no-host	FIFA Club World Cup	*	not a fault: the original writes no host for the Club World Cup (slot +0x88 0x5dce00); its row of every year holds a random nation (0.6.2 slice 5)		design
 missing	Football at the Summer Olympics	*	open items 1, 2, 19 and 20: editions stop or are not written
 next-edition	Football at the Summer Olympics	*	open item 1: the class waits for 2200
 missing	Greek Super Cup	*	open items 1, 2, 19 and 20: editions stop or are not written
-gap	Lamar Hunt U.S. Open Cup	2022	real calendar: the 2020 and 2021 cups were cancelled for COVID-19 (rules rows arg-usa-289 and -290 not held; en.wikipedia.org "U.S. Open Cup", read 7 November 2026: canceled entirely in August 2020, the 2021 cup canceled too)
-missing	Lamar Hunt U.S. Open Cup	2020	real calendar: the 2020 and 2021 cups were cancelled for COVID-19 (rules rows arg-usa-289 and -290 not held; en.wikipedia.org "U.S. Open Cup", read 7 November 2026: canceled entirely in August 2020, the 2021 cup canceled too); a save of 2022 before the final of 2022
+gap	Lamar Hunt U.S. Open Cup	2022	real calendar: the 2020 and 2021 cups were cancelled for COVID-19 (rules rows arg-usa-289 and -290 not held; en.wikipedia.org "U.S. Open Cup", read 7 November 2026: canceled entirely in August 2020, the 2021 cup canceled too)		real
+missing	Lamar Hunt U.S. Open Cup	2020	real calendar: the 2020 and 2021 cups were cancelled for COVID-19 (rules rows arg-usa-289 and -290 not held; en.wikipedia.org "U.S. Open Cup", read 7 November 2026: canceled entirely in August 2020, the 2021 cup canceled too); a save of 2022 before the final of 2022		real
 duplicate	League of Ireland First Division	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	League of Ireland Premier Division	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
-gap	Lega Pro girone C	2015	by design and real history: the third tier had two groups to 2013/14 and three from 2014/15 (en.wikipedia.org "Lega Pro Prima Divisione", read 7 November 2026); without the Serie C2 extra division the game makes group C only from 2014/15 (season_divisions_ita.c, season_ita_group_c on the record of Serie C2/A), so its rows to 2006 are the data's C2/A rows; the same as Serie C girone C 2015
-missing	Leinster Senior Cup	2020	real history: 2019/20 abandoned, 2020/21 and 2021/22 not held for COVID-19 (rules rows wal-nir-irl-471 to -521 not held; en.wikipedia.org "Leinster Senior Cup (association football)", read 7 November 2026); a save of 2022 before the final of 2022/23
+gap	Lega Pro girone C	2015	by design and real history: the third tier had two groups to 2013/14 and three from 2014/15 (en.wikipedia.org "Lega Pro Prima Divisione", read 7 November 2026); without the Serie C2 extra division the game makes group C only from 2014/15 (season_divisions_ita.c, season_ita_group_c on the record of Serie C2/A), so its rows to 2006 are the data's C2/A rows; the same as Serie C girone C 2015		real
+missing	Leinster Senior Cup	2020	real history: 2019/20 abandoned, 2020/21 and 2021/22 not held for COVID-19 (rules rows wal-nir-irl-471 to -521 not held; en.wikipedia.org "Leinster Senior Cup (association football)", read 7 November 2026); a save of 2022 before the final of 2022/23		real
 duplicate	NIFL Championship	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 confederation	OFC Club Championship	*	real history: a guest nation or club, or Australia in OFC before 2006
 gap	OFC Club Championship	*	open items 2 and 19: editions not written
@@ -57,11 +60,11 @@ next-edition	OFC Nations Cup	*	open item 1: the class waits for 2200
 same-final	OFC Nations Cup	*	real history before the start (2000 to 2002, 2015 to 2017)
 confederation	Oceania Champions Cup	*	real history: a guest nation or club, or Australia in OFC before 2006
 same-final	Oceania Champions Cup	*	real history before the start (2000 to 2002, 2015 to 2017)
-gap	Polish Super Cup	2004	real calendar: no Super Cup in 2002 (cancelled for financial reasons) and 2003 (rules rows gre-pol-cro-272 and -273 not held; en.wikipedia.org "Polish Super Cup", read 7 November 2026)
+gap	Polish Super Cup	2004	real calendar: no Super Cup in 2002 (cancelled for financial reasons) and 2003 (rules rows gre-pol-cro-272 and -273 not held; en.wikipedia.org "Polish Super Cup", read 7 November 2026)		real
 duplicate	Portuguese Second Division B Central	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	Portuguese Second Division B North	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	Portuguese Second Division B South	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
-missing	President's Cup	2003	real history: the LFA President's Cup was last played in 2002/03; the FAI cup of the record starts in 2014 as the President of Ireland's Cup (rules rows wal-nir-irl-73 to -298 not held; en.wikipedia.org "LFA President's Cup", read 7 November 2026: played between 1930 and 2002)
+missing	President's Cup	2003	real history: the LFA President's Cup was last played in 2002/03; the FAI cup of the record starts in 2014 as the President of Ireland's Cup (rules rows wal-nir-irl-73 to -298 not held; en.wikipedia.org "LFA President's Cup", read 7 November 2026: played between 1930 and 2002)		real
 duplicate	Primera B Nacional	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 duplicate	Primera División	*	open items 58 and 59: rows held twice in the data itself before or at the start (several titles a year, or the newest row one year early); not a start overlap (slice 7)
 same-final	Russian Super Cup	*	a game result: check by hand
@@ -78,21 +81,21 @@ next-edition	UEFA European Championship	*	open item 1: the class waits for 2200
 duplicate	UEFA Intertoto Cup	*	open items 3 and 17: rows held twice before the start in the 0.6.0 saves (data); slice 7 checked only its 10 starts
 gap	Welsh Cup	*	open items 2 and 19: editions not written
 missing	OFC Men's Nations Cup	2028	open items 2 and 19: editions not written
-same-final	CONCACAF Gold Cup	2009	real results: the same finalists count only in Tier B (spec, Decisions)
-same-final	CONCACAF Gold Cup	2023	real results: the same finalists count only in Tier B (spec, Decisions)
+same-final	CONCACAF Gold Cup	2009	real results: the same finalists count only in Tier B (spec, Decisions)		real
+same-final	CONCACAF Gold Cup	2023	real results: the same finalists count only in Tier B (spec, Decisions)		real
 entrant-route	*Finalissima	2022	open item 19: no Copa America after 2001 in a 2001 game, so no winner to enter
-entrant-host	Africa*Cup of Nations	2002	original design, changing rules off only: the original's host row of 2002 names Egypt (HostCountry::init_default_table 0x5f9970, Egypt written at 0x5f9f19, fixed at 0x5f9f2f). With changing rules on the row takes Mali at the draw (item 181; a 2001 Tier A game to 2005 shows Mali as host and entrant)
+entrant-host	Africa*Cup of Nations	2002	original design, changing rules off only: the original's host row of 2002 names Egypt (HostCountry::init_default_table 0x5f9970, Egypt written at 0x5f9f19, fixed at 0x5f9f2f). With changing rules on the row takes Mali at the draw (item 181; a 2001 Tier A game to 2005 shows Mali as host and entrant)	off	design
 entrant-route	Intercontinental Cup	2002	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
 entrant-route	Intercontinental Cup	2003	open item 47: the data row of the 2002 Libertadores, after the start (fault 17), counts as a played route until slice 7 removes it; then the original's drawn club passes (slice 9a)
-no-host	OFC*Nations Cup	2008	not a fault: the 2008 OFC Nations Cup was played home and away with no host (int-continental-87)
-gap	Leinster Senior Cup	2010	real history: no edition from 2002/03 to 2008/09 (rules rows wal-nir-irl-46 to -196 not held; en.wikipedia.org "Leinster Senior Cup (association football)", read 1 November 2026: no competition between 2001 and 2009)
-gap	Leinster Senior Cup	2023	real history: 2019/20 abandoned, 2020/21 and 2021/22 not held for COVID-19 (the same source; rules rows wal-nir-irl-471 to -521 not held)
-gap	OFC*Champions League	2005	real calendar: no OFC club championship from 2002 to 2004 (first pass of the run set, 1 November 2026)
-gap	Serie C girone C	2015	by design: without the Serie C2 extra division the game makes group C only from 2014/15 (season_divisions_ita.c:159); its 2005 and 2006 rows are the data's
-gap	President of Ireland's Cup	2013	by design: the rules table holds the cup from 2013/14 (wal-nir-irl-323); before it only the rows of the data
-gap	K League Super Cup	2026	real calendar: not held from 2007 to 2025 (aus-jap-kor-402), again from 2025/26
-gap	National League Cup	2008	by design: played in 2004/05, 2007/08 and 2008/09 only (season_cups_more.c, Q336)
-no-host	FIFA Club World Championship	*	open item 18: the game writes no host for most finals; the name of the base game (changing rules off)
-missing	Korean Super Cup	2007	real calendar: the K League Super Cup was not held from 2007 to 2025 (aus-jap-kor-402); the table holds it again from 2025/26
-missing	K League Super Cup	2007	real calendar: not held from 2007 to 2025 (aus-jap-kor-402); the table holds it again from 2025/26
+no-host	OFC*Nations Cup	2008	not a fault: the 2008 OFC Nations Cup was played home and away with no host (int-continental-87)		real
+gap	Leinster Senior Cup	2010	real history: no edition from 2002/03 to 2008/09 (rules rows wal-nir-irl-46 to -196 not held; en.wikipedia.org "Leinster Senior Cup (association football)", read 1 November 2026: no competition between 2001 and 2009)		real
+gap	Leinster Senior Cup	2023	real history: 2019/20 abandoned, 2020/21 and 2021/22 not held for COVID-19 (the same source; rules rows wal-nir-irl-471 to -521 not held)		real
+gap	OFC*Champions League	2005	real calendar: no OFC club championship in 2002, 2003 and 2004 (the editions were 2001, 2005, 2006 and 2007; en.wikipedia.org "OFC Champions League", read 8 November 2026; first pass of the run set, 1 November 2026)		real
+gap	Serie C girone C	2015	by design: without the Serie C2 extra division the game makes group C only from 2014/15 (season_divisions_ita.c:159); its 2005 and 2006 rows are the data's		design
+gap	President of Ireland's Cup	2013	by design: the rules table holds the cup from 2013/14 (wal-nir-irl-323); before it only the rows of the data		design
+gap	K League Super Cup	2026	real calendar: not held from 2007 to 2025 (aus-jap-kor-402), again from 2025/26		real
+gap	National League Cup	2008	by design: played in 2004/05, 2007/08 and 2008/09 only (season_cups_more.c, Q336)		design
+no-host	FIFA Club World Championship	*	open item 18: the game writes no host for most finals; the name of the base game (changing rules off)	off	design
+missing	Korean Super Cup	2007	real calendar: the K League Super Cup was not held from 2007 to 2025 (aus-jap-kor-402); the table holds it again from 2025/26		real
+missing	K League Super Cup	2007	real calendar: not held from 2007 to 2025 (aus-jap-kor-402); the table holds it again from 2025/26		real
 duplicate	Liga Profesional de Fútbol	2025	data: three titles in 2025 (Apertura Platense, Clausura Estudiantes, the annual table Rosario Central)

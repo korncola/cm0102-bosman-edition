@@ -971,6 +971,23 @@ def main():
         if history_check.idle_is_next(edition, save_year, cyc) != want_:
             bad.append(f"idle_is_next({edition}, {save_year}, {cyc}) is not {want_}")
 
+    # Known rows with a rules condition and an accepted mark (Q12: a row with a source is accepted, not a fault).
+    known = [{"check": "gap", "competition": "A Cup", "year": "2022", "note": "n", "rules": "", "accepted": ""},
+             {"check": "gap", "competition": "B Cup", "year": "*", "note": "n", "rules": "off", "accepted": "design"},
+             {"check": "gap", "competition": "C*", "year": "2010", "note": "n", "rules": "on", "accepted": "real"},
+             {"check": "gap", "competition": "D Cup", "year": "*", "note": "n"}]       # a short row: no more columns
+    for args, want_ in ((("gap", "A Cup", 2022, "on"), "known"), (("gap", "A Cup", 2022, "off"), "known"),
+                        (("gap", "A Cup", 2023, "on"), None), (("gap", "B Cup", 2001, "off"), "accepted"),
+                        (("gap", "B Cup", 2001, "on"), None), (("gap", "C Cup", 2010, "on"), "accepted"),
+                        (("gap", "C Cup", 2010, "off"), None), (("gap", "D Cup", 1999, "on"), "known"),
+                        (("gap", "B Cup", 2001, None), None), (("gap", "A Cup", 2022, None), "known")):
+        got = history_check.known_status(known, *args)
+        if got != want_:
+            bad.append(f"known_status{args} is {got}, not {want_}")
+    if history_check.is_known(known, "gap", "B Cup", 2001, "off") is not True or \
+            history_check.is_known(known, "gap", "B Cup", 2001, "on") is not False:
+        bad.append("is_known does not follow the rules condition")
+
     # nations.tsv holds the renames of the season code.
     bad += renames_match()
     bad += uefa_moves_match()
