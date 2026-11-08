@@ -69,7 +69,7 @@ static const OptionDef defs[OPT_COUNT] = {
         "game_password = the password that a human manager types to join a network game that you host. Empty: no password."},
     /* Read once a game day (manager_ability.c). */
     [OPT_MANAGER_ABILITY_GROWS] = {"manager_ability_grows", KIND_SWITCH, "off", NULL,
-        "manager_ability_grows = on lets the ability of a human manager follow his reputation, one point a game day, up to 200. off keeps the ability the game drew for him at the start, as in the original."},
+        "manager_ability_grows = on lets the ability of a human manager follow his reputation as that of the AI managers does, one point a game day, up to 200. off keeps the ability the game drew for him at the start, as in the original."},
 };
 
 #define TEXT_MAX 1100
