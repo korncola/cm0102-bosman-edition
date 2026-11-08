@@ -76,6 +76,7 @@ static void check_defaults(void)
     CHECK(options_bool(OPT_FULL_PLAYER_SEARCH) == 0);
     CHECK(options_bool(OPT_CHANGING_RULES) == 1);
     CHECK(options_bool(OPT_ONLINE_PLAY) == 1);
+    CHECK(options_bool(OPT_GOAL_DIFFERENCE) == 1);
     CHECK(options_enum(OPT_DATABASE) == DATABASE_3960);
     CHECK(!strcmp(options_string(OPT_DATABASE), "3.9.60"));   /* item 11 of 0.6.1: the original data */
     CHECK(options_enum(OPT_SEASON) == 0 && !strcmp(options_string(OPT_SEASON), "2001/02"));
@@ -108,6 +109,8 @@ int main(void)
     CHECK(strstr(get(), "changing_rules = on lets the rules of each league and cup change each July") != NULL);
     CHECK(strstr(get(), "\nonline_play = on\n") != NULL);
     CHECK(strstr(get(), "online_play = on shows online games in the game list") != NULL);
+    CHECK(strstr(get(), "\ngoal_difference = on\n") != NULL);
+    CHECK(strstr(get(), "goal_difference = on shows the goal difference (GD)") != NULL);
     CHECK(strstr(get(), "\nseason = 2001/02\n") != NULL);
     CHECK(strstr(get(), "season = the season of a new game, 2001/02 to 2026/27.") != NULL);
     static char first[16384];
@@ -194,6 +197,14 @@ int main(void)
     put("game_password = Sunday 7\n");
     options_load(path);
     CHECK(!strcmp(options_string(OPT_GAME_PASSWORD), "Sunday 7"));
+
+    /* 5b4. goal_difference (issue 105): on by default, off when the file says so. A bad word keeps on. */
+    put("goal_difference = off\n");
+    options_load(path);
+    CHECK(options_bool(OPT_GOAL_DIFFERENCE) == 0);
+    put("goal_difference = maybe\n");
+    options_load(path);
+    CHECK(options_bool(OPT_GOAL_DIFFERENCE) == 1);
 
     /* 5c. changing_rules (0.6.0 slice 11): on by default, off when the file says so. A bad word keeps on. */
     put("changing_rules = off\n");

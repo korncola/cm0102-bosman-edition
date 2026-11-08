@@ -67,6 +67,9 @@ static const OptionDef defs[OPT_COUNT] = {
     /* 0.7.0 slice 6 (Q38): the Network tab of the Options box sets it; the join check reads it (net_lobby.c). */
     [OPT_GAME_PASSWORD] = {"game_password", KIND_TEXT, "", NULL,
         "game_password = the password that a human manager types to join a network game that you host. Empty: no password."},
+    /* Issue 105: read each time the table tab is drawn (columns.c). */
+    [OPT_GOAL_DIFFERENCE] = {"goal_difference", KIND_SWITCH, "on", NULL,
+        "goal_difference = on shows the goal difference (GD) beside For and Ag in the league tables of the competition screen."},
 };
 
 #define TEXT_MAX 1100
