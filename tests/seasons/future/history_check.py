@@ -144,7 +144,10 @@ kind, confed (FIFA or nation: no check, else codes joined by |), has_host (0: no
 the start on needs one), cycle (0: the competition ended) and end_year (a year or none). --names (default
 history_names.tsv next to this file) gives the key of each competition name of a save; a name with no key keeps
 the rules above. --known: a TSV with check, competition (* for any text), year
-(or *) and a note; a fault that matches is printed as "known". Exit code 1 when a fault is not known.
+(or *) and a note, and two optional columns: rules ("on" or "off": the row matches only a game with that
+changing-rules setting) and accepted ("design" or "real": the note cites a source that shows the game matches the
+original or real life; the fault is printed as "accepted", not a fault). A fault that matches another row is printed
+as "known". Exit code 1 when a fault is not known or accepted.
 """
 import collections
 import csv
@@ -361,10 +364,31 @@ def read_known(path):
     return [r for r in tsv(path) if r.get("check")]
 
 
-def is_known(known, check, comp, year):
-    """The competition of a known row may hold * for any text (fnmatch)."""
-    return any(k["check"] == check and fnmatch.fnmatchcase(comp, k["competition"]) and k["year"] in ("*", str(year))
-               for k in known)
+def rules_of(game):
+    """The changing-rules setting of a game, as the column rules of history_known.tsv names it."""
+    return "on" if game.changing else "off"
+
+
+def known_status(known, check, comp, year, rules=None):
+    """"accepted", "known" or None for a fault. The competition of a known row may hold * for any text (fnmatch). A row
+    with a rules condition ("on" or "off" in the column rules) matches only a game with that changing-rules setting
+    (rules: "on" or "off"; None matches no conditional row). A row whose column accepted is "design" or "real"
+    cites a source that shows the game matches the original or real life: accepted, not a fault (Q12). Another matching
+    row is known: a fault that waits for its fix. An accepted row wins over a known one."""
+    found = None
+    for k in known:
+        if k["check"] != check or not fnmatch.fnmatchcase(comp, k["competition"]) or k["year"] not in ("*", str(year)):
+            continue
+        if (k.get("rules") or "") not in ("", rules):
+            continue
+        if (k.get("accepted") or "") in ("design", "real"):
+            return "accepted"
+        found = "known"
+    return found
+
+
+def is_known(known, check, comp, year, rules=None):
+    return known_status(known, check, comp, year, rules) is not None
 
 
 def number(v):
@@ -1428,7 +1452,7 @@ def write(game, label, out, faults, known):
         w = csv.writer(f, delimiter="\t", lineterminator="\n")
         w.writerow(["check", "competition", "year", "known", "detail"])
         for c, name, y, d in faults:
-            w.writerow([c, name, y, "known" if is_known(known, c, name, y) else "new", d])
+            w.writerow([c, name, y, known_status(known, c, name, y, rules_of(game)) or "new", d])
 
 
 RESULT_CHECKS = {"same-final"}               # checks of real results: Tier A's results come from reputation
@@ -1486,7 +1510,7 @@ def main(argv):
             write_entrants(listing, os.path.join(opts["--out"], label + ".entrants.tsv"))
             if summary:
                 write_health(summary, rows, os.path.join(opts["--out"], label + ".health.tsv"))
-        fresh = [f for f in faults if not is_known(known, f[0], f[1], f[2])]
+        fresh = [f for f in faults if not is_known(known, f[0], f[1], f[2], rules_of(game))]
         new += len(fresh)
         y, d = game.date
         print(f"{label}: start {game.start}{'' if game.changing else ' (changing rules off)'}, save day {d} of {y}, {len(game.rows)} history rows, "
@@ -1494,7 +1518,7 @@ def main(argv):
         if summary:
             print("    health: " + ", ".join(f"{k} {v}" for k, v in summary.items()))
         for c, name, yr, detail in faults:
-            print(f"    {'known' if is_known(known, c, name, yr) else 'FAULT'}  {c}  {name} {yr}: {detail}")
+            print(f"    {known_status(known, c, name, yr, rules_of(game)) or 'FAULT'}  {c}  {name} {yr}: {detail}")
     return 1 if new else 0
 
 
