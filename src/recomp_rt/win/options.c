@@ -70,6 +70,9 @@ static const OptionDef defs[OPT_COUNT] = {
     /* Issue 105: read each time the table tab is drawn (columns.c). */
     [OPT_GOAL_DIFFERENCE] = {"goal_difference", KIND_SWITCH, "on", NULL,
         "goal_difference = on shows the goal difference (GD) beside For and Ag in the league tables of the competition screen."},
+    /* Read each time the table tab is drawn (table_zones.c). */
+    [OPT_TABLE_ZONES] = {"table_zones", KIND_SWITCH, "on", NULL,
+        "table_zones = on colours the place of each club in a league table by what it leads to (European cups, promotion, play-offs, relegation) in place of the dashed lines."},
 };
 
 #define TEXT_MAX 1100

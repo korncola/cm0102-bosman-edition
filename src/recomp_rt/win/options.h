@@ -38,6 +38,7 @@ typedef enum {
     OPT_ONLINE_PLAY,           /* switch, on: online games in the game list and a host in the lobby (net_lobby.c) */
     OPT_GAME_PASSWORD,         /* text, empty: the password of a network game that this computer hosts (net_lobby.c) */
     OPT_GOAL_DIFFERENCE,       /* switch, on: a GD column in the league table (columns.c) */
+    OPT_TABLE_ZONES,           /* switch, on: coloured place boxes in place of the dashed lines (table_zones.c) */
     OPT_COUNT
 } OptionId;
 
