@@ -353,7 +353,7 @@ The computer that runs a network game. Only the host runs the match engine and k
 _Avoid_: server (for the host's computer)
 
 **Manager ability**:
-The current ability of a manager, 1 to 200, kept in his non-player data with his potential. Clubs read it when they pick a manager. The original changes it for no manager; the option `manager_ability_grows` lets a human manager's ability follow his reputation.
+The current ability of a manager, 1 to 200, kept in his non-player data with his potential. The ratings of his attributes depend on it. The original changes it for no manager; the option `manager_ability_grows` lets a human manager's ability follow his reputation as that of the AI managers does.
 _Avoid_: manager rating, manager potential (the potential is the cap)
 
 **Human manager**:
