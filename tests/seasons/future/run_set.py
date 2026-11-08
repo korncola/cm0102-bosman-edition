@@ -97,7 +97,8 @@ SWITCHES = ("RECOMP_TIER_A", "RECOMP_DATE_JUMP", "RECOMP_TEST_EXTRA", "RECOMP_TE
 # Q15: the rows whose human manager also manages a national team. Leg 0 sets RECOMP_TEST_NATION_JOB (nation_job.c): at
 # the first human turn the runtime appoints him through the original's appoint_manager_to_club 0x69ebc0, to this
 # nation or, when it has a manager, to the first senior national team with none and a nation value over 150. The
-# leg must log the appointment and, after the first FIFA window after it, that he still manages the team (nation_job_check).
+# leg must log the appointment and, after the team's next match, that he still manages the team and that the match
+# was played (nation_job_check).
 NATION_JOB = {"a2001nation": "England"}
 NATION_JOB_LINE = "recomp: nation job test: "
 SAVE_ON = 200                                 # every leg saves on day 200 (from 0, about 20 July) after its last season
@@ -328,14 +329,17 @@ def tidy(work, keep_save):
 
 def nation_job_check(text):
     """The reason a leg 0 of a NATION_JOB row fails, from its stderr text, or "" when it passes: the runtime
-    appointed the human and he still managed the team after the first FIFA window after it."""
+    appointed the human, he managed the team at every human turn to the team's next match, and the team played that
+    match."""
     lines = [ln[len(NATION_JOB_LINE):] for ln in text.splitlines() if ln.startswith(NATION_JOB_LINE)]
     made = [ln for ln in lines if ln.startswith("the human manages ") and ln.endswith("(appointed)")]
     if not made:
         return "nation job: no appointment" + (f" ({lines[-1]})" if lines else "")
     team = made[0][len("the human manages "):].split(" from day ")[0]
     if not [ln for ln in lines if ln.startswith("on day ") and ln.endswith(f"the human still manages {team}")]:
-        return f"nation job: no line that the human still manages {team} after the first FIFA window"
+        return f"nation job: no line that the human still manages {team} after its next match"
+    if not [ln for ln in lines if ln.startswith(f"{team} played the match of day ")]:
+        return f"nation job: no line that {team} played its next match"
     return ""
 
 

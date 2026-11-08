@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The national team job of the run set row a2001nation (Q15): a new game whose human manager also manages a national
-team (RECOMP_TEST_NATION_JOB, src/recomp_rt/win/nation_job.c), played on holiday past the first FIFA window after the
-appointment, and the same new game without the switch.
+team (RECOMP_TEST_NATION_JOB, src/recomp_rt/win/nation_job.c), played on holiday past the team's next match after
+the appointment, and the same new game without the switch.
 
 Usage:
     python3 tests/seasons/nation_job_run.py <cm0102_recomp> <game folder> [--nations England|all] [--days 75]
@@ -10,8 +10,9 @@ Usage:
 Run "job" is leg 0 of a run set game (soak_run.new_game_leg, the 2001 start, changing rules on) with
 RECOMP_TEST_NATION_JOB=England. It saves after --days game days (75: mid September 2001, after the FIFA days of
 August and September). Its log must pass run_set.nation_job_check: the runtime appointed the human through
-appoint_manager_to_club 0x69ebc0, and after the first FIFA window after it he still managed the team. Run "plain" is the
-same game without the switch: its log must have no line of the switch. Both must end with code 0 and no box.
+appoint_manager_to_club 0x69ebc0, he managed the team at every human turn to the team's next match, and the team
+played that match. Run "plain" is the same game without the switch: its log must have
+no line of the switch. Both must end with code 0 and no box.
 With --nations England a new game takes a few minutes; all takes about 25 minutes. One game at a time.
 """
 import os

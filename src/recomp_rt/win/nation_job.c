@@ -22,9 +22,14 @@
  * Go on Holiday would hit the item below it (Holiday until next match, holiday_next.c), and that holiday ends
  * before the club's next match, where the script has no clicks.
  *
- * The check. At the first human turn after the last day of the first FIFA window after the appointment (the run of
- * days from season_fifa_year_days), it logs whether the human still manages that team. It does not show that the
- * team played a match in that window. tests/seasons/future/run_set.py reads both lines. */
+ * The check. At the appointment it finds the team's next match in that year with the fixture search 0x5acbe0,
+ * thiscall on the fixture store [0xae2a58] (day, year, end day, end year, club id, list, -1, -2, -1), which for a
+ * national team reads the competition types 0 and 1 and takes the fixtures with the club at home +0xc or away +0x10.
+ * A fixture (0x4f bytes) has its year at +0x28, its day at +0x2a and its result at +0x43, -1 when not played
+ * (docs/research/2026-10-15-holiday-next-match-inventory.md). The log says whether that day is a FIFA day
+ * (season_fifa_year_days). At the first human turn after that day it logs whether the human still manages the team
+ * and managed it at every human turn between (the fixture has no manager field), and whether the match was played.
+ * tests/seasons/future/run_set.py reads the lines. */
 #include "win.h"
 #include "season_uefa_days.h"
 
@@ -52,10 +57,32 @@
 #define HUMANS 0xb63c98u             /* the human records, 0xa6ef bytes each (holiday_next.c) */
 #define HUMAN_RECORD 0xa6efu
 #define ON_HOLIDAY 0x9a01u
+#define FIXTURES 0xae2a58u
+#define FIXTURE_SEARCH 0x5acbe0u
+#define LIST_FREE 0x68d040u          /* thiscall on the list: frees its nodes */
+#define FIXTURE_HOME 0xcu
+#define FIXTURE_AWAY 0x10u
+#define FIXTURE_YEAR 0x28u
+#define FIXTURE_DAY 0x2au
+#define FIXTURE_RESULT 0x43u
 
 static int state = -1;               /* -1 not read, 0 off, 1 to appoint, 2 appointed, 3 checked */
 static uint32_t human, team;
-static int check_year, check_doy;
+static int check_year, check_doy, lost_doy = -1, lost_year;
+
+static uint32_t call_this(uint32_t fn, uint32_t self, int n, const uint32_t *args)
+{
+    Cpu saved = cpu;
+    cpu.ecx = self;
+    uint32_t r = rt_callback(fn, n, args);
+    cpu = saved;
+    return r;
+}
+
+static int holds(void)
+{
+    return rd32(g_mem, human + STAFF_NATION_TEAM) == team && rd32(g_mem, team + CLUB_MANAGER) == human;
+}
 
 static const char *long_name(uint32_t club)
 {
@@ -92,24 +119,35 @@ static uint32_t pick(const char *want)
     return 0;
 }
 
-static int first_fifa_window_end(int year, int doy, int *out_year, int *out_doy)
+static int is_fifa_day(int year, int doy)
 {
-    for (int y = year; y <= year + 1; y++) {
-        int days[SEASON_FIFA_YEAR_MAX], n = season_fifa_year_days(y, days, SEASON_FIFA_YEAR_MAX), best = -1;
-        for (int i = 0; i < n; i++)
-            if ((y > year || days[i] > doy) && (best < 0 || days[i] < best)) best = days[i];
-        if (best >= 0) {
-            for (int more = 1; more; ) {            /* the last day of the window that starts there */
-                more = 0;
-                for (int i = 0; i < n; i++)
-                    if (days[i] == best + 1) { best++; more = 1; }
-            }
-            *out_year = y;
-            *out_doy = best;
-            return 1;
-        }
-    }
+    int days[SEASON_FIFA_YEAR_MAX], n = season_fifa_year_days(year, days, SEASON_FIFA_YEAR_MAX);
+    for (int i = 0; i < n; i++)
+        if (days[i] == doy) return 1;
     return 0;
+}
+
+/* The first fixture of the team from day to end_day of year (played or not, as want_played), through the fixture
+ * search 0x5acbe0. Its day and the other club; 0 when there is none. One year at most, so the search never makes a
+ * new year block of the store (0x5abf10). */
+static int first_fixture(int year, int day, int end_day, int want_played, int *out_day, uint32_t *out_other)
+{
+    uint32_t id = rd32(g_mem, team), list = rt_alloc_zero(16), store = rd32(g_mem, FIXTURES);
+    uint32_t args[9] = {(uint32_t)day, (uint32_t)year, (uint32_t)end_day, (uint32_t)year, id, list, 0xffffffffu,
+                        0xfffffffeu, 0xffffffffu};
+    call_this(FIXTURE_SEARCH, store, 9, args);
+    int found = 0;
+    for (uint32_t node = rd32(g_mem, list + 2), n = 0; node && n < 1000 && !found; node = rd32(g_mem, node + 6), n++) {
+        uint32_t f = rd32(g_mem, node);
+        if (!f || ((int8_t)g_mem[f + FIXTURE_RESULT] != -1) != want_played) continue;
+        found = 1;
+        *out_day = (int16_t)rd16(g_mem, f + FIXTURE_DAY);
+        uint32_t home = rd32(g_mem, f + FIXTURE_HOME);
+        *out_other = rd32(g_mem, CLUB_TABLE) + (home == id ? rd32(g_mem, f + FIXTURE_AWAY) : home) * CLUB_SIZE;
+    }
+    call_this(LIST_FREE, list, 0, NULL);
+    rt_free(list);
+    return found;
 }
 
 void nation_job_turn(void)
@@ -154,15 +192,49 @@ void nation_job_turn(void)
         cpu.ecx = rd32(g_mem, MANAGER_MANAGER);
         rt_callback(APPOINT, 2, args);
         cpu = saved;
-        int now = rd32(g_mem, human + STAFF_NATION_TEAM) == team && rd32(g_mem, team + CLUB_MANAGER) == human;
+        int now = holds();
         fprintf(stderr, "recomp: nation job test: the human manages %s from day %d of %d (%s)\n", long_name(team),
                 doy + 1, year, now ? "appointed" : "the call did not appoint him");
-        if (now && first_fifa_window_end(year, doy, &check_year, &check_doy)) state = 2;
+        if (!now) return;
+        int last = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 ? 365 : 364;
+        uint32_t other;
+        if (doy >= last || !first_fixture(year, doy + 1, last, 0, &check_doy, &other)) {
+            fprintf(stderr, "recomp: nation job test: %s has no match after day %d of %d in that year\n",
+                    long_name(team), doy + 1, year);
+            return;
+        }
+        check_year = year;
+        char against[64];
+        snprintf(against, sizeof against, "%s", long_name(other));
+        fprintf(stderr, "recomp: nation job test: the next match of %s is on day %d of %d against %s (%s)\n",
+                long_name(team), check_doy + 1, year, against,
+                is_fifa_day(year, check_doy) ? "a FIFA day" : "not a FIFA day");
+        state = 2;
         return;
     }
-    if (year < check_year || (year == check_year && doy <= check_doy)) return;
+    if (year < check_year || (year == check_year && doy <= check_doy)) {
+        if (lost_doy < 0 && !holds()) {
+            lost_doy = doy;
+            lost_year = year;
+        }
+        return;
+    }
     state = 3;
-    int still = rd32(g_mem, human + STAFF_NATION_TEAM) == team && rd32(g_mem, team + CLUB_MANAGER) == human;
-    fprintf(stderr, "recomp: nation job test: on day %d of %d (the first FIFA window ends on day %d) the human %s %s\n",
+    int still = holds() && lost_doy < 0;
+    fprintf(stderr, "recomp: nation job test: on day %d of %d (after the match of day %d) the human %s %s\n",
             doy + 1, year, check_doy + 1, still ? "still manages" : "no longer manages", long_name(team));
+    if (lost_doy >= 0)
+        fprintf(stderr, "recomp: nation job test: the human did not manage %s at the turn of day %d of %d\n",
+                long_name(team), lost_doy + 1, lost_year);
+    int day;
+    uint32_t other;
+    if (first_fixture(check_year, check_doy, check_doy, 1, &day, &other)) {
+        char against[64];
+        snprintf(against, sizeof against, "%s", long_name(other));
+        fprintf(stderr, "recomp: nation job test: %s played the match of day %d of %d against %s\n", long_name(team),
+                day + 1, check_year, against);
+    } else {
+        fprintf(stderr, "recomp: nation job test: %s did not play the match of day %d of %d\n", long_name(team),
+                check_doy + 1, check_year);
+    }
 }

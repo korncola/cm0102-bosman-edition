@@ -205,19 +205,24 @@ def main():
     if not finds(waiting, "a2001nation: not in the run"):
         bad.append("verify: a waiting row does not block a release")
 
-    # Q15: leg 0 of a NATION_JOB row passes only with the appointment and the line after the first FIFA window.
+    # Q15: leg 0 of a NATION_JOB row passes only with the appointment and the lines after the team's next match.
     if run_set.NATION_JOB.get("a2001nation") != "England" or \
             [r for r in run_set.read_set() if r["name"] == "a2001nation"][0]["status"] != "run":
         bad.append("nation job: a2001nation is not a NATION_JOB row with status run")
     made = "recomp: nation job test: the human manages Wales from day 182 of 2001 (appointed)\n"
-    still = "recomp: nation job test: on day 236 of 2001 (the first FIFA window ends on day 236) the human still manages Wales\n"
+    still = "recomp: nation job test: on day 245 of 2001 (after the match of day 244) the human still manages Wales\n"
     lost = still.replace("still manages", "no longer manages")
-    for text, want in ((made + still, ""), (made + lost, "no line that the human still manages Wales"),
+    match = "recomp: nation job test: Wales played the match of day 244 of 2001 against Spain\n"
+    none = "recomp: nation job test: Wales did not play the match of day 244 of 2001\n"
+    for text, want in ((made + still + match, ""), (made + lost + match, "no line that the human still manages Wales"),
+                       (made + still, "no line that Wales played its next match"),
+                       (made + still + none, "no line that Wales played its next match"),
+                       (made + still + match.replace("Wales", "Scotland"), "no line that Wales played"),
                        (made, "no line that the human still manages Wales"), ("", "no appointment"),
-                       (made + still.replace("Wales", "Scotland"), "no line that the human still manages Wales"),
+                       (made + still.replace("Wales", "Scotland") + match, "no line that the human still manages Wales"),
                        ("recomp: nation job test: no national team without a manager and a value over 150\n",
                         "no appointment (no national team"),
-                       (made.replace("(appointed)", "(the call did not appoint him)") + still, "no appointment")):
+                       (made.replace("(appointed)", "(the call did not appoint him)") + still + match, "no appointment")):
         got = run_set.nation_job_check(text)
         if (want == "" and got) or (want and want not in got):
             bad.append(f"nation_job_check: {got!r} for {text!r}, wanted {want!r}")
