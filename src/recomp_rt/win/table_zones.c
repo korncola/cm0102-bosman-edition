@@ -16,6 +16,10 @@
  * The colours, from the league's own values, so they show what the game does:
  *   promotion places                 dark green     promotion play-off places   light green
  *   relegation play-off places       orange         relegation places           red
+ * One class builds its promotion play-off in its own code and keeps no play-off places in those values:
+ * HolFirst, the Eerste Divisie (vtable 0x96b86c, written by its constructor at 0x5f54d7).
+ * HolFirst::create_play_off_groups 0x5f6720 takes the rows of status 1 (play-off), then rows with no status in
+ * table order until it holds 6 (0x5f677e), so the 6 places after the direct one are its play-off places.
  * In the top division of a European nation (league +0x1c is -1, as League::update_positions_and_status 0x684cd0
  * tests at 0x685388, and the nation's continent is Europe, 0x6853b0..0x6853df) the top places are the European
  * places of the next season instead:
@@ -53,6 +57,8 @@
 #define SEEDING_YEAR 0x439u
 #define ENTRY 0x12u
 #define LEAGUE_TABLE_ENGLAND 0xb64150u
+#define VTABLE_HOL_FIRST 0x96b86cu
+#define HOL_FIRST_PLAY_OFF 6
 
 #define DARK_GREEN 0x03C5u          /* (0, 120, 40) */
 #define LIGHT_GREEN 0x6E4Au         /* (110, 200, 80) */
@@ -156,6 +162,7 @@ void table_zones_before(uint32_t league)
     if (up_po < 0) up_po = 0;
     if (down_po < 0) down_po = 0;
     if (down < 0) down = 0;
+    if (rd32(g_mem, league) == VTABLE_HOL_FIRST && up_po == 0) up_po = HOL_FIRST_PLAY_OFF;
     paint(clubs - down + 1, down, RED, clubs);
     paint(clubs - down - down_po + 1, down_po, ORANGE, clubs);
     uint32_t record = rd32(g_mem, league + LEAGUE_RECORD);
